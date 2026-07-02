@@ -285,9 +285,12 @@ export {};
  *
  * 10. 日志输出
  *     在关键步骤使用 logger("...") 输出日志（如"开始提交任务"、"任务ID: xxx"、"轮询中..."），
- *     便于调试。
+ *     便于调试。禁止在 logger 中输出 API Key、Secret 等敏感凭证。
  *
- * 11. vendor 配置填写
+ * 11. 错误信息提取
+ *     建议实现 extractApiError(error) 统一解析 Axios/HTTP 响应，将 status、message 写入日志后 throw。
+ *
+ * 12. vendor 配置填写
  *     - id：纯英文小写，作为文件名使用，禁止特殊符号和空格。
  *     - version：语义化版本格式 "x.y"。
  *     - inputs：根据目标 API 所需的认证信息配置（API Key、Secret、请求地址等）。
@@ -299,19 +302,19 @@ export {};
  *       - ImageModel 的 mode 对应 API 支持的生图模式（"text" 纯文本、"singleImage" 单图参考、"multiReference" 多图参考）。
  *       - TTSModel 的 voices 对应可选的音色列表。
  *
- * 12. 图片处理
+ * 13. 图片处理
  *     - 需要压缩图片体积时使用 zipImage(base64, maxSizeKB)。
  *     - 需要调整图片分辨率时使用 zipImageResolution(base64, width, height)。
  *     - 需要将多张图片拼合为一张时使用 mergeImages(base64Arr, maxSize)。
  *     - 以上函数均接收和返回有头 base64 字符串。
  *
- * 13. 文件结构
+ * 14. 文件结构
  *     生成的代码必须保持本模板的整体结构：
  *     类型定义区 → 全局声明区 → 供应商配置区 → [辅助工具区（可选）] → 适配器函数区 → 导出区
  *     不要打乱顺序，不要删除已有的结构注释分隔线。
  *     辅助工具区用于放置多个适配器函数共享的小驼峰命名辅助函数（如 getHeaders、getBaseUrl）。
  *
- * 14. 导出规范
+ * 15. 导出规范
  *     必须导出以下字段（通过 exports.xxx = xxx 赋值）：
  *       - exports.vendor（必须）
  *       - exports.textRequest（必须）

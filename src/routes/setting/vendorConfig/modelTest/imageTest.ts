@@ -34,9 +34,8 @@ export default router.post(
       const resultUrl = await u.oss.getFileUrl("testImage.jpg");
       res.status(200).send(success(resultUrl));
     } catch (err) {
-      console.error(err);
       const msg = u.error(err).message;
-      console.error(msg);
+      u.genLog({ vendorId: id, model: modelName, taskClass: "模型测试", phase: "image_test_failed", message: msg });
       res.status(500).send(error(msg));
     }
   },

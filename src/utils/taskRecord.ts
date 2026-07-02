@@ -48,13 +48,28 @@ export default async function taskRecord(
     startTime: Date.now(),
   });
 
-  /** 任务成功时调用 done(1)，失败时调用 done(-1, '原因') */
-  return async function done(state: 1 | -1, reason?: string) {
-    await db("o_tasks")
-      .where("id", id)
-      .update({
-        state: taskStateMap[state],
-        reason: state === -1 ? (reason ?? "") : null,
+  /** 任务成功时调用 done(1)，失败时调用 done(-1, '原因', errorDetail?) */
+  return async function done(state: 1 | -1, reason?: string, errorDetail?: Record<string, unknown>) {
+    const update: Record<string, unknown> = {
+      state: taskStateMap[state],
+      reason: state === -1 ? (reason ?? "") : null,
+    };
+    if (state === -1 && errorDetail) {
+      const row = await db("o_tasks").where("id", id).select("relatedObjects").first();
+      let existing: Record<string, unknown> = {};
+      if (row?.relatedObjects) {
+        try {
+          existing = JSON.parse(row.relatedObjects);
+        } catch {
+          existing = { raw: row.relatedObjects };
+        }
+      }
+      update.relatedObjects = JSON.stringify({
+        ...existing,
+        errorDetail,
+        failedAt: Date.now(),
       });
+    }
+    await db("o_tasks").where("id", id).update(update);
   };
 }

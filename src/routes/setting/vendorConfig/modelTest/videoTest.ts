@@ -13,7 +13,7 @@ export default router.post(
     modelName: z.string(),
     id: z.string(),
     mode: z.string(),
-    prompt: z.string(),
+    prompt: z.string().optional().default(""),
     videos: z.array(
       z.object({
         type: z.string(),
@@ -44,6 +44,9 @@ export default router.post(
       const modelList = await u.vendor.getModelList(vendorConfigData.id!);
 
       const selectedModel = modelList.find((i: any) => i.modelName == modelName);
+      if (!selectedModel) {
+        return res.status(400).send(error(`未找到模型「${modelName}」，请刷新供应商模型列表后重试`));
+      }
 
       let modeData = [];
       if (Array.isArray(mode)) {
@@ -52,11 +55,12 @@ export default router.post(
           modeData = JSON.parse(mode);
         } catch (e) {}
       }
+      const drm = selectedModel.durationResolutionMap?.[0];
       const reqFn = await u.Ai.Video(`${id}:${modelName}`).run({
-        duration: selectedModel.durationResolutionMap[0].duration[0],
-        resolution: selectedModel.durationResolutionMap[0].resolution[0],
+        duration: drm?.duration?.[0] ?? 5,
+        resolution: drm?.resolution?.[0] ?? "720p",
         aspectRatio: "16:9",
-        prompt: prompt,
+        prompt: prompt || "测试视频生成",
         referenceList: [...images, ...videos, ...audios],
         audio: typeof selectedModel.audio == "boolean" ? selectedModel.audio : true,
         mode: modeData.length > 0 ? modeData : mode,
@@ -65,9 +69,8 @@ export default router.post(
       const resultUrl = await u.oss.getFileUrl("test.mp4");
       res.status(200).send(success(resultUrl));
     } catch (err) {
-      console.error(err);
       const msg = u.error(err).message;
-      console.error(msg);
+      u.genLog({ vendorId: id, model: modelName, taskClass: "模型测试", phase: "video_test_failed", message: msg });
       res.status(500).send(error(msg));
     }
   },

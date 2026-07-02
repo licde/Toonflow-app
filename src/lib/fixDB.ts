@@ -190,7 +190,23 @@ export default async (knex: Knex): Promise<void> => {
   if (Number(toonflowVer) < 3.2) {
     u.vendor.writeCode("toonflow", vendorData["toonflow.ts"]);
   }
+  const agnesaiVer = getVendorVersion("agnesai");
+  if (agnesaiVer < 2.5 && vendorData["agnesai.ts"]) {
+    u.vendor.writeCode("agnesai", vendorData["agnesai.ts"]);
+  }
+  const huggingfaceVer = getVendorVersion("huggingface");
+  if (huggingfaceVer < 1.3 && vendorData["huggingface.ts"]) {
+    u.vendor.writeCode("huggingface", vendorData["huggingface.ts"]);
+  }
 };
+
+function getVendorVersion(id: string): number {
+  try {
+    return Number(u.vendor.getVendor(id).version) || 0;
+  } catch {
+    return 0;
+  }
+}
 
 async function tempOnsert(tsCode: string) {
   const jsCode = transform(tsCode, { transforms: ["typescript"] }).code;

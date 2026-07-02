@@ -125,12 +125,22 @@ export default router.post(
         .then(async () => await aiVideo.save(videoPath))
         .then(async () => await u.db("o_video").where("id", videoId).update({ state: "生成成功" }))
         .catch(async (error: any) => {
+          const normalized = u.error(error);
+          u.genLog({
+            vendorId: model.split(/:(.+)/)[0],
+            model,
+            taskClass: "视频生成",
+            assetId: videoId,
+            phase: "batch_failed",
+            message: normalized.message,
+            httpStatus: normalized.status,
+          });
           await u
             .db("o_video")
             .where("id", videoId)
             .update({
               state: "生成失败",
-              errorReason: u.error(error).message,
+              errorReason: normalized.message,
             });
         });
     }

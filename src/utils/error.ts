@@ -16,6 +16,7 @@ export interface NormalizedError {
 export function normalizeError(error: unknown): NormalizedError {
   // Axios 特殊处理
   if (isAxiosError(error)) {
+    const url = error.config?.url;
     return {
       name: "AxiosError",
       message: error.response?.data?.error?.message || error.response?.data?.message || error.message,
@@ -24,7 +25,7 @@ export function normalizeError(error: unknown): NormalizedError {
       stack: error.stack,
       responseData: error.response?.data,
       meta: {
-        url: error.config?.url,
+        url: typeof url === "string" ? url.replace(/Bearer\s+[^\s]+/gi, "Bearer [REDACTED]") : url,
         method: error.config?.method,
       },
     };

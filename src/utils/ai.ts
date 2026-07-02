@@ -3,6 +3,7 @@ import { devToolsMiddleware } from "@ai-sdk/devtools";
 import axios from "axios";
 import { transform } from "sucrase";
 import u from "@/utils";
+import { sanitizeErrorDetail, genLog } from "@/utils/genLog";
 
 type AiType =
   | "scriptAgent"
@@ -148,7 +149,7 @@ async function withTaskRecord<T>(
   fn: (modelName: `${string}:${string}`, think: Boolean, thinkLevel: 0 | 1 | 2 | 3) => Promise<T>,
 ): Promise<T> {
   const modelName = await resolveModelName(modelKey);
-  const [_, model] = modelName.split(/:(.+)/);
+  const [vendorId, model] = modelName.split(/:(.+)/);
   const taskRecord = await u.task(projectId, taskClass, model, { describe: describe, content: relatedObjects });
   try {
     const result = await fn(modelName, false, 0);
@@ -156,8 +157,18 @@ async function withTaskRecord<T>(
     taskRecord(1);
     return result;
   } catch (e) {
-    taskRecord(-1, u.error(e).message);
-    throw new Error(u.error(e).message);
+    const normalized = u.error(e);
+    genLog({
+      vendorId,
+      model,
+      taskClass,
+      phase: "failed",
+      message: normalized.message,
+      httpStatus: normalized.status,
+    });
+    const errorDetail = sanitizeErrorDetail(normalized);
+    taskRecord(-1, normalized.message, errorDetail);
+    throw new Error(normalized.message);
   }
 }
 
@@ -337,7 +348,9 @@ class AiAudio {
 
         if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
         return this;
-      } catch (e) {}
+      } catch (e) {
+        throw e;
+      }
     };
     if (taskRecord) {
       return withTaskRecord(this.key, taskRecord.taskClass, taskRecord.describe, taskRecord.relatedObjects, taskRecord.projectId, exec);

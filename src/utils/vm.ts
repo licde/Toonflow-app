@@ -17,7 +17,7 @@ import crypto from "node:crypto";
 export default function runCode(code: string, vendor?: Record<string, any>) {
   code = code.replace(/export\s*\{\s*\};?/g, ""); // 去掉 export {} 以免沙盒环境报错
   // 创建一个沙盒
-  const exports = {};
+  const exports: Record<string, any> = {};
   const sandbox: Record<string, any> = {
     createOpenAI,
     createDeepSeek,
@@ -33,13 +33,23 @@ export default function runCode(code: string, vendor?: Record<string, any>) {
     urlToBase64,
     mergeImages,
     pollTask,
+    base64ToPublicUrl,
     fetch: fetch,
+    setTimeout,
+    clearTimeout,
+    setInterval,
+    clearInterval,
     exports,
     axios,
     FormData,
-    logger,
+    logger: (logstring: any) => {
+      const vendorId = exports?.vendor?.id;
+      const prefix = vendorId ? `【VM:${vendorId}】` : "【VM】";
+      console.log(prefix + (typeof logstring === "string" ? logstring : JSON.stringify(logstring)));
+    },
     jsonwebtoken,
     crypto,
+    Buffer,
   };
   if (vendor !== undefined) {
     sandbox.vendor = vendor;
@@ -77,6 +87,15 @@ export async function zipImageResolution(completeBase64: string, width: number, 
   const buffer = Buffer.from(completeBase64.split(",")[1], "base64");
   const out = await sharp(buffer).resize(width, height).toBuffer();
   return `data:image/jpeg;base64,${out.toString("base64")}`;
+}
+
+/** 将 base64 写入本地 OSS 并返回可访问 URL（需配置 ossURL 公网地址供上游拉取） */
+export async function base64ToPublicUrl(base64: string, ext = "jpg"): Promise<string> {
+  const raw = base64.replace(/^data:[^;]+;base64,/, "");
+  const hash = crypto.createHash("sha256").update(raw.slice(0, 256) + String(raw.length)).digest("hex").slice(0, 20);
+  const relPath = `vendor-temp/${hash}.${ext}`;
+  await u.oss.writeFile(relPath, base64);
+  return u.oss.getFileUrl(relPath);
 }
 
 //url转Base64
