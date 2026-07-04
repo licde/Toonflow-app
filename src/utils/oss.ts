@@ -3,6 +3,8 @@ import getPath, { isEletron } from "@/utils/getPath";
 import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { getOssConfig, resolvePublicFileUrl } from "@/utils/publicAssetUrl";
+import { imageUrlLog } from "@/utils/imageUrlLog";
 
 // 规范化路径：去除前导斜杠，并将路径分隔符统一转换为系统分隔符
 function normalizeUserPath(userPath: string): string {
@@ -49,13 +51,24 @@ class OSS {
   async getFileUrl(userRelPath: string, prefix?: string): Promise<string> {
     if (!prefix) prefix = "oss";
     await this.ensureInit();
+    const cfg = await getOssConfig();
+    const hasPublic =
+      !!cfg.ossPublicBaseUrl.replace(/\/+$/, "") ||
+      (cfg.ossStorageMode === "aliyun" && !!cfg.aliyunOssBucket && !!cfg.aliyunOssAccessKeyId);
+
+    if (hasPublic) {
+      const url = await resolvePublicFileUrl(userRelPath, prefix);
+      imageUrlLog("生成访问URL", { userRelPath, prefix, fileUrl: url });
+      return url;
+    }
+
     const safePath = normalizeUserPath(userRelPath);
-    // URL 始终使用 /，所以这里需要将系统分隔符转回 /
     let url = `/${prefix}/`;
-    if (process.env.ossURL && process.env.ossURL !== "") url = process.env.ossURL + `/${prefix}/`;
     if (process.env.NODE_ENV == "dev") url = `http://localhost:10588/${prefix}/`;
-    if (isEletron()) url = `http://localhost:${process.env.PORT}/${prefix}/`;
-    return `${url}${safePath.split(path.sep).join("/")}`;
+    else if (isEletron()) url = `http://localhost:${process.env.PORT}/${prefix}/`;
+    const fileUrl = `${url}${safePath.split(path.sep).join("/")}`;
+    imageUrlLog("生成访问URL", { userRelPath, prefix, fileUrl });
+    return fileUrl;
   }
 
   /**

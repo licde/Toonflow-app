@@ -14,6 +14,7 @@ import FormData from "form-data";
 import jsonwebtoken from "jsonwebtoken";
 import u from "@/utils";
 import crypto from "node:crypto";
+import { uploadReferenceAsset, preflightPublicUrl } from "@/utils/publicAssetUrl";
 export default function runCode(code: string, vendor?: Record<string, any>) {
   code = code.replace(/export\s*\{\s*\};?/g, ""); // 去掉 export {} 以免沙盒环境报错
   // 创建一个沙盒
@@ -33,7 +34,8 @@ export default function runCode(code: string, vendor?: Record<string, any>) {
     urlToBase64,
     mergeImages,
     pollTask,
-    base64ToPublicUrl,
+    uploadReferenceAsset,
+    preflightPublicUrl,
     fetch: fetch,
     setTimeout,
     clearTimeout,
@@ -89,13 +91,9 @@ export async function zipImageResolution(completeBase64: string, width: number, 
   return `data:image/jpeg;base64,${out.toString("base64")}`;
 }
 
-/** 将 base64 写入本地 OSS 并返回可访问 URL（需配置 ossURL 公网地址供上游拉取） */
+/** @deprecated 使用 uploadReferenceAsset */
 export async function base64ToPublicUrl(base64: string, ext = "jpg"): Promise<string> {
-  const raw = base64.replace(/^data:[^;]+;base64,/, "");
-  const hash = crypto.createHash("sha256").update(raw.slice(0, 256) + String(raw.length)).digest("hex").slice(0, 20);
-  const relPath = `vendor-temp/${hash}.${ext}`;
-  await u.oss.writeFile(relPath, base64);
-  return u.oss.getFileUrl(relPath);
+  return uploadReferenceAsset(base64, ext === "mp4" ? "video" : "image");
 }
 
 //url转Base64

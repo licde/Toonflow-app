@@ -1,5 +1,4 @@
 import { generateText, streamText, wrapLanguageModel, stepCountIs, extractReasoningMiddleware } from "ai";
-import { devToolsMiddleware } from "@ai-sdk/devtools";
 import axios from "axios";
 import { transform } from "sucrase";
 import u from "@/utils";
@@ -199,10 +198,12 @@ class AiText {
     const modelName = await resolveModelName(this.AiType);
     const sdkFn = await getVendorTemplateFn("textRequest", modelName);
     const baseModel = await sdkFn(this.think, this.thinkLevel);
-    const mws = [
-      ...(switchAiDevTool?.value === "1" ? [devToolsMiddleware()] : []),
-      ...(middleware ? (Array.isArray(middleware) ? middleware : [middleware]) : []),
-    ];
+    const mws: any[] = [];
+    if (switchAiDevTool?.value === "1") {
+      const { devToolsMiddleware } = await import("@ai-sdk/devtools");
+      mws.push(devToolsMiddleware());
+    }
+    if (middleware) mws.push(...(Array.isArray(middleware) ? middleware : [middleware]));
     return mws.length > 0 ? wrapLanguageModel({ model: baseModel, middleware: mws.length === 1 ? mws[0] : mws }) : baseModel;
   }
   async invoke(input: Omit<Parameters<typeof generateText>[0], "model">) {

@@ -93,6 +93,19 @@ export default async (knex: Knex): Promise<void> => {
       type: "audioBindPrompt",
       data: `你是一个音色匹配助手。\n你的任务是：根据给定角色资产的名称与描述，从候选音频列表中选出最合适的音色。\n匹配规则：\n1. 优先根据角色性别、年龄、性格等特征与音色描述进行语义匹配；\n2. 同一角色仅可匹配一个音色；\n3. 若候选列表中没有合适的音色，则无需返回 audioId；`,
     });
+  const ossSettingDefaults = [
+    { key: "ossStorageMode", value: "local" },
+    { key: "ossPublicBaseUrl", value: process.env.ossURL || "" },
+    { key: "aliyunOssEndpoint", value: "oss-cn-beijing.aliyuncs.com" },
+    { key: "aliyunOssBucket", value: "" },
+    { key: "aliyunOssAccessKeyId", value: "" },
+    { key: "aliyunOssAccessKeySecret", value: "" },
+  ];
+  for (const item of ossSettingDefaults) {
+    const exists = await u.db("o_setting").where("key", item.key).first();
+    if (!exists) await u.db("o_setting").insert(item);
+  }
+
   //检测o_setting是否有agentUseMode
   const agentUserMode = await u.db("o_setting").where("key", "agentUseMode").first();
   if (!agentUserMode) {
@@ -191,11 +204,11 @@ export default async (knex: Knex): Promise<void> => {
     u.vendor.writeCode("toonflow", vendorData["toonflow.ts"]);
   }
   const agnesaiVer = getVendorVersion("agnesai");
-  if (agnesaiVer < 2.5 && vendorData["agnesai.ts"]) {
+  if (agnesaiVer < 2.6 && vendorData["agnesai.ts"]) {
     u.vendor.writeCode("agnesai", vendorData["agnesai.ts"]);
   }
   const huggingfaceVer = getVendorVersion("huggingface");
-  if (huggingfaceVer < 1.3 && vendorData["huggingface.ts"]) {
+  if (huggingfaceVer < 1.4 && vendorData["huggingface.ts"]) {
     u.vendor.writeCode("huggingface", vendorData["huggingface.ts"]);
   }
 };

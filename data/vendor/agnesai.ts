@@ -1,6 +1,6 @@
 /**
  * Agnes AI 供应商适配代码
- * @version 2.5
+ * @version 2.6
  */
 
 // ============================================================
@@ -11,7 +11,8 @@
 // 全局声明 （已由系统声明，直接调用）
 // ============================================================
 
-declare const base64ToPublicUrl: (base64: string, ext?: string) => Promise<string>;
+declare const uploadReferenceAsset: (base64: string, kind: "image" | "video") => Promise<string>;
+declare const preflightPublicUrl: (url: string, kind: "image" | "video") => Promise<void>;
 
 // ============================================================
 // 供应商配置
@@ -19,7 +20,7 @@ declare const base64ToPublicUrl: (base64: string, ext?: string) => Promise<strin
 
 const vendor: VendorConfig = {
   id: "agnesai",
-  version: "2.5",
+  version: "2.6",
   author: "Toonflow",
   name: "Agnes AI",
   description: "## Agnes AI 全模态适配供应商\n- 支持文本、图片生成、以及高品质视频生成模型。\n- 已预设默认时长分辨率等参数，无需手动繁琐配置。",
@@ -96,21 +97,21 @@ const toImageRef = (base64: string) => {
   return `data:image/jpeg;base64,${base64}`;
 };
 
-/** 优先上传 OSS 公网 URL（上游可拉取）；无公网 ossURL 时回退 base64 */
+/** 上传参考素材为公网 URL（ngrok / 阿里云 OSS） */
 const toRemoteMediaRef = async (base64: string, kind: "image" | "video") => {
-  if (/^https?:\/\//i.test(base64)) return base64;
-  try {
-    const ext = kind === "video" ? "mp4" : "jpg";
-    const url = await base64ToPublicUrl(base64, ext);
-    if (!/localhost|127\.0\.0\.1/i.test(url)) {
-      logger(`参考${kind === "video" ? "视频" : "图"}已上传: ${url.slice(0, 96)}`);
-      return url;
-    }
-    logger("未配置公网 ossURL，参考素材使用 base64（上游可能无法拉取 localhost）");
-  } catch (e: any) {
-    logger(`参考素材上传 OSS 失败，回退 base64: ${e?.message || e}`);
+  if (/^https?:\/\//i.test(base64)) {
+    await preflightPublicUrl(base64, kind);
+    return base64;
   }
-  return toImageRef(base64);
+  try {
+    const url = await uploadReferenceAsset(base64, kind);
+    logger(`参考${kind === "video" ? "视频" : "图"}公网 URL: ${url.slice(0, 120)}`);
+    return url;
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    logger(`参考素材公网化失败: ${msg}`);
+    throw new Error(msg);
+  }
 };
 
 const normalizeNumFrames = (duration = 5) => {
@@ -347,8 +348,8 @@ const ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> =
 const checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {
   return {
     hasUpdate: false,
-    latestVersion: "2.5",
-    notice: "## v2.5\n- 参考图/视频优先上传 OSS 公网 URL\n- 修复 VM 内 503 重试 setTimeout\n- 503 重试保留",
+    latestVersion: "2.6",
+    notice: "## v2.6\n- 参考图/视频必须公网 URL（ngrok 或阿里云 OSS）\n- 提交前 URL 预检\n- 503 重试",
   };
 };
 

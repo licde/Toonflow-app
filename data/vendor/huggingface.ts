@@ -2,7 +2,7 @@
 
  * HuggingFace Inference Providers 供应商适配
 
- * @version 1.3
+ * @version 1.4
 
  */
 
@@ -258,7 +258,7 @@ const vendor: VendorConfig = {
 
   id: "huggingface",
 
-  version: "1.3",
+  version: "1.4",
 
   author: "Toonflow",
 
@@ -532,6 +532,37 @@ const inferenceProviderMapping: Record<string, Record<string, ProviderRoute>> = 
 
 
 
+const mappingHydrated = new Set<string>();
+
+const hydrateProviderMapping = async (hubModelId: string) => {
+  if (mappingHydrated.has(hubModelId)) return;
+  mappingHydrated.add(hubModelId);
+  try {
+    const token = getApiKey();
+    const resp = await axios.get(`https://huggingface.co/api/models/${hubModelId}?expand=inferenceProviderMapping`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 20000,
+      validateStatus: () => true,
+    });
+    if (resp.status >= 400 || !resp.data?.inferenceProviderMapping) return;
+    if (!inferenceProviderMapping[hubModelId]) inferenceProviderMapping[hubModelId] = {};
+    for (const [provider, info] of Object.entries(resp.data.inferenceProviderMapping)) {
+      const row = info as any;
+      if (row?.providerId && row?.task) {
+        inferenceProviderMapping[hubModelId][provider] = {
+          providerId: row.providerId,
+          task: row.task as InferenceTask,
+        };
+      }
+    }
+    logger(`已同步 HF Provider 映射: ${hubModelId}`);
+  } catch {
+    logger(`HF 映射同步跳过: ${hubModelId}`);
+  }
+};
+
+
+
 const modelProviderHints: Record<string, string[]> = {
 
   "black-forest-labs/FLUX.1-schnell": ["fal-ai", "wavespeed", "hf-inference", "replicate", "together"],
@@ -618,6 +649,8 @@ const postInferenceWithFallback = async (
 
   const { provider: explicit } = parseModelRoute(modelName);
 
+  await hydrateProviderMapping(hubModelId);
+
   const candidates = getProviderCandidates(hubModelId, task, explicit);
 
   if (candidates.length === 0) {
@@ -703,11 +736,9 @@ const getApiKey = () => {
 
 
 const getInferenceAccept = (task: InferenceTask) => {
-
-  if (task === "text-to-video") return "video/mp4, application/octet-stream, application/json";
-
-  return "image/png, image/jpeg, image/webp, application/json";
-
+  if (task === "text-to-video") return "video/mp4";
+  if (task === "image-to-image") return "image/png";
+  return "image/png";
 };
 
 
@@ -1145,41 +1176,28 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
 
 
   const { width, height } = resolveImageSize(config.size, config.aspectRatio);
-
   const parameters: any = {
-
     width,
-
     height,
-
     num_inference_steps: parseInt(vendor.inputValues.numInferenceSteps || "28", 10) || 28,
-
     guidance_scale: parseFloat(vendor.inputValues.guidanceScale || "3.5") || 3.5,
-
   };
 
-
-
   let body: any;
-
   if (task === "image-to-image") {
-
     let refBase64 = config.referenceList![0].base64;
-
     refBase64 = await zipImage(refBase64.startsWith("data:") ? refBase64 : `data:image/jpeg;base64,${refBase64}`, 3 * 1024 * 1024);
-
-    parameters.prompt = config.prompt;
-
-    body = { inputs: stripDataUrl(refBase64), parameters };
-
+    const imgParams: any = {
+      prompt: config.prompt,
+      target_size: { width, height },
+      num_inference_steps: parseInt(vendor.inputValues.numInferenceSteps || "28", 10) || 28,
+      guidance_scale: parseFloat(vendor.inputValues.guidanceScale || "3.5") || 3.5,
+    };
+    body = { inputs: stripDataUrl(refBase64), parameters: imgParams };
     logger(`图生图 | hub=${hubModelId}`);
-
   } else {
-
     body = { inputs: config.prompt, parameters };
-
     logger(`文生图 | hub=${hubModelId}`);
-
   }
 
 
@@ -1204,18 +1222,10 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
 
   const duration = config.duration || 5;
 
-
-
   const parameters: any = {
-
-    width,
-
-    height,
-
-    duration,
-
     num_frames: Math.max(16, Math.round(duration * 24)),
-
+    guidance_scale: parseFloat(vendor.inputValues.guidanceScale || "3.5") || 3.5,
+    num_inference_steps: parseInt(vendor.inputValues.numInferenceSteps || "28", 10) || 28,
   };
 
 
@@ -1382,11 +1392,11 @@ const checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: s
 
     hasUpdate: false,
 
-    latestVersion: "1.3",
+    latestVersion: "1.4",
 
     notice:
 
-      "## v1.3\n- 使用 HF 官方 providerId 映射（与模型页 InferenceClient 一致）\n- 修复 Accept 头与图生图 payload\n- FLUX.2-dev 限定图生图；Hunyuan 走 fal-ai",
+      "## v1.4\n- 运行时同步 HF inferenceProviderMapping\n- providerId 路由与模型页一致",
 
   };
 

@@ -30,7 +30,7 @@ const external = [
 const appBuildConfig: esbuild.BuildOptions = {
   entryPoints: ["src/app.ts"],
   bundle: true,
-  minify: false,
+  minify: process.env.NODE_ENV === "prod",
   format: "cjs",
   allowOverwrite: true,
   outfile: `data/serve/app.js`,
@@ -51,7 +51,7 @@ const appBuildConfig: esbuild.BuildOptions = {
 const mainBuildConfig: esbuild.BuildOptions = {
   entryPoints: ["scripts/main.ts"],
   bundle: true,
-  minify: false,
+  minify: process.env.NODE_ENV === "prod",
   format: "cjs",
   outfile: `build/main.js`,
   allowOverwrite: true,

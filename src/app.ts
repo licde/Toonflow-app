@@ -11,6 +11,8 @@ import buildRoute from "@/core";
 import path from "path";
 import fs from "fs";
 import u from "@/utils";
+import { hasPublicOssConfigured } from "@/utils/publicAssetUrl";
+import { imageUrlLog } from "@/utils/imageUrlLog";
 import jwt from "jsonwebtoken";
 import socketInit from "@/socket/index";
 import { isEletron } from "@/utils/getPath";
@@ -46,6 +48,10 @@ async function checkPermissions() {
 export default async function startServe(randomPort: Boolean = false) {
   await checkPermissions();
 
+  const publicOss = await hasPublicOssConfigured();
+  const useFixedPort = publicOss || !randomPort;
+  const startAt = Date.now();
+
   await u.writeVersion();
   const io = new Server(server, { cors: { origin: "*" } });
   socketInit(io);
@@ -68,6 +74,8 @@ export default async function startServe(randomPort: Boolean = false) {
   app.use(
     "/oss",
     (req, res, next) => {
+      res.setHeader("ngrok-skip-browser-warning", "1");
+      res.setHeader("Access-Control-Allow-Origin", "*");
       // 如果传参 type=small，则返回小图
       if (req.query.size) {
         const size = req.query.size as string;
@@ -185,12 +193,14 @@ export default async function startServe(randomPort: Boolean = false) {
     res.status(err.status || 500).send(err);
   });
 
-  const port = randomPort ? 0 : 10588;
+  const port = useFixedPort ? 10588 : 0;
   return await new Promise((resolve) => {
     server.listen(port, async () => {
       const address = server.address();
       const realPort = typeof address === "string" ? address : address?.port;
-      console.log(`[服务启动成功]: http://localhost:${realPort}`);
+      const elapsed = Date.now() - startAt;
+      console.log(`[服务启动成功]: http://localhost:${realPort}${useFixedPort ? " (固定端口)" : " (随机端口)"}`);
+      imageUrlLog("服务启动", { port: realPort, useFixedPort, publicOss, elapsedMs: elapsed });
       resolve(realPort);
     });
   });

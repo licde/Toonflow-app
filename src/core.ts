@@ -13,15 +13,12 @@ function fileNameToRoutePath(fileName: string): string {
   return routePath;
 }
 
-type RouteModulePair = { routePath: string; varName: string; entry: string };
+type RouteModulePair = { routePath: string; varName: string; entry: string; importPath: string };
 
 export default async function generateRouter(): Promise<void> {
-  // glob 得到 entries
   let entries: string[] = await fg(["src/routes/**/*.ts"]);
-  // 排序
   entries = entries.sort((a, b) => a.localeCompare(b));
 
-  const importLines: string[] = [];
   const routeModulePairs: RouteModulePair[] = [];
 
   entries.forEach((entry: string, i: number) => {
@@ -29,19 +26,36 @@ export default async function generateRouter(): Promise<void> {
     let importPath = path.relative("src", entry).replace(/\\/g, "/");
     if (!importPath.startsWith(".")) importPath = "./" + importPath;
     importPath = importPath.replace(/\.ts$/, "");
-    importLines.push(`import ${varName} from "${importPath}";`);
     const routeKey = path.relative("src/routes", entry).replace(/\\/g, "/");
     const routePath = fileNameToRoutePath(routeKey);
-    routeModulePairs.push({ routePath, varName, entry });
+    routeModulePairs.push({ routePath, varName, entry, importPath });
   });
+
   const routerData = JSON.stringify(routeModulePairs.map(({ routePath, varName }) => ({ routePath, varName })));
   const hash = crypto.createHash("md5").update(routerData).digest("hex");
 
-  let content = `// @routes-hash ${hash}\nimport { Express } from "express";\n\n`;
-  content += `${importLines.join("\n")}\n\n`;
+  let content = `// @routes-hash ${hash}\nimport { Express, Request, Response, NextFunction, Router } from "express";\n\n`;
+  content += `type RouteLoader = () => Promise<{ default: Router }>;\n\n`;
+
+  for (const { varName, importPath } of routeModulePairs) {
+    content += `const ${varName}: RouteLoader = () => import("${importPath}");\n`;
+  }
+
+  content += `\nconst lazyRoute = (loader: RouteLoader) => {\n`;
+  content += `  let router: Router | null = null;\n`;
+  content += `  return async (req: Request, res: Response, next: NextFunction) => {\n`;
+  content += `    try {\n`;
+  content += `      if (!router) router = (await loader()).default;\n`;
+  content += `      return router(req, res, next);\n`;
+  content += `    } catch (e) {\n`;
+  content += `      next(e);\n`;
+  content += `    }\n`;
+  content += `  };\n`;
+  content += `};\n\n`;
+
   content += `export default async (app: Express) => {\n`;
   for (const { routePath, varName } of routeModulePairs) {
-    content += `  app.use("/api${routePath}", ${varName});\n`;
+    content += `  app.use("/api${routePath}", lazyRoute(${varName}));\n`;
   }
   content += `}\n`;
 
@@ -50,9 +64,7 @@ export default async function generateRouter(): Promise<void> {
     const current = await readFile("src/router.ts", "utf8");
     const match = current.match(/^\/\/\s*@routes-hash\s*([a-z0-9]+)\n/);
     const currentHash = match ? match[1] : null;
-    if (currentHash === hash) {
-      needWrite = false;
-    }
+    if (currentHash === hash) needWrite = false;
   } catch {
     needWrite = true;
   }

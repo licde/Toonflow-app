@@ -3,7 +3,7 @@ import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import u from "@/utils";
 import { z } from "zod";
-import { tool, jsonSchema } from "ai";
+import { vendorGuard } from "@/utils/vendorGuard";
 const router = express.Router();
 
 // 检查语言模型
@@ -23,6 +23,8 @@ export default router.post(
 
       if (!vendorConfigData) return res.status(500).send(error("未找到该供应商配置"));
       if (!vendorConfigData.models) return res.status(500).send(error("未找到模型列表"));
+      if (id === "huggingface") await vendorGuard.huggingface();
+      if (id === "agnesai") await vendorGuard.agnesai();
 
       const reqFn = await u.Ai.Image(`${id}:${modelName}`).run({
         prompt: prompt,

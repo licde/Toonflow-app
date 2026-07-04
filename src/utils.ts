@@ -14,6 +14,7 @@ import replaceUrl from "@/utils/replaceUrl";
 import writeVersion from "@/utils/writeVersion";
 import * as vendor from "@/utils/vendor";
 import { genLog, sanitizeErrorDetail } from "@/utils/genLog";
+import { uploadReferenceAsset, preflightPublicUrl, hasPublicOssConfigured } from "@/utils/publicAssetUrl";
 
 export default {
   db,
@@ -33,4 +34,7 @@ export default {
   vendor,
   genLog,
   sanitizeErrorDetail,
+  uploadReferenceAsset,
+  preflightPublicUrl,
+  hasPublicOssConfigured,
 };

@@ -3,7 +3,7 @@ import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import u from "@/utils";
 import { z } from "zod";
-import { tool, jsonSchema } from "ai";
+import { vendorGuard } from "@/utils/vendorGuard";
 const router = express.Router();
 
 // 检查语言模型
@@ -47,6 +47,8 @@ export default router.post(
       if (!selectedModel) {
         return res.status(400).send(error(`未找到模型「${modelName}」，请刷新供应商模型列表后重试`));
       }
+      if (id === "huggingface") await vendorGuard.huggingface();
+      if (id === "agnesai") await vendorGuard.agnesai();
 
       let modeData = [];
       if (Array.isArray(mode)) {
