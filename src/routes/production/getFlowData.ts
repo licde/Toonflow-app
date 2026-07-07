@@ -43,6 +43,29 @@ export default router.post(
       .whereNotNull("o_assets.assetsId");
 
     if (!sqlData) {
+      const storyboardRows = await u.db("o_storyboard").where({ scriptId: episodesId, projectId }).orderBy("index", "asc");
+      const storyboardIds = storyboardRows.map((i) => i.id);
+      const assets2Rows = storyboardIds.length
+        ? await u.db("o_assets2Storyboard").whereIn("storyboardId", storyboardIds).orderBy("rowid")
+        : [];
+      const assets2StoryboardMap: Record<number, number[]> = {};
+      assets2Rows.forEach((i) => {
+        if (!assets2StoryboardMap[i.storyboardId!]) assets2StoryboardMap[i.storyboardId!] = [];
+        assets2StoryboardMap[i.storyboardId!].push(i.assetId!);
+      });
+      await Promise.all(
+        storyboardRows.map(async (i) => {
+          if (i.filePath) {
+            try {
+              i.filePath = await u.oss.getSmallImageUrl(i.filePath);
+            } catch {
+              i.filePath = "";
+            }
+          } else {
+            i.filePath = "";
+          }
+        }),
+      );
       const flowData: FlowData = {
         script: scriptData?.content ?? "",
         scriptPlan: "",
@@ -65,22 +88,30 @@ export default router.post(
                   prompt: child.prompt,
                   desc: child.describe ?? "",
                   src: child.filePath && (await u.oss.getSmallImageUrl(child.filePath!)),
-                  state: child.state ?? "未生成", //todo：矫正状态值
+                  state: child.state ?? "未生成",
                 })),
             ),
           })),
         ),
         storyboardTable: "",
-        storyboard: [],
-        //todo：矫正workbench数据
-        //@ts-ignore
+        storyboard: storyboardRows.map((i) => ({
+          id: i.id,
+          index: i.index,
+          duration: i.duration ? +i.duration : 0,
+          prompt: i.prompt,
+          videoPrompt: i.videoPrompt ?? "",
+          promptSource: i.promptSource ?? "",
+          associateAssetsIds: assets2StoryboardMap[i.id!] ?? [],
+          src: i.filePath,
+          state: i.state,
+          videoDesc: i.videoDesc,
+          shouldGenerateImage: i.shouldGenerateImage,
+          reason: i?.reason ?? "",
+          flowId: i.flowId,
+        })),
         workbench: {
           videoList: [],
         },
-        // //todo：矫正封面数据
-        // poster: {
-        //   items: [],
-        // },
       };
       return res.status(200).send(success(flowData));
     } else {
@@ -144,6 +175,8 @@ export default router.post(
             index: i.index,
             duration: i.duration ? +i.duration : 0,
             prompt: i.prompt,
+            videoPrompt: i.videoPrompt ?? "",
+            promptSource: i.promptSource ?? "",
             associateAssetsIds: assets2StoryboardMap[i.id!] ?? [],
             src: i.filePath,
             state: i.state,

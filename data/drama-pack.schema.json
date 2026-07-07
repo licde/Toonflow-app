@@ -1,0 +1,218 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Toonflow Drama Pack",
+  "version": "1.2",
+  "type": "object",
+  "required": ["meta", "episodes"],
+  "properties": {
+    "version": { "type": "string", "default": "1.0" },
+    "meta": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "episodeCount": { "type": "integer", "minimum": 1 },
+        "tone": { "type": "string" },
+        "artStyleHint": { "type": "string" },
+        "packFormat": { "type": "string", "enum": ["canonical-v1.2", "author-v3"], "description": "author-v3 导入时由 packNormalizer 自动转 canonical" },
+        "lastUpdated": { "type": "string" }
+      }
+    },
+    "narrative": { "description": "作者格式扩展：导入时映射到 plan.*", "type": "object" },
+    "characterAssets": { "description": "作者格式扩展：导入时合成 plan.visualLock", "type": "object" },
+    "continuityTracking": { "description": "作者格式扩展：支持嵌套 道具.咖啡杯.镜N", "type": "object" },
+    "versionTracking": { "description": "版本修订记录，sync 元数据", "type": "object" },
+    "交付物清单": { "type": "array" },
+    "交付报告": { "type": "object" },
+    "plan": {
+      "description": "标准策划块；若提供 productionSpec 且 visualLock 为空，导入时自动从 productionSpec 合成",
+      "type": "object",
+      "properties": {
+        "storySkeleton": { "type": "string" },
+        "adaptationStrategy": { "type": "string" },
+        "stylePosition": { "type": "string" },
+        "adaptationMatrix": { "type": "string" },
+        "characterBible": { "type": "string" },
+        "dialogueStyleAnchor": { "type": "string" },
+        "visualLock": {
+          "type": "object",
+          "properties": {
+            "characters": { "$ref": "#/definitions/visualLockItems" },
+            "scenes": { "$ref": "#/definitions/visualLockItems" },
+            "props": { "$ref": "#/definitions/visualLockItems" },
+            "globalStyle": {
+              "type": "object",
+              "properties": {
+                "tone": { "type": "string" },
+                "texture": { "type": "string" },
+                "lighting": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "productionSpec": {
+      "description": "生产规格书（v1.2）；与 plan.visualLock 二选一或并存，导入时自动转换为 visualLock",
+      "type": "object",
+      "properties": {
+        "characterDesign": { "type": "object" },
+        "sceneDesign": { "type": "object" },
+        "propDesign": { "type": "object" },
+        "colorToneMapping": { "type": "object" },
+        "performanceBaseline": { "type": "object" },
+        "shotTypeRules": { "type": "array" },
+        "constraints": { "type": "object" },
+        "imagePromptTemplates": { "type": "object" },
+        "soundDesign": { "type": "object" },
+        "dialogueActionSync": { "type": "object" },
+        "transitionRules": { "type": "object" },
+        "editingRules": { "type": "object" },
+        "continuityLock": { "type": "object" },
+        "costTiers": { "type": "object" },
+        "aiFailover": { "type": "object" },
+        "cameraAnchor": { "type": "object" },
+        "emotionPerformanceMapping": { "type": "object" },
+        "outputFormatRules": { "type": "object" },
+        "characterAssetRules": { "type": "object" },
+        "bgmRules": { "type": "object" },
+        "subtitleRules": { "type": "object" },
+        "platformAdaption": { "type": "object" },
+        "sceneColorLock": { "type": "array" },
+        "systemUIAppearance": { "type": "object" },
+        "imagePromptRules": { "type": "object" },
+        "episodeOpenRules": { "type": "object" },
+        "sceneGenerationRules": { "type": "object" },
+        "emotionCurveDimensions": { "type": "object" },
+        "validation": { "type": "object", "description": "productionSpec 内 V1-V40 规则" }
+      }
+    },
+    "validation": { "description": "根级 rhythm/emotionCurve 交叉校验", "type": "object" },
+    "episodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/episode" }
+    }
+  },
+  "definitions": {
+    "visualLockItem": {
+      "type": "object",
+      "required": ["code", "name"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^(CHAR|SCENE|PROP)-" },
+        "name": { "type": "string" },
+        "prompt": { "type": "string" },
+        "desc": { "type": "string" },
+        "lockFace": { "type": "string" },
+        "stages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "episodeRange": { "type": "string" },
+              "visualMark": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "visualLockItems": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/visualLockItem" }
+    },
+    "storyboardShot": {
+      "type": "object",
+      "required": ["duration"],
+      "properties": {
+        "time": { "type": "string" },
+        "shotType": { "type": "string" },
+        "sceneName": { "type": "string" },
+        "visualFocus": {
+          "type": "object",
+          "properties": {
+            "层级": { "type": "string" },
+            "说明": { "type": "string" },
+            "拍摄要求": { "type": "string" }
+          }
+        },
+        "visualId": { "type": "string" },
+        "content": { "type": "string" },
+        "sound": { "type": "string" },
+        "dialogue": { "type": "string" },
+        "duration": { "type": "number", "minimum": 0.1 },
+        "assetCodes": { "type": "array", "items": { "type": "string" } },
+        "imagePrompt": { "type": "string" },
+        "videoPrompt": { "type": "string" },
+        "track": { "type": "string" },
+        "type": { "type": "string", "enum": ["PURE-SCENE", "PURE-PROP", "CHAR-SCENE", "CHAR-PROP"] },
+        "cameraAngle": { "type": "string" },
+        "characterFacing": { "type": "string" },
+        "positionInScene": { "type": "string" },
+        "transitionType": { "type": "string" },
+        "transitionDuration": { "type": "string" },
+        "emotionIntensity": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "colorTone": { "type": "string" },
+        "performance": {
+          "type": "object",
+          "properties": {
+            "bodyWeight": { "type": "string" },
+            "shoulders": { "type": "string" },
+            "breath": { "type": "string" },
+            "gaze": { "type": "string" },
+            "hands": { "type": "string" },
+            "mouth": { "type": "string" },
+            "transition": { "type": "string" },
+            "microExpression": {
+              "type": "object",
+              "properties": {
+                "flush": { "type": "string" },
+                "eyes": { "type": "string" },
+                "pupil": { "type": "string" },
+                "mouthDetail": { "type": "string" }
+              }
+            },
+            "physiological": {
+              "type": "object",
+              "properties": {
+                "sweat": { "type": "string" },
+                "breathVisible": { "type": "string" },
+                "pallor": { "type": "string" },
+                "swallow": { "type": "string" },
+                "tremor": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "episode": {
+      "type": "object",
+      "required": ["name", "script"],
+      "properties": {
+        "name": { "type": "string" },
+        "script": { "type": "string" },
+        "emotionBeats": { "type": "string" },
+        "dialogueValidation": { "type": "string" },
+        "directorNotes": { "type": "string" },
+        "rhythmReview": { "type": "string" },
+        "sensoryReview": { "type": "string" },
+        "storyboard": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/storyboardShot" }
+        },
+        "keyPrompts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scene": { "type": "string" },
+              "imagePrompt": { "type": "string" },
+              "videoPrompt": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,15 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { loadProjectPackContext } from "@/lib/dramaPack/loadProjectPackContext";
+import { buildFinalAssetImagePrompt, assetImageWrapper } from "@/lib/dramaPack/assetImagePromptBuilder";
+import { detectAssetTier, assetAspectRatio, assetPromptTitle } from "@/lib/dramaPack/assetTierUtils";
+import {
+  resolveT0ReferenceBase64,
+  resolveSecondaryFaceReferenceBase64,
+  requireT1ReferenceOrThrow,
+} from "@/lib/dramaPack/assetReferenceUtils";
+import { parseLockCode } from "@/lib/dramaPack/schema";
 
 const router = express.Router();
 
@@ -42,9 +51,17 @@ const assetTypeConfig: Record<AssetType, AssetTypeConfig> = {
   },
 };
 
-function buildPrompt(cfg: AssetTypeConfig, artStyle: string, name: string, prompt: string): string {
+function buildPrompt(
+  cfg: AssetTypeConfig,
+  artStyle: string,
+  name: string,
+  prompt: string,
+  titleOverride?: { title: string; end: string },
+): string {
+  const title = titleOverride?.title ?? cfg.promptTitle;
+  const end = titleOverride?.end ?? cfg.promptEnd;
   return `
-    请根据以下参数生成${cfg.promptTitle}：
+    请根据以下参数生成${title}：
 
     **基础参数：**
     - 画风风格: ${artStyle || "未指定"}
@@ -53,7 +70,7 @@ function buildPrompt(cfg: AssetTypeConfig, artStyle: string, name: string, promp
     - 名称:${name},
     - 提示词:${prompt},
 
-    请严格按照系统规范生成${cfg.promptEnd}。
+    请严格按照系统规范生成${end}。
   `;
 }
 
@@ -80,7 +97,14 @@ export default router.post("/", validateFields(requestSchema), async (req, res) 
   const project = await u.db("o_project").where("id", projectId).select("artStyle", "type", "intro").first();
   if (!project) return res.status(500).send(error("项目为空"));
 
-  // 2. 逐条插入 o_image 占位记录，收集 imageId 列表
+  const packCtx = await loadProjectPackContext(projectId);
+
+  // 2. 预加载 remark 用于 T0/T1 检测
+  const assetIds = items.map((item: { id: number }) => item.id);
+  const assetRows = await u.db("o_assets").whereIn("id", assetIds).select("id", "remark", "assetsId");
+  const assetMetaMap = new Map(assetRows.map((a) => [a.id, a]));
+
+  // 3. 逐条插入 o_image 占位记录，收集 imageId 列表
   const totalNovelId: number[] = [];
   for (const item of items) {
     const [imageId] = await u.db("o_image").insert({
@@ -92,7 +116,7 @@ export default router.post("/", validateFields(requestSchema), async (req, res) 
     totalNovelId.push(imageId);
   }
 
-  // 3. 后台异步并发生成，不阻塞响应
+  // 4. 后台异步并发生成，不阻塞响应
   const limit = pLimit(concurrentCount ?? 1);
 
   const tasks = items.map((item: { id: number; type: string; name: string; prompt: string; base64: string | null | undefined }, index: number) =>
@@ -105,20 +129,60 @@ export default router.post("/", validateFields(requestSchema), async (req, res) 
       const cfg = assetTypeConfig[item.type as AssetType];
       if (!cfg) return;
 
+      const meta = assetMetaMap.get(item.id);
+      const tier = detectAssetTier(meta?.remark, meta?.assetsId);
+      const aspectRatio = assetAspectRatio(item.type, tier);
+      const assetType = item.type as AssetType;
+      const finalPrompt = buildFinalAssetImagePrompt({
+        type: assetType,
+        dbPrompt: item.prompt,
+        remark: meta?.remark,
+        assetsId: meta?.assetsId,
+        productionSpec: packCtx.productionSpec,
+        tier,
+        extensions: packCtx.extensions,
+      });
+      const userPrompt = assetImageWrapper(assetType, tier, project.artStyle ?? "", item.name, finalPrompt);
+
       await u.db("o_assets").where("id", item.id).update({ imageId });
 
       const imagePath = `/${projectId}/${cfg.dir}/${uuidv4()}.jpg`;
-      const userPrompt = buildPrompt(cfg, project.artStyle ?? "", item.name, item.prompt);
-      const describe = `生成${cfg.label}图，名称：${item.name}，提示词：${item.prompt}`;
+      console.log(
+        `[drama-pack] batchGenerateImageAssets id=${item.id} type=${item.type} tier=${tier} aspect=${aspectRatio} prompt=${finalPrompt.slice(0, 120)}`,
+      );
+      const describe = `生成${cfg.label}图，名称：${item.name}，提示词：${finalPrompt}`;
       const relatedObjects = { id: item.id, projectId, type: cfg.label };
       try {
         const aiImage = u.Ai.Image(model);
+        let referenceBase64 = item.base64 ?? null;
+        const referenceList: Array<{ base64: string; type: "image" }> = [];
+        if (referenceBase64) {
+          referenceList.push({ base64: referenceBase64, type: "image" });
+        } else if (tier === "t1_wardrobe") {
+          try {
+            await requireT1ReferenceOrThrow(projectId, meta?.remark);
+          } catch (refErr) {
+            await u
+              .db("o_image")
+              .where("id", imageId)
+              .update({ state: "生成失败", errorReason: u.error(refErr).message });
+            return;
+          }
+          referenceBase64 = (await resolveT0ReferenceBase64(projectId, meta?.remark)) ?? null;
+          if (referenceBase64) referenceList.push({ base64: referenceBase64, type: "image" });
+        } else if (tier === "t0_base" && meta?.remark) {
+          const charCode = parseLockCode(meta.remark);
+          if (charCode && !charCode.includes(":")) {
+            const sec = await resolveSecondaryFaceReferenceBase64(projectId, charCode);
+            if (sec) referenceList.push({ base64: sec, type: "image" });
+          }
+        }
         await aiImage.run(
           {
             prompt: userPrompt,
-            referenceList: item.base64 ? [{ base64: item.base64, type: "image" }] : [],
+            referenceList,
             size: resolution,
-            aspectRatio: "16:9",
+            aspectRatio,
           },
           {
             taskClass: cfg.taskClass,

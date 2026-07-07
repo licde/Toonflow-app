@@ -12,6 +12,10 @@ export const planData = z.object({
   storySkeleton: z.string().describe("故事骨架"),
   adaptationStrategy: z.string().describe("改编策略"),
   script: z.string().describe("剧本内容"),
+  stylePosition: z.string().optional().describe("风格定位"),
+  adaptationMatrix: z.string().optional().describe("改版矩阵"),
+  characterBible: z.string().optional().describe("人物视觉圣经"),
+  dialogueStyleAnchor: z.string().optional().describe("台词风格锚点"),
 });
 
 export type planData = z.infer<typeof planData>;

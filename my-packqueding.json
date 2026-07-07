@@ -1,0 +1,933 @@
+{
+  "version": "1.0",
+  "meta": {
+    "title": "社畜的末路告白",
+    "episodeCount": 1,
+    "tone": "轻喜虐恋",
+    "artStyleHint": "realpeople_urban_modern"
+  },
+
+  "productionSpec": {
+    "characterDesign": {
+      "CHAR-WRJ": {
+        "name": "温如珏",
+        "lockFace": "左眼下方泪痣, 泪痣直径1.2mm, 颜色浅褐",
+        "intensity": { "darkCircles": 2 },
+        "ageRange": "24-26",
+        "hair": "黑色碎发, 额前发丝向右偏, 长度盖住额头1/3",
+        "wardrobe": {
+          "日常": "灰蓝牛津纺衬衫, 深灰直筒裤, 深蓝条纹领带（歪左15°）",
+          "潜入": "黑色连帽卫衣, 拉链到顶, 深色束脚裤",
+          "落魄": "白色皱褶衬衫（第三颗扣开）, 黑色长裤"
+        }
+      },
+      "CHAR-LZH": {
+        "name": "兰芷蘅（白天）",
+        "lockFace": "深棕瞳孔, 无青色血丝",
+        "ageRange": "27-29",
+        "hair": "高马尾, 发髻与耳尖齐平",
+        "wardrobe": {
+          "白天": "黑色双排扣西装, 白色真丝内搭, 黑色西裤, 极简银耳钉"
+        }
+      },
+      "CHAR-XC": {
+        "name": "雪辞（夜晚人格）",
+        "lockFace": "青色蛛网血丝, 瞳孔边缘泛青光",
+        "hair": "披发微卷, 左耳后别一缕",
+        "wardrobe": {
+          "夜晚": "墨绿/暗红色丝质睡袍或V领吊带长裙"
+        }
+      }
+    },
+
+    "sceneDesign": {
+      "SCENE-OFFICE": { "baseTemp": 5000, "tone": "冷白+灰蓝", "desc": "开放式工位, 玻璃隔断, 灰色地毯" },
+      "SCENE-TEA": { "baseTemp": 3200, "tone": "暖黄+米白", "desc": "茶水间, 大理石桌, 饮水机, 暖黄顶灯" },
+      "SCENE-CEO": { "baseTemp": 4500, "tone": "冷白+深棕", "desc": "落地窗, 胡桃木办公桌, 抽象画, 夜景" },
+      "SCENE-HOME": { "baseTemp": 2800, "tone": "暖黄+米色", "desc": "小公寓, 沙发, 毯子, 外卖盒, 台灯" }
+    },
+
+    "propDesign": {
+      "PROP-CUP": { "desc": "白色陶瓷杯, 字: 世界以痛吻我，我报之以哈欠", "size": "高12cm", "handle": "右侧" },
+      "PROP-PHONE": { "desc": "黑色直板, 右下角屏幕裂痕1.5cm", "size": "15cm×7cm" },
+      "PROP-SYS": { "desc": "半透明蓝屏, 数据流线, 无实体" }
+    },
+
+    "performanceBaseline": {
+      "bodyWeight": "居中",
+      "shoulders": "自然下沉",
+      "breath": "3s/次（吸1.5s 呼1.5s）",
+      "gaze": "对话:对方眉心; 独白:画面左侧虚焦",
+      "hands": "自然垂放",
+      "mouth": "闭合; 开口前0.2s微张, 闭后0.1s过渡"
+    },
+
+    "colorToneMapping": {
+      "平静": { "colorTemp": 5000, "tone": "冷白+灰蓝", "saturation": 70 },
+      "紧张": { "colorTemp": 4500, "tone": "冷白偏青", "saturation": 65 },
+      "社死": { "colorTemp": 3200, "tone": "暖黄偏橙", "saturation": 50 },
+      "雪辞出现": { "colorTemp": "3200->2800", "tone": "暖紫+墨绿", "saturation": 75 }
+    },
+
+    "shotTypeRules": [
+      { "intensity": 1, "recommended": ["全景"], "forbidden": ["特写"] },
+      { "intensity": 2, "recommended": ["中景", "全景"], "forbidden": ["大特写"] },
+      { "intensity": 3, "recommended": ["中景", "近景"], "forbidden": ["远景"] },
+      { "intensity": 4, "recommended": ["近景", "特写"], "forbidden": ["全景"] },
+      { "intensity": 5, "recommended": ["特写", "大特写"], "forbidden": ["中景及以上"] }
+    ],
+
+    "transitionRules": {
+      "1to2": { "duration": "0.5-1s", "states": 0 },
+      "2to4": { "duration": "0.8-1.5s", "states": "1-2" },
+      "1to5": { "duration": "1.5-2.5s", "states": "2-3" },
+      "人格切换": { "duration": "1.0-1.5s", "states": 1 }
+    },
+
+    "dialogueActionSync": {
+      "情绪爆发": { "actionLead": "0.3s", "example": "先闭眼/吸气, 再开口" },
+      "冷淡回应": { "actionLead": "0s", "example": "台词与动作同步" },
+      "内心独白": { "actionLead": "覆盖", "example": "动作同时进行独白" },
+      "欲言又止": { "actionLead": "0.5s+终止", "example": "微张→闭上→低头" }
+    },
+
+    "imagePromptTemplates": {
+      "PURE-SCENE": "{场景描述}, empty interior, no people, no characters, {光线}, {构图}, {色调}, 9:16 aspect ratio --ar 9:16 --sref {SCENE-CODE}",
+      "PURE-PROP": "Isolated {道具描述} on clean white background, no hands, no person, studio lighting, centered, 1:1 aspect ratio --ar 1:1 --sref {PROP-CODE}",
+      "CHAR-SCENE": "{角色锁定描述}, {场景描述}, {光线}, {构图}, {情绪强度}, 9:16 aspect ratio --ar 9:16 --cref {CHAR-CODE} --sref {SCENE-CODE}",
+      "CHAR-PROP": "{角色锁定描述}, holding {道具描述}, {场景描述}, {光线}, {构图}, 9:16 aspect ratio --ar 9:16 --cref {CHAR-CODE} --sref {PROP-CODE}"
+    },
+
+    "constraints": {
+      "PURE-SCENE": "禁止: people, person, figure, character, human, body, face",
+      "PURE-PROP": "禁止: hands, person, holding, fingers, human"
+    },
+
+    "soundDesign": {
+      "环境音": {
+        "SCENE-OFFICE": "空调60Hz低频, 键盘, 打印机远响",
+        "SCENE-TEA": "饮水机滴声, 空调, 室外交通",
+        "SCENE-HOME": "冰箱低频, 窗外车辆",
+        "SCENE-CEO": "城市白噪音, 空调低鸣"
+      },
+      "心跳": { "平静": "60-70bpm", "紧张": "80-100bpm", "恐惧": "110-130bpm" },
+      "系统音": { "新任务": "短促电子音0.3s", "警告": "高低频混合1s", "倒计时": "机械音1s间隔" }
+    },
+
+    "editingRules": {
+      "平静": { "avgShot": "4-6s", "transition": "切为主" },
+      "紧张": { "avgShot": "1.5-3s", "transition": "快速切" },
+      "情绪爆发": { "avgShot": "关键镜慢放1.5s", "transition": "切+慢放反差" },
+      "转场": { "场景切换": "淡入淡出0.5s", "时间跳跃": "叠化0.8s" }
+    },
+
+    "continuityLock": {
+      "咖啡杯": { "持有手": "温如珏右手", "液面": "逐步下降", "状态": "镜16泼洒" },
+      "领带": { "歪斜方向": "左15°固定", "第2集": "已更换（床脚可见）" },
+      "黑眼圈": { "第1集开场": "2/5", "第1集结束": "3/5" }
+    },
+
+    "costTiers": {
+      "T1-预演": { "res": "1024x576", "steps": 20, "cost": "0.5积分/张" },
+      "T2-标准": { "res": "1536x864", "steps": 30, "cost": "1.5积分/张" },
+      "T3-精品": { "res": "1920x1080", "steps": 50, "cost": "4积分/张" }
+    },
+
+    "aiFailover": {
+      "Step1": "调整提示词顺序, 重要描述前移",
+      "Step2": "更换模型（MJ→Flux→SDXL）",
+      "Step3": "局部重绘修复",
+      "Step4": "PS手动修图"
+    }
+  },
+
+  "episodes": [
+    {
+      "name": "EP01：社畜的末路告白",
+      "script": "第1集：社畜的末路告白\n\n写字楼清晨的光线里漂浮着细小的灰尘。温如珏坐在工位上，眼前是三天没改完的PPT，身后是打印机不间断的嗡鸣。他打了一个哈欠，眼角沁出生理性的泪水，刚准备继续敲字，半透明的蓝色光屏毫无预兆地从电脑屏幕上弹出来。\n\n\"请注意，您即将迎来改变命运的一刻。\"\n\n他面无表情地点了关闭。弹窗又弹出来，加粗的红字挤占了大半个屏幕：\"今日17:00前，向总裁兰芷蘅告白。失败惩罚：社死全公司大群。\"\n\n他盯着那行字看了很久。唇动了动，没发出声音。他想说什么，但觉得自己可能骂不过一个连实体都没有的对话框。于是他端起桌角的咖啡杯站起来，走向茶水间的时候，脚步比平时慢了半步。不是犹豫，是在给自己做心理建设。\n\n茶水间的门关着。他站在门口深呼吸了一次，推开门。兰芷蘅正站在饮水机旁，黑色西装裙、高马尾、冷淡的侧脸。他端着咖啡杯的手肉眼可见地抖了一下，杯中的咖啡晃出一圈波纹。她侧目看了他一眼，没有说话，但用眼神问了个\"有事吗\"。\n\n他把那杯咖啡泼在了自己裤子上。\n\n她拿纸巾擦了擦袖口上被溅到的水渍，说了句\"好好工作\"，从他身边走过去，步伐不停。他脑子里有一半是空的，另一半在疯狂回放她刚才的表情。然后他听见自己开口叫住她，声音干得像砂纸：\"兰总，我其实一直——\"\n\n她停了一步。他心脏跳到喉咙口。\n\n\"……我只把你当弟弟。\"\n\n她说完这句话就走了。没有犹豫，没有回头。茶水间的玻璃门在弹簧的作用下缓慢合拢，映出他一个人站在灯下的影子。\n\n系统提示音在他脑海里弹出来：\"任务失败。惩罚将在5秒后执行。\"\n\n大群消息响了一下午。温如珏趴在桌上，桌面传来的震动像一句又一句的判词。太阳落下去，同事走完了，工位区的灯一盏一盏熄掉。\n\n镜头跟着夜色往大楼上层移动。顶层的总裁办公室里，兰芷蘅站在落地窗前，城市灯光在她眼底碎成一片细密的光斑。她低头看着手机屏幕——屏幕上是一张工牌照片，照片上的年轻人表情僵硬，眼角有一颗很淡的痣。\n\n青色蛛网血丝从她眼白边缘缓慢蔓延向瞳孔。她看了那张照片很久，然后轻轻勾了一下嘴角。\n\n\"白天那个我，真是笨死了。\"\n\n另一边，温如珏瘫在家里的沙发上，系统面板再次亮起来：\"补救任务已触发：明夜零点，潜入总裁病房，获取'龙脉契约'。\"\n\n他对着天花板说了一句：\"我？潜入女总裁病房？\"\n\n没有人回答他。窗外的路灯亮了一下，又灭了一下。",
+
+      "emotionBeats": "节拍一（0-20s）：社畜の一日——好笑又心酸, 温如珏打哈欠、系统弹窗。\n节拍二（20-45s）：系统任务：告白——紧张+好笑, 红色加粗任务弹出, 温如珏瞳孔地震。\n节拍三（45-70s）：茶水间追击——节奏感+心跳加速, 温如珏泼咖啡、兰芷蘅冷淡。\n节拍四（70-73s）：社死罚单——爆笑+同情, 大群刷屏、温如珏埋桌。\n节拍五（73-95s）：雪辞：你好, 夜里见——悬疑+暧昧, 瞳孔异色、对手机照片轻笑。\n节拍六（95-98s）：系统新任务——期待+好奇, 潜入病房获取龙脉契约。",
+
+      "dialogueValidation": "| 序号 | 台词 | 字数 | 句式 | 情绪标记 | 指向 | 结果 |\n| 1 | 系统你……是不是有病？ | 8 | 省略+反问 | 无奈 | '系统' | 通过 |\n| 2 | 兰、兰总！ | 4 | 中断 | 紧张 | '兰总' | 通过 |\n| 3 | 我其实一直—— | 6 | 中断 | 慌乱 | '我' | 通过 |\n| 4 | 好好工作。 | 4 | 陈述 | 冷淡 | '工作' | 通过 |\n| 5 | 我只把你当弟弟。 | 7 | 陈述 | 疏离 | '你' | 通过 |\n| 6 | 白天那个我，真是笨死了。 | 11 | 感叹 | 嘲讽+愉悦 | '我' | 通过 |\n| 7 | 我？潜入女总裁病房？ | 9 | 反问 | 困惑 | '我' | 通过 |\n\n结论：7句台词全部通过 ✅",
+
+      "storyboard": [
+        {
+          "time": "0-3s",
+          "shotType": "全景",
+          "visualId": "场景建立",
+          "content": "写字楼外部，清晨阳光，玻璃幕墙反射金光，镜头缓慢下摇至工位区",
+          "type": "PURE-SCENE",
+          "cameraAngle": "D",
+          "transitionType": "淡入",
+          "transitionDuration": "0.5s",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "sound": "键盘敲击声、打印机嗡鸣声",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["SCENE-OFFICE"],
+          "imagePrompt": "Empty modern open-plan office, no people, no characters, morning sunlight streaming through glass curtain wall, golden light, empty cubicles, computers on desks, clean corporate style, color temperature 4500K, 9:16 aspect ratio --ar 9:16 --sref SCENE-OFFICE",
+          "videoPrompt": "Slow downward pan from ceiling to office floor, light shifting from bright to even"
+        },
+        {
+          "time": "3-6s",
+          "shotType": "特写",
+          "visualId": "温如珏-日常",
+          "content": "温如珏的脸，正对电脑，打哈欠，眼下淡淡青黑（强度2/5）",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "E",
+          "characterFacing": "面向镜头偏左5°",
+          "positionInScene": "工位靠窗第三排，椅子正中",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 2,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "前倾",
+            "shoulders": "微耸→下沉",
+            "breath": "吸气打哈欠→呼气2s",
+            "gaze": "直视屏幕，涣散",
+            "hands": "右手握鼠标",
+            "mouth": "张开→闭合，唇微干",
+            "transition": "疲惫→系统提示音惊动"
+          },
+          "sound": "哈欠声、系统提示音'叮！'",
+          "dialogue": "独白：如果我知道今天会在茶水间社死……",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Close-up portrait of young Chinese male yawning, slight dark circles (intensity 2/5), tiny mole below left eye, messy hair, blue office background, soft overhead fluorescent light (5000K), shallow depth of field, neutral expression, 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-OFFICE",
+          "videoPrompt": "Slow zoom in on face, yawn, eyes slightly watering, then blink once"
+        },
+        {
+          "time": "6-8s",
+          "shotType": "特写（屏幕）",
+          "visualId": "系统UI",
+          "content": "电脑屏幕弹出半透明蓝色系统面板，红字：'请注意，您即将迎来改变命运的一刻。'",
+          "type": "PURE-PROP",
+          "cameraAngle": "A",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 1,
+          "sound": "系统电子音效",
+          "dialogue": "",
+          "duration": 2,
+          "assetCodes": ["PROP-SYS"],
+          "imagePrompt": "Isolated holographic UI panel on clean background, no hands, no person, semi-transparent blue, red bold text: 'The moment that changes your fate', glowing edges, data lines, 9:16 aspect ratio --ar 9:16 --sref PROP-SYS",
+          "videoPrompt": "Panel flickering on, text appearing letter by letter from left to right"
+        },
+        {
+          "time": "8-10s",
+          "shotType": "中景",
+          "visualId": "温如珏-日常",
+          "content": "温如珏面无表情点掉弹窗，继续打字",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "A",
+          "characterFacing": "面向镜头，眼珠随弹窗移动",
+          "positionInScene": "工位靠窗第三排，椅子前部",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "前倾",
+            "shoulders": "微圆含胸",
+            "breath": "均匀略快，0.8s/次",
+            "gaze": "屏幕，眼珠微动",
+            "hands": "右手快速点击鼠标",
+            "mouth": "闭合，嘴角微下压",
+            "transition": "麻木→关闭→重复劳作"
+          },
+          "sound": "鼠标点击声",
+          "dialogue": "独白：……我一定会在早餐里多加一个蛋。",
+          "duration": 2,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Mid-shot of young Chinese male working at desk, indifferent expression, clicking mouse, tiny mole below left eye, slight dark circles (2/5), office background with blurred monitors, cool fluorescent light (5000K), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-OFFICE",
+          "videoPrompt": "Hand clicking mouse, slight head shake (1cm), eyes shifting from popup to document"
+        },
+        {
+          "time": "10-14s",
+          "shotType": "特写（屏幕）",
+          "visualId": "系统UI",
+          "content": "系统面板再次弹出，加粗红字：'今日17:00前，向总裁兰芷蘅告白。失败惩罚：社死全公司大群。'",
+          "type": "PURE-PROP",
+          "cameraAngle": "A",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 1,
+          "sound": "系统警告音'叮——！'",
+          "dialogue": "",
+          "duration": 4,
+          "assetCodes": ["PROP-SYS"],
+          "imagePrompt": "Isolated holographic panel on clean background, no hands, no person, red bold text: 'Confess to President Lan before 17:00. Failure penalty: public humiliation in company group chat', glowing alert border pulsing at 1.5s intervals, 9:16 aspect ratio --ar 9:16 --sref PROP-SYS",
+          "videoPrompt": "Panel appearing with warning pulse effect, red border flashing 3 times"
+        },
+        {
+          "time": "14-16s",
+          "shotType": "特写",
+          "visualId": "温如珏-震惊",
+          "content": "温如珏瞳孔地震，嘴慢慢张开，身体僵直",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "E",
+          "characterFacing": "面向镜头偏左10°",
+          "positionInScene": "椅子后仰，靠背110°",
+          "transitionType": "慢放",
+          "transitionDuration": "0.5s",
+          "emotionIntensity": 4,
+          "colorTone": "紧张",
+          "performance": {
+            "bodyWeight": "后仰，重心压椅背",
+            "shoulders": "耸起僵住",
+            "breath": "屏息→吸气0.5s",
+            "gaze": "瞳孔放大，锁定屏幕",
+            "hands": "悬空，指尖微颤",
+            "mouth": "慢慢张开0.5cm",
+            "transition": "麻木→察觉→震惊，0.8s"
+          },
+          "sound": "心跳声渐起（60bpm→90bpm）",
+          "dialogue": "独白：……系统你是不是有病？",
+          "duration": 2,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Close-up shocked eyes, pupils slightly dilated, mouth slowly opening (not exaggerated), tiny mole below left eye, slight dark circles (2/5), dramatic lighting from screen (blue cast), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-OFFICE",
+          "videoPrompt": "Slow zoom on eyes, pupil dilation over 1s, slight jaw drop, freeze on peak shock for 0.3s"
+        },
+        {
+          "time": "16-20s",
+          "shotType": "中景",
+          "visualId": "温如珏-准备行动",
+          "content": "温如珏环顾同事，深吸一口气，端起咖啡杯",
+          "type": "CHAR-PROP",
+          "cameraAngle": "B",
+          "characterFacing": "面向镜头偏右20°",
+          "positionInScene": "椅子前部，站起一半",
+          "transitionType": "切",
+          "transitionDuration": "0.2s",
+          "emotionIntensity": 3,
+          "colorTone": "紧张",
+          "performance": {
+            "bodyWeight": "前倾，站起一半",
+            "shoulders": "内收→下沉",
+            "breath": "深吸1s→憋1s→呼2s",
+            "gaze": "左→右扫视→看杯→看茶水间",
+            "hands": "右手端杯，拇指扣杯沿",
+            "mouth": "抿紧→微张→闭合",
+            "transition": "犹豫→下定→行动"
+          },
+          "sound": "心跳90bpm、椅子拖动声",
+          "dialogue": "独白：行吧，告白就告白。",
+          "duration": 4,
+          "assetCodes": ["CHAR-WRJ","PROP-CUP"],
+          "imagePrompt": "Mid-shot of young Chinese male standing up, looking around, holding white ceramic coffee mug (handle facing right, thumb on rim), tiny mole below left eye, slight dark circles (2/5), office background with colleagues, tension in shoulders, warm overhead light (3200K), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref PROP-CUP",
+          "videoPrompt": "Slow motion of standing up (0.8s), deep breath visible in chest rise, hand gripping cup with slight knuckle whiten"
+        },
+        {
+          "time": "20-23s",
+          "shotType": "全景",
+          "visualId": "温如珏-紧张",
+          "content": "茶水间门外，温如珏举着咖啡杯做心理建设，身体微晃",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "D",
+          "characterFacing": "背对镜头80%",
+          "positionInScene": "茶水间门口正中，距门0.5m",
+          "transitionType": "切",
+          "transitionDuration": "0.2s",
+          "emotionIntensity": 3,
+          "colorTone": "紧张",
+          "performance": {
+            "bodyWeight": "前倾，脚掌压地",
+            "shoulders": "耸起",
+            "breath": "浅快1.2s/次",
+            "gaze": "紧盯门把手",
+            "hands": "右手握杯（力度4/5），左手摩挲裤缝",
+            "mouth": "唇微动（无声）→抿紧",
+            "transition": "自我鼓励→决心→推门，0.3s停顿"
+          },
+          "sound": "环境白噪音（空调低频）",
+          "dialogue": "独白：只要她不在里面，我就不算失败。",
+          "duration": 3,
+          "assetCodes": ["SCENE-TEA","CHAR-WRJ"],
+          "imagePrompt": "Full shot of young Chinese male standing outside small tea room, holding coffee mug, hesitating, tiny mole below left eye (visible from side), warm yellow light from door gap (3200K), hallway perspective, 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow push in from hallway (2s), hand hovering near door handle, slight weight shift between feet"
+        },
+        {
+          "time": "23-25s",
+          "shotType": "特写",
+          "visualId": "温如珏-紧张",
+          "content": "温如珏推开门，手按在把手上，指节发白",
+          "type": "PURE-PROP",
+          "cameraAngle": "B",
+          "transitionType": "切",
+          "transitionDuration": "0.15s",
+          "emotionIntensity": 3,
+          "sound": "门把手转动声",
+          "dialogue": "",
+          "duration": 2,
+          "assetCodes": [],
+          "imagePrompt": "Isolated hand pushing door handle, slightly trembling fingers, metal handle with subtle reflections, no person in frame, 9:16 aspect ratio --ar 9:16",
+          "videoPrompt": "Hand turning handle (0.3s), door opening slightly, light from inside spilling onto hand"
+        },
+        {
+          "time": "25-28s",
+          "shotType": "中景",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅站在饮水机旁，黑色西装裙、高马尾、冷白皮，侧目看来",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "F",
+          "characterFacing": "面向门口，头微左偏10°",
+          "positionInScene": "饮水机旁，距门2.5m",
+          "transitionType": "切",
+          "transitionDuration": "0.15s",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "重心右腿",
+            "shoulders": "平直",
+            "breath": "均匀2.5s/次",
+            "gaze": "侧目，眼球先转→头转15°",
+            "hands": "左手握纸杯，右手按开关（半停）",
+            "mouth": "微抿",
+            "transition": "接水→被打断→转头，0.8s"
+          },
+          "sound": "水流声停止、高跟鞋声",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["CHAR-LZH","SCENE-TEA"],
+          "imagePrompt": "Mid-shot of tall Chinese female in black suit, high ponytail, standing by water cooler, cold gaze turning towards camera, sharp jawline, deep brown eyes, cool fluorescent light (5000K), 9:16 aspect ratio --ar 9:16 --cref CHAR-LZH --sref SCENE-TEA",
+          "videoPrompt": "Slow motion of turning head (0.6s), eyes locking on door, slight pause (0.3s)"
+        },
+        {
+          "time": "28-30s",
+          "shotType": "特写",
+          "visualId": "温如珏-慌乱",
+          "content": "温如珏嘴角抽动，眼神躲闪",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "E",
+          "characterFacing": "面向镜头偏右15°",
+          "positionInScene": "刚入茶水间，距门内1m",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 4,
+          "colorTone": "紧张",
+          "performance": {
+            "bodyWeight": "僵立",
+            "shoulders": "耸起",
+            "breath": "浅快1s/次",
+            "gaze": "上下扫→移开→回看",
+            "hands": "右手握杯（力度5/5），左手紧握裤缝",
+            "mouth": "右嘴角抽动0.2s→试图微笑（失败）",
+            "transition": "强撑镇定→慌乱，0.6s"
+          },
+          "sound": "心跳90bpm→120bpm",
+          "dialogue": "独白：……好的，完蛋了。",
+          "duration": 2,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Close-up nervous face of young Chinese male, twitching lips, wide eyes with slight aversion, tiny mole below left eye, slight dark circles (2/5), office background blur, 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow zoom on lips twitching, eyes darting left then back, freeze on eye shift for 0.2s"
+        },
+        {
+          "time": "30-33s",
+          "shotType": "中景",
+          "visualId": "温如珏-慌乱",
+          "content": "温如珏走进去，手抖，咖啡杯晃出波纹，液面晃动明显",
+          "type": "CHAR-PROP",
+          "cameraAngle": "B",
+          "characterFacing": "面向兰芷蘅，头微低15°",
+          "positionInScene": "距兰芷蘅1.5m→1m（移动）",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 4,
+          "colorTone": "紧张",
+          "performance": {
+            "bodyWeight": "重心不稳",
+            "shoulders": "内收",
+            "breath": "浅快1.2s/次",
+            "gaze": "交替看她/杯中/路",
+            "hands": "右手端杯，振幅0.5cm",
+            "mouth": "微张",
+            "transition": "走近，紧张递增"
+          },
+          "sound": "脚步声（一轻一重）",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ","PROP-CUP"],
+          "imagePrompt": "Mid-shot of young Chinese male walking unsteadily, shaking coffee cup with visible ripples, nervous expression, tiny mole below left eye, tea room interior, warm yellow light (3200K), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow tracking of hand shaking, coffee sloshing in cup, footsteps uneven"
+        },
+        {
+          "time": "33-35s",
+          "shotType": "特写",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅自上而下扫他一眼，无表情，眼神锐利",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "C",
+          "characterFacing": "面向温如珏",
+          "positionInScene": "饮水机旁，距温如珏1.2m",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "重心右腿",
+            "shoulders": "平直",
+            "breath": "均匀",
+            "gaze": "头→脚扫0.6s→锁眼",
+            "hands": "放下纸杯→交叉胸前",
+            "mouth": "闭合",
+            "transition": "观察→判断→等待"
+          },
+          "sound": "纸杯轻放",
+          "dialogue": "",
+          "duration": 2,
+          "assetCodes": ["CHAR-LZH"],
+          "imagePrompt": "Close-up of Chinese female's cold eyes scanning down then up, slight tilt of head (5°), indifferent expression, sharp jawline, deep brown pupils, cool light (5000K), 9:16 aspect ratio --ar 9:16 --cref CHAR-LZH --sref SCENE-TEA",
+          "videoPrompt": "Slow eye movement from top to bottom (0.6s), then locking gaze (0.3s pause)"
+        },
+        {
+          "time": "35-38s",
+          "shotType": "中景",
+          "visualId": "温如珏-慌乱",
+          "content": "温如珏开口：'兰、兰总！'，声音发紧，语速偏快",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "F",
+          "characterFacing": "面向兰芷蘅，头微垂15°",
+          "positionInScene": "距兰芷蘅1m",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 4,
+          "colorTone": "紧张",
+          "performance": {
+            "bodyWeight": "前倾",
+            "shoulders": "内收",
+            "breath": "屏住→说完呼1s",
+            "gaze": "锁眼0.8s→垂→抬起",
+            "hands": "右手握杯（指节全白），左手攥拳",
+            "mouth": "'兰'（圆唇）→停顿0.2s→'兰总'（收窄）",
+            "transition": "紧张→开口挣扎，0.5s"
+          },
+          "sound": "",
+          "dialogue": "台词：兰、兰总！",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Mid-shot of young Chinese male stammering, face tense, coffee cup shaking, tea room background, tiny mole below left eye, slight dark circles (2/5), warm light (3200K), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow motion of lips forming words, stammer with slight pause between 'Lan' and 'Lan Zong'"
+        },
+        {
+          "time": "38-40s",
+          "shotType": "特写",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅挑眉：'嗯？'，单侧眉微抬，无其他表情",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "E",
+          "characterFacing": "面向温如珏",
+          "positionInScene": "饮水机旁，距1m",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "后仰",
+            "shoulders": "微耸→放下",
+            "breath": "均匀",
+            "gaze": "直视，耐心等待",
+            "hands": "交叉胸前",
+            "mouth": "右眉上抬3mm→闭合",
+            "transition": "等待→轻微诧异，0.4s"
+          },
+          "sound": "",
+          "dialogue": "台词：嗯？",
+          "duration": 2,
+          "assetCodes": ["CHAR-LZH"],
+          "imagePrompt": "Close-up of Chinese female raising one eyebrow (right), slightly confused but composed, cool expression, deep brown eyes, sharp jawline, cool light (5000K), 9:16 aspect ratio --ar 9:16 --cref CHAR-LZH --sref SCENE-TEA",
+          "videoPrompt": "Slow motion of eyebrow raising (0.3s), slight tilt of head (3°), then hold"
+        },
+        {
+          "time": "40-45s",
+          "shotType": "中景",
+          "visualId": "温如珏-社死",
+          "content": "温如珏闭眼：'我其实一直——'话未说完，咖啡泼了自己一裤裆",
+          "type": "CHAR-PROP",
+          "cameraAngle": "D",
+          "characterFacing": "面向兰芷蘅，头微低",
+          "positionInScene": "距兰芷蘅1m",
+          "transitionType": "慢放",
+          "transitionDuration": "0.5s",
+          "emotionIntensity": 5,
+          "colorTone": "社死",
+          "performance": {
+            "bodyWeight": "后仰，右后撤半步",
+            "shoulders": "内收→后缩",
+            "breath": "深吸→屏→'直'字气息断裂",
+            "gaze": "闭眼0.3s→睁大→低头看裤0.5s",
+            "hands": "手腕僵住0.2s→失控下滑0.3s",
+            "mouth": "'直'咬紧，尾音断裂",
+            "transition": "决心→意外→惊愕，1.2s"
+          },
+          "sound": "咖啡泼洒声（液体冲击布料）",
+          "dialogue": "台词：我其实一直——",
+          "duration": 5,
+          "assetCodes": ["CHAR-WRJ","PROP-CUP"],
+          "imagePrompt": "Mid-shot of young Chinese male spilling coffee on himself, shocked expression, liquid splashing, wide angle, tea room background, tiny mole below left eye, slight dark circles (2/5), warm light (3200K), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow motion of coffee spilling (0.5s), droplets flying, facial reaction from shock to horror (0.3s transition)"
+        },
+        {
+          "time": "45-48s",
+          "shotType": "特写",
+          "visualId": "温如珏-社死",
+          "content": "温如珏低头看裤子，表情从慌张到绝望，瞳孔放大又恢复",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "D",
+          "characterFacing": "面朝下，头垂40°",
+          "positionInScene": "原地，身体后倾",
+          "transitionType": "切",
+          "transitionDuration": "0.2s",
+          "emotionIntensity": 5,
+          "colorTone": "社死",
+          "performance": {
+            "bodyWeight": "后仰",
+            "shoulders": "下沉1.5cm",
+            "breath": "浅短2次→长叹2s",
+            "gaze": "盯水渍1.5s→失焦0.3s→闭眼",
+            "hands": "右手空杯垂侧，左手悬空",
+            "mouth": "微张0.5s→下撇3mm",
+            "transition": "慌张→震惊→放弃，0.8s"
+          },
+          "sound": "水滴声（3滴, 间隔0.5s）",
+          "dialogue": "独白：……好的，更完蛋了。",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Close-up of young Chinese male looking down at wet pants, despair in eyes, mouth slightly open (then down-turned), tiny mole below left eye, overhead light casting shadows, 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow pull back from face to pants (0.5s), despair spreading across face, eyes losing focus"
+        },
+        {
+          "time": "48-52s",
+          "shotType": "中景",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅拿纸巾擦袖口水渍，动作从容，表情冷淡",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "C",
+          "characterFacing": "面向温如珏，头微低",
+          "positionInScene": "饮水机旁，距温如珏1.2m",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "侧身，重心左腿",
+            "shoulders": "平直",
+            "breath": "均匀",
+            "gaze": "看袖口0.5s→抬眼0.3s→继续擦",
+            "hands": "抽纸巾0.4s→擦2次",
+            "mouth": "闭合",
+            "transition": "观察→冷静处理"
+          },
+          "sound": "纸巾摩擦声",
+          "dialogue": "台词：好好工作。",
+          "duration": 4,
+          "assetCodes": ["CHAR-LZH"],
+          "imagePrompt": "Mid-shot of Chinese female calmly wiping sleeve, indifferent expression, sharp jawline, deep brown eyes, cool light (5000K), tea room background, 9:16 aspect ratio --ar 9:16 --cref CHAR-LZH --sref SCENE-TEA",
+          "videoPrompt": "Slow wiping motion (0.6s per wipe), glance at him then away, head remains still"
+        },
+        {
+          "time": "52-55s",
+          "shotType": "特写",
+          "visualId": "温如珏-绝望前",
+          "content": "温如珏抬头，眼里还剩最后一丝希望，嘴唇微张欲言又止",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "E",
+          "characterFacing": "面向兰芷蘅，头微抬15°",
+          "positionInScene": "原地，身体前倾",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 4,
+          "colorTone": "社死",
+          "performance": {
+            "bodyWeight": "前倾5cm",
+            "shoulders": "微耸",
+            "breath": "屏息等待",
+            "gaze": "望她眼睛，带恳求",
+            "hands": "空杯放桌→双手微摊",
+            "mouth": "微张0.3cm，下唇颤一次",
+            "transition": "绝望→心存侥幸，0.4s"
+          },
+          "sound": "",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Close-up of hopeful eyes, slight desperation, face lit by tea room light (warm 3200K), tiny mole below left eye, slight dark circles (2/5), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow zoom on eyes, plea in them, slight head tilt up (0.3s)"
+        },
+        {
+          "time": "55-58s",
+          "shotType": "中景",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅走过他身边，步伐不停，侧脸说出：'我只把你当弟弟。'",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "B",
+          "characterFacing": "面向走廊，头未转",
+          "positionInScene": "从温如珏身侧经过向左出画",
+          "transitionType": "慢放",
+          "transitionDuration": "0.5s",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "平稳向前",
+            "shoulders": "平直",
+            "breath": "均匀",
+            "gaze": "平视前方",
+            "hands": "自然摆动",
+            "mouth": "台词清晰，嘴角无变化",
+            "transition": "停留→坚决离开"
+          },
+          "sound": "高跟鞋声渐远",
+          "dialogue": "台词：我只把你当弟弟。",
+          "duration": 3,
+          "assetCodes": ["CHAR-LZH"],
+          "imagePrompt": "Mid-shot of Chinese female walking away from camera, saying line over shoulder, cold and detached, high ponytail, black suit, office corridor, cool light (5000K), 9:16 aspect ratio --ar 9:16 --cref CHAR-LZH --sref SCENE-TEA",
+          "videoPrompt": "Slow motion of walking away (0.5s slowdown), head not turning, line delivered while in motion"
+        },
+        {
+          "time": "58-62s",
+          "shotType": "特写",
+          "visualId": "温如珏-石化",
+          "content": "温如珏石化，茶水间灯光打在他脸上，整个人僵住，目光失焦",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "E",
+          "characterFacing": "面向她离开方向",
+          "positionInScene": "原地，距门1m",
+          "transitionType": "切",
+          "transitionDuration": "0.15s",
+          "emotionIntensity": 5,
+          "colorTone": "社死",
+          "performance": {
+            "bodyWeight": "僵直后仰",
+            "shoulders": "内收僵硬",
+            "breath": "屏息2s→呼气1.5s",
+            "gaze": "失焦，未追踪",
+            "hands": "垂侧，指尖微颤",
+            "mouth": "微张，下唇颤",
+            "transition": "希望→破碎，0.5s"
+          },
+          "sound": "心跳骤停一拍、系统音'叮！'",
+          "dialogue": "独白：……好。",
+          "duration": 4,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Close-up of frozen expression, overhead light casting shadows under eyes (dark circles 2/5), despair in eyes, mouth slightly open, tiny mole below left eye, tea room background blur, 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow zoom on face, life draining from eyes, freeze on expression for 1.5s"
+        },
+        {
+          "time": "62-65s",
+          "shotType": "特写（屏幕）",
+          "visualId": "系统UI",
+          "content": "系统面板：'任务失败。惩罚将在5秒后执行。'倒计时开始",
+          "type": "PURE-PROP",
+          "cameraAngle": "A",
+          "transitionType": "切",
+          "transitionDuration": "0.1s",
+          "emotionIntensity": 1,
+          "sound": "倒计时音效'5、4、3……'",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["PROP-SYS"],
+          "imagePrompt": "Isolated holographic panel on clean background, no hands, no person, 'Mission Failed' with countdown, red alert border pulsing at 1s intervals, 9:16 aspect ratio --ar 9:16 --sref PROP-SYS",
+          "videoPrompt": "Countdown numbers ticking down, red border pulsing faster"
+        },
+        {
+          "time": "65-70s",
+          "shotType": "全景",
+          "visualId": "温如珏-社死",
+          "content": "公司大群刷屏，同事们探头看温如珏，手机消息提示音此起彼伏",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "D",
+          "characterFacing": "面朝桌面，头深埋",
+          "positionInScene": "工位处",
+          "transitionType": "切",
+          "transitionDuration": "0.2s",
+          "emotionIntensity": 4,
+          "colorTone": "社死",
+          "performance": {
+            "bodyWeight": "塌在椅上",
+            "shoulders": "下沉",
+            "breath": "叹2s→浅快",
+            "gaze": "扫视一圈→收回→看桌",
+            "hands": "撑桌面，低头",
+            "mouth": "抿紧，嘴角下压3mm",
+            "transition": "社死→围观→放弃"
+          },
+          "sound": "消息提示音10次",
+          "dialogue": "独白：兄弟们别笑了……我给你们跪下了。",
+          "duration": 5,
+          "assetCodes": ["SCENE-OFFICE","CHAR-WRJ"],
+          "imagePrompt": "Full shot of open office, colleagues peering over cubicles, phones buzzing, young Chinese male slumped at desk, shame and embarrassment, tiny mole below left eye, warm but harsh light (4500K), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-OFFICE",
+          "videoPrompt": "Slow pan from phone notifications to faces (colleagues), then to him hiding (0.8s per pan)"
+        },
+        {
+          "time": "70-73s",
+          "shotType": "中景",
+          "visualId": "温如珏-社死",
+          "content": "温如珏把脸埋进桌面，双手交叉放在头顶，彻底放弃",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "D",
+          "characterFacing": "面朝下",
+          "positionInScene": "工位趴下",
+          "transitionType": "切",
+          "transitionDuration": "0.2s",
+          "emotionIntensity": 4,
+          "colorTone": "社死",
+          "performance": {
+            "bodyWeight": "前倾趴下",
+            "shoulders": "下沉内收",
+            "breath": "叹2.5s→浅",
+            "gaze": "闭眼",
+            "hands": "交叉放头顶",
+            "mouth": "唇贴桌面",
+            "transition": "放弃抵抗"
+          },
+          "sound": "",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "Mid-shot of young Chinese male burying face on desk, hands crossed over head, shame, office background blurred, tiny mole below left eye (slightly visible from side), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-OFFICE",
+          "videoPrompt": "Slow motion of head lowering onto desk (0.4s), hands covering head (0.3s)"
+        },
+        {
+          "time": "73-80s",
+          "shotType": "全景",
+          "visualId": "场景转场",
+          "content": "公司大楼夜景，镜头从外部推进至空无一人的总裁办公室，色调从冷蓝转为暗紫",
+          "type": "PURE-SCENE",
+          "cameraAngle": "外部全景→内部推进",
+          "transitionType": "叠化",
+          "transitionDuration": "0.8s",
+          "emotionIntensity": 1,
+          "sound": "风声、城市夜鸣",
+          "dialogue": "",
+          "duration": 7,
+          "assetCodes": ["SCENE-CEO"],
+          "imagePrompt": "Empty CEO office interior at night, no people, no characters, floor-to-ceiling window with city lights, blue and purple tones, color temperature shifting from 4500K to 2800K, 9:16 aspect ratio --ar 9:16 --sref SCENE-CEO",
+          "videoPrompt": "Slow push through window to interior (3s), light shifting from cool blue to warm purple"
+        },
+        {
+          "time": "80-88s",
+          "shotType": "中景",
+          "visualId": "兰芷蘅-夜晚",
+          "content": "兰芷蘅站在落地窗前，月光映在侧脸，低头看手机，发丝披散，丝质睡袍",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "B",
+          "characterFacing": "面向窗外，头微低15°",
+          "positionInScene": "落地窗前正中，距窗0.3m",
+          "transitionType": "切",
+          "transitionDuration": "0.15s",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "重心左腿",
+            "shoulders": "微沉",
+            "breath": "均匀较深2s/次",
+            "gaze": "低头看手机，眼球微动",
+            "hands": "左手拿手机，拇指滑动",
+            "mouth": "闭合微抿",
+            "transition": "平静→发现照片→切换"
+          },
+          "sound": "呼吸声（约18次/分）",
+          "dialogue": "",
+          "duration": 8,
+          "assetCodes": ["CHAR-LZH","PROP-PHONE"],
+          "imagePrompt": "Mid-shot of Chinese female standing at window, moonlight on her face (left side), looking at phone, loose hair, silk robe (dark green), reflected city lights, purple and blue tones, color temperature 3200K, 9:16 aspect ratio --ar 9:16 --cref CHAR-LZH --sref SCENE-CEO",
+          "videoPrompt": "Slow push in (1.5s), screen glow illuminating face, slight eye movement reading"
+        },
+        {
+          "time": "88-95s",
+          "shotType": "特写",
+          "visualId": "兰芷蘅-雪辞",
+          "content": "手机屏幕显示温如珏工牌照片，兰芷蘅眼白爬上青色蛛网血丝，嘴角微勾",
+          "type": "CHAR-SCENE",
+          "cameraAngle": "E",
+          "characterFacing": "面向镜头，头微歪5°",
+          "positionInScene": "落地窗前，手机举眼前",
+          "transitionType": "慢放",
+          "transitionDuration": "1.5s",
+          "emotionIntensity": 3,
+          "colorTone": "雪辞出现",
+          "performance": {
+            "bodyWeight": "无变化",
+            "shoulders": "微倾",
+            "breath": "稍缓，期待",
+            "gaze": "瞳孔微放→聚焦泪痣1s",
+            "hands": "拇指轻抚屏幕3次",
+            "mouth": "先下压→再微翘",
+            "transition": "平静→血丝蔓延1.2s→兴奋"
+          },
+          "sound": "诡异低音弦乐起",
+          "dialogue": "台词：白天那个我……真是笨死了。",
+          "duration": 7,
+          "assetCodes": ["CHAR-XC","PROP-PHONE"],
+          "imagePrompt": "Close-up of Chinese female's eye with green spiderweb veins spreading from sclera edge to pupil, phone screen reflection, slight smirk (right corner up 2mm), dramatic side lighting (left blue, right purple), 9:16 aspect ratio --ar 9:16 --cref CHAR-XC --sref SCENE-CEO",
+          "videoPrompt": "Slow zoom on eye (1.5s), green veins spreading over 1.2s, smirk forming over 0.8s, phone light glitching slightly"
+        },
+        {
+          "time": "95-98s",
+          "shotType": "中景",
+          "visualId": "温如珏-困惑",
+          "content": "温如珏瘫在沙发上，系统面板弹出新任务：'补救任务已触发：明夜零点，潜入总裁病房，获取龙脉契约。'",
+          "type": "CHAR-PROP",
+          "cameraAngle": "D",
+          "characterFacing": "面向天花板，头微侧",
+          "positionInScene": "沙发正中，瘫倒",
+          "transitionType": "切",
+          "transitionDuration": "0.15s",
+          "emotionIntensity": 3,
+          "colorTone": "平静",
+          "performance": {
+            "bodyWeight": "瘫倒150°",
+            "shoulders": "下沉",
+            "breath": "叹2s→正常",
+            "gaze": "翻白眼→看屏幕",
+            "hands": "垂侧，微动",
+            "mouth": "无声'啊'0.2s→闭合",
+            "transition": "泄气→被激活"
+          },
+          "sound": "系统提示音（低频）",
+          "dialogue": "独白：我？潜入女总裁病房？",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ","PROP-SYS","SCENE-HOME"],
+          "imagePrompt": "Mid-shot of young Chinese male on sofa, holographic screen appearing with new mission text, confused expression, tiny mole below left eye, slight dark circles (2/5), warm home lighting (2800K), 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-HOME",
+          "videoPrompt": "Slow zoom on face (0.5s), hologram appearing (0.3s), eyes shifting to read text"
+        }
+      ],
+
+      "keyPrompts": [
+        {
+          "scene": "茶水间告白",
+          "imagePrompt": "Modern office tea room, a young man in rumpled shirt spilling coffee on himself, a tall woman in black suit standing by the water cooler, cold expression, glass door reflection showing both figures, soft warm light, tiny mole below left eye, realistic photography style, 9:16 aspect ratio --ar 9:16 --cref CHAR-WRJ --sref SCENE-TEA",
+          "videoPrompt": "Slow motion of coffee spilling from cup, droplets falling in mid-air, shock expression on young man's face, a woman turning away indifferently, glass door reflection blurring and refocusing"
+        },
+        {
+          "scene": "雪辞初登场",
+          "imagePrompt": "Night cityscape through floor-to-ceiling window, a woman in silk robe standing alone, phone screen glowing on her face, green spiderweb veins spreading in her eyes, cold blue and purple tones, cinematic lighting, 9:16 aspect ratio --ar 9:16 --cref CHAR-XC --sref SCENE-CEO",
+          "videoPrompt": "Slow zoom into a woman's eye, green veins spreading slowly from the edge of the iris, phone screen reflection flickering, subtle eerie musical undertone"
+        }
+      ],
+
+      "executionChecklist": [
+        "剧本：台词验证通过",
+        "剧本：情绪节拍完整",
+        "剧本：独白≤12字/对话≤15字",
+        "分镜：每镜有performance字段",
+        "分镜：每镜有imagePrompt",
+        "分镜：每镜有transitionType",
+        "分镜：每镜有type（PURE-SCENE/PURE-PROP/CHAR-SCENE/CHAR-PROP）",
+        "视听：色温一致",
+        "视听：情绪-景别匹配",
+        "视听：音效分层",
+        "道具：咖啡杯持有手固定为右手",
+        "道具：液面逐步下降（镜7满杯→镜16泼洒→镜17空杯）",
+        "AI：提示词含限制词",
+        "AI：参考图锚点正确",
+        "AI：成本层级标注为T2标准",
+        "连续性：温如珏黑眼圈从2/5→3/5",
+        "连续性：领带歪左15°固定",
+        "执行：拍摄可行性已标注",
+        "执行：共28镜, 总时长98秒"
+      ]
+    }
+  ]
+}

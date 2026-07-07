@@ -3,10 +3,15 @@ import u from "@/utils";
 import * as zod from "zod";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
-const router = express.Router();
+import { loadProjectPackContext } from "@/lib/dramaPack/loadProjectPackContext";
+import { buildFinalAssetImagePrompt, assetImageWrapper } from "@/lib/dramaPack/assetImagePromptBuilder";
+import { detectAssetTier, assetAspectRatio } from "@/lib/dramaPack/assetTierUtils";
+import { formatAssetPayloadForAi } from "@/lib/dramaPack/assetPayloadForAi";
 
 
 type ItemType = "characters" | "props" | "scenes";
+
+const router = express.Router();
 
 //润色提示词
 export default router.post(
@@ -20,23 +25,44 @@ export default router.post(
   }),
   async (req, res) => {
     const { assetsId, projectId, type, name, describe } = req.body;
-    //获取风格
     const project = await u.db("o_project").where("id", projectId).select("artStyle", "type", "intro").first();
-    //如果没有找到对应的项目，返回错误
     if (!project) return res.status(500).send(success({ message: "项目为空" }));
+
+    const assetRow = await u
+      .db("o_assets")
+      .where("id", assetsId)
+      .select("assetsId", "remark", "prompt", "promptSource", "describe", "type")
+      .first();
+    if (!assetRow) return res.status(500).send(error("资产不存在"));
+
+    const packCtx = await loadProjectPackContext(projectId);
+    const assetType = (type === "scene" ? "scene" : type === "tool" ? "tool" : "role") as "role" | "scene" | "tool";
+    const tier = detectAssetTier(assetRow.remark, assetRow.assetsId);
+    const isT1 = tier === "t1_wardrobe";
+
+    if (assetRow.promptSource === "import" && assetRow.prompt?.trim()) {
+      const finalPrompt = buildFinalAssetImagePrompt({
+        type: assetType,
+        dbPrompt: assetRow.prompt,
+        remark: assetRow.remark,
+        assetsId: assetRow.assetsId,
+        productionSpec: packCtx.productionSpec,
+        tier,
+        extensions: packCtx.extensions,
+      });
+      return res.status(200).send(success({ prompt: finalPrompt, assetsId, merged: true }));
+    }
 
     await u.db("o_assets").where("id", assetsId).update({ promptState: "生成中" });
 
-    //查询资产是否是衍生资产
-    const assetsData = await u.db("o_assets").where("id", assetsId).select("assetsId").first();
-    if (!assetsData) return { code: 500, message: "资产不存在" };
+    const assetsData = assetRow;
     const typeConfig: Record<string, { promptKey: string; itemType: ItemType; label: string; nameLabel: string; visualManual: string }> = {
       role: {
         promptKey: "role-polish",
         itemType: "characters",
-        label: "角色标准四视图",
+        label: isT1 ? "角色服化单图参考" : "角色标准四视图",
         nameLabel: "角色",
-        visualManual: assetsData.assetsId ? "art_character_derivative" : "art_character",
+        visualManual: assetsData.assetsId || isT1 ? "art_character_derivative" : "art_character",
       },
       scene: {
         promptKey: "scene-polish",
@@ -62,6 +88,7 @@ export default router.post(
     if (!visualManual) return res.status(500).send(error("视觉手册未定义"));
     const systemPrompt = visualManual;
     try {
+      const payload = formatAssetPayloadForAi({ ...assetRow, name, describe, type }, packCtx.extensions);
       const { _output } = (await u.Ai.Text("universalAi").invoke({
         system: systemPrompt,
         messages: [
@@ -70,15 +97,25 @@ export default router.post(
             content: `**基础参数：**
       **${config.nameLabel}设定：**
       - ${config.nameLabel}名称:${name},
-      - ${config.nameLabel}描述:${describe},`,
+      - 性别:${payload.gender || "未指定"},
+      - ${config.nameLabel}描述:${payload.describe || describe},`,
           },
         ],
       })) as any;
 
       if (!_output) return res.status(500).send("失败");
-      await u.db("o_assets").where("id", assetsId).update({ prompt: _output, promptState: "已完成" });
+      const finalPrompt = buildFinalAssetImagePrompt({
+        type: assetType,
+        dbPrompt: _output,
+        remark: assetRow.remark,
+        assetsId: assetRow.assetsId,
+        productionSpec: packCtx.productionSpec,
+        tier,
+        extensions: packCtx.extensions,
+      });
+      await u.db("o_assets").where("id", assetsId).update({ prompt: finalPrompt, promptState: "已完成", promptSource: "ai" });
 
-      res.status(200).send(success({ prompt: _output, assetsId }));
+      res.status(200).send(success({ prompt: finalPrompt, assetsId }));
     } catch (e: any) {
       await u
         .db("o_assets")

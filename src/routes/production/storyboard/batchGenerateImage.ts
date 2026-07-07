@@ -1,13 +1,13 @@
 import express from "express";
 import u from "@/utils";
 import { z } from "zod";
-import sharp from "sharp";
+import pLimit from "p-limit";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
-import { Output, tool } from "ai";
-import { assetItemSchema } from "@/agents/productionAgent/tools";
+import { recomposeShotFromDB, loadProductionSpecForProject, getAiFailoverHintForProject } from "@/lib/dramaPack/recomposeDramaPack";
 const router = express.Router();
-export type AssetData = z.infer<typeof assetItemSchema>;
+
+const GENERATE_TIMEOUT_MS = 10 * 60 * 1000;
 
 export default router.post(
   "/",
@@ -17,6 +17,7 @@ export default router.post(
     scriptId: z.number(),
     concurrentCount: z.number().min(1).optional(),
     compulsory: z.boolean().optional(),
+    recomposeBeforeGenerate: z.boolean().optional(),
   }),
   async (req, res) => {
     const {
@@ -25,58 +26,50 @@ export default router.post(
       scriptId,
       concurrentCount = 5,
       compulsory = false,
+      recomposeBeforeGenerate = false,
     }: {
       storyboardIds: number[];
       projectId: number;
       scriptId: number;
       concurrentCount: number;
       compulsory: boolean;
+      recomposeBeforeGenerate: boolean;
     } = req.body;
-    if (!storyboardIds || storyboardIds.length === 0) return res.status(400).send(error("storyboardIds不能为空"));
-    // 当没有 storyboardIds 时，通过 AI 生成新的分镜面板数据
-    let finalStoryboardIds: number[] = storyboardIds || [];
-    // shouldGenerateImage === 0 的分镜标记为「未生成」，其余标记为「生成中」
-    const storyboardData = await u.db("o_storyboard").where("scriptId", scriptId).where("projectId", projectId).whereIn("id", finalStoryboardIds);
+    if (!storyboardIds?.length) return res.status(400).send(error("storyboardIds不能为空"));
+
+    const storyboardData = await u.db("o_storyboard").where({ scriptId, projectId }).whereIn("id", storyboardIds);
     if (!storyboardData.length) return res.status(500).send(error("未查到分镜数据"));
+
     const storyIds = storyboardData.map((i) => i.id);
+    const now = Date.now();
+
     if (compulsory) {
-      await u.db("o_storyboard").whereIn("id", storyIds).where("scriptId", scriptId).update({ state: "生成中", shouldGenerateImage: 1 });
+      await u.db("o_storyboard").whereIn("id", storyIds).update({ state: "生成中", shouldGenerateImage: 1, generateStartTime: now });
     } else {
-      await u.db("o_storyboard").whereIn("id", storyIds).where("scriptId", scriptId).where("shouldGenerateImage", 0).update({ state: "未生成" });
-      await u.db("o_storyboard").whereIn("id", storyIds).where("scriptId", scriptId).where("shouldGenerateImage", 1).update({ state: "生成中" });
+      await u.db("o_storyboard").whereIn("id", storyIds).where("shouldGenerateImage", 0).update({ state: "未生成" });
+      await u.db("o_storyboard").whereIn("id", storyIds).where("shouldGenerateImage", 1).update({ state: "生成中", generateStartTime: now });
     }
 
     const projectSettingData = await u.db("o_project").where("id", projectId).select("imageModel", "imageQuality", "artStyle", "videoRatio").first();
 
-    // 按 rowid 顺序查出每个 storyboard 关联的 assetId 有序列表
-    const assets2StoryboardRows = await u
-      .db("o_assets2Storyboard")
-      .whereIn("storyboardId", storyIds)
-      .orderBy("rowid")
-      .select("storyboardId", "assetId");
-
-    // 收集所有 assetId，批量查对应的 imageId
+    const assets2StoryboardRows = await u.db("o_assets2Storyboard").whereIn("storyboardId", storyIds).orderBy("rowid").select("storyboardId", "assetId");
     const allAssetIds = [...new Set(assets2StoryboardRows.map((r: any) => r.assetId))];
     const assetImageMap: Record<number, number> = {};
-    if (allAssetIds.length > 0) {
+    if (allAssetIds.length) {
       const assetRows = await u.db("o_assets").whereIn("id", allAssetIds).select("id", "imageId");
       assetRows.forEach((row: any) => {
         assetImageMap[row.id] = row.imageId;
       });
     }
 
-    // 按 rowid 顺序重建 assetRecord，值为有序的 imageId 列表
     const assetRecord: Record<number, number[]> = {};
     assets2StoryboardRows.forEach((item: any) => {
-      if (!assetRecord[item.storyboardId]) {
-        assetRecord[item.storyboardId] = [];
-      }
+      if (!assetRecord[item.storyboardId]) assetRecord[item.storyboardId] = [];
       const imageId = assetImageMap[item.assetId];
-      if (imageId != null) {
-        assetRecord[item.storyboardId].push(imageId);
-      }
+      if (imageId != null) assetRecord[item.storyboardId].push(imageId);
     });
-    const realStoryData = await u.db("o_storyboard").where("scriptId", scriptId).where("projectId", projectId).whereIn("id", storyIds);
+
+    const realStoryData = await u.db("o_storyboard").where({ scriptId, projectId }).whereIn("id", storyIds);
     res.status(200).send(
       success(
         realStoryData.map((i) => ({
@@ -91,13 +84,43 @@ export default router.post(
       ),
     );
 
+    let generateList = compulsory ? storyboardData : storyboardData.filter((item) => item.shouldGenerateImage !== 0);
+
+    const productionSpec = recomposeBeforeGenerate ? await loadProductionSpecForProject(projectId) : undefined;
+    const failoverHint = getAiFailoverHintForProject(productionSpec);
+
     const generateTask = async (item: (typeof storyboardData)[number]) => {
+      if (recomposeBeforeGenerate && item.promptSource === "import" && productionSpec) {
+        await recomposeShotFromDB(item.id!, "merge");
+        const refreshed = await u.db("o_storyboard").where("id", item.id).first();
+        if (refreshed) item = refreshed;
+      }
+
+      if (!item.prompt?.trim()) {
+        await u.db("o_storyboard").where("id", item.id).update({
+          state: "生成失败",
+          reason: "分镜提示词为空，请先填写或重新导入 drama-pack",
+          filePath: "",
+        });
+        return;
+      }
+
+      const [imageId] = await u.db("o_image").insert({
+        storyboardId: item.id,
+        type: "storyboard",
+        state: "生成中",
+        resolution: projectSettingData?.imageQuality,
+        model: projectSettingData?.imageModel,
+      });
+      await u.db("o_storyboard").where("id", item.id).update({ imageId, state: "生成中" });
+
       const repeloadObj = {
         prompt: item.prompt!,
         size: projectSettingData?.imageQuality as "1K" | "2K" | "4K",
         aspectRatio: projectSettingData?.videoRatio as `${number}:${number}`,
       };
-      try {
+
+      const runWithTimeout = async () => {
         const imageCls = await u.Ai.Image(projectSettingData?.imageModel as `${string}:${string}`).run(
           {
             referenceList: await getAssetsImageBase64(assetRecord[item.id!] || []),
@@ -107,50 +130,45 @@ export default router.post(
             taskClass: "生成分镜图片",
             describe: "分镜图片生成",
             relatedObjects: JSON.stringify(repeloadObj),
-            projectId: projectId,
+            projectId,
           },
         );
         const savePath = `/${projectId}/assets/${scriptId}/${u.uuid()}.jpg`;
         await imageCls.save(savePath);
-        await u.db("o_storyboard").where("id", item.id).update({
-          filePath: savePath,
-          state: "已完成",
-        });
+        await u.db("o_image").where("id", imageId).update({ filePath: savePath, state: "已完成" });
+        await u.db("o_storyboard").where("id", item.id).update({ filePath: savePath, imageId, state: "已完成", reason: "" });
+      };
+
+      try {
+        await Promise.race([
+          runWithTimeout(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("分镜图生成超时（10分钟）")), GENERATE_TIMEOUT_MS)),
+        ]);
       } catch (e) {
-        u.db("o_storyboard")
-          .where("id", item.id)
-          .update({
-            filePath: "",
-            reason: u.error(e).message,
-            state: "生成失败",
-          });
+        const baseReason = u.error(e).message;
+        const reason = failoverHint ? `${baseReason}；建议：${failoverHint}` : baseReason;
+        await u.db("o_image").where("id", imageId).update({ state: "生成失败", errorReason: reason });
+        await u.db("o_storyboard").where("id", item.id).update({
+          filePath: "",
+          reason,
+          state: "生成失败",
+        });
       }
     };
-    // 按 concurrentCount 控制并发数，分批执行；跳过 shouldGenerateImage === 0 的分镜
-    let generateList = [];
-    if (compulsory) {
-      generateList = storyboardData;
-    } else {
-      generateList = storyboardData.filter((item) => item.shouldGenerateImage !== 0);
-    }
-    for (let i = 0; i < generateList.length; i += concurrentCount) {
-      const batch = generateList.slice(i, i + concurrentCount);
-      await Promise.all(batch.map(generateTask));
-    }
+
+    const limit = pLimit(concurrentCount);
+    const tasks = generateList.map((item) => limit(() => generateTask(item)));
+    Promise.all(tasks).catch((e) => {
+      console.error("[batchGenerateImage] 批量任务异常:", u.error(e).message);
+    });
   },
 );
+
 async function getAssetsImageBase64(imageIds: number[]) {
   if (!imageIds.length) return [];
-
   const imagePaths = await u.db("o_image").whereIn("o_image.id", imageIds).select("o_image.id", "o_image.filePath");
-
-  // 建立 id 到 filePath 的映射
   const id2Path = new Map<number, string>();
-  for (const row of imagePaths) {
-    id2Path.set(row.id, row.filePath);
-  }
-
-  // 保证输出顺序与 imageIds 一致
+  for (const row of imagePaths) id2Path.set(row.id, row.filePath);
   const imageUrls = await Promise.all(
     imageIds.map(async (id) => {
       const filePath = id2Path.get(id);
@@ -164,6 +182,5 @@ async function getAssetsImageBase64(imageIds: number[]) {
       return null;
     }),
   );
-  // 保留顺序，并且过滤掉无效项
   return (imageUrls.filter(Boolean) as string[]).map((url) => ({ type: "image" as const, base64: url }));
 }

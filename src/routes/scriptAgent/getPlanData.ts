@@ -22,6 +22,10 @@ export default router.post(
         data: JSON.stringify({
           storySkeleton: "",
           adaptationStrategy: "",
+          stylePosition: "",
+          adaptationMatrix: "",
+          characterBible: "",
+          dialogueStyleAnchor: "",
         }),
       });
       return res.status(200).send(
@@ -29,6 +33,10 @@ export default router.post(
           data: {
             storySkeleton: "",
             adaptationStrategy: "",
+            stylePosition: "",
+            adaptationMatrix: "",
+            characterBible: "",
+            dialogueStyleAnchor: "",
           },
           id
         }),

@@ -14,6 +14,7 @@ export default router.post(
     const { id, prompt, duration } = req.body;
     await u.db("o_videoTrack").where("id", id).update({
       prompt,
+      promptSource: "manual",
     });
     res.status(200).send(success("更新成功"));
   },

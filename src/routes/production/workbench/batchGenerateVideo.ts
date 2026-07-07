@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { ReferenceList } from "@/utils/ai";
-const router = express.Router();
+import { resolveStoryboardReference, resolveAssetReference } from "@/lib/dramaPack/resolveReference";
 
 type Type = "imageReference" | "startImage" | "endImage" | "videoReference" | "audioReference";
 interface UploadItem {
@@ -17,6 +17,8 @@ interface UploadItem {
   label?: string;
   prompt?: string;
 }
+
+const router = express.Router();
 
 export default router.post(
   "/",
@@ -64,18 +66,14 @@ export default router.post(
         const images = await Promise.all(
           uploadData.map(async (item) => {
             if (item.sources === "storyboard") {
-              const filePath = await u.db("o_storyboard").where("id", item.id).select("filePath").first();
-              return { path: filePath?.filePath, sources: "storyBoard" };
+              const ref = await resolveStoryboardReference(item.id);
+              return ref?.path ? { path: ref.path, sources: "storyBoard" } : null;
             }
             if (item.sources === "assets") {
-              const filePath = await u
-                .db("o_assets")
-                .where("o_assets.id", item.id)
-                .leftJoin("o_image", "o_assets.imageId", "o_image.id")
-                .select("o_image.filePath", "o_image.type")
-                .first();
-              return { path: filePath?.filePath, sources: filePath.type };
+              const ref = await resolveAssetReference(item.id);
+              return ref?.path ? { path: ref.path, sources: ref.sources } : null;
             }
+            return null;
           }),
         );
 

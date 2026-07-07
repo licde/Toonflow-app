@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "meta": {
+    "title": "作者格式示例",
+    "episodeCount": 1,
+    "tone": "示例",
+    "artStyleHint": "realpeople_urban_modern",
+    "packFormat": "author-v3"
+  },
+  "productionSpec": {
+    "imagePromptRules": {
+      "PURE-SCENE": "禁止: people, person, character",
+      "CHAR-SCENE": "必须引用 CHAR-CODE"
+    },
+    "colorToneMapping": {
+      "平静": { "colorTemp": 5000, "tone": "冷白+灰蓝" }
+    },
+    "sceneColorLock": [
+      { "scene": "SCENE-OFFICE", "baseTemp": 5000, "tone": "冷白+灰蓝" }
+    ]
+  },
+  "narrative": {
+    "storySkeleton": "一句话叙事内核示例",
+    "characterBible": {
+      "CHAR-WRJ": {
+        "核心认知框架": { "世界观": "示例" },
+        "行为决策原则": ["示例原则"]
+      }
+    }
+  },
+  "characterAssets": {
+    "CHAR-WRJ": {
+      "name": "温如珏",
+      "baseModel": { "面容特征": "泪痣", "锁定描述": "young Chinese male, tiny mole below left eye" },
+      "分镜引用prompt_日常": "CHAR-WRJ, young Chinese male, grey-blue shirt, no makeup",
+      "四视图": {
+        "完整提示词": "young Chinese male, four-view character sheet, solid grey background"
+      }
+    }
+  },
+  "episodes": [
+    {
+      "name": "EP01：示例",
+      "script": "示例剧本正文……",
+      "directorNotes": ["镜头1：重心前倾", "镜头2：呼吸浅快"],
+      "storyboard": [
+        {
+          "镜号": 1,
+          "time": "0-3s",
+          "shotType": "全景",
+          "sceneName": "OFFICE_01_建立",
+          "type": "PURE-SCENE",
+          "emotionIntensity": 1,
+          "colorTone": "平静",
+          "assetCodes": ["SCENE-OFFICE"],
+          "imagePrompt": "Empty office, no people, morning light, 9:16 --sref SCENE-OFFICE",
+          "videoPrompt": "Slow pan down from ceiling"
+        },
+        {
+          "镜号": 2,
+          "time": "3-6s",
+          "shotType": "特写",
+          "sceneName": "OFFICE_02_打哈欠",
+          "type": "CHAR-SCENE",
+          "emotionIntensity": 2,
+          "colorTone": "平静",
+          "assetCodes": ["CHAR-WRJ", "SCENE-OFFICE"],
+          "imagePrompt": "CHAR-WRJ, yawning, office background, 9:16 --cref CHAR-WRJ",
+          "videoPrompt": "Slow zoom in, yawn, blink once"
+        }
+      ]
+    }
+  ],
+  "continuityTracking": {
+    "道具": {
+      "咖啡杯": {
+        "镜2": "右手, 满杯"
+      }
+    }
+  }
+}

@@ -4,6 +4,10 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { loadProjectPackContext } from "@/lib/dramaPack/loadProjectPackContext";
+import { buildFinalAssetImagePrompt, assetImageWrapper } from "@/lib/dramaPack/assetImagePromptBuilder";
+import { detectAssetTier, assetAspectRatio } from "@/lib/dramaPack/assetTierUtils";
+import { buildRoleReferenceList, requireT1ReferenceOrThrow } from "@/lib/dramaPack/assetReferenceUtils";
 
 const router = express.Router();
 
@@ -81,6 +85,31 @@ export default router.post("/", validateFields(requestSchema), async (req, res) 
   const cfg = assetTypeConfig[type as AssetType];
   if (!cfg) return res.status(400).send(error("不支持的类型"));
 
+  const assetRow = await u.db("o_assets").where("id", id).select("remark", "assetsId").first();
+  const packCtx = await loadProjectPackContext(projectId);
+  const tier = detectAssetTier(assetRow?.remark, assetRow?.assetsId);
+  const assetType = type as AssetType;
+  const finalPrompt = buildFinalAssetImagePrompt({
+    type: assetType,
+    dbPrompt: prompt,
+    remark: assetRow?.remark,
+    assetsId: assetRow?.assetsId,
+    productionSpec: packCtx.productionSpec,
+    tier,
+    extensions: packCtx.extensions,
+  });
+  const aspectRatio = assetAspectRatio(assetType, tier);
+
+  if (tier === "t1_wardrobe") {
+    try {
+      await requireT1ReferenceOrThrow(projectId, assetRow?.remark);
+    } catch (refErr) {
+      return res.status(400).send(error(u.error(refErr).message));
+    }
+  }
+
+  const referenceList = await buildRoleReferenceList(projectId, assetRow?.remark, base64);
+
   // 2. 创建图片占位记录
   const [imageId] = await u.db("o_image").insert({
     type,
@@ -93,8 +122,8 @@ export default router.post("/", validateFields(requestSchema), async (req, res) 
 
   // 3. 准备生成参数
   const imagePath = `/${projectId}/${cfg.dir}/${uuidv4()}.jpg`;
-  const userPrompt = buildPrompt(cfg, project.artStyle!, name, prompt);
-  const describe = `生成${cfg.label}图，名称：${name}，提示词：${prompt}`;
+  const userPrompt = assetImageWrapper(assetType, tier, project.artStyle!, name, finalPrompt);
+  const describe = `生成${cfg.label}图，名称：${name}，提示词：${finalPrompt}`;
   const relatedObjects = { id, projectId, type: cfg.label };
 
   try {
@@ -102,9 +131,9 @@ export default router.post("/", validateFields(requestSchema), async (req, res) 
     await aiImage.run(
       {
         prompt: userPrompt,
-        referenceList: base64 ? [{ type: "image", base64 }] : [],
+        referenceList,
         size: resolution,
-        aspectRatio: "16:9",
+        aspectRatio,
       },
       {
         taskClass: cfg.taskClass,

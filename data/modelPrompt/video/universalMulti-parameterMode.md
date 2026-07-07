@@ -112,7 +112,7 @@ Based on the storyboard @图{分镜图编号} :
 set in the {场景描述（英文）} of @图{场景资产编号} ,
 {镜头/运镜描述（英文）},
 {情感基调（英文）},
-{台词描述（英文，含 dialogue/OS/VO 标注）/ No dialogue},
+{台词描述（保持原始语言，含 dialogue/OS/VO 标注）/ No dialogue},
 {音效描述（英文）}.
 ```
 

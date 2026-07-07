@@ -66,6 +66,17 @@ export default async (knex: Knex): Promise<void> => {
   // 添加新字段
   await addColumn("o_agentDeploy", "maxOutputTokens", "integer");
   await addColumn("o_assets", "audioBindState", "integer");
+  await addColumn("o_project", "scriptWorkflowMode", "string");
+  await addColumn("o_storyboard", "videoPrompt", "text");
+  await addColumn("o_storyboard", "promptSource", "string");
+  await addColumn("o_storyboard", "shotMeta", "text");
+  await addColumn("o_storyboard", "imageId", "integer");
+  await addColumn("o_image", "storyboardId", "integer");
+  await addColumn("o_storyboard", "generateStartTime", "integer");
+  await addColumn("o_assets", "promptSource", "string");
+  await addColumn("o_videoTrack", "promptSource", "string");
+  await addColumn("o_videoTrack", "index", "integer");
+  await addColumn("o_videoTrack", "medias", "text");
   await addColumn("o_modelPrompt", "fileName", "string");
   await addColumn("o_modelPrompt", "path", "string");
   const vendorDataSelect = await u.db("o_vendorConfig").whereIn("id", ["deepseek", "atlascloud"]).select("*");
@@ -128,6 +139,10 @@ export default async (knex: Knex): Promise<void> => {
     { key: "scriptAgent:storySkeletonAgent", name: "剧本Agent:故事骨架", desc: "故事骨架生成" },
     { key: "scriptAgent:adaptationStrategyAgent", name: "剧本Agent:改编策略", desc: "改编策略生成" },
     { key: "scriptAgent:scriptAgent", name: "剧本Agent:剧本生成", desc: "剧本生成" },
+    { key: "scriptAgent:stylePositionAgent", name: "剧本Agent:风格定位", desc: "风格定位与情绪锚点" },
+    { key: "scriptAgent:adaptationMatrixAgent", name: "剧本Agent:改版矩阵", desc: "12维改版矩阵" },
+    { key: "scriptAgent:characterBibleAgent", name: "剧本Agent:人物视觉圣经", desc: "行为逻辑与视觉演变" },
+    { key: "scriptAgent:dialogueValidationAgent", name: "剧本Agent:台词验证", desc: "台词设计与验证通道" },
     { key: "productionAgent:decisionAgent", name: "生产Agent:决策层", desc: "决策层" },
     { key: "productionAgent:supervisionAgent", name: "生产Agent:监督层", desc: "监督层" },
     { key: "productionAgent:deriveAssetsAgent", name: "生产Agent:衍生资产", desc: "衍生资产" },

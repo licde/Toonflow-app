@@ -1,4 +1,4 @@
-// @db-hash 1674c3fa6699c6c7fc88d5b3c83ec28e
+// @db-hash cd00bc84349db1e0cf1aa5c7d14e2e2d
 //该文件由脚本自动生成，请勿手动修改
 
 export interface memories {
@@ -53,6 +53,7 @@ export interface o_assets {
   'projectId'?: number | null;
   'prompt'?: string | null;
   'promptErrorReason'?: string | null;
+  'promptSource'?: string | null;
   'promptState'?: string | null;
   'remark'?: string | null;
   'scriptId'?: number | null;
@@ -86,6 +87,7 @@ export interface o_image {
   'model'?: string | null;
   'resolution'?: string | null;
   'state'?: string | null;
+  'storyboardId'?: number | null;
   'type'?: string | null;
 }
 export interface o_imageFlow {
@@ -122,6 +124,7 @@ export interface o_project {
   'mode'?: string | null;
   'name'?: string | null;
   'projectType'?: string | null;
+  'scriptWorkflowMode'?: string | null;
   'type'?: string | null;
   'userId'?: number | null;
   'videoModel'?: string | null;
@@ -172,17 +175,22 @@ export interface o_storyboard {
   'duration'?: string | null;
   'filePath'?: string | null;
   'flowId'?: number | null;
+  'generateStartTime'?: number | null;
   'id'?: number;
+  'imageId'?: number | null;
   'index'?: number | null;
   'projectId'?: number | null;
   'prompt'?: string | null;
+  'promptSource'?: string | null;
   'reason'?: string | null;
   'scriptId'?: number | null;
+  'shotMeta'?: string | null;
   'shouldGenerateImage'?: number | null;
   'state'?: string | null;
   'track'?: string | null;
   'trackId'?: number | null;
   'videoDesc'?: string | null;
+  'videoPrompt'?: string | null;
 }
 export interface o_tasks {
   'describe'?: string | null;
@@ -219,8 +227,11 @@ export interface o_video {
 export interface o_videoTrack {
   'duration'?: number | null;
   'id'?: number;
+  'index'?: number | null;
+  'medias'?: string | null;
   'projectId'?: number | null;
   'prompt'?: string | null;
+  'promptSource'?: string | null;
   'reason'?: string | null;
   'scriptId'?: number | null;
   'selectVideoId'?: number | null;

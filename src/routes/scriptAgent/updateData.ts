@@ -12,6 +12,10 @@ export default router.post(
     data: z.object({
       storySkeleton: z.string(),
       adaptationStrategy: z.string(),
+      stylePosition: z.string().optional(),
+      adaptationMatrix: z.string().optional(),
+      characterBible: z.string().optional(),
+      dialogueStyleAnchor: z.string().optional(),
       script: z.array(
         z.object({
           id: z.number(),

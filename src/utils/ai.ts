@@ -13,6 +13,10 @@ type AiType =
   | "scriptAgent:storySkeletonAgent"
   | "scriptAgent:adaptationStrategyAgent"
   | "scriptAgent:scriptAgent"
+  | "scriptAgent:stylePositionAgent"
+  | "scriptAgent:adaptationMatrixAgent"
+  | "scriptAgent:characterBibleAgent"
+  | "scriptAgent:dialogueValidationAgent"
   | "productionAgent:decisionAgent"
   | "productionAgent:supervisionAgent"
   | "productionAgent:deriveAssetsAgent"
@@ -33,6 +37,10 @@ const AiTypeValues: AiType[] = [
   "scriptAgent:storySkeletonAgent",
   "scriptAgent:adaptationStrategyAgent",
   "scriptAgent:scriptAgent",
+  "scriptAgent:stylePositionAgent",
+  "scriptAgent:adaptationMatrixAgent",
+  "scriptAgent:characterBibleAgent",
+  "scriptAgent:dialogueValidationAgent",
   "productionAgent:decisionAgent",
   "productionAgent:supervisionAgent",
   "productionAgent:deriveAssetsAgent",

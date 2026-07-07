@@ -13,6 +13,18 @@ export default router.post(
     data: z.object({
       storySkeleton: z.string(),
       adaptationStrategy: z.string(),
+      stylePosition: z.string().optional(),
+      adaptationMatrix: z.string().optional(),
+      characterBible: z.string().optional(),
+      dialogueStyleAnchor: z.string().optional(),
+      script: z
+        .array(
+          z.object({
+            name: z.string(),
+            content: z.string(),
+          }),
+        )
+        .optional(),
     }),
   }),
   async (req, res) => {
@@ -25,16 +37,18 @@ export default router.post(
       });
     const script = data.script;
 
-    await Promise.all(
-      script.map(async (s: any) => {
-        const row = await u.db("o_script").where({ projectId, name: s.name }).first();
-        if (row) {
-          await u.db("o_script").where({ id: row.id }).update({ content: s.content });
-        } else {
-          await u.db("o_script").insert({ projectId, name: s.name, content: s.content });
-        }
-      }),
-    );
+    if (script?.length) {
+      await Promise.all(
+        script.map(async (s: any) => {
+          const row = await u.db("o_script").where({ projectId, name: s.name }).first();
+          if (row) {
+            await u.db("o_script").where({ id: row.id }).update({ content: s.content });
+          } else {
+            await u.db("o_script").insert({ projectId, name: s.name, content: s.content, createTime: Date.now() });
+          }
+        }),
+      );
+    }
 
     res.status(200).send(success());
   },

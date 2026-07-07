@@ -3,6 +3,8 @@ import u from "@/utils";
 import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { resolveStoryboardReference } from "@/lib/dramaPack/resolveReference";
+import { enrichMediasWithResolved, buildRefSlots, buildPromptHint, type RefMediaInput } from "@/lib/dramaPack/refSlotBuilder";
 const router = express.Router();
 
 interface VideoItem {
@@ -26,6 +28,8 @@ interface TrackItem {
   duration?: number;
   selectVideoId?: number;
   medias: TrackMedia[];
+  refSlots?: ReturnType<typeof buildRefSlots>;
+  promptHint?: string;
   videoList: VideoItem[];
 }
 
@@ -58,26 +62,19 @@ export default router.post(
     );
     const storyboardTrackRecord: Record<number, any[]> = {};
     storyboardList.forEach((i) => {
+      const entry = {
+        src: i.filePath,
+        fileType: "image" as const,
+        sources: "storyboard" as const,
+        ...(i.prompt != null ? { prompt: i.videoDesc } : {}),
+        ...(i.id != null ? { id: i.id } : {}),
+        index: i.index,
+        canReference: Boolean(i.filePath),
+      };
       if (storyboardTrackRecord[i.trackId!]) {
-        storyboardTrackRecord[i.trackId!].push({
-          src: i.filePath,
-          fileType: "image",
-          sources: "storyboard",
-          ...(i.prompt != null ? { prompt: i.videoDesc } : {}),
-          ...(i.id != null ? { id: i.id } : {}),
-          index: i.index,
-        });
+        storyboardTrackRecord[i.trackId!].push(entry);
       } else {
-        storyboardTrackRecord[i.trackId!] = [
-          {
-            src: i.filePath,
-            fileType: "image",
-            sources: "storyboard",
-            ...(i.prompt != null ? { prompt: i.videoDesc } : {}),
-            ...(i.id != null ? { id: i.id } : {}),
-            index: i.index,
-          },
-        ];
+        storyboardTrackRecord[i.trackId!] = [entry];
       }
     });
     // 按 storyboardId 分组的资产数据，key 为 storyboardId
@@ -139,8 +136,9 @@ export default router.post(
             name: i.name,
             describe: i.describe,
             type: i.type,
+            remark: i.remark,
             fileType: "image" as const,
-            sources: "assets",
+            sources: "assets" as const,
             src: i.filePath ? await u.oss.getSmallImageUrl(i.filePath) : "",
           };
           const sid = i.storyboardId as number;
@@ -152,7 +150,21 @@ export default router.post(
       );
     }
 
-    const trackData = await u.db("o_videoTrack").where({ projectId, scriptId });
+    for (const trackId of Object.keys(storyboardTrackRecord)) {
+      for (const entry of storyboardTrackRecord[Number(trackId)]) {
+        const assets = otherDataMap[entry.id as number] ?? [];
+        const fallbacks = assets.filter((a: { src?: string; fileType?: string }) => a.src && a.fileType === "image").map((a: { src: string }) => a.src);
+        if (fallbacks.length) {
+          (entry as { fallbackAssetSrcs?: string[] }).fallbackAssetSrcs = fallbacks;
+          if (!entry.src) {
+            (entry as { fallbackAssetSrc?: string }).fallbackAssetSrc = fallbacks[0];
+            entry.canReference = true;
+          }
+        }
+      }
+    }
+
+    const trackData = await u.db("o_videoTrack").where({ projectId, scriptId }).orderBy("index", "asc");
     const videoList = await u.db("o_video").whereIn(
       "videoTrackId",
       trackData.map((t) => t.id),
@@ -161,40 +173,54 @@ export default router.post(
     const trackIdMap = [...new Set<number>(trackData.map((t) => t.id!))];
     for (const trackId of trackIdMap) {
       const item = trackData.find((t) => t.id === trackId);
+      const storyboardMedias = storyboardTrackRecord[trackId] ?? [];
+      const assetMedias = storyboardMedias.flatMap((s) => otherDataMap[s.id] ?? []);
+
+      const seenAssetIds = new Set<number>();
+      const uniqueAssets = assetMedias.filter((a) => {
+        if (seenAssetIds.has(a.id)) return false;
+        seenAssetIds.add(a.id);
+        return true;
+      });
+
+      const audioCountMap: Record<string, number> = {};
+      const filteredAssets = uniqueAssets.filter((a) => {
+        if (a.fileType !== "audio" || audioReferenceCount === 0) return true;
+        const key = String(a.id);
+        audioCountMap[key] = (audioCountMap[key] ?? 0) + 1;
+        const totalAudio = Object.values(audioCountMap).reduce((s, n) => s + n, 0);
+        return totalAudio <= audioReferenceCount;
+      });
+
+      const hasImageAssetData = filteredAssets.filter((i) => i.src);
+      const notHasImageAssetData = filteredAssets.filter((i) => !i.src);
+      const defaultMedias = [...hasImageAssetData, ...storyboardMedias, ...notHasImageAssetData];
+
+      let rawMedias: RefMediaInput[] = defaultMedias;
+      if (item?.medias) {
+        try {
+          const saved = JSON.parse(item.medias as string) as RefMediaInput[];
+          if (Array.isArray(saved) && saved.length) rawMedias = saved;
+        } catch {
+          /* use default */
+        }
+      }
+
+      const enrichedMedias = enrichMediasWithResolved(rawMedias);
+      const refSlots = buildRefSlots(enrichedMedias);
+      const trackPrompt = item?.prompt || "";
+      const promptHint = !trackPrompt.includes("@图") && refSlots.length ? buildPromptHint(refSlots) : undefined;
+
       trackList.push({
         id: trackId,
         duration: item?.duration ?? 0,
-        prompt: item?.prompt || "",
+        prompt: trackPrompt,
         state: (item?.state as "未生成" | "生成中" | "已完成" | "生成失败") ?? "未生成",
         reason: item?.reason ?? "",
         selectVideoId: Number(item?.videoId)!,
-        medias: (() => {
-          const storyboardMedias = storyboardTrackRecord[trackId] ?? [];
-          const assetMedias = storyboardMedias.flatMap((s) => otherDataMap[s.id] ?? []);
-
-          const seenAssetIds = new Set<number>();
-          const uniqueAssets = assetMedias.filter((a) => {
-            if (seenAssetIds.has(a.id)) return false;
-            seenAssetIds.add(a.id);
-            return true;
-          });
-
-          // 有 audioReference 时，按数量截取 audio 类型资产
-          const audioCountMap: Record<string, number> = {};
-          const filteredAssets = uniqueAssets.filter((a) => {
-            if (a.fileType !== "audio" || audioReferenceCount === 0) return true;
-            const key = String(a.id);
-            audioCountMap[key] = (audioCountMap[key] ?? 0) + 1;
-            // 统计当前 track 内 audio 总数，超过上限则过滤
-            const totalAudio = Object.values(audioCountMap).reduce((s, n) => s + n, 0);
-            return totalAudio <= audioReferenceCount;
-          });
-
-          const hasImageAssetData = filteredAssets.filter((i) => i.src);
-          const notHasImageAssetData = filteredAssets.filter((i) => !i.src);
-
-          return [...hasImageAssetData, ...storyboardMedias, ...notHasImageAssetData];
-        })(),
+        medias: enrichedMedias as TrackMedia[],
+        refSlots,
+        promptHint,
         videoList: await Promise.all(
           videoList
             .filter((v) => v.videoTrackId === trackId)
@@ -210,10 +236,20 @@ export default router.post(
     res.status(200).send(
       success({
         storyboardList: await Promise.all(
-          storyboardList.map(async (s) => ({
-            ...s,
-            src: s.filePath,
-          })),
+          storyboardList.map(async (s) => {
+            const ref = !s.filePath ? await resolveStoryboardReference(s.id!) : null;
+            const fallbackAssetSrcs: string[] = [];
+            if (ref?.path && ref.fallback) {
+              fallbackAssetSrcs.push(await u.oss.getSmallImageUrl(ref.path));
+            }
+            return {
+              ...s,
+              src: s.filePath,
+              fallbackAssetSrcs,
+              hasImage: Boolean(s.filePath),
+              canReference: Boolean(s.filePath || fallbackAssetSrcs.length),
+            };
+          }),
         ),
         trackList,
       }),

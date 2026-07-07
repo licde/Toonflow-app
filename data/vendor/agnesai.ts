@@ -44,7 +44,7 @@ const vendor: VendorConfig = {
       audio: "optional",
       // 优化：提供最佳默认的时长与分辨率预设，让用户添加模型时自动选中，解决空白问题
       durationResolutionMap: [
-        { duration: [5, 10], resolution: ["720p", "1080p"] }
+        { duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30], resolution: ["720p", "1080p"] }
       ],
       associationSkills: "图像参考, 动作控制, 双帧过渡"
     },

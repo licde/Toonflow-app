@@ -40,6 +40,7 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.text("directorManual");
         table.text("mode");
         table.text("videoRatio");
+        table.text("scriptWorkflowMode");
         table.integer("createTime");
         table.integer("userId");
         table.primary(["id"]);
@@ -457,6 +458,7 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.integer("flowId"); //工作流id
         table.integer("startTime");
         table.string("promptState");
+        table.string("promptSource");
         table.integer("audioBindState");
         table.text("promptErrorReason");
         table.primary(["id"]);
@@ -472,6 +474,7 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.text("filePath");
         table.text("type");
         table.integer("assetsId");
+        table.integer("storyboardId");
         table.text("model");
         table.text("resolution");
         table.text("state");
@@ -494,6 +497,11 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.text("reason");
         table.text("track");
         table.text("videoDesc");
+        table.text("videoPrompt");
+        table.string("promptSource");
+        table.text("shotMeta");
+        table.integer("imageId");
+        table.integer("generateStartTime");
         table.integer("shouldGenerateImage"); // 0 否  1 是
         table.integer("projectId");
         table.integer("flowId"); //工作流id
@@ -545,6 +553,7 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.text("state");
         table.text("reason");
         table.text("prompt");
+        table.string("promptSource");
         table.integer("selectVideoId");
         table.integer("duration");
         table.primary(["id"]);

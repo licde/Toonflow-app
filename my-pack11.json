@@ -1,0 +1,460 @@
+{
+  "version": "1.0",
+  "meta": {
+    "title": "社畜的末路告白",
+    "episodeCount": 1,
+    "tone": "轻喜虐恋",
+    "artStyleHint": "realpeople_urban_modern"
+  },
+  "plan": {
+    "storySkeleton": "【叙事内核】\n一个被系统逼迫‘作恶’的社畜男配，在每次‘迫害’高冷女上司（实则身患分魂之症）的过程中，一步步陷落在她脆弱又危险的另一面里，最终发现，系统发布的所有任务，都在将他们推向彼此。\n\n【前5集结构】\n第1集：社畜被告白任务，茶水间被拒，雪辞初登场，系统发布潜入病房任务。\n第2集：夜闯病房，雪辞抓腕，月牙印记初显，契约初立。\n第3集：系统任务突变（提交错误方案），兰芷蘅白天开除温如珏，雪辞视角补全印记由来。\n第4集：年会下药任务，雪辞主动介入，阳台对峙，印记二次触发，契约进度70%。\n第5集：温如珏被开除，雪辞发来天台邀约，天台对话揭晓分魂真相，达成“夜里回消息”的约定。",
+    "adaptationStrategy": "核心改编原则：\n1. 性别反转——原女主视角转为男配视角，增加社畜代入感。\n2. 现代修真——将古风世家体系置换为都市职场+神秘系统，降低理解门槛。\n3. 双视角叙事——单数集为温如珏视角，双数集为兰芷蘅/雪辞视角，制造信息差与悬疑感。\n4. 反差强化——白天人格“冰冷克制”，夜里人格“疯批粘人”，形成极致反差。\n5. 轻喜虐恋——以社畜的内心吐槽和社死现场为笑点，以“白天被推开，夜里被拉近”为虐点，甜虐交织。",
+    "stylePosition": "【文本核心矛盾】\n冲突类型：身份认知与情感归属的错位\n对立双方：温如瓷（被迫遵循剧本的女配） vs 兰芝珩/雪辞（一体双魂的男主）\n根本原因：温如瓷为了求生不得不‘作恶’靠近男主，却意外触碰到男主双重人格的核心秘密，导致剧情预定的‘假孕陷害’逐渐演变成真实情感与复杂权谋的交织。",
+    "adaptationMatrix": "【维度1：性别结构】\n1C 系统性反转（原女配→男配，原男主→女总裁）\n【维度2：故事流程】\n2F 双线并行（女配任务线与男主分魂真相线同步推进）\n【维度3：冲突场域】\n3D 完全架空现代修真\n【维度4：叙事视角】\n4B 男女主双视角交替\n【维度5：流程细节】\n5D 增加大量原创剧情填充\n【维度6：集数结构】\n6B 紧凑18-24集\n【维度7：人物命名】\n7D 重命名所有角色（温如珏、兰芷蘅、雪辞）\n【维度8：人物性格定位】\n8D 弱化男主（把重点放在女主成长线）\n【维度9：角色关系架构】\n9B 精简为‘1V1’纯爱主线\n【维度10：背景架构】\n10C 完全架空，脱离具体朝代感\n【维度11：叙事内核】\n11C 新：‘自我觉醒，挣脱他者定义’\n【维度12：作品调性】\n12B 轻喜剧+虐恋穿插",
+    "characterBible": "人物一：温如珏\n核心认知框架：\n- 他怎么看世界：‘这是一个充满系统bug和PUA老板的鬼地方。’\n- 他看自己：‘我就是个被系统绑架的倒霉蛋，只想活到大结局。’\n- 他看兰芷蘅：‘白天是灭绝师太，夜里……是狐狸精。’\n行为决策原则：\n- 苟命第一：系统任务必须做，但要做得很‘笨’，留足回旋余地。\n- 嘴硬心软：嘴上吐槽她是女魔头，看到她受伤忍不住偷偷送药。\n- 反向拿捏：发现雪辞更‘好说话’后，开始学会用‘撒娇’来完成系统任务。\n不可替换行为特征：\n- 习惯性社死：明明想演坏蛋，每次都被兰芷蘅一句话噎得脸红脖子粗。\n- 偷感很重：做任务时总是猫着腰、贴着墙走，自带偷感。\n- 双标式关心：对兰芷蘅白天呼来喝去，夜里会鬼鬼祟祟给‘雪辞’盖被子。\n\n人物二：兰芷蘅/雪辞\n核心认知框架：\n- 她怎么看世界：‘利益交换，清醒克制。’\n- 她看自己：‘我身体里住着一个我厌恶的怪物。’\n- 她看温如珏：‘一个总在笨拙地试图引起我注意的……不讨厌的人。’\n行为决策原则：\n- 白天是冰：在公司绝不流露私人情绪，对温如珏公事公办。\n- 夜里是火：雪辞人格出现时，肆意妄为，极度粘人。\n- 不自知的保护欲：无论哪个人格，都不允许别人动温如珏。\n不可替换行为特征：\n- 瞳孔异色：雪辞人格浮现时，眼白会爬上青色蛛网血丝。\n- 香气变化：清醒时是雪松冷香，发病时是奇异花香。\n- 语言风格分裂：白天说‘按规章办事’，夜里说‘你想要的我都会给你，包括我’。",
+    "dialogueStyleAnchor": "断句规则：自然口语的停顿位置（吸气、犹豫都在句中出现）\n句尾规则：不总是完整句子，可以是半句、一个词、一个声音\n字数上限：单句独白≤12字，对话≤15字\n完整句占比：不超过40%\n口语词库：停顿词（‘……’‘嗯’）、模糊词（‘有点’‘差不多’）、省略词（‘行’‘算了’）、反问词（‘是吗’）、标记词（‘我说’‘你看’）\n\n角色台词生成路径（温如珏）：\n- 说还是不说：能不说就不说，被迫营业型。\n- 什么时候必须说：系统倒计时、被兰芷蘅堵住时。\n- 说话目的：完成系统任务 + 给自己找台阶下。\n- 不说话的目的：装死、避免社死。\n- 说话时内部状态：疯狂吐槽，但面上强行镇定。\n- 说话时外部状态：眼神飘忽、摸鼻子、扯衣角。\n\n角色台词生成路径（兰芷蘅/雪辞）：\n- 兰芷蘅（白天）：言简意赅，多说一句都算输。说话时正襟危坐、眼神锐利。\n- 雪辞（夜里）：想说什么说什么，说话时靠近、低头、瞳孔异色、语气轻佻。",
+    "visualLock": {
+      "characters": [
+        {
+          "code": "CHAR-WRJ",
+          "name": "温如珏",
+          "desc": "男性，24-26岁，脸型偏圆润，下颌线柔和，少年感，眼下有青黑（社畜印记），左眼下方有一颗极淡的褐色泪痣。",
+          "prompt": "a young man with soft jawline, dark circles under eyes, tiny mole below left eye, casual grey-blue shirt, slightly messy hair, tired but alert",
+          "lockFace": "左眼下方泪痣",
+          "stages": [
+            { "name": "日常", "episodeRange": "第1-3集", "visualMark": "灰蓝衬衫、领带歪斜、含胸" },
+            { "name": "潜入", "episodeRange": "第2-4集", "visualMark": "黑色连帽卫衣、拉链拉到顶、猫腰" },
+            { "name": "落魄", "episodeRange": "第5集", "visualMark": "西装皱褶、纸箱、街头迷茫" }
+          ]
+        },
+        {
+          "code": "CHAR-LZH",
+          "name": "兰芷蘅（白天人格）",
+          "desc": "女性，27-29岁，脸型偏窄，下颌线锋利，颧骨略高，冷感美人，瞳孔深棕色，日常高马尾。",
+          "prompt": "a tall woman in black suit, high ponytail, sharp jawline, cold expression, deep brown eyes, professional urban look",
+          "lockFace": "深棕色瞳孔，无青色血丝",
+          "stages": [
+            { "name": "白天工作", "episodeRange": "全季", "visualMark": "高马尾、深色西装、挺直肩背" }
+          ]
+        },
+        {
+          "code": "CHAR-XC",
+          "name": "雪辞（夜里人格）",
+          "desc": "与兰芷蘅同一张脸，但眼白有青色蛛网血丝，瞳孔边缘泛青光，发丝微卷松散，常着丝质睡袍或暗色长裙。",
+          "prompt": "same woman, silk robe, loose hair, green veins in eyes, faint cyan glow, mysterious and seductive",
+          "lockFace": "青色蛛网血丝 + 唇角不对称弧度",
+          "stages": [
+            { "name": "夜晚初始", "episodeRange": "第1-3集", "visualMark": "披发、墨绿睡袍、靠近说话" },
+            { "name": "契约主动", "episodeRange": "第4-5集", "visualMark": "黑色连衣裙、天台夜景、瞳孔青光大盛" }
+          ]
+        }
+      ],
+      "scenes": [
+        {
+          "code": "SCENE-OFFICE",
+          "name": "办公室工位区",
+          "desc": "开放式工位，约20个工位，温如珏的工位靠窗第三排角落，桌上堆着文件、空咖啡杯、一盆半死不活的多肉。",
+          "prompt": "open office cubicles, desk with files, coffee cup, dying succulent, natural light, modern corporate"
+        },
+        {
+          "code": "SCENE-TEA",
+          "name": "茶水间",
+          "desc": "约10平米，中央大理石纹圆桌，靠墙饮水机、咖啡机，墙上褪色值班表，暖黄顶灯。",
+          "prompt": "small office tea room, marble table, water cooler, coffee machine, warm yellow light, cozy but impersonal"
+        },
+        {
+          "code": "SCENE-CEO",
+          "name": "总裁办公室",
+          "desc": "约40平米，落地窗、胡桃木办公桌、真皮椅、会客沙发，墙上有抽象画，白天自然光，夜晚壁灯。",
+          "prompt": "spacious CEO office, floor-to-ceiling window, dark wood desk, leather chair, abstract art, night city view"
+        },
+        {
+          "code": "SCENE-HOME",
+          "name": "温如珏的家",
+          "desc": "一室一厅小公寓，客厅与卧室半打通，沙发上有毯子、外卖盒、游戏手柄，暖黄台灯为主光。",
+          "prompt": "small messy apartment, sofa with blanket, takeout boxes, game controller, warm yellow lamp, cozy clutter"
+        },
+        {
+          "code": "SCENE-ROOF",
+          "name": "旧天台",
+          "desc": "废弃写字楼天台，铁门锈蚀，地面有裂纹，城市夜景背景，风大，无遮蔽。",
+          "prompt": "abandoned rooftop, rusty iron door, cracked floor, night city skyline, windy, dark blue and purple tones"
+        }
+      ],
+      "props": [
+        {
+          "code": "PROP-SYS",
+          "name": "系统面板",
+          "desc": "半透明蓝色光屏，边缘有数据流线，无实体，通过后期特效实现",
+          "prompt": "semi-transparent blue holographic panel, glowing data lines, sci-fi UI"
+        },
+        {
+          "code": "PROP-BADGE",
+          "name": "温如珏的工牌",
+          "desc": "白色塑料卡，照片表情僵硬，下方有‘市场部’字样",
+          "prompt": "white ID card, stiff photo, text 'Marketing Department'"
+        },
+        {
+          "code": "PROP-CUP",
+          "name": "咖啡杯",
+          "desc": "白色陶瓷杯，杯身有褪色字：‘世界以痛吻我，我报之以哈欠’",
+          "prompt": "white ceramic coffee mug, faded text 'The world kisses me with pain, I yawn back'"
+        },
+        {
+          "code": "PROP-PHONE",
+          "name": "兰芷蘅的手机",
+          "desc": "黑色直板手机，屏幕有细微裂痕",
+          "prompt": "black smartphone with slight crack on screen"
+        },
+        {
+          "code": "PROP-PLANT",
+          "name": "多肉盆栽",
+          "desc": "小型多肉，叶片发黄、歪斜",
+          "prompt": "small succulent, yellowing and bent leaves"
+        },
+        {
+          "code": "PROP-PAPER",
+          "name": "方案纸",
+          "desc": "A4纸，红笔圈出‘尚未核实’字样",
+          "prompt": "white A4 paper with red circled text 'unverified'"
+        }
+      ],
+      "globalStyle": {
+        "tone": "暖灰+冷蓝交替（白天冷蓝灰，夜晚暖灰+暗紫）",
+        "texture": "城市+玻璃+金属的现代质感，搭配丝绸和暗纹织物",
+        "lighting": "强调对比，白天自然光为主，夜晚多使用单点光源（台灯、壁灯、手机屏幕光）"
+      }
+    }
+  },
+  "episodes": [
+    {
+      "name": "EP01：社畜的末路告白",
+      "script": "第1集：《社畜的末路告白》\n\n写字楼清晨的光线里漂浮着细小的灰尘。温如珏坐在工位上，眼前是三天没改完的PPT，身后是打印机不间断的嗡鸣。他打了一个哈欠，眼角沁出生理性的泪水，刚准备继续敲字，半透明的蓝色光屏毫无预兆地从电脑屏幕上弹出来。\n\n“请注意，您即将迎来改变命运的一刻。”\n\n他面无表情地点了关闭。弹窗又弹出来，加粗的红字挤占了大半个屏幕：“今日17:00前，向总裁兰芷蘅告白。失败惩罚：社死全公司大群。”\n\n他盯着那行字看了很久。唇动了动，没发出声音。他想说什么，但觉得自己可能骂不过一个连实体都没有的对话框。于是他端起桌角的咖啡杯站起来，走向茶水间的时候，脚步比平时慢了半步。不是犹豫，是在给自己做心理建设。\n\n茶水间的门关着。他站在门口深呼吸了一次，推开门。兰芷蘅正站在饮水机旁，黑色西装裙、高马尾、冷淡的侧脸。他端着咖啡杯的手肉眼可见地抖了一下，杯中的咖啡晃出一圈波纹。她侧目看了他一眼，没有说话，但用眼神问了个“有事吗”。\n\n他把那杯咖啡泼在了自己裤子上。\n\n她拿纸巾擦了擦袖口上被溅到的水渍，说了句“好好工作”，从他身边走过去，步伐不停。他脑子里有一半是空的，另一半在疯狂回放她刚才的表情。然后他听见自己开口叫住她，声音干得像砂纸：“兰总，我其实一直——”\n\n她停了一步。他心脏跳到喉咙口。\n\n“……我只把你当弟弟。”\n\n她说完这句话就走了。没有犹豫，没有回头。茶水间的玻璃门在弹簧的作用下缓慢合拢，映出他一个人站在灯下的影子。\n\n系统提示音在他脑海里弹出来：“任务失败。惩罚将在5秒后执行。”\n\n大群消息响了一下午。温如珏趴在桌上，桌面传来的震动像一句又一句的判词。太阳落下去，同事走完了，工位区的灯一盏一盏熄掉。\n\n镜头跟着夜色往大楼上层移动。顶层的总裁办公室里，兰芷蘅站在落地窗前，城市灯光在她眼底碎成一片细密的光斑。她低头看着手机屏幕——屏幕上是一张工牌照片，照片上的年轻人表情僵硬，眼角有一颗很淡的痣。\n\n青色蛛网血丝从她眼白边缘缓慢蔓延向瞳孔。她看了那张照片很久，然后轻轻勾了一下嘴角。\n\n“白天那个我，真是笨死了。”\n\n另一边，温如珏瘫在家里的沙发上，系统面板再次亮起来：“补救任务已触发：明夜零点，潜入总裁病房，获取‘龙脉契约’。”\n\n他对着天花板说了一句：“我？潜入女总裁病房？”\n\n没有人回答他。窗外的路灯亮了一下，又灭了一下。",
+      "emotionBeats": "节拍一（0-20s）：社畜の一日——好笑又心酸，温如珏打哈欠、系统弹窗。\n节拍二（20-45s）：系统任务：告白——紧张+好笑，红色加粗任务弹出，温如珏瞳孔地震。\n节拍三（45-1:30s）：茶水间追击——节奏感+心跳加速，温如珏泼咖啡、兰芷蘅冷淡。\n节拍四（1:30-2:20s）：‘我只把你当弟弟’——虐中带笑，名场面诞生，系统惩罚触发。\n节拍五（2:20-2:45s）：社死罚单——爆笑+同情，大群刷屏、温如珏埋桌。\n节拍六（2:45-3:20s）：雪辞：你好，夜里见——悬疑+暧昧，瞳孔异色、对手机照片轻笑。\n结尾钩子（3:20-3:30s）：系统新任务——期待+好奇，潜入病房获取龙脉契约。",
+      "dialogueValidation": "| 序号 | 台词 | 字数 | 句式 | 情绪标记 | 指向 | 结果 |\n| 1 | 系统你……是不是有病？ | 8 | 省略+反问 | 无奈 | ‘系统’ | 通过 |\n| 2 | 兰、兰总！ | 4 | 中断 | 紧张 | ‘兰总’ | 通过 |\n| 3 | 我其实一直—— | 6 | 中断 | 慌乱 | ‘我’ | 通过 |\n| 4 | 好好工作。 | 4 | 陈述 | 冷淡 | ‘工作’ | 通过 |\n| 5 | 我只把你当弟弟。 | 7 | 陈述 | 疏离 | ‘你’ | 通过 |\n| 6 | 白天那个我，真是笨死了。 | 11 | 感叹 | 嘲讽+愉悦 | ‘我’ | 通过 |\n| 7 | 我？潜入女总裁病房？ | 9 | 反问 | 困惑 | ‘我’ | 通过 |\n\n结论：7句台词全部通过 ✅",
+      "directorNotes": "镜头10（茶水间初遇）：温如珏推门时重心偏前，肩膀微耸，视线先落兰芷蘅脸上再下移工牌再移开，手指抠咖啡杯壁。\n镜头16（咖啡泼裤）：说话时喉结滚动，停顿因紧张而非断句，咖啡倾斜延迟补救。\n镜头20（‘我只把你当弟弟’）：兰芷蘅说此句时无嘲讽，仅冷淡公事公办，说完直接迈步不停顿，温如珏眼中光在‘弟弟’二字时熄灭。\n镜头27（雪辞初登场）：青色蛛网血丝从眼白边缘向瞳孔缓慢蔓延，看照片时瞳孔微微放大，说‘白天那个我’时嘴角下压，说‘真是笨死了’时嘴角微翘，最后轻笑带‘轮到我了’的愉悦感。",
+      "storyboard": [
+        {
+          "time": "0-3s",
+          "shotType": "中景",
+          "visualId": "温如珏-日常",
+          "content": "写字楼外部，清晨阳光，镜头下摇至工位区",
+          "sound": "键盘敲击声、打印机声",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["SCENE-OFFICE"],
+          "imagePrompt": "modern office building exterior, morning sunlight, glass curtain wall"
+        },
+        {
+          "time": "3-6s",
+          "shotType": "特写",
+          "visualId": "温如珏-日常",
+          "content": "温如珏的脸，正对电脑打哈欠，眼下青黑",
+          "sound": "哈欠声、系统提示音‘叮！’",
+          "dialogue": "独白：如果我知道今天会在茶水间社死……",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "close-up young man yawning, dark circles, office background"
+        },
+        {
+          "time": "6-8s",
+          "shotType": "特写（屏幕）",
+          "visualId": "系统UI",
+          "content": "电脑屏幕弹出半透明蓝色系统面板，红字：‘请注意，您即将迎来改变命运的一刻。’",
+          "sound": "系统电子音效",
+          "dialogue": "",
+          "duration": 2,
+          "assetCodes": ["PROP-SYS"],
+          "imagePrompt": "holographic blue screen with red text 'The moment that changes your fate'"
+        },
+        {
+          "time": "8-10s",
+          "shotType": "中景",
+          "visualId": "温如珏-日常",
+          "content": "温如珏面无表情点掉弹窗，继续打字",
+          "sound": "鼠标点击声",
+          "dialogue": "独白：……我一定会在早餐里多加一个蛋。",
+          "duration": 2,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "young man clicking mouse, indifferent expression, office desk"
+        },
+        {
+          "time": "10-14s",
+          "shotType": "特写（屏幕）",
+          "visualId": "系统UI",
+          "content": "系统面板再次弹出，红字：‘今日17:00前，向总裁兰芷蘅告白。失败惩罚：社死全公司大群。’",
+          "sound": "系统警告音‘叮——！’",
+          "dialogue": "",
+          "duration": 4,
+          "assetCodes": ["PROP-SYS"],
+          "imagePrompt": "red holographic task text: 'Confess to President Lan before 17:00'"
+        },
+        {
+          "time": "14-16s",
+          "shotType": "特写",
+          "visualId": "温如珏-震惊",
+          "content": "温如珏瞳孔地震，嘴慢慢张开",
+          "sound": "心跳声渐起",
+          "dialogue": "独白：……系统你是不是有病？",
+          "duration": 2,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "close-up shocked eyes, mouth slightly open"
+        },
+        {
+          "time": "16-20s",
+          "shotType": "中景",
+          "visualId": "温如珏-准备行动",
+          "content": "温如珏环顾同事，深吸一口气，端起咖啡杯",
+          "sound": "紧张心跳声、椅子拖动声",
+          "dialogue": "独白：行吧，告白就告白。",
+          "duration": 4,
+          "assetCodes": ["CHAR-WRJ","PROP-CUP"],
+          "imagePrompt": "young man picking up coffee cup, determined expression"
+        },
+        {
+          "time": "20-23s",
+          "shotType": "全景",
+          "visualId": "温如珏-紧张",
+          "content": "茶水间门外，温如珏举着咖啡杯做心理建设",
+          "sound": "环境白噪音",
+          "dialogue": "独白：只要她不在里面，我就不算失败。",
+          "duration": 3,
+          "assetCodes": ["SCENE-TEA","CHAR-WRJ"],
+          "imagePrompt": "young man standing outside tea room door, holding coffee, hesitating"
+        },
+        {
+          "time": "23-25s",
+          "shotType": "特写",
+          "visualId": "温如珏-紧张",
+          "content": "温如珏推开门",
+          "sound": "门把手转动声",
+          "dialogue": "",
+          "duration": 2,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "hand pushing door handle"
+        },
+        {
+          "time": "25-28s",
+          "shotType": "中景",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅站在饮水机旁，黑色西装裙、高马尾、冷白皮，侧目看来",
+          "sound": "水流声停止、高跟鞋轻响",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["CHAR-LZH","SCENE-TEA"],
+          "imagePrompt": "tall woman in black suit, high ponytail, standing by water cooler, cold gaze"
+        },
+        {
+          "time": "28-30s",
+          "shotType": "特写",
+          "visualId": "温如珏-慌乱",
+          "content": "温如珏嘴角抽动",
+          "sound": "心跳声变大",
+          "dialogue": "独白：……好的，完蛋了。",
+          "duration": 2,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "close-up nervous face, twitching lips"
+        },
+        {
+          "time": "30-33s",
+          "shotType": "中景",
+          "visualId": "温如珏-慌乱",
+          "content": "温如珏走进去，手抖，咖啡杯晃出波纹",
+          "sound": "脚步声",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ","PROP-CUP"],
+          "imagePrompt": "young man walking with shaking coffee cup"
+        },
+        {
+          "time": "33-35s",
+          "shotType": "特写",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅自上而下扫他一眼",
+          "sound": "",
+          "dialogue": "",
+          "duration": 2,
+          "assetCodes": ["CHAR-LZH"],
+          "imagePrompt": "close-up woman's cold eyes scanning"
+        },
+        {
+          "time": "35-38s",
+          "shotType": "中景",
+          "visualId": "温如珏-慌乱",
+          "content": "温如珏开口：“兰、兰总！”",
+          "sound": "",
+          "dialogue": "台词：兰、兰总！",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "young man stammering, nervous expression"
+        },
+        {
+          "time": "38-40s",
+          "shotType": "特写",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅挑眉：“嗯？”",
+          "sound": "",
+          "dialogue": "台词：嗯？",
+          "duration": 2,
+          "assetCodes": ["CHAR-LZH"],
+          "imagePrompt": "woman raising one eyebrow"
+        },
+        {
+          "time": "40-45s",
+          "shotType": "中景",
+          "visualId": "温如珏-社死",
+          "content": "温如珏闭眼：“我其实一直——”话未说完，咖啡泼了自己一裤裆",
+          "sound": "咖啡泼洒声",
+          "dialogue": "台词：我其实一直——",
+          "duration": 5,
+          "assetCodes": ["CHAR-WRJ","PROP-CUP"],
+          "imagePrompt": "young man with coffee spilled on pants, shocked face"
+        },
+        {
+          "time": "45-48s",
+          "shotType": "特写",
+          "visualId": "温如珏-社死",
+          "content": "温如珏低头看裤子，表情从慌张到绝望",
+          "sound": "水滴声",
+          "dialogue": "独白：……好的，更完蛋了。",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "close-up looking down at wet pants, despair"
+        },
+        {
+          "time": "48-52s",
+          "shotType": "中景",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅拿纸巾擦袖口水渍",
+          "sound": "纸巾摩擦声",
+          "dialogue": "台词：好好工作。",
+          "duration": 4,
+          "assetCodes": ["CHAR-LZH"],
+          "imagePrompt": "woman wiping sleeve with tissue, indifferent"
+        },
+        {
+          "time": "52-55s",
+          "shotType": "特写",
+          "visualId": "温如珏-绝望前",
+          "content": "温如珏抬头，眼里还剩最后一丝希望",
+          "sound": "",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "close-up hopeful eyes"
+        },
+        {
+          "time": "55-58s",
+          "shotType": "中景",
+          "visualId": "兰芷蘅-白天",
+          "content": "兰芷蘅走过他身边，步伐不停：“我只把你当弟弟。”",
+          "sound": "高跟鞋声渐远",
+          "dialogue": "台词：我只把你当弟弟。",
+          "duration": 3,
+          "assetCodes": ["CHAR-LZH"],
+          "imagePrompt": "woman walking away, saying line over shoulder"
+        },
+        {
+          "time": "58-62s",
+          "shotType": "特写",
+          "visualId": "温如珏-石化",
+          "content": "温如珏石化，茶水间灯光打在他脸上",
+          "sound": "心跳声骤停、系统提示音‘叮！’",
+          "dialogue": "独白：……好。",
+          "duration": 4,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "frozen young man, overhead light"
+        },
+        {
+          "time": "62-65s",
+          "shotType": "特写（屏幕）",
+          "visualId": "系统UI",
+          "content": "系统面板：‘任务失败。惩罚将在5秒后执行。’",
+          "sound": "倒计时音效‘5、4、3……’",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["PROP-SYS"],
+          "imagePrompt": "holographic screen with 'Mission Failed' and countdown"
+        },
+        {
+          "time": "65-70s",
+          "shotType": "全景",
+          "visualId": "温如珏-社死",
+          "content": "公司大群刷屏，同事们探头看温如珏",
+          "sound": "手机消息提示音连续响起",
+          "dialogue": "独白：兄弟们别笑了……我给你们跪下了。",
+          "duration": 5,
+          "assetCodes": ["SCENE-OFFICE","CHAR-WRJ"],
+          "imagePrompt": "open office, colleagues looking, phones buzzing"
+        },
+        {
+          "time": "70-73s",
+          "shotType": "中景",
+          "visualId": "温如珏-社死",
+          "content": "温如珏把脸埋进桌面",
+          "sound": "",
+          "dialogue": "",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ"],
+          "imagePrompt": "young man burying face on desk"
+        },
+        {
+          "time": "73-80s",
+          "shotType": "全景",
+          "visualId": "场景转场",
+          "content": "公司大楼夜景，镜头推进至空无一人的总裁办公室",
+          "sound": "风声、城市夜鸣",
+          "dialogue": "",
+          "duration": 7,
+          "assetCodes": ["SCENE-CEO"],
+          "imagePrompt": "night office building, dark city skyline"
+        },
+        {
+          "time": "80-88s",
+          "shotType": "中景",
+          "visualId": "兰芷蘅-夜晚",
+          "content": "兰芷蘅站在落地窗前，月光映在侧脸，低头看手机",
+          "sound": "安静，呼吸声",
+          "dialogue": "",
+          "duration": 8,
+          "assetCodes": ["CHAR-LZH","PROP-PHONE"],
+          "imagePrompt": "woman standing at window, moonlight, looking at phone"
+        },
+        {
+          "time": "88-95s",
+          "shotType": "特写",
+          "visualId": "兰芷蘅-雪辞",
+          "content": "手机屏幕显示温如珏工牌照片，兰芷蘅眼白爬上青色蛛网血丝，嘴角微勾",
+          "sound": "诡异低音弦乐起",
+          "dialogue": "台词：白天那个我……真是笨死了。",
+          "duration": 7,
+          "assetCodes": ["CHAR-XC","PROP-PHONE"],
+          "imagePrompt": "close-up woman's eye with green veins, phone screen reflection, slight smile"
+        },
+        {
+          "time": "95-98s",
+          "shotType": "中景",
+          "visualId": "温如珏-困惑",
+          "content": "温如珏瘫在沙发上，系统面板弹出新任务",
+          "sound": "系统提示音",
+          "dialogue": "独白：我？潜入女总裁病房？",
+          "duration": 3,
+          "assetCodes": ["CHAR-WRJ","PROP-SYS","SCENE-HOME"],
+          "imagePrompt": "young man on sofa, holographic screen with new task"
+        }
+      ],
+      "keyPrompts": [
+        {
+          "scene": "茶水间告白",
+          "imagePrompt": "Modern office tea room, a young man in rumpled shirt spilling coffee on himself, a tall woman in black suit standing by the water cooler, cold expression, glass door reflection showing both figures, soft warm light, realistic photography style, 9:16 aspect ratio --ar 9:16",
+          "videoPrompt": "Slow motion of coffee spilling from cup, droplets falling in mid-air, shock expression on young man's face, a woman turning away indifferently, glass door reflection blurring and refocusing"
+        },
+        {
+          "scene": "雪辞初登场",
+          "imagePrompt": "Night cityscape through floor-to-ceiling window, a woman in silk robe standing alone, phone screen glowing on her face, green spiderweb veins spreading in her eyes, cold blue and purple tones, cinematic lighting, 9:16 aspect ratio --ar 9:16",
+          "videoPrompt": "Slow zoom into a woman's eye, green veins spreading slowly from the edge of the iris, phone screen reflection flickering, subtle eerie musical undertone"
+        }
+      ]
+    }
+  ]
+}

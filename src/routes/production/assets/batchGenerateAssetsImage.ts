@@ -4,7 +4,10 @@ import { z } from "zod";
 import sharp from "sharp";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
-import { Output } from "ai";
+import { detectAssetTier, assetAspectRatio } from "@/lib/dramaPack/assetTierUtils";
+import { loadProjectPackContext } from "@/lib/dramaPack/loadProjectPackContext";
+import { buildFinalAssetImagePrompt, assetImageWrapper } from "@/lib/dramaPack/assetImagePromptBuilder";
+
 const router = express.Router();
 
 export default router.post(
@@ -20,7 +23,12 @@ export default router.post(
 
     const projectSettingData = await u.db("o_project").where("id", projectId).select("imageModel", "imageQuality", "artStyle").first();
 
-    const assetsDataArr = await u.db("o_assets").whereIn("id", assetIds).select("id", "describe", "name", "type", "assetsId");
+    const packCtx = await loadProjectPackContext(projectId);
+
+    const assetsDataArr = await u
+      .db("o_assets")
+      .whereIn("id", assetIds)
+      .select("id", "describe", "name", "type", "assetsId", "remark", "prompt", "promptSource");
     const parentIds = assetsDataArr.map((item) => item.assetsId).filter((id) => id !== null);
     const parentAssetsData = await u
       .db("o_assets")
@@ -70,27 +78,57 @@ export default router.post(
     const generateSingleAsset = async (item: any) => {
       const imageId = imageIdMap[item.id!];
       const typeConfig = promptRecord[item.type!] || promptRecord["role"];
+      const tier = detectAssetTier(item.remark, item.assetsId);
+      const aspectRatio = assetAspectRatio(item.type || "role", tier);
 
-      const { text } = await u.Ai.Text("universalAi").invoke({
-        system: `${typeConfig.prompt}`,
-        messages: [
-          {
-            role: "user",
-            content: `
+      let text = item.prompt?.trim() || "";
+      const keepImportPrompt = item.promptSource === "import" && text.length > 0;
+
+      if (!keepImportPrompt) {
+        const { text: aiText } = await u.Ai.Text("universalAi").invoke({
+          system: `${typeConfig.prompt}`,
+          messages: [
+            {
+              role: "user",
+              content: `
             父级资产描述: ${item.parentDescribe || "无详细描述"}
             当前资产描述: ${item.describe || "无详细描述"}`,
-          },
-        ],
+            },
+          ],
+        });
+        text = aiText || text;
+        await u.db("o_assets").where("id", item.id).update({ prompt: text, promptSource: "ai" });
+      } else {
+        console.log(
+          `[drama-pack] batchGenerateAssetsImage keep import prompt id=${item.id} tier=${tier} preview=${text.slice(0, 120)}`,
+        );
+      }
+
+      const assetType = (item.type === "scene" ? "scene" : item.type === "tool" ? "tool" : "role") as "role" | "scene" | "tool";
+      const finalPrompt = buildFinalAssetImagePrompt({
+        type: assetType,
+        dbPrompt: text,
+        remark: item.remark,
+        assetsId: item.assetsId,
+        productionSpec: packCtx.productionSpec,
+        tier,
       });
-        await u.db("o_assets").where("id", item.id).update({ prompt: text });
+      const imagePrompt = assetImageWrapper(
+        assetType,
+        tier,
+        projectSettingData?.artStyle || "",
+        item.name || "",
+        finalPrompt,
+      );
 
       const imageBase64 = imageUrlRecord[item.assetsId!] ? await u.oss.getImageBase64(imageUrlRecord[item.assetsId!]) : null;
       try {
         const repeloadObj = {
-          prompt: text,
+          prompt: imagePrompt,
           size: projectSettingData?.imageQuality as "1K" | "2K" | "4K",
-          aspectRatio: "16:9" as `${number}:${number}`,
+          aspectRatio,
         };
+        console.log(`[drama-pack] batchGenerateAssetsImage id=${item.id} tier=${tier} aspect=${aspectRatio}`);
         const imageCls = await u.Ai.Image(projectSettingData?.imageModel as `${string}:${string}`).run(
           {
             referenceList: imageBase64 ? [{ type: "image", base64: imageBase64 }] : [],

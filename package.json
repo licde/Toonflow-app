@@ -20,6 +20,7 @@
   },
   "scripts": {
     "dev": "nodemon --inspect --exec tsx src/app.ts",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3 sharp",
     "dev:gui": "electronmon -r tsx scripts/main.ts",
     "dev:gui-vite": "cross-env VITE_DEV=1 electronmon -r tsx scripts/main.ts",
     "start": "cross-env NODE_ENV=prod node data/serve/app.js",
@@ -33,7 +34,10 @@
     "debug:ai": "npx @ai-sdk/devtools",
     "license": "node scripts/license.ts",
     "vendor2json": "node scripts/vendor2json.ts",
-    "test:vendors": "tsx scripts/test-vendors.ts"
+    "test:vendors": "tsx scripts/test-vendors.ts",
+    "drama-pack": "tsx scripts/import-drama-pack.ts",
+    "drama-pack:backfill-prompts": "tsx scripts/backfill-asset-prompts.ts",
+    "drama-pack:verify": "tsx scripts/verify-drama-pack-project.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.35",

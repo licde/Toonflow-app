@@ -17,9 +17,44 @@ export default router.post(
     type: z.enum(["role", "scene", "tool"]),
     prompt: z.string().optional().nullable(),
     imageId: z.number().optional().nullable(),
+    scriptId: z.number().optional(),
   }),
   async (req, res) => {
-    const { id, base64, type, prompt, projectId, imageId } = req.body;
+    const { id, base64, type, prompt, projectId, imageId, scriptId } = req.body;
+
+    const isStoryboard = !(await u.db("o_assets").where("id", id).first());
+    if (isStoryboard) {
+      if (base64) {
+        const matches = base64.match(/^data:image\/\w+;base64,(.+)$/);
+        const realBase64 = matches ? matches[1] : base64;
+        const savePath = `/${projectId}/assets/${scriptId ?? "0"}/${uuidv4()}.jpg`;
+        await u.oss.writeFile(savePath, Buffer.from(realBase64, "base64"));
+        const [newImageId] = await u.db("o_image").insert({
+          storyboardId: id,
+          filePath: savePath,
+          type: "storyboard",
+          state: "已完成",
+        });
+        await u.db("o_storyboard").where("id", id).update({
+          imageId: newImageId,
+          filePath: savePath,
+          state: "已完成",
+          shouldGenerateImage: 1,
+        });
+      } else if (imageId) {
+        const image = await u.db("o_image").where({ id: imageId, storyboardId: id }).first();
+        if (image?.filePath) {
+          await u.db("o_storyboard").where("id", id).update({
+            imageId,
+            filePath: image.filePath,
+            state: "已完成",
+            shouldGenerateImage: 1,
+          });
+        }
+      }
+      return res.status(200).send(success({ message: "保存分镜图片成功" }));
+    }
+
     if (base64) {
       //自定义上传选择的图片
       const matches = base64.match(/^data:image\/\w+;base64,(.+)$/);

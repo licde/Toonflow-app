@@ -15,14 +15,22 @@ export default router.post(
   }),
   async (req, res) => {
     const { id, url, flowId } = req.body;
+    const filePath = u.replaceUrl(url);
+    const [imageId] = await u.db("o_image").insert({
+      filePath,
+      state: "已完成",
+      storyboardId: id,
+      type: "storyboard",
+    });
     await u
       .db("o_storyboard")
       .where({ id })
       .update({
-        filePath: u.replaceUrl(url),
+        filePath,
         flowId,
+        imageId,
         state: "已完成",
-        shouldGenerateImage:url ? 1 : 0
+        shouldGenerateImage: filePath ? 1 : 0,
       });
     res.status(200).send(success({ message: "更新分镜成功" }));
   },

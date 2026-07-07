@@ -43,12 +43,16 @@ export async function runDecisionAI(ctx: AgentContext) {
   const memory = new Memory("scriptAgent", isolationKey);
   await memory.add("user", text, { createTime: userMessageTime });
 
-  const skill = path.join(u.getPath("skills"), "script_agent_decision.md");
-  const prompt = await fs.promises.readFile(skill, "utf-8");
+  const skillPath = path.join(u.getPath("skills"), "script_agent_decision.md");
+  let prompt = await fs.promises.readFile(skillPath, "utf-8");
+  const projectData = await u.db("o_project").where("id", resTool.data.projectId).first();
+  if (projectData?.scriptWorkflowMode === "quality") {
+    const addonPath = path.join(u.getPath("skills"), "script_agent_decision_quality_addon.md");
+    const addon = await fs.promises.readFile(addonPath, "utf-8");
+    prompt += "\n\n---\n\n" + addon;
+  }
 
   const mem = buildMemPrompt(await memory.get(text));
-
-  const projectData = await u.db("o_project").where("id", resTool.data.projectId).first();
 
   const novelData = await u.db("o_novel").where("projectId", resTool.data.projectId).select("chapterIndex");
 
@@ -208,6 +212,79 @@ function createSubAgent(parentCtx: AgentContext) {
     },
   });
 
+  const run_sub_agent_stylePosition = tool({
+    description: "运行执行subAgent完成风格定位（高质量模式步骤1）",
+    inputSchema: jsonSchema<{ prompt: string }>(promptInput),
+    execute: async ({ prompt }) => {
+      const skill = path.join(u.getPath("skills"), "script_execution_stylePosition.md");
+      const systemPrompt = await fs.promises.readFile(skill, "utf-8");
+      const formatPrompt = "\n你必须使用如下XML格式写入工作区：\n<stylePosition>风格定位内容</stylePosition>";
+      return runAgent({
+        key: "scriptAgent:stylePositionAgent",
+        prompt,
+        system: systemPrompt + formatPrompt,
+        name: "编剧",
+        memoryKey: "assistant:execution:stylePosition",
+        messages: [{ role: "user", content: prompt + formatPrompt }],
+      });
+    },
+  });
+
+  const run_sub_agent_adaptationMatrix = tool({
+    description: "运行执行subAgent完成12维改版矩阵（高质量模式步骤1.5）",
+    inputSchema: jsonSchema<{ prompt: string }>(promptInput),
+    execute: async ({ prompt }) => {
+      const skill = path.join(u.getPath("skills"), "script_execution_adaptationMatrix.md");
+      const systemPrompt = await fs.promises.readFile(skill, "utf-8");
+      const formatPrompt = "\n你必须使用如下XML格式写入工作区：\n<adaptationMatrix>改版矩阵内容</adaptationMatrix>";
+      return runAgent({
+        key: "scriptAgent:adaptationMatrixAgent",
+        prompt,
+        system: systemPrompt + formatPrompt,
+        name: "编剧",
+        memoryKey: "assistant:execution:adaptationMatrix",
+        messages: [{ role: "user", content: prompt + formatPrompt }],
+      });
+    },
+  });
+
+  const run_sub_agent_characterBible = tool({
+    description: "运行执行subAgent完成人物行为与视觉圣经（高质量模式步骤2.5-2.7）",
+    inputSchema: jsonSchema<{ prompt: string }>(promptInput),
+    execute: async ({ prompt }) => {
+      const skill = path.join(u.getPath("skills"), "script_execution_characterBible.md");
+      const systemPrompt = await fs.promises.readFile(skill, "utf-8");
+      const formatPrompt = "\n你必须使用如下XML格式写入工作区：\n<characterBible>人物视觉圣经内容</characterBible>";
+      return runAgent({
+        key: "scriptAgent:characterBibleAgent",
+        prompt,
+        system: systemPrompt + formatPrompt,
+        name: "编剧",
+        memoryKey: "assistant:execution:characterBible",
+        messages: [{ role: "user", content: prompt + formatPrompt }],
+      });
+    },
+  });
+
+  const run_sub_agent_dialogueValidation = tool({
+    description: "运行执行subAgent完成台词设计与验证（高质量模式步骤3.6-3.7）",
+    inputSchema: jsonSchema<{ prompt: string }>(promptInput),
+    execute: async ({ prompt }) => {
+      const skill = path.join(u.getPath("skills"), "script_execution_dialogueValidation.md");
+      const systemPrompt = await fs.promises.readFile(skill, "utf-8");
+      const formatPrompt =
+        "\n你必须使用如下XML格式写入工作区：\n<dialogueStyleAnchor>台词风格锚点</dialogueStyleAnchor>\n<dialogueValidation>验证表</dialogueValidation>";
+      return runAgent({
+        key: "scriptAgent:dialogueValidationAgent",
+        prompt,
+        system: systemPrompt + formatPrompt,
+        name: "编剧",
+        memoryKey: "assistant:execution:dialogueValidation",
+        messages: [{ role: "user", content: prompt + formatPrompt }],
+      });
+    },
+  });
+
   const run_supervision_agent = tool({
     description: "运行监督层subAgent执行独立任务，完成后返回结果",
     inputSchema: jsonSchema<{ prompt: string }>(promptInput),
@@ -229,6 +306,10 @@ function createSubAgent(parentCtx: AgentContext) {
     run_sub_agent_storySkeleton,
     run_sub_agent_adaptationStrategy,
     run_sub_agent_script,
+    run_sub_agent_stylePosition,
+    run_sub_agent_adaptationMatrix,
+    run_sub_agent_characterBible,
+    run_sub_agent_dialogueValidation,
     run_supervision_agent,
   };
 }

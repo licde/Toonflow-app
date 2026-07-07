@@ -2,7 +2,9 @@ import express from "express";
 import u from "@/utils";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import { success } from "@/lib/responseFormat";
+import { resolveStoryboardReference, resolveAssetReference } from "@/lib/dramaPack/resolveReference";
+import { findAllOrphanRefs, loadTrackRefSlots } from "@/lib/dramaPack/refSlotBuilder";
+import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { ReferenceList } from "@/utils/ai";
 const router = express.Router();
@@ -50,23 +52,38 @@ export default router.post(
     const ratio = await u.db("o_project").select("videoRatio").where("id", projectId).first();
     const videoPath = `/${projectId}/video/${uuidv4()}.mp4`; //视频保存路径
     //查询出图片数据
+    const missingRefs: Array<{ id?: number; reason: string }> = [];
     const images = await Promise.all(
       uploadData.map(async (item: UploadItem) => {
         if (item.sources === "storyboard") {
-          const filePath = await u.db("o_storyboard").where("id", item.id).select("filePath").first();
-          return { path: filePath?.filePath, sources: "storyBoard" };
+          const ref = await resolveStoryboardReference(item.id!);
+          if (!ref?.path) {
+            missingRefs.push({ id: item.id, reason: "分镜图未生成且无关联资产图" });
+            return null;
+          }
+          return { path: ref.path, sources: "storyBoard", fallback: ref.fallback };
         }
         if (item.sources === "assets") {
-          const filePath = await u
-            .db("o_assets")
-            .where("o_assets.id", item.id)
-            .leftJoin("o_image", "o_assets.imageId", "o_image.id")
-            .select("o_image.filePath", "o_image.type")
-            .first();
-          return { path: filePath?.filePath, sources: filePath.type };
+          const ref = await resolveAssetReference(item.id!);
+          if (!ref?.path) {
+            missingRefs.push({ id: item.id, reason: "资产图未生成" });
+            return null;
+          }
+          return { path: ref.path, sources: ref.sources };
         }
+        return null;
       }),
     );
+
+    if (missingRefs.length && uploadData.length > 0) {
+      return res.status(400).send(error({ message: "参考图缺失", missingRefs }));
+    }
+
+    const refSlots = await loadTrackRefSlots(trackId);
+    const orphanRefs = findAllOrphanRefs(prompt, uploadData.length, refSlots);
+    if (orphanRefs.length) {
+      return res.status(400).send(error({ message: "提示词引用与参考条带不一致", orphanRefs }));
+    }
     //把images里面的图片转成base64格式
     const base64 = await Promise.all(
       images.map(async (item) => {

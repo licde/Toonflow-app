@@ -4,6 +4,10 @@ import pLimit from "p-limit";
 import * as zod from "zod";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { isT1WardrobeAsset, detectAssetTier } from "@/lib/dramaPack/assetTierUtils";
+import { loadProjectPackContext } from "@/lib/dramaPack/loadProjectPackContext";
+import { buildFinalAssetImagePrompt } from "@/lib/dramaPack/assetImagePromptBuilder";
+import { formatAssetPayloadForAi } from "@/lib/dramaPack/assetPayloadForAi";
 const router = express.Router();
 interface OutlineItem {
   description: string;
@@ -50,10 +54,12 @@ export default router.post(
     //如果没有找到对应的项目，返回错误
     if (!project) return res.status(500).send(success({ message: "项目为空" }));
 
+    const packCtx = await loadProjectPackContext(projectId);
+
     // 预加载公共数据
     const assetsIds = items.map((item: { assetsId: number }) => item.assetsId);
     //查询所有资产，用于判断每个资产是否是衍生资产
-    const assetsDataList = await u.db("o_assets").whereIn("id", assetsIds).select("id", "assetsId");
+    const assetsDataList = await u.db("o_assets").whereIn("id", assetsIds).select("id", "assetsId", "remark", "prompt", "promptSource");
     if (!assetsDataList || assetsDataList.length === 0) return res.status(500).send(error("资产不存在"));
     const assetsDataMap = new Map(assetsDataList.map((a: any) => [a.id, a]));
     // 所有前置检测通过后，再批量更新状态为生成中
@@ -61,13 +67,14 @@ export default router.post(
 
     const getTypeConfig = (
       isDerivative: boolean,
+      isT1Wardrobe: boolean,
     ): Record<string, { promptKey: string; itemType: ItemType; label: string; nameLabel: string; visualManual: string }> => ({
       role: {
         promptKey: "role-polish",
         itemType: "characters",
-        label: "角色标准四视图",
+        label: isT1Wardrobe ? "角色服化单图参考" : "角色标准四视图",
         nameLabel: "角色",
-        visualManual: isDerivative ? "art_character_derivative" : "art_character",
+        visualManual: isDerivative || isT1Wardrobe ? "art_character_derivative" : "art_character",
       },
       scene: {
         promptKey: "scene-polish",
@@ -91,7 +98,36 @@ export default router.post(
       limit(async () => {
         const assetData = assetsDataMap.get(item.assetsId);
         if (!assetData) return;
-        const typeConfig = getTypeConfig(!!assetData.assetsId);
+
+        const assetType = (item.type === "scene" ? "scene" : item.type === "tool" ? "tool" : "role") as "role" | "scene" | "tool";
+        const tier = detectAssetTier(assetData.remark, assetData.assetsId);
+
+        const mergeOnly =
+          assetData.promptSource === "import" &&
+          assetData.prompt?.trim() &&
+          (assetType === "scene" || assetType === "tool" || assetType === "role");
+
+        if (mergeOnly) {
+          const finalPrompt = buildFinalAssetImagePrompt({
+            type: assetType,
+            dbPrompt: assetData.prompt,
+            remark: assetData.remark,
+            assetsId: assetData.assetsId,
+            productionSpec: packCtx.productionSpec,
+            tier,
+          });
+          await u.db("o_assets").where("id", item.assetsId).update({
+            prompt: finalPrompt,
+            promptState: "已完成",
+            promptSource: "import",
+          });
+          console.log(`[drama-pack] batchPolish merge import id=${item.assetsId} type=${assetType}`);
+          return;
+        }
+
+        const isDerivative = assetData.assetsId != null;
+        const isT1Wardrobe = isT1WardrobeAsset(assetData.remark, assetData.assetsId);
+        const typeConfig = getTypeConfig(isDerivative, isT1Wardrobe);
         const config = typeConfig[item.type];
         if (!config) return;
         //获取到视觉手册
@@ -102,6 +138,10 @@ export default router.post(
         }
         const systemPrompt = visualManual;
         try {
+          const payload = formatAssetPayloadForAi(
+            { ...assetData, name: item.name, describe: item.describe, type: item.type },
+            packCtx.extensions,
+          );
           const { _output } = (await u.Ai.Text("universalAi").invoke({
             system: systemPrompt + "\n" + otherTextPrompt,
             messages: [
@@ -111,7 +151,8 @@ export default router.post(
                     **基础参数：**
       **${config.nameLabel}设定：**
       - ${config.nameLabel}名称:${item.name},
-      - ${config.nameLabel}描述:${item.describe},`,
+      - 性别:${payload.gender || "未指定"},
+      - ${config.nameLabel}描述:${payload.describe || item.describe},`,
               },
             ],
           })) as any;
@@ -121,7 +162,16 @@ export default router.post(
             return;
           }
 
-          await u.db("o_assets").where("id", item.assetsId).update({ prompt: _output, promptState: "已完成" });
+          const finalPrompt = buildFinalAssetImagePrompt({
+            type: assetType,
+            dbPrompt: _output,
+            remark: assetData.remark,
+            assetsId: assetData.assetsId,
+            productionSpec: packCtx.productionSpec,
+            tier,
+          });
+
+          await u.db("o_assets").where("id", item.assetsId).update({ prompt: finalPrompt, promptState: "已完成", promptSource: "ai" });
         } catch (e: any) {
           await u
             .db("o_assets")

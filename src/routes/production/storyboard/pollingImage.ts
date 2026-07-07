@@ -12,12 +12,17 @@ export default router.post(
   }),
   async (req, res) => {
     const { ids } = req.body;
-    const data = await u.db("o_storyboard").whereIn("id", ids).whereNot("state", "生成中").select("id", "state", "reason", "filePath", "prompt");
+    const data = await u.db("o_storyboard").whereIn("id", ids).select("id", "state", "reason", "filePath", "prompt", "videoDesc", "videoPrompt", "generateStartTime", "createTime");
+    const now = Date.now();
     const result = await Promise.all(
-      data.map(async (item: any) => ({
-        ...item,
-        src: item.filePath ? await u.oss.getSmallImageUrl(item.filePath) : null,
-      })),
+      data.map(async (item: any) => {
+        const start = item.generateStartTime || item.createTime || now;
+        return {
+          ...item,
+          elapsedMs: now - start,
+          src: item.filePath ? await u.oss.getSmallImageUrl(item.filePath) : null,
+        };
+      }),
     );
     res.status(200).send(success(result));
   },

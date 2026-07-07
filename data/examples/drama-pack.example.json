@@ -1,0 +1,84 @@
+{
+  "version": "1.1",
+  "meta": {
+    "title": "示例短剧",
+    "episodeCount": 1,
+    "tone": "生存博弈",
+    "artStyleHint": "realpeople_urban_modern"
+  },
+  "plan": {
+    "storySkeleton": "【叙事内核】一句话：……\n【前5集结构】……",
+    "adaptationStrategy": "核心改编原则……",
+    "stylePosition": "【文本核心矛盾】……",
+    "adaptationMatrix": "【维度1：性别结构】……",
+    "characterBible": "人物一：沈砚\n核心认知框架：……",
+    "dialogueStyleAnchor": "断句规则：……\n独白≤12字，对话≤15字",
+    "visualLock": {
+      "characters": [
+        {
+          "code": "CHAR-1",
+          "name": "沈砚",
+          "desc": "男性，二十余岁，清瘦，深色长袍",
+          "prompt": "a young man, dark robes, sharp eyes, pale skin",
+          "lockFace": "左眉尾浅疤",
+          "stages": [
+            { "name": "阶段一", "episodeRange": "第1-3集", "visualMark": "束发、衣襟整齐" },
+            { "name": "阶段二", "episodeRange": "第4-6集", "visualMark": "散发、衣袖破损" }
+          ]
+        }
+      ],
+      "scenes": [
+        {
+          "code": "SCENE-1",
+          "name": "书房",
+          "desc": "窄小书房，窗纸泛黄，案上堆满卷宗",
+          "prompt": "small ancient study room, yellowed paper windows, scrolls on desk"
+        }
+      ],
+      "props": [
+        {
+          "code": "PROP-1",
+          "name": "信纸",
+          "desc": "泛黄宣纸，边缘卷曲",
+          "prompt": "aged yellow paper letter, curled edges"
+        }
+      ],
+      "globalStyle": {
+        "tone": "冷调偏青",
+        "texture": "胶片颗粒感",
+        "lighting": "侧逆光为主"
+      }
+    }
+  },
+  "episodes": [
+    {
+      "name": "EP01：入局",
+      "script": "作品名 EP01：入局\n\n△ 书房内，沈砚将信纸放回案上。\n沈砚：……行。",
+      "emotionBeats": "节拍一：0-3s 短钩……",
+      "dialogueValidation": "| 序号 | 台词 | 字数 | 结果 |\n| 1 | 行。 | 2 | 通过 |",
+      "directorNotes": "镜头1：重心前倾，肩膀内收，呼吸浅快",
+      "storyboard": [
+        {
+          "time": "0-3s",
+          "shotType": "特写",
+          "visualId": "沈砚-阶段一",
+          "content": "沈砚手指将信纸压平在案上",
+          "sound": "纸张摩擦声",
+          "dialogue": "沈砚：……行。",
+          "duration": 3,
+          "assetCodes": ["CHAR-1", "SCENE-1", "PROP-1"],
+          "imagePrompt": "close-up, hands pressing letter on desk, ancient study",
+          "videoPrompt": "slow push in, hand presses paper flat, paper rustling",
+          "track": "1"
+        }
+      ],
+      "keyPrompts": [
+        {
+          "scene": "书房信纸",
+          "imagePrompt": "close-up, ancient study, letter on desk, cinematic 9:16",
+          "videoPrompt": "slow push in, hand presses paper flat, paper rustling"
+        }
+      ]
+    }
+  ]
+}
