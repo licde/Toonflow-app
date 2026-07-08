@@ -14,6 +14,7 @@ import {
 import { extractShotMeta } from "./productionRuleEngine";
 import { reconcileOrphanAssets } from "./assetReconcile";
 import { resolveProjectId, buildProjectNotFoundMessage } from "./resolveProjectId";
+import { autoPersistTrackMedias } from "./trackVideoService";
 import type { PackDomainHashes } from "./packDerivation";
 import { isEmotionStageName } from "./tieredAssetPolicy";
 import {
@@ -417,6 +418,10 @@ async function upsertEpisode(
     trackNameToId.set(trackKey, trackId);
     await u.db("o_storyboard").whereIn("id", group.ids).update({ trackId });
     trackIdx++;
+  }
+
+  for (const trackId of trackNameToId.values()) {
+    await autoPersistTrackMedias(trackId);
   }
 
   const flowData = {

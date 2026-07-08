@@ -1,0 +1,56 @@
+智能、完善高质量短剧方案
+参考问题如下
+1.展示文字变英文了，比如分镜图纸条的文字等展示性内容，还有其他这方面问题吗？
+2.默认是这样的提示如下，没有参考图？没有按字段配置生成，没有对白等还有没有其他问题？
+[Visual]
+Wen RuJie: young Chinese male, round soft jawline with slight asymmetry, tiny mole below left eye (1.2mm), faded grey-blue oxford shirt (slight yellowing at left collar), dark grey straight-leg trousers. Expression shifts from tension to anger, then to focused action. Hands trembling slightly before pocketing the note.
+Office environment: Modern corporate space, cold white-greenish lighting, sterile atmosphere. Empty corridors and elevator lobby visible.
+modern urban drama, photorealistic, cinematic, natural lighting, ultra-fine detail, shallow depth of field.
+
+[Motion]
+0s-1s: Wen RuJie quickly stuffs the handwritten note into his trouser pocket. His body leans forward slightly, posture tense. He takes short, quick steps towards the exit, looking straight ahead with narrowed eyes.
+1s-3s: He stops abruptly at the elevator entrance. His shoulders hunch slightly, breath held for a moment, eyes staring forward in shock/freeze frame. He processes the situation internally.
+3s-4s: Resume walking but with a slumped, thoughtful gait. Head moves slightly side-to-side as he mentally dismisses potential suspects. Hands swing naturally but stiffly.
+
+[Camera]
+Medium shot, tracking forward slightly then static close-up at elevator door. Single continuous take, no cuts. Focus shifts from the hand action to facial expression changes.
+
+[Audio]
+0s-1s: Rustling of paper being stuffed into pocket. Quick, rhythmic footsteps on carpet/tiles. "Dialogue" — Wen RuJie (dialogue, silent lips).
+1s-3s: Sudden halt of footsteps. Heavy silence. Low, fast heartbeat sound effect intensifies. "Dialogue" — Wen RuJie (dialogue, silent lips).
+3s-4s: Footsteps resume slowly. "Dialogue" — Wen RuJie (dialogue, silent lips).
+
+[Narrative]
+Post-reveal panic turning into decisive action. Wen RuJie hides the evidence, confronts his fear at the elevator, and begins his internal investigation process while walking through the cold, empty office space.
+
+
+[Dialogue]
+<dialogue index="6" type="dialogue">—</dialogue>
+<dialogue index="7" type="dialogue">独白：老李？不可能。小林？不。实习生？不感兴趣。</dialogue>
+<dialogue index="8" type="dialogue">—</dialogue>
+
+下面是文生视频没有图片内容
+参考图，分镜图都没显示缩略图，是无法按参考图生成？
+[References]
+@图1 : [温如珏参考图]
+@图2 : [温如珏-日常参考图]
+@图3 : [分镜图1]
+@图4 : [分镜图2]
+@图5 : [分镜图3]
+
+[Instruction]
+Based on the storyboard from @图3 to @图5 :
+@图2 putting a note into his pocket with a quick step, expression shifting to determined action,
+@图2 walking down the corridor with a slight hunch, looking ahead, shaking head slightly while thinking,
+@图2 stopping abruptly near the elevator, staring forward, freezing with a slight shrug and mouth slightly open,
+set in the modern office environment of @图1 ,
+medium shot transitioning to close-up, shallow depth of field, cinematic,
+tense atmosphere shifting to rapid analysis, cold-white and bluish lighting,
+—(dialogue), inner monologue: 独白：老李？不可能。小林？不。实习生？不感兴趣。(dialogue), no dialogue,
+heartbeats syncing, subtle fabric rustling.
+
+并且还是只能单条生成提示词，生成一条视频后，不能再次点击生成与交互不符
+不是统一后端链路缓存前端做法，切换模式或重新生成提示词只是当前条改变，没有规则统一调用缓存层
+有分镜图1，在单图模式，参考条带不是图片是空白加文显示，无法更改，
+
+3.综合性全流程端到端的智能、高质量、规范实施方案问题

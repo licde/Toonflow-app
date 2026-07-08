@@ -279,5 +279,6 @@ yarn drama-pack export <projectId> ./out.json
 ## 九、延伸阅读
 
 - **高质量短剧端到端 Playbook**：[`short-drama-quality-playbook.md`](./short-drama-quality-playbook.md) — SOP、质量门禁、已知问题登记
+- **视频工作台实操链路**：[`workbench-smart-video-production-guide.md`](./workbench-smart-video-production-guide.md) — 400 排查、模式固化、参考条带一致性与模型契约
 - **Pack 引擎架构**：[`pack-architecture-guide.md`](./pack-architecture-guide.md)
 - **人格/脸锚策略**：[`pack-persona-asset-guide.md`](./pack-persona-asset-guide.md)

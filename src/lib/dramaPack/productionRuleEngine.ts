@@ -122,6 +122,11 @@ function resolveCameraMotion(
     }
   }
 
+  // 情绪峰值镜头增强：高强度镜头默认补充特写锚点，提升表情/嘴型可见度
+  if ((shot.emotionIntensity ?? 0) >= 4 && !parts.some((p) => /close-up|特写/i.test(p))) {
+    parts.push("peak-emotion close-up");
+  }
+
   return parts.filter(Boolean).join(" ") || "静止";
 }
 
@@ -305,6 +310,14 @@ export async function applyProductionRules(
   const soundText = systemSound || resolveSound(shot, sceneCode, soundDesign);
 
   const mergedPerf = mergePerformanceWithMapping(shot, performanceBaseline, emotionMapping);
+  if ((shot.emotionIntensity ?? 0) >= 4) {
+    mergedPerf.mouth = mergedPerf.mouth || "嘴角紧绷后短促开合";
+    mergedPerf.gaze = mergedPerf.gaze || "视线快速聚焦后轻微回闪";
+    mergedPerf.microExpression = {
+      ...(mergedPerf.microExpression || {}),
+      mouthDetail: mergedPerf.microExpression?.mouthDetail || "唇线绷紧后瞬时松动",
+    };
+  }
   let performanceText = formatPerformanceFull(mergedPerf);
   const personalitySuffix = buildPersonalityVideoSuffix(ruleCtx);
   if (personalitySuffix) performanceText = [performanceText, personalitySuffix].filter(Boolean).join("，");

@@ -46,7 +46,12 @@ export function resolveVideoPromptRoute(modelData: string, mode: string): VideoP
   if (isJsonArrayMode) {
     return { fileName: "universalMulti-parameterMode.md", modeLabel: "通用多参", isMultiParam: true };
   }
-  return { fileName: null, modeLabel: "通用（fallback skill）", isMultiParam: false };
+  // Fallback 策略（质量模式优先）：无法从 mode 推断时，
+  // 1）Wan 系列默认走单图首帧；2）其他模型默认走通用多参，避免让 LLM 自行路由。
+  if (modelLower.includes("wan")) {
+    return { fileName: "wan2.6Single-imageFirstFrameMode.md", modeLabel: "Wan2.6 单图首帧（fallback）", isMultiParam: false };
+  }
+  return { fileName: "universalMulti-parameterMode.md", modeLabel: "通用多参（fallback）", isMultiParam: true };
 }
 
 export async function loadVideoPromptSkill(
@@ -82,6 +87,7 @@ export async function loadVideoPromptSkill(
 export function buildStoryboardXml(
   items: Array<{
     videoDesc?: string | null;
+    videoPrompt?: string | null;
     prompt?: string | null;
     track?: string | null;
     duration?: string | null;
@@ -93,6 +99,7 @@ export function buildStoryboardXml(
     .map(
       (i) => `<storyboardItem
   videoDesc='${String(i.videoDesc ?? "").replace(/'/g, "&#39;")}'
+  videoPrompt='${String(i.videoPrompt ?? "").replace(/'/g, "&#39;")}'
   duration='${i.duration ?? ""}'
   track='${i.track ?? ""}'
   associateAssetsIds='${(i.associateAssetsIds ?? []).join(",")}'
@@ -111,6 +118,8 @@ export function buildVideoPromptUserContent(opts: {
   storyboardXml: string;
   dialogueBlock?: string;
   refSlotsBlock?: string;
+  episodeDirectorBlock?: string;
+  keyPromptsBlock?: string;
 }): string {
   const dialogueSection = opts.dialogueBlock?.trim()
     ? `\n**台词**（保持台词原始语言，严禁翻译；仅标注 (dialogue)/(inner monologue, OS)/(voiceover, VO)）：\n${opts.dialogueBlock}\n`
@@ -118,11 +127,13 @@ export function buildVideoPromptUserContent(opts: {
   const refSection = opts.refSlotsBlock?.trim()
     ? `\n**参考图槽位**（@图N 必须严格对应以下 slot，禁止自行编号）：\n${opts.refSlotsBlock}\n`
     : "";
+  const directorSection = opts.episodeDirectorBlock?.trim() ? `\n**本集导演意图**：\n${opts.episodeDirectorBlock}\n` : "";
+  const keyPromptSection = opts.keyPromptsBlock?.trim() ? `\n**关键场景提示**：\n${opts.keyPromptsBlock}\n` : "";
   return `**模型名称**：${opts.modelData}
 **模式**：${opts.modeLabel}
 **多参**：${opts.isMultiParam ? "是" : "否"}
 **原始 mode 参数**：${opts.mode}
-${dialogueSection}${refSection}
+${directorSection}${keyPromptSection}${dialogueSection}${refSection}
 **关联资产**（含性别与描述）:
 ${opts.assetsBlock}
 
@@ -230,6 +241,19 @@ export function sanitizeVideoPromptOutput(text: string): string {
   return result;
 }
 
+/** 当 fallback skill 输出仍然包含明显路由/说明性文本时，尝试裁剪到第一个有效块，避免把路由推理写入 track.prompt。 */
+export function hardTrimReasoningIfNeeded(text: string): string {
+  if (!detectVideoPromptReasoningLeak(text)) return text;
+  const markers = [/\[References\]/i, /\[Instruction\]/i, /\[Visual\]/i, /^Based on the storyboard/im];
+  for (const marker of markers) {
+    const idx = text.search(marker);
+    if (idx > 0) {
+      return text.slice(idx).trim();
+    }
+  }
+  return text;
+}
+
 export function dialogueBlockHasChinese(dialogueBlock: string): boolean {
   return /[\u4e00-\u9fa5]/.test(dialogueBlock);
 }
@@ -257,6 +281,8 @@ export type VideoPromptGenInput = {
   storyboardXml: string;
   dialogueBlock?: string;
   refSlotsBlock?: string;
+  episodeDirectorBlock?: string;
+  keyPromptsBlock?: string;
 };
 
 export async function invokeVideoPromptGeneration(input: VideoPromptGenInput): Promise<string> {
@@ -274,6 +300,8 @@ export async function invokeVideoPromptGeneration(input: VideoPromptGenInput): P
     storyboardXml: input.storyboardXml,
     dialogueBlock: input.dialogueBlock,
     refSlotsBlock: input.refSlotsBlock,
+    episodeDirectorBlock: input.episodeDirectorBlock,
+    keyPromptsBlock: input.keyPromptsBlock,
   });
 
   const messages = [
@@ -291,10 +319,15 @@ export async function invokeVideoPromptGeneration(input: VideoPromptGenInput): P
       system: systemPrompt,
       messages: [{ ...messages[0] }, { role: "user", content: content + retryHint }],
     });
-    lastText = sanitizeVideoPromptOutput(text);
+    lastText = hardTrimReasoningIfNeeded(sanitizeVideoPromptOutput(text));
     if (!input.dialogueBlock || !detectDialogueTranslationLeak(lastText, input.dialogueBlock)) {
       return lastText;
     }
+  }
+  // 二次重试后仍侦测到翻译泄漏时，强制附加原始 dialogueBlock，确保最终提示词中保留未被模型改写的台词文本。
+  if (input.dialogueBlock?.trim()) {
+    const safeAppend = `\n\n[Dialogue]\n${input.dialogueBlock.trim()}`;
+    return `${lastText}\n${safeAppend}`.trim();
   }
   return lastText;
 }

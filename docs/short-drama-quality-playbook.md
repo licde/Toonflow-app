@@ -41,7 +41,7 @@ flowchart TB
 
 ---
 
-## 2. 标准 SOP（导入后）
+## 2. 标准 SOP（导入后，含视频主链）
 
 ### 2.1 入库
 
@@ -58,20 +58,25 @@ yarn drama-pack audit <projectId> ./my-pack.json
 3. 场景/道具：空 prompt 时先 `batchEnsureAssetPrompts`
 4. 人工对照 visualLock 抽检：T0 四格含 back view；T1 同脸、服化可变
 
-### 2.3 分镜
+### 2.3 分镜（分镜图链路）
 
 1. `batchGenerateImage` 生成分镜图
 2. sync 默认 `preserveStoryboardImages=true`，同 index 保留 `filePath`
 3. 裂图排查：`pollingImage` / audit `BROKEN_STORYBOARD_IMAGE`
 
-### 2.4 视频工作台
+### 2.4 视频工作台（单图首帧主链）
 
 1. 确认项目 **videoModel** + **mode**（设置 → 项目）
-2. segment 拖拽排序 → `reorderTracks` 持久化
-3. 参考图：分镜图优先，无图时 `fallbackAssetSrc`（关联资产图）
-4. **批量生成提示词** → 抽检 `o_videoTrack.prompt` 无推理泄漏
-5. **生成视频** → 缺图时 API 返回 `missingRefs`
-6. 选片 → 配音
+2. **优先选择「单图首帧」类模式**：`singleImage` / Wan2.6 单图首帧，当仅需一套参考图锁脸锁服化时优先使用；仅在需要复杂多参控制时再切换多参模式
+3. segment 拖拽排序 → `reorderTracks` 持久化
+4. 参考图：分镜图优先，无图时 `fallbackAssetSrc`（关联资产图）
+5. **批量生成提示词（单图首帧链路）**：
+   - videoModel 为 Wan 系列且 `mode=singleImage` 时 → 实际走 `Wan2.6 单图首帧` skill
+   - 其他模型且 `mode=singleImage` 时 → 走 `通用单图首帧` skill
+   - 无法判定模式时 → 回退到 `通用多参`，但需人工确认提示词无路由推理文本
+6. 抽检 `o_videoTrack.prompt`：应为结构化提示词正文（如 `[References]` + `[Instruction]` 或 JSON Prompt），**不应**包含「Wan2.6 / seedance2 / 多参路由规则」等推理说明
+7. **生成视频** → 缺图时 API 返回 `missingRefs`
+8. 选片 → 配音
 
 ### 2.5 开发环境（Electron GUI）
 

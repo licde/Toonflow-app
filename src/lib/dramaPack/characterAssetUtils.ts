@@ -21,7 +21,10 @@ export function lookupLockDescription(entry: RawRecord | undefined): string {
 
 export function lookupLockFaceEnglish(entry: RawRecord | undefined): string {
   const desc = lookupLockDescription(entry);
-  if (/\b(male|female|jaw|mole|face|round)\b/i.test(desc)) return desc.slice(0, 200);
+  // 优先使用已包含面部关键特征的英文锁定描述
+  if (/\b(male|female|jaw|mole|face|round|eye|cheek|chin|nose)\b/i.test(desc)) {
+    return desc.slice(0, 200);
+  }
   return lookupLockFace(entry);
 }
 

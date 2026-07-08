@@ -3,10 +3,11 @@ import u from "@/utils";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { resolveStoryboardReference, resolveAssetReference } from "@/lib/dramaPack/resolveReference";
-import { findAllOrphanRefs, loadTrackRefSlots } from "@/lib/dramaPack/refSlotBuilder";
+import { loadTrackRefSlots, refSlotsToUploadInfo } from "@/lib/dramaPack/refSlotBuilder";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { ReferenceList } from "@/utils/ai";
+import { buildPromptSourceTag, validatePromptRefsAgainstTrack, validateVideoContract } from "@/lib/dramaPack/videoWorkbenchGuard";
 const router = express.Router();
 
 type Type = "imageReference" | "startImage" | "endImage" | "videoReference" | "audioReference";
@@ -40,7 +41,19 @@ export default router.post(
     trackId: z.number(),
   }),
   async (req, res) => {
-    const { scriptId, projectId, prompt, uploadData, model, duration, resolution, audio, mode, trackId } = req.body;
+    const { scriptId, projectId, prompt, model, duration, resolution, audio, mode, trackId } = req.body;
+    const contract = validateVideoContract({ model, mode, duration, resolution, audio });
+    if (!contract.ok) {
+      u.genLog({
+        vendorId: model.split(/:(.+)/)[0],
+        model,
+        taskClass: "视频生成",
+        assetId: trackId,
+        phase: "preflight_reject",
+        message: `${contract.code}:${contract.message}`,
+      });
+      return res.status(400).send(error(contract));
+    }
     let modeData = [];
     if (Array.isArray(mode)) {
     } else if (typeof mode === "string" && mode.startsWith('["') && mode.endsWith('"]')) {
@@ -51,10 +64,13 @@ export default router.post(
     //获取生成视频比例
     const ratio = await u.db("o_project").select("videoRatio").where("id", projectId).first();
     const videoPath = `/${projectId}/video/${uuidv4()}.mp4`; //视频保存路径
+    // 统一以轨道当前参考条带为准，避免前端临时 uploadData/refSlots 漂移导致错配
+    const trackRefSlots = await loadTrackRefSlots(trackId);
+    const canonicalUploadData = refSlotsToUploadInfo(trackRefSlots);
     //查询出图片数据
     const missingRefs: Array<{ id?: number; reason: string }> = [];
     const images = await Promise.all(
-      uploadData.map(async (item: UploadItem) => {
+      canonicalUploadData.map(async (item: UploadItem) => {
         if (item.sources === "storyboard") {
           const ref = await resolveStoryboardReference(item.id!);
           if (!ref?.path) {
@@ -75,14 +91,35 @@ export default router.post(
       }),
     );
 
-    if (missingRefs.length && uploadData.length > 0) {
-      return res.status(400).send(error({ message: "参考图缺失", missingRefs }));
+    if (missingRefs.length && canonicalUploadData.length > 0) {
+      u.genLog({
+        vendorId: model.split(/:(.+)/)[0],
+        model,
+        taskClass: "视频生成",
+        assetId: trackId,
+        phase: "preflight_reject",
+        message: `REFERENCE_MISSING:${JSON.stringify(missingRefs).slice(0, 300)}`,
+      });
+      return res.status(400).send(
+        error({
+          code: "REFERENCE_MISSING",
+          message: "参考图缺失",
+          details: { missingRefs },
+        }),
+      );
     }
 
-    const refSlots = await loadTrackRefSlots(trackId);
-    const orphanRefs = findAllOrphanRefs(prompt, uploadData.length, refSlots);
-    if (orphanRefs.length) {
-      return res.status(400).send(error({ message: "提示词引用与参考条带不一致", orphanRefs }));
+    const refGuard = await validatePromptRefsAgainstTrack({ trackId, prompt });
+    if (!refGuard.ok) {
+      u.genLog({
+        vendorId: model.split(/:(.+)/)[0],
+        model,
+        taskClass: "视频生成",
+        assetId: trackId,
+        phase: "preflight_reject",
+        message: `${refGuard.code}:${JSON.stringify(refGuard.details || {}).slice(0, 300)}`,
+      });
+      return res.status(400).send(error(refGuard));
     }
     //把images里面的图片转成base64格式
     const base64 = await Promise.all(
@@ -99,6 +136,9 @@ export default router.post(
       scriptId,
       projectId,
       videoTrackId: trackId,
+    });
+    await u.db("o_videoTrack").where({ id: trackId }).update({
+      promptSource: buildPromptSourceTag(model, mode, prompt, refGuard.refSlotsCount),
     });
     res.status(200).send(success(videoId));
     const relatedObjects = {

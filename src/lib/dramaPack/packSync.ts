@@ -17,7 +17,8 @@ import { resolveArtStyleProfile, shouldApplySpecBlock } from "./artStyleProfiles
 import { resolveProjectId, buildProjectNotFoundMessage } from "./resolveProjectId";
 import { lookupLockDescription } from "./characterAssetUtils";
 import { recomposeProjectPrompts, type RecomposeResult } from "./recomposeDramaPack";
-import { expandProjectVideoTracks, type ExpandVideoTracksResult } from "./expandVideoTrackPrompts";
+import { type ExpandVideoTracksResult } from "./expandVideoTrackPrompts";
+import { presetEpisodeVideo } from "./trackVideoService";
 import { extractShotMeta } from "./productionRuleEngine";
 import { normalizeDramaPack } from "./normalizeDramaPack";
 
@@ -143,7 +144,25 @@ export async function syncDramaPack(packInput: unknown, options: SyncOptions): P
   let videoExpandResult: ExpandVideoTracksResult | undefined;
   const shouldExpandVideo = options.expandVideoPrompts !== false;
   if (importResult.success && shouldExpandVideo) {
-    videoExpandResult = await expandProjectVideoTracks({ projectId, respectImport: false });
+    const scriptIds = importResult.scriptIds?.length
+      ? importResult.scriptIds
+      : (await u.db("o_script").where("projectId", projectId).select("id")).map((s) => s.id!);
+    let totalUpdated = 0;
+    let totalSkipped = 0;
+    const details: string[] = [];
+    for (const sid of scriptIds) {
+      const preset = await presetEpisodeVideo({ projectId, scriptId: sid, respectImport: true });
+      totalUpdated += preset.promptCount;
+      totalSkipped += preset.skippedCount;
+      details.push(preset.message);
+    }
+    videoExpandResult = {
+      success: totalUpdated > 0,
+      updatedCount: totalUpdated,
+      skippedCount: totalSkipped,
+      message: `单集视频预设：生成 ${totalUpdated} 条，跳过 ${totalSkipped} 条`,
+      details,
+    };
   }
 
   const staleReports: SyncResult["staleReports"] = [];

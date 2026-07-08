@@ -65,7 +65,11 @@ export type RefSlot = {
 
 
 export function resolveMediaSrc(item: RefMediaInput): string {
-
+  // 参考条带的真实引用应优先使用本体 src。
+  // storyboard 的 fallbackAssetSrc 仅用于兜底展示，不作为正式引用源，避免“分镜图被资产图替代”造成引用漂移。
+  if (item.sources === "storyboard") {
+    return (item.src || "").trim();
+  }
   return (item.src || item.fallbackAssetSrc || "").trim();
 
 }

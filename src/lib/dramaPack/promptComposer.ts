@@ -109,10 +109,16 @@ export function composeAssetPrompt(
     prompt = mergeFragment(prompt, stageVisualMark);
   }
 
+  // 双层锁脸：硬特征主锚 + 轻度自然波动说明，避免全局僵硬同脸
   if (item.lockFace?.trim()) {
-    const faceHint = `lock face: ${item.lockFace}`;
-    if (!promptContains(prompt, item.lockFace.slice(0, 6))) {
-      prompt = mergeFragment(prompt, faceHint);
+    const hardLock = item.lockFace.trim();
+    const hardPrefix = `lock face: ${hardLock}`;
+    if (!promptContains(prompt, hardLock.slice(0, 6))) {
+      prompt = mergeFragment(prompt, hardPrefix);
+    }
+    const softHint = "same face as base character, allow subtle variation in expression and hairstyle only";
+    if (!promptContains(prompt, "allow subtle variation")) {
+      prompt = mergeFragment(prompt, softHint);
     }
   }
 
@@ -225,7 +231,7 @@ export async function composePackAssets(
       const rawStagePrompt = strippedStage
         ? strippedStage
         : composeAssetPrompt(artStyle, "role", item, globalStyle, true, stage.visualMark, extensions);
-      const facePrefix = lockFace ? `lock face: ${lockFace}, ` : "";
+      const facePrefix = lockFace ? `lock face: ${lockFace}, same face as base character, allow subtle variation in expression and hairstyle only, ` : "";
       const finalStagePrompt = /^lock face:/i.test(rawStagePrompt) ? rawStagePrompt : `${facePrefix}${rawStagePrompt}`;
       result.push({
         code: `${item.code}:${stage.name}`,

@@ -6,6 +6,8 @@ import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { ReferenceList } from "@/utils/ai";
 import { resolveStoryboardReference, resolveAssetReference } from "@/lib/dramaPack/resolveReference";
+import { loadTrackRefSlots, refSlotsToUploadInfo } from "@/lib/dramaPack/refSlotBuilder";
+import { buildPromptSourceTag, validatePromptRefsAgainstTrack, validateVideoContract } from "@/lib/dramaPack/videoWorkbenchGuard";
 
 type Type = "imageReference" | "startImage" | "endImage" | "videoReference" | "audioReference";
 interface UploadItem {
@@ -45,6 +47,7 @@ export default router.post(
   }),
   async (req, res) => {
     const { scriptId, projectId, trackData, model, resolution, audio, mode } = req.body;
+    const rejected: Array<{ trackId: number; code: string; message: string; details?: Record<string, unknown> }> = [];
 
     let modeData = [];
     if (Array.isArray(mode)) {
@@ -60,22 +63,76 @@ export default router.post(
     // 为每个 track 预处理数据并插入数据库，返回任务列表
     const tasks = await Promise.all(
       (trackData as { uploadData: { id: number; sources: string }[]; trackId: number; prompt: string; duration: number }[]).map(async (track) => {
-        const { uploadData, trackId, prompt, duration } = track;
+        const { trackId, prompt, duration } = track;
+        const contract = validateVideoContract({ model, mode, duration, resolution, audio });
+        if (!contract.ok) {
+          u.genLog({
+            vendorId: model.split(/:(.+)/)[0],
+            model,
+            taskClass: "视频生成",
+            assetId: trackId,
+            phase: "batch_preflight_reject",
+            message: `${contract.code}:${contract.message}`,
+          });
+          rejected.push({ trackId, code: contract.code, message: contract.message, details: contract.details });
+          return null;
+        }
+        const refGuard = await validatePromptRefsAgainstTrack({ trackId, prompt });
+        if (!refGuard.ok) {
+          u.genLog({
+            vendorId: model.split(/:(.+)/)[0],
+            model,
+            taskClass: "视频生成",
+            assetId: trackId,
+            phase: "batch_preflight_reject",
+            message: `${refGuard.code}:${JSON.stringify(refGuard.details || {}).slice(0, 300)}`,
+          });
+          rejected.push({ trackId, code: refGuard.code, message: refGuard.message, details: refGuard.details });
+          return null;
+        }
 
+        const trackRefSlots = await loadTrackRefSlots(trackId);
+        const canonicalUploadData = refSlotsToUploadInfo(trackRefSlots);
         // 查询出图片数据
+        const missingRefs: Array<{ id?: number; reason: string }> = [];
         const images = await Promise.all(
-          uploadData.map(async (item) => {
+          canonicalUploadData.map(async (item) => {
             if (item.sources === "storyboard") {
               const ref = await resolveStoryboardReference(item.id);
-              return ref?.path ? { path: ref.path, sources: "storyBoard" } : null;
+              if (!ref?.path) {
+                missingRefs.push({ id: item.id, reason: "分镜图未生成且无关联资产图" });
+                return null;
+              }
+              return { path: ref.path, sources: "storyBoard" };
             }
             if (item.sources === "assets") {
               const ref = await resolveAssetReference(item.id);
-              return ref?.path ? { path: ref.path, sources: ref.sources } : null;
+              if (!ref?.path) {
+                missingRefs.push({ id: item.id, reason: "资产图未生成" });
+                return null;
+              }
+              return { path: ref.path, sources: ref.sources };
             }
             return null;
           }),
         );
+        if (missingRefs.length && canonicalUploadData.length > 0) {
+          u.genLog({
+            vendorId: model.split(/:(.+)/)[0],
+            model,
+            taskClass: "视频生成",
+            assetId: trackId,
+            phase: "batch_preflight_reject",
+            message: `REFERENCE_MISSING:${JSON.stringify(missingRefs).slice(0, 300)}`,
+          });
+          rejected.push({
+            trackId,
+            code: "REFERENCE_MISSING",
+            message: "参考图缺失",
+            details: { missingRefs },
+          });
+          return null;
+        }
 
         const videoPath = `/${projectId}/video/${uuidv4()}.mp4`;
         const [videoId] = await u.db("o_video").insert({
@@ -86,13 +143,23 @@ export default router.post(
           projectId,
           videoTrackId: trackId,
         });
+        await u.db("o_videoTrack").where({ id: trackId }).update({
+          promptSource: buildPromptSourceTag(model, mode, prompt, refGuard.refSlotsCount),
+        });
 
         return { videoId, videoPath, prompt, duration, images, trackId };
       }),
     );
-
-    res.status(200).send(success(tasks.map((t) => ({ videoId: t.videoId, trackId: t.trackId }))));
-    for (const { videoId, videoPath, prompt, duration, images } of tasks) {
+    const validTasks = tasks.filter(Boolean) as Array<{
+      videoId: number;
+      videoPath: string;
+      prompt: string;
+      duration: number;
+      images: Array<{ path: string; sources: string } | null>;
+      trackId: number;
+    }>;
+    res.status(200).send(success({ accepted: validTasks.map((t) => ({ videoId: t.videoId, trackId: t.trackId })), rejected }));
+    for (const { videoId, videoPath, prompt, duration, images } of validTasks) {
       // 所有任务全部并发后台执行，完全不阻塞任何进程
       const base64 = await Promise.all(
         images.map(async (item) => {

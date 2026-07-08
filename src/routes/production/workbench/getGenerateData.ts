@@ -5,6 +5,12 @@ import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { resolveStoryboardReference } from "@/lib/dramaPack/resolveReference";
 import { enrichMediasWithResolved, buildRefSlots, buildPromptHint, type RefMediaInput } from "@/lib/dramaPack/refSlotBuilder";
+import {
+  autoPersistTrackMedias,
+  loadEpisodePlan,
+  reconcileEpisodePresetStatus,
+  resolveTrackContext,
+} from "@/lib/dramaPack/trackVideoService";
 const router = express.Router();
 
 interface VideoItem {
@@ -30,6 +36,10 @@ interface TrackItem {
   medias: TrackMedia[];
   refSlots?: ReturnType<typeof buildRefSlots>;
   promptHint?: string;
+  promptStale?: boolean;
+  promptPresets?: Record<string, { ready: boolean; generatedAt?: number }>;
+  activeRoute?: string;
+  inputHash?: string;
   videoList: VideoItem[];
 }
 
@@ -169,47 +179,44 @@ export default router.post(
       "videoTrackId",
       trackData.map((t) => t.id),
     );
+    const episodePlan = await loadEpisodePlan(scriptId, projectId);
+    let videoWorkbench = await reconcileEpisodePresetStatus(projectId, scriptId);
     const trackList: TrackItem[] = [];
     const trackIdMap = [...new Set<number>(trackData.map((t) => t.id!))];
     for (const trackId of trackIdMap) {
       const item = trackData.find((t) => t.id === trackId);
-      const storyboardMedias = storyboardTrackRecord[trackId] ?? [];
-      const assetMedias = storyboardMedias.flatMap((s) => otherDataMap[s.id] ?? []);
+      await autoPersistTrackMedias(trackId);
+      const ctx = await resolveTrackContext(trackId);
 
-      const seenAssetIds = new Set<number>();
-      const uniqueAssets = assetMedias.filter((a) => {
-        if (seenAssetIds.has(a.id)) return false;
-        seenAssetIds.add(a.id);
-        return true;
-      });
-
-      const audioCountMap: Record<string, number> = {};
-      const filteredAssets = uniqueAssets.filter((a) => {
-        if (a.fileType !== "audio" || audioReferenceCount === 0) return true;
-        const key = String(a.id);
-        audioCountMap[key] = (audioCountMap[key] ?? 0) + 1;
-        const totalAudio = Object.values(audioCountMap).reduce((s, n) => s + n, 0);
-        return totalAudio <= audioReferenceCount;
-      });
-
-      const hasImageAssetData = filteredAssets.filter((i) => i.src);
-      const notHasImageAssetData = filteredAssets.filter((i) => !i.src);
-      const defaultMedias = [...hasImageAssetData, ...storyboardMedias, ...notHasImageAssetData];
-
-      let rawMedias: RefMediaInput[] = defaultMedias;
-      if (item?.medias) {
-        try {
-          const saved = JSON.parse(item.medias as string) as RefMediaInput[];
-          if (Array.isArray(saved) && saved.length) rawMedias = saved;
-        } catch {
-          /* use default */
-        }
+      let rawMedias: RefMediaInput[] = ctx?.medias ?? [];
+      if (!rawMedias.length) {
+        const storyboardMedias = storyboardTrackRecord[trackId] ?? [];
+        const assetMedias = storyboardMedias.flatMap((s) => otherDataMap[s.id] ?? []);
+        rawMedias = [...assetMedias.filter((a) => a.src), ...storyboardMedias, ...assetMedias.filter((a) => !a.src)];
       }
 
-      const enrichedMedias = enrichMediasWithResolved(rawMedias);
+      const enrichedMedias = await Promise.all(
+        enrichMediasWithResolved(rawMedias).map(async (m) => {
+          if (!m.src || m.src.startsWith("http")) return m;
+          const url =
+            m.fileType === "audio"
+              ? m.src
+                ? await u.oss.getFileUrl(m.src)
+                : ""
+              : m.src
+                ? await u.oss.getSmallImageUrl(m.src)
+                : "";
+          return { ...m, src: url || m.src, resolvedSrc: url || m.resolvedSrc };
+        }),
+      );
+
       const refSlots = buildRefSlots(enrichedMedias);
-      const trackPrompt = item?.prompt || "";
-      const promptHint = !trackPrompt.includes("@图") && refSlots.length ? buildPromptHint(refSlots) : undefined;
+      const trackPrompt = ctx?.prompt || item?.prompt || "";
+      const promptStale = ctx?.promptStale ?? false;
+      const promptHintBase = !trackPrompt.includes("@图") && refSlots.length ? buildPromptHint(refSlots) : "";
+      const promptHint = promptStale
+        ? `${promptHintBase ? `${promptHintBase}；` : ""}当前模式或参考条带已变更，建议批量重新生成提示词后再生成视频`
+        : promptHintBase || undefined;
 
       trackList.push({
         id: trackId,
@@ -221,6 +228,10 @@ export default router.post(
         medias: enrichedMedias as TrackMedia[],
         refSlots,
         promptHint,
+        promptStale,
+        promptPresets: ctx?.promptPresets,
+        activeRoute: ctx?.activeRouteKey,
+        inputHash: ctx?.inputHash,
         videoList: await Promise.all(
           videoList
             .filter((v) => v.videoTrackId === trackId)
@@ -247,11 +258,17 @@ export default router.post(
               src: s.filePath,
               fallbackAssetSrcs,
               hasImage: Boolean(s.filePath),
-              canReference: Boolean(s.filePath || fallbackAssetSrcs.length),
+              canReference: Boolean(s.filePath),
             };
           }),
         ),
         trackList,
+        episodePlan,
+        videoWorkbench: {
+          presetStatus: videoWorkbench.presetStatus,
+          defaultRoute: videoWorkbench.defaultRoute,
+          routes: videoWorkbench.routes,
+        },
       }),
     );
   },
