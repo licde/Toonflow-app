@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Toonflow 日志中心</title>
+  <style>
+    :root { --bg: #0f1419; --card: #1a2332; --text: #e7ecf3; --muted: #8b9cb3; --accent: #3d8bfd; --err: #f87171; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { padding: 1rem 1.5rem; border-bottom: 1px solid #2a3548; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    h1 { margin: 0; font-size: 1.1rem; }
+    input, select, button { background: var(--card); border: 1px solid #334155; color: var(--text); padding: 0.45rem 0.6rem; border-radius: 6px; }
+    button { cursor: pointer; background: var(--accent); border-color: var(--accent); }
+    main { display: grid; grid-template-columns: 1fr 320px; gap: 1rem; padding: 1rem; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+    .card { background: var(--card); border-radius: 10px; padding: 1rem; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 0.4rem; border-bottom: 1px solid #2a3548; vertical-align: top; }
+    tr:hover { background: #243044; cursor: pointer; }
+    .level-error, .level-fatal { color: var(--err); }
+    .muted { color: var(--muted); font-size: 0.8rem; }
+    pre { white-space: pre-wrap; word-break: break-all; font-size: 0.75rem; max-height: 240px; overflow: auto; }
+    #status { margin-left: auto; font-size: 0.85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>日志中心</h1>
+    <input id="token" type="password" placeholder="Bearer Token" style="min-width:200px" />
+    <select id="level"><option value="">全部级别</option><option>error</option><option>warn</option><option>info</option></select>
+    <select id="category"><option value="">全部分类</option><option>ai_call</option><option>http</option><option>vendor</option><option>task</option></select>
+    <input id="keyword" placeholder="关键词 FTS" />
+    <button id="refresh">刷新</button>
+    <span id="status"></span>
+  </header>
+  <main>
+    <section class="card">
+      <table>
+        <thead><tr><th>时间</th><th>级别</th><th>分类</th><th>厂商</th><th>消息</th><th>traceId</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+    <aside class="card">
+      <h3 style="margin-top:0">详情</h3>
+      <div id="detail" class="muted">点击左侧行查看</div>
+    </aside>
+  </main>
+  <script>
+    const api = (path, body) => {
+      const token = document.getElementById('token').value.trim();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = 'Bearer ' + token.replace(/^Bearer\s+/i, '');
+      return fetch('/api/logs/' + path, { method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined }).then(r => r.json());
+    };
+    const fmt = (ts) => new Date(ts).toLocaleString();
+    let cache = [];
+    async function load() {
+      document.getElementById('status').textContent = '加载中…';
+      const level = document.getElementById('level').value;
+      const category = document.getElementById('category').value;
+      const keyword = document.getElementById('keyword').value;
+      const res = await api('query', { limit: 80, level: level || null, category: category || null, keyword: keyword || null });
+      if (res.code !== 200) { document.getElementById('status').textContent = res.message || '请求失败'; return; }
+      cache = res.data?.rows || [];
+      const tbody = document.getElementById('rows');
+      tbody.innerHTML = cache.map((r, i) => `<tr data-i="${i}">
+        <td class="muted">${fmt(r.ts)}</td>
+        <td class="level-${r.level}">${r.level}</td>
+        <td>${r.category || ''}</td>
+        <td>${r.vendorId || ''}</td>
+        <td>${(r.message || '').slice(0, 80)}</td>
+        <td class="muted">${(r.traceId || '').slice(0, 8)}</td>
+      </tr>`).join('');
+      document.getElementById('status').textContent = `共 ${res.data?.total ?? cache.length} 条`;
+    }
+    document.getElementById('rows').addEventListener('click', async (e) => {
+      const tr = e.target.closest('tr');
+      if (!tr) return;
+      const row = cache[Number(tr.dataset.i)];
+      let extra = '';
+      if (row.traceId) {
+        const t = await api('trace/' + encodeURIComponent(row.traceId));
+        if (t.code === 200 && t.data?.diagnosis) {
+          extra = `<p><b>诊断</b>: ${t.data.diagnosis.conclusion}</p><ul>${(t.data.diagnosis.suggestions||[]).map(s=>'<li>'+s+'</li>').join('')}</ul>`;
+        }
+      }
+      document.getElementById('detail').innerHTML = `<p><b>${row.level}</b> · ${row.category} · ${row.vendorId || '-'}</p>
+        <p>${row.message}</p><pre>${row.payload || ''}</pre>${extra}`;
+    });
+    document.getElementById('refresh').onclick = load;
+    api('health').then(h => {
+      if (h.code === 200) document.getElementById('status').textContent = 'obs ' + (h.data?.enabled ? 'on' : 'off');
+    }).catch(() => {});
+  </script>
+</body>
+</html>

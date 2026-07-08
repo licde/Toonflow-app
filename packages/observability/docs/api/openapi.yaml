@@ -1,0 +1,333 @@
+openapi: 3.1.0
+info:
+  title: Toonflow Observability & Agnes AI API
+  version: 1.0.0
+  description: |
+    Toonflow 可观测性日志中心 API（需 JWT Bearer）与 Agnes AI 供应商外部网关 API 参考。
+servers:
+  - url: http://localhost:10588
+    description: Local Toonflow API
+  - url: https://apihub.agnes-ai.com/v1
+    description: Agnes AI API Hub
+tags:
+  - name: logs
+    description: 结构化日志 / 诊断 / 推荐
+  - name: agnes
+    description: Agnes AI 供应商 HTTP 接口（由 data/vendor/agnesai.ts 适配）
+paths:
+  /api/logs/query:
+    post:
+      tags: [logs]
+      summary: 查询日志事件
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogQueryRequest"
+      responses:
+        "200":
+          description: 分页日志列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiSuccessLogQuery"
+  /api/logs/trace/{traceId}:
+    get:
+      tags: [logs]
+      summary: 按 traceId 获取链路事件与诊断
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: traceId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 链路详情
+  /api/logs/incidents:
+    get:
+      tags: [logs]
+      summary: 事件中心（错误日志 + 失败任务）
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: 合并事件列表
+  /api/logs/diagnose:
+    post:
+      tags: [logs]
+      summary: Playbook 诊断
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [traceId]
+              properties:
+                traceId: { type: string }
+      responses:
+        "200":
+          description: 诊断结论与建议
+  /api/logs/similar:
+    post:
+      tags: [logs]
+      summary: 相似错误（指纹）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [errorFingerprint]
+              properties:
+                errorFingerprint: { type: string }
+                limit: { type: integer }
+      responses:
+        "200":
+          description: 相似事件
+  /api/logs/aggregate:
+    post:
+      tags: [logs]
+      summary: 厂商成功率与延迟聚合
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                days: { type: integer, default: 7 }
+      responses:
+        "200":
+          description: 厂商统计
+  /api/logs/recommend/list:
+    get:
+      tags: [logs]
+      summary: 智能推荐（非 LLM）
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: 推荐列表
+  /api/logs/ingest:
+    post:
+      tags: [logs]
+      summary: 外部日志注入（Embed/Sidecar）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogIngestRequest"
+      responses:
+        "200":
+          description: 已接收
+  /api/logs/health:
+    get:
+      tags: [logs]
+      summary: 可观测性健康检查
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: 运行状态
+  /api/logs/switches/getSwitches:
+    get:
+      tags: [logs]
+      summary: 获取日志开关配置
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: SwitchConfig
+  /api/logs/switches/updateSwitches:
+    post:
+      tags: [logs]
+      summary: 更新日志开关 / Profile
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SwitchPatch"
+      responses:
+        "200":
+          description: 更新后的配置
+  /images/generations:
+    post:
+      tags: [agnes]
+      summary: Agnes 图像生成
+      servers: [{ url: https://apihub.agnes-ai.com/v1 }]
+      security: [{ agnesBearer: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgnesImageRequest"
+      responses:
+        "200":
+          description: 图像 URL 或 base64
+        "401":
+          description: API Key 无效
+        "429":
+          description: 限流
+  /videos:
+    post:
+      tags: [agnes]
+      summary: Agnes 视频任务提交
+      servers: [{ url: https://apihub.agnes-ai.com/v1 }]
+      security: [{ agnesBearer: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgnesVideoCreateRequest"
+      responses:
+        "200":
+          description: 返回 video_id / task_id
+  /videos/{taskId}:
+    get:
+      tags: [agnes]
+      summary: Agnes 视频任务轮询（task_id 模式）
+      servers: [{ url: https://apihub.agnes-ai.com/v1 }]
+      security: [{ agnesBearer: [] }]
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 任务状态
+  /agnesapi:
+    get:
+      tags: [agnes]
+      summary: Agnes 视频任务轮询（video_id 模式）
+      servers: [{ url: https://apihub.agnes-ai.com }]
+      security: [{ agnesBearer: [] }]
+      parameters:
+        - name: video_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: model_name
+          in: query
+          schema: { type: string, example: agnes-video-v2.0 }
+      responses:
+        "200":
+          description: 任务状态与视频 URL
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Toonflow JWT（/api/login/login 获取）
+    agnesBearer:
+      type: http
+      scheme: bearer
+      description: Agnes API Key（设置 → 模型配置 → Agnes AI）
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data: {}
+    ApiSuccessLogQuery:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                rows: { type: array, items: { $ref: "#/components/schemas/LogEventRow" } }
+                total: { type: integer }
+    LogQueryRequest:
+      type: object
+      properties:
+        level: { type: string }
+        category: { type: string }
+        vendorId: { type: string }
+        model: { type: string }
+        traceId: { type: string }
+        projectId: { type: integer }
+        keyword: { type: string }
+        from: { type: integer, description: epoch ms }
+        to: { type: integer }
+        limit: { type: integer, default: 50 }
+        offset: { type: integer, default: 0 }
+    LogIngestRequest:
+      type: object
+      required: [level, category, message]
+      properties:
+        level: { type: string, enum: [trace, debug, info, warn, error, fatal] }
+        category: { type: string }
+        message: { type: string }
+        traceId: { type: string }
+        module: { type: string }
+        vendorId: { type: string }
+        model: { type: string }
+        projectId: { type: integer }
+        payload: { type: object }
+    SwitchPatch:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        level: { type: string }
+        profile: { type: string, enum: [balanced, secure, performance, debug] }
+        transports:
+          type: object
+          properties:
+            stdout: { type: boolean }
+            file: { type: boolean }
+            sqlite: { type: boolean }
+    LogEventRow:
+      type: object
+      properties:
+        id: { type: integer }
+        ts: { type: integer }
+        level: { type: string }
+        category: { type: string }
+        traceId: { type: string }
+        vendorId: { type: string }
+        model: { type: string }
+        message: { type: string }
+        errorFingerprint: { type: string }
+        payload: { type: string }
+    AgnesImageRequest:
+      type: object
+      required: [model, prompt, size]
+      properties:
+        model: { type: string, example: agnes-image-2.1-flash }
+        prompt: { type: string }
+        size: { type: string, example: "1024x576" }
+        extra_body:
+          type: object
+          properties:
+            response_format: { type: string, enum: [url, b64_json] }
+            image:
+              type: array
+              items: { type: string, format: uri }
+              description: 公网可访问参考图 URL
+    AgnesVideoCreateRequest:
+      type: object
+      required: [model, prompt, width, height, num_frames, frame_rate]
+      properties:
+        model: { type: string, example: agnes-video-v2.0 }
+        prompt: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+        num_frames: { type: integer, description: "8n+1, 9-441" }
+        frame_rate: { type: integer, example: 24 }
+        image: { type: string, description: 单图参考公网 URL }
+        extra_body:
+          type: object
+          properties:
+            image: { type: array, items: { type: string } }
+            video: { type: array, items: { type: string } }
+            mode: { type: string, enum: [keyframes] }
+            generate_audio: { type: boolean }

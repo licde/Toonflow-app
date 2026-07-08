@@ -39,6 +39,7 @@ const appBuildConfig: esbuild.BuildOptions = {
   tsconfig: "./tsconfig.json",
   alias: {
     "@": "./src",
+    "@toonflow/observability": "./packages/observability/src/index.ts",
   },
   sourcemap: false,
   external,
@@ -60,6 +61,7 @@ const mainBuildConfig: esbuild.BuildOptions = {
   tsconfig: "./tsconfig.json",
   alias: {
     "@": "./src",
+    "@toonflow/observability": "./packages/observability/src/index.ts",
   },
   sourcemap: false,
   external,

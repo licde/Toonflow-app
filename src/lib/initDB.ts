@@ -612,8 +612,35 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
             models: "[]",
             enable: 0,
           },
+          {
+            id: "agnesai",
+            inputValues: JSON.stringify({ apiKey: "", baseUrl: "https://apihub.agnes-ai.com/v1" }),
+            models: "[]",
+            enable: 0,
+          },
         ]);
       },
+    },
+    {
+      name: "o_log_events",
+      builder: (table) => {
+        table.increments("id").primary();
+        table.integer("ts").notNullable().index();
+        table.string("level");
+        table.string("category").index();
+        table.string("traceId").index();
+        table.string("appId");
+        table.string("module");
+        table.integer("projectId").index();
+        table.string("vendorId");
+        table.string("model");
+        table.text("message");
+        table.string("errorFingerprint").index();
+        table.text("payload");
+        table.integer("taskId");
+        table.text("entityRefs");
+      },
+      initData: async () => {},
     },
     //图片工作流表
     {

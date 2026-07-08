@@ -74,6 +74,9 @@ export default async (knex: Knex): Promise<void> => {
   await addColumn("o_image", "storyboardId", "integer");
   await addColumn("o_modelPrompt", "fileName", "string");
   await addColumn("o_modelPrompt", "path", "string");
+  await addColumn("o_tasks", "traceId", "string");
+  await addColumn("o_tasks", "endTime", "integer");
+  await addColumn("o_tasks", "latencyMs", "integer");
   const vendorDataSelect = await u.db("o_vendorConfig").whereIn("id", ["deepseek", "atlascloud"]).select("*");
   if (!vendorDataSelect.find((i) => i.id == "deepseek")) {
     await u.db("o_vendorConfig").insert({
@@ -195,6 +198,22 @@ export default async (knex: Knex): Promise<void> => {
   const toonflowVer = await u.vendor.getVendor("toonflow").version;
   if (Number(toonflowVer) < 3.2) {
     u.vendor.writeCode("toonflow", vendorData["toonflow.ts"]);
+  }
+
+  const agnesTsPath = path.join(process.cwd(), "data/vendor/agnesai.ts");
+  if (fs.existsSync(agnesTsPath)) {
+    const agnesCode = fs.readFileSync(agnesTsPath, "utf8");
+    const agnesRow = await u.db("o_vendorConfig").where("id", "agnesai").first();
+    if (!agnesRow) {
+      await tempOnsert(agnesCode);
+    } else {
+      try {
+        const agnesVer = Number((await u.vendor.getVendor("agnesai")).version || 0);
+        if (agnesVer < 2.6) u.vendor.writeCode("agnesai", agnesCode);
+      } catch {
+        u.vendor.writeCode("agnesai", agnesCode);
+      }
+    }
   }
 };
 

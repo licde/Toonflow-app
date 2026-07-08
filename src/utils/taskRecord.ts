@@ -1,4 +1,5 @@
 import db from "@/utils/db";
+import { getObs } from "@/observability/bootstrap";
 
 const taskStateMap = {
   "0": "进行中",
@@ -22,6 +23,8 @@ export default async function taskRecord(
   } = {},
 ) {
   const { content, describe = "" } = opts;
+  const traceId = getObs().getTraceId();
+  const startTime = Date.now();
 
   let opteorContent: string | undefined;
   if (content === undefined || content === null) {
@@ -45,16 +48,30 @@ export default async function taskRecord(
     model: modelName,
     describe,
     state: taskStateMap[0],
-    startTime: Date.now(),
+    startTime,
+    traceId: traceId || null,
   });
 
   /** 任务成功时调用 done(1)，失败时调用 done(-1, '原因') */
   return async function done(state: 1 | -1, reason?: string) {
+    const endTime = Date.now();
     await db("o_tasks")
       .where("id", id)
       .update({
         state: taskStateMap[state],
         reason: state === -1 ? (reason ?? "") : null,
+        endTime,
+        latencyMs: endTime - startTime,
       });
+    await getObs().log({
+      level: state === 1 ? "info" : "error",
+      category: "task",
+      module: "taskRecord",
+      message: state === 1 ? `任务完成: ${taskClass}` : `任务失败: ${taskClass}`,
+      traceId,
+      projectId,
+      taskId: id,
+      payload: { taskClass, modelName, reason, latencyMs: endTime - startTime },
+    });
   };
 }

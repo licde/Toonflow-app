@@ -15,9 +15,17 @@ import jsonwebtoken from "jsonwebtoken";
 import u from "@/utils";
 import crypto from "node:crypto";
 import oss from "@/utils/oss";
+import { getObs } from "@/observability/bootstrap";
 
 export function logger(logstring: any) {
-  console.log("【VM】" + JSON.stringify(logstring));
+  const msg = typeof logstring === "string" ? logstring : JSON.stringify(logstring);
+  void getObs().log({
+    level: "info",
+    category: "vendor",
+    module: "vm",
+    message: msg.slice(0, 500),
+    payload: typeof logstring === "object" ? logstring : undefined,
+  });
 }
 
 /** 供应商参考图/视频公网化：写入本地 OSS，返回可访问 URL（需配置 ossURL 供外部 API 拉取） */

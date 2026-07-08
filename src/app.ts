@@ -1,11 +1,11 @@
 // import "./logger";
+import "@/observability/bootstrap";
 import "./err";
 import "./env";
 import express, { Request, Response, NextFunction } from "express";
 import { Server } from "socket.io";
 import http from "node:http";
 import expressWs from "express-ws";
-import logger from "morgan";
 import cors from "cors";
 import buildRoute from "@/core";
 import path from "path";
@@ -15,6 +15,8 @@ import jwt from "jsonwebtoken";
 import socketInit from "@/socket/index";
 import { isEletron } from "@/utils/getPath";
 import { ensureThumbnail, ThumbnailSize } from "@/utils/image";
+import { getObs } from "@/observability/bootstrap";
+import { traceMiddleware, errorHandler } from "@toonflow/observability";
 
 const app = express();
 const server = http.createServer(app);
@@ -54,7 +56,7 @@ export default async function startServe(randomPort: Boolean = false) {
 
   expressWs(app);
 
-  app.use(logger("dev"));
+  app.use(traceMiddleware(getObs()));
   app.use(cors({ origin: "*" }));
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));
@@ -178,12 +180,7 @@ export default async function startServe(randomPort: Boolean = false) {
   });
 
   // 错误处理
-  app.use((err: any, _: Request, res: Response, __: NextFunction) => {
-    res.locals.message = err.message;
-    res.locals.error = err;
-    console.error(err);
-    res.status(err.status || 500).send(err);
-  });
+  app.use(errorHandler(getObs()));
 
   const port = randomPort ? 0 : 10588;
   return await new Promise((resolve) => {

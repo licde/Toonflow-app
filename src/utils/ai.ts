@@ -3,6 +3,7 @@ import { devToolsMiddleware } from "@ai-sdk/devtools";
 import axios from "axios";
 import { transform } from "sucrase";
 import u from "@/utils";
+import { getObs } from "@/observability/bootstrap";
 
 type AiType =
   | "scriptAgent"
@@ -110,6 +111,45 @@ async function getModelConfig(value: AiType | `${string}:${string}`) {
   return null;
 }
 
+async function logAiSuccess(meta: { fnName: string; vendorId: string; model: string; latencyMs: number; aiType?: string }) {
+  await getObs().log({
+    level: "info",
+    category: "ai_call",
+    module: "ai",
+    vendorId: meta.vendorId,
+    model: meta.model,
+    message: `${meta.fnName} succeeded`,
+    payload: { fnName: meta.fnName, aiType: meta.aiType, latencyMs: meta.latencyMs },
+  });
+}
+
+async function logAiFailure(
+  err: unknown,
+  meta: { fnName: string; vendorId: string; model: string; latencyMs: number; aiType?: string },
+) {
+  await getObs().logAiError(err, {
+    vendorId: meta.vendorId,
+    model: meta.model,
+    module: "ai",
+    aiType: meta.aiType || meta.fnName,
+    latencyMs: meta.latencyMs,
+  });
+}
+
+function wrapVendorExec<T, R>(exec: (input: T) => Promise<R>, meta: { fnName: FnName; vendorId: string; model: string }) {
+  return async (input: T) => {
+    const start = Date.now();
+    try {
+      const result = await exec(input);
+      await logAiSuccess({ ...meta, fnName: meta.fnName, latencyMs: Date.now() - start });
+      return result;
+    } catch (e) {
+      await logAiFailure(e, { ...meta, fnName: meta.fnName, latencyMs: Date.now() - start });
+      throw e;
+    }
+  };
+}
+
 async function getVendorTemplateFn(
   fnName: "textRequest",
   modelName: `${string}:${string}`,
@@ -131,12 +171,15 @@ async function getVendorTemplateFn(fnName: FnName, modelName: `${string}:${strin
   }
   const fn = running[fnName];
   if (!fn) throw new Error(`未找到供应商配置中的函数 ${fnName} id=${id}`);
+  const vendorId = id;
+  const model = name;
   if (fnName == "textRequest")
     return (think?: boolean, thinkLevel: 0 | 1 | 2 | 3 = 0) => {
       const effectiveThink = think ?? !!selectedModel.think;
       return fn(selectedModel, effectiveThink, thinkLevel);
     };
-  else return <T>(input: T) => fn(input, selectedModel);
+  const raw = <T>(input: T) => fn(input, selectedModel);
+  return wrapVendorExec(raw, { fnName, vendorId, model });
 }
 
 async function withTaskRecord<T>(
@@ -196,25 +239,43 @@ class AiText {
   }
   async invoke(input: Omit<Parameters<typeof generateText>[0], "model">) {
     const config = await getModelConfig(this.AiType);
-
-    return generateText({
-      ...(input.tools && { stopWhen: stepCountIs(Object.keys(input.tools).length * 50) }),
-      ...input,
-      model: await this.resolveModel(),
-      ...(config?.temperature && { temperature: config.temperature }),
-      ...(config?.maxOutputTokens && { maxOutputTokens: config.maxOutputTokens }),
-    } as Parameters<typeof generateText>[0]);
+    const modelName = await resolveModelName(this.AiType);
+    const [vendorId, model] = modelName.split(/:(.+)/);
+    const start = Date.now();
+    try {
+      const result = await generateText({
+        ...(input.tools && { stopWhen: stepCountIs(Object.keys(input.tools).length * 50) }),
+        ...input,
+        model: await this.resolveModel(),
+        ...(config?.temperature && { temperature: config.temperature }),
+        ...(config?.maxOutputTokens && { maxOutputTokens: config.maxOutputTokens }),
+      } as Parameters<typeof generateText>[0]);
+      await logAiSuccess({ fnName: "textRequest", vendorId, model, latencyMs: Date.now() - start, aiType: String(this.AiType) });
+      return result;
+    } catch (e) {
+      await logAiFailure(e, { fnName: "textRequest", vendorId, model, latencyMs: Date.now() - start, aiType: String(this.AiType) });
+      throw e;
+    }
   }
   async stream(input: Omit<Parameters<typeof streamText>[0], "model">) {
     const config = await getModelConfig(this.AiType);
-
-    return streamText({
-      ...(input.tools && { stopWhen: stepCountIs(Object.keys(input.tools).length * 50) }),
-      ...input,
-      model: await this.resolveModel(extractReasoningMiddleware({ tagName: "reasoning_content", separator: "\n" })),
-      ...(config?.temperature && { temperature: config.temperature }),
-      ...(config?.maxOutputTokens && { maxOutputTokens: config.maxOutputTokens }),
-    } as Parameters<typeof streamText>[0]);
+    const modelName = await resolveModelName(this.AiType);
+    const [vendorId, model] = modelName.split(/:(.+)/);
+    const start = Date.now();
+    try {
+      const result = streamText({
+        ...(input.tools && { stopWhen: stepCountIs(Object.keys(input.tools).length * 50) }),
+        ...input,
+        model: await this.resolveModel(extractReasoningMiddleware({ tagName: "reasoning_content", separator: "\n" })),
+        ...(config?.temperature && { temperature: config.temperature }),
+        ...(config?.maxOutputTokens && { maxOutputTokens: config.maxOutputTokens }),
+      } as Parameters<typeof streamText>[0]);
+      await logAiSuccess({ fnName: "textRequest", vendorId, model, latencyMs: Date.now() - start, aiType: String(this.AiType) });
+      return result;
+    } catch (e) {
+      await logAiFailure(e, { fnName: "textRequest", vendorId, model, latencyMs: Date.now() - start, aiType: String(this.AiType) });
+      throw e;
+    }
   }
 }
 
@@ -330,14 +391,11 @@ class AiAudio {
   async run(input: VideoConfig, taskRecord?: TaskRecord) {
     const modelName = await resolveModelName(this.key);
     const exec = async (mn: `${string}:${string}`) => {
-      try {
-        const fn = await getVendorTemplateFn("ttsRequest", mn);
-        await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
-        this.result = await fn(input);
-
-        if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
-        return this;
-      } catch (e) {}
+      const fn = await getVendorTemplateFn("ttsRequest", mn);
+      await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
+      this.result = await fn(input);
+      if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
+      return this;
     };
     if (taskRecord) {
       return withTaskRecord(this.key, taskRecord.taskClass, taskRecord.describe, taskRecord.relatedObjects, taskRecord.projectId, exec);

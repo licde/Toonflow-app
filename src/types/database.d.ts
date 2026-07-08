@@ -1,4 +1,4 @@
-// @db-hash f63d56262ca63124352b8f7158934af6
+// @db-hash 832a3d95c447ba17649b242384ab2c11
 //该文件由脚本自动生成，请勿手动修改
 
 export interface memories {
@@ -93,6 +93,44 @@ export interface o_image {
 export interface o_imageFlow {
   'flowData': string;
   'id'?: number;
+}
+export interface o_log_events {
+  'appId'?: string | null;
+  'category'?: string | null;
+  'entityRefs'?: string | null;
+  'errorFingerprint'?: string | null;
+  'id'?: number;
+  'level'?: string | null;
+  'message'?: string | null;
+  'model'?: string | null;
+  'module'?: string | null;
+  'payload'?: string | null;
+  'projectId'?: number | null;
+  'taskId'?: number | null;
+  'traceId'?: string | null;
+  'ts': number;
+  'vendorId'?: string | null;
+}
+export interface o_log_events_fts {
+  'message'?: any | null;
+  'payload'?: any | null;
+}
+export interface o_log_events_fts_config {
+  'k'?: any;
+  'v'?: any | null;
+}
+export interface o_log_events_fts_data {
+  'block'?: any | null;
+  'id'?: number | null;
+}
+export interface o_log_events_fts_docsize {
+  'id'?: number | null;
+  'sz'?: any | null;
+}
+export interface o_log_events_fts_idx {
+  'pgno'?: any | null;
+  'segid'?: any;
+  'term'?: any;
 }
 export interface o_modelPrompt {
   'fileName'?: string | null;
@@ -195,7 +233,9 @@ export interface o_storyboard {
 }
 export interface o_tasks {
   'describe'?: string | null;
+  'endTime'?: number | null;
   'id'?: number;
+  'latencyMs'?: number | null;
   'model'?: string | null;
   'projectId'?: number | null;
   'reason'?: string | null;
@@ -203,6 +243,7 @@ export interface o_tasks {
   'startTime'?: number | null;
   'state'?: string | null;
   'taskClass'?: string | null;
+  'traceId'?: string | null;
 }
 export interface o_user {
   'id'?: number;
@@ -252,6 +293,12 @@ export interface DB {
   "o_eventChapter": o_eventChapter;
   "o_image": o_image;
   "o_imageFlow": o_imageFlow;
+  "o_log_events": o_log_events;
+  "o_log_events_fts": o_log_events_fts;
+  "o_log_events_fts_config": o_log_events_fts_config;
+  "o_log_events_fts_data": o_log_events_fts_data;
+  "o_log_events_fts_docsize": o_log_events_fts_docsize;
+  "o_log_events_fts_idx": o_log_events_fts_idx;
   "o_modelPrompt": o_modelPrompt;
   "o_novel": o_novel;
   "o_project": o_project;

@@ -15,6 +15,12 @@
     "paths": {
       "@/*": [
         "src/*"
+      ],
+      "@toonflow/observability": [
+        "packages/observability/src/index.ts"
+      ],
+      "@toonflow/observability/*": [
+        "packages/observability/src/*"
       ]
     },
     "incremental": true,
