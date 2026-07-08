@@ -97,14 +97,30 @@ const toImageRef = (base64: string) => {
   return `data:image/jpeg;base64,${base64}`;
 };
 
-/** 上传参考素材为公网 URL（ngrok / 阿里云 OSS） */
+/** 上传参考素材为公网 URL（ngrok / 阿里云 OSS），带 hash 缓存 */
+const mediaUrlCache = new Map<string, string>();
+
+const mediaHash = (base64: string) => {
+  let h = 0;
+  const s = base64.slice(0, 2000);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return String(h);
+};
+
 const toRemoteMediaRef = async (base64: string, kind: "image" | "video") => {
   if (/^https?:\/\//i.test(base64)) {
     await preflightPublicUrl(base64, kind);
     return base64;
   }
+  const key = `${kind}:${mediaHash(base64)}`;
+  const cached = mediaUrlCache.get(key);
+  if (cached) {
+    logger(`参考${kind} 命中 URL 缓存`);
+    return cached;
+  }
   try {
     const url = await uploadReferenceAsset(base64, kind);
+    mediaUrlCache.set(key, url);
     logger(`参考${kind === "video" ? "视频" : "图"}公网 URL: ${url.slice(0, 120)}`);
     return url;
   } catch (e: any) {
@@ -275,6 +291,12 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
       image: zippedImages,
       ...(modeLabel === "startEndRequired" ? { mode: "keyframes" } : {}),
     };
+  }
+
+  if (payload.extra_body) {
+    payload.extra_body.generate_audio = config.audio === true;
+  } else if (config.audio === true) {
+    payload.extra_body = { generate_audio: true };
   }
 
   const videoApiBase = getVideoApiBase();

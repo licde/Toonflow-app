@@ -5,6 +5,8 @@ import sharp from "sharp";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { Output, tool } from "ai";
+import { compileImage } from "@/services/generationContext/PromptCompiler";
+import { getAssetIdsByStoryboard, resolveReferenceImages } from "@/services/structuredScript/assetResolver";
 import { assetItemSchema } from "@/agents/productionAgent/tools";
 const router = express.Router();
 export type AssetData = z.infer<typeof assetItemSchema>;
@@ -92,15 +94,34 @@ export default router.post(
     );
 
     const generateTask = async (item: (typeof storyboardData)[number]) => {
+      let prompt = item.prompt!;
+      if (item.promptSource === "structuredImport" && item.shotMeta) {
+        try {
+          const shot = JSON.parse(item.shotMeta);
+          const row = await u.db("o_agentWorkData").where({ projectId, key: "structuredSource" }).first();
+          const json = row?.data ? JSON.parse(row.data).json ?? JSON.parse(row.data) : null;
+          if (json) {
+            const ep = json.episodes?.[0];
+            prompt = compileImage(shot, { json, episode: ep }).prompt;
+          }
+        } catch {
+          /* fallback to stored prompt */
+        }
+      }
       const repeloadObj = {
-        prompt: item.prompt!,
+        prompt,
         size: projectSettingData?.imageQuality as "1K" | "2K" | "4K",
         aspectRatio: projectSettingData?.videoRatio as `${number}:${number}`,
       };
       try {
+        const refIds = assetRecord[item.id!] || [];
+        const referenceList =
+          item.promptSource === "structuredImport"
+            ? await resolveReferenceImages(await getAssetIdsByStoryboard(item.id!))
+            : await getAssetsImageBase64(refIds);
         const imageCls = await u.Ai.Image(projectSettingData?.imageModel as `${string}:${string}`).run(
           {
-            referenceList: await getAssetsImageBase64(assetRecord[item.id!] || []),
+            referenceList,
             ...repeloadObj,
           },
           {

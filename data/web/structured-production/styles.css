@@ -1,0 +1,21 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: #0f1115; color: #e8eaed; }
+.sp-app { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.sp-header h1 { margin: 0 0 4px; font-size: 1.4rem; }
+.sp-sub { margin: 0 0 16px; color: #9aa0a6; font-size: 0.9rem; }
+.sp-panel { background: #1a1d24; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+.sp-panel h2 { margin: 0 0 10px; font-size: 1rem; }
+.sp-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+input[type="number"], input[type="file"] { padding: 6px 8px; border-radius: 4px; border: 1px solid #3c4043; background: #0f1115; color: inherit; }
+button { padding: 8px 14px; border: none; border-radius: 4px; background: #4a7dff; color: #fff; cursor: pointer; }
+button:hover { filter: brightness(1.08); }
+.sp-log { max-height: 200px; overflow: auto; font-size: 12px; background: #0f1115; padding: 8px; border-radius: 4px; }
+.sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.sp-card { background: #0f1115; border-radius: 6px; padding: 8px; border: 1px solid #2a2f38; }
+.sp-card img { width: 100%; aspect-ratio: 9/16; object-fit: cover; border-radius: 4px; background: #222; }
+.sp-card .no { font-weight: 600; font-size: 13px; }
+.sp-card .st { font-size: 11px; color: #9aa0a6; }
+.sp-card.dirty { border-color: #e8a317; }
+.sp-card.done { border-color: #34a853; }
+.sp-card-actions { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.sp-card-actions button { font-size: 11px; padding: 4px 6px; }

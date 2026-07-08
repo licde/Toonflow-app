@@ -1,0 +1,56 @@
+# FieldHandler 声明式注册表（M2.5）
+# 新增字段：追加 handler 条目 + 实现对应 compile 函数
+
+handlers:
+  - field: colorTone
+    level: G1
+    handler: emotionToneInjector
+    deps: [productionSpec.colorToneMapping]
+  - field: visualId
+    level: G1
+    handler: variantSelector
+    deps: [characterAssets]
+  - field: directorNotes
+    level: G0
+    handler: creativeIntentMatcher
+    priority: 100
+  - field: performance
+    level: G1
+    handler: performanceInjector
+    deps: [productionSpec.emotionPerformanceMapping]
+  - field: dialogue
+    level: G1
+    handler: dialogueSyncInjector
+    deps: [productionSpec.dialogueActionSync]
+  - field: visualEffect
+    level: G3
+    handler: visualEffectRouter
+  - field: sound
+    level: G4
+    handler: soundPostRouter
+  - field: personalitySwitch
+    level: G2
+    handler: personalitySwitchMode
+  - field: cameraAngle
+    level: G1
+    handler: cameraAnchorInjector
+    deps: [productionSpec.cameraAnchor]
+  - field: shotType
+    level: G1
+    handler: shotTypeRules
+    deps: [productionSpec.shotTypeRules]
+  - field: sceneName
+    level: G1
+    handler: sceneColorLock
+    deps: [productionSpec.sceneColorLock]
+  - field: L6-trigger
+    level: G1
+    handler: l6TriggerLinker
+    deps: [characterAssets.L6-personality]
+  - field: transitionType
+    level: G1
+    handler: transitionTypeInjector
+  - field: keyPrompts
+    level: G0
+    handler: creativeIntentMatcher
+    priority: 90

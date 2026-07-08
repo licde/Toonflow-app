@@ -1,4 +1,4 @@
-// @routes-hash b06914ce90c35a809cf607988f703a0f
+// @routes-hash b7a9b6393679a1facc42035b22b19742
 import { Express } from "express";
 
 import route1 from "./routes/agents/clearMemory";
@@ -165,11 +165,23 @@ import route161 from "./routes/setting/vendorConfig/modelTest/videoTest";
 import route162 from "./routes/setting/vendorConfig/updateCode";
 import route163 from "./routes/setting/vendorConfig/updateVendorInputs";
 import route164 from "./routes/setting/vendorConfig/upVendorModel";
-import route165 from "./routes/task/getProject";
-import route166 from "./routes/task/getTaskApi";
-import route167 from "./routes/task/getTaskCategories";
-import route168 from "./routes/task/taskDetails";
-import route169 from "./routes/test/test";
+import route165 from "./routes/structured/assembleEpisode";
+import route166 from "./routes/structured/batchGenerateFromStructured";
+import route167 from "./routes/structured/generateShotImage";
+import route168 from "./routes/structured/generateShotVideo";
+import route169 from "./routes/structured/getStructuredGrid";
+import route170 from "./routes/structured/importStructured";
+import route171 from "./routes/structured/pollStructured";
+import route172 from "./routes/structured/previewStructured";
+import route173 from "./routes/structured/regenerateShot";
+import route174 from "./routes/structured/selectStoryboardImage";
+import route175 from "./routes/structured/selectStructuredVideo";
+import route176 from "./routes/structured/syncStructured";
+import route177 from "./routes/task/getProject";
+import route178 from "./routes/task/getTaskApi";
+import route179 from "./routes/task/getTaskCategories";
+import route180 from "./routes/task/taskDetails";
+import route181 from "./routes/test/test";
 
 export default async (app: Express) => {
   app.use("/api/agents/clearMemory", route1);
@@ -336,9 +348,21 @@ export default async (app: Express) => {
   app.use("/api/setting/vendorConfig/updateCode", route162);
   app.use("/api/setting/vendorConfig/updateVendorInputs", route163);
   app.use("/api/setting/vendorConfig/upVendorModel", route164);
-  app.use("/api/task/getProject", route165);
-  app.use("/api/task/getTaskApi", route166);
-  app.use("/api/task/getTaskCategories", route167);
-  app.use("/api/task/taskDetails", route168);
-  app.use("/api/test/test", route169);
+  app.use("/api/structured/assembleEpisode", route165);
+  app.use("/api/structured/batchGenerateFromStructured", route166);
+  app.use("/api/structured/generateShotImage", route167);
+  app.use("/api/structured/generateShotVideo", route168);
+  app.use("/api/structured/getStructuredGrid", route169);
+  app.use("/api/structured/importStructured", route170);
+  app.use("/api/structured/pollStructured", route171);
+  app.use("/api/structured/previewStructured", route172);
+  app.use("/api/structured/regenerateShot", route173);
+  app.use("/api/structured/selectStoryboardImage", route174);
+  app.use("/api/structured/selectStructuredVideo", route175);
+  app.use("/api/structured/syncStructured", route176);
+  app.use("/api/task/getProject", route177);
+  app.use("/api/task/getTaskApi", route178);
+  app.use("/api/task/getTaskCategories", route179);
+  app.use("/api/task/taskDetails", route180);
+  app.use("/api/test/test", route181);
 }

@@ -66,6 +66,12 @@ export default async (knex: Knex): Promise<void> => {
   // 添加新字段
   await addColumn("o_agentDeploy", "maxOutputTokens", "integer");
   await addColumn("o_assets", "audioBindState", "integer");
+  await addColumn("o_storyboard", "shotMeta", "text");
+  await addColumn("o_storyboard", "videoPrompt", "text");
+  await addColumn("o_storyboard", "promptSource", "text");
+  await addColumn("o_storyboard", "promptSourceHash", "text");
+  await addColumn("o_storyboard", "imageId", "integer");
+  await addColumn("o_image", "storyboardId", "integer");
   await addColumn("o_modelPrompt", "fileName", "string");
   await addColumn("o_modelPrompt", "path", "string");
   const vendorDataSelect = await u.db("o_vendorConfig").whereIn("id", ["deepseek", "atlascloud"]).select("*");

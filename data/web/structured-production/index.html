@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>结构化生产</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app" class="sp-app">
+    <header class="sp-header">
+      <h1>结构化生产</h1>
+      <p class="sp-sub">导入 JSON v1.0 → 编译预览 → 逐镜生成 → 拼接成片</p>
+    </header>
+
+    <section class="sp-panel">
+      <h2>1. 导入与预览</h2>
+      <div class="sp-row">
+        <input type="number" id="projectId" placeholder="projectId" value="1" />
+        <input type="number" id="scriptId" placeholder="scriptId（同步用）" />
+        <input type="file" id="jsonFile" accept=".json,application/json" />
+      </div>
+      <div class="sp-row">
+        <button id="btnPreview">预览编译</button>
+        <button id="btnImport">导入</button>
+        <button id="btnSync">同步 JSON</button>
+      </div>
+      <pre id="previewOut" class="sp-log"></pre>
+    </section>
+
+    <section class="sp-panel">
+      <h2>2. 批量生成</h2>
+      <div class="sp-row">
+        <button id="btnGenImages">出分镜图</button>
+        <button id="btnGenVideos">出视频</button>
+        <button id="btnBatch">一键编排</button>
+        <button id="btnAssemble">拼接成片</button>
+        <button id="btnPoll">刷新状态</button>
+      </div>
+      <label><input type="checkbox" id="audioOn" checked /> 台词镜原生音频</label>
+    </section>
+
+    <section class="sp-panel sp-grid-wrap">
+      <h2>3. 分镜网格 <span id="gridMeta"></span></h2>
+      <div id="shotGrid" class="sp-grid"></div>
+    </section>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
