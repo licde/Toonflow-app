@@ -1,5 +1,5 @@
 import type { LogEvent } from "@toonflow/observability";
-import { aggregateVendors, buildRecommendations, findSimilar } from "@toonflow/observability";
+import { aggregateVendors, buildRecommendations, findSimilar, computeHealthScore, estimateCostUsd, buildAssistantSummary } from "@toonflow/observability";
 import { getObs } from "./bootstrap";
 import { getTraceEvents, queryLogs } from "./store";
 
@@ -50,5 +50,14 @@ export async function aggregateVendorStats(days = 7) {
 export async function listRecommendations() {
   const obs = getObs();
   const events = await fetchRecentAiEvents(7);
-  return buildRecommendations(events, obs.getSwitches());
+  const recommendations = buildRecommendations(events, obs.getSwitches());
+  const healthScore = computeHealthScore(events);
+  const cost = estimateCostUsd(events);
+  return { recommendations, healthScore, cost };
+}
+
+export async function assistantForTrace(traceId: string) {
+  const rows = await getTraceEvents(traceId);
+  const events = rows.map((r) => rowToLogEvent(r as Record<string, unknown>));
+  return buildAssistantSummary(traceId, events);
 }

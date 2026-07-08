@@ -1,4 +1,11 @@
-import { createObservability, createFileSink, createStdoutSink } from "@toonflow/observability";
+import {
+  createObservability,
+  createFileSink,
+  createStdoutSink,
+  loadConfigFile,
+  defaultConfigPath,
+  resolveObservabilityOptions,
+} from "@toonflow/observability";
 import getPath from "@/utils/getPath";
 import { createDbSink, initLogStore } from "./store";
 
@@ -18,19 +25,26 @@ export function initObservabilityBootstrap() {
   if (global.__toonflowObs) return global.__toonflowObs;
 
   const logDir = getPath("logs");
-  const obs = createObservability({
-    appId: "toonflow",
-    appVersion,
-    logDir,
-    switches: {
-      enabled: envEnabled(),
-      transports: {
-        stdout: process.env.LOG_STDOUT !== "0",
-        file: process.env.LOG_FILE_ENABLED !== "0",
-        sqlite: false,
+  const fileConfig = loadConfigFile(defaultConfigPath());
+  const obs = createObservability(
+    resolveObservabilityOptions(
+      {
+        appId: "toonflow",
+        appVersion,
+        logDir,
+        switches: {
+          enabled: envEnabled(),
+          transports: {
+            stdout: process.env.LOG_STDOUT !== "0",
+            file: process.env.LOG_FILE_ENABLED !== "0",
+            sqlite: false,
+          },
+        },
       },
-    },
-  });
+      process.env,
+      fileConfig,
+    ),
+  );
 
   obs.applyProfile("balanced");
   obs.registerSink(createStdoutSink(process.env.LOG_STDOUT !== "0"));

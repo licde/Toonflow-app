@@ -3,95 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Toonflow 日志中心</title>
+  <title>Toonflow 事件中心</title>
   <style>
-    :root { --bg: #0f1419; --card: #1a2332; --text: #e7ecf3; --muted: #8b9cb3; --accent: #3d8bfd; --err: #f87171; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    header { padding: 1rem 1.5rem; border-bottom: 1px solid #2a3548; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-    h1 { margin: 0; font-size: 1.1rem; }
-    input, select, button { background: var(--card); border: 1px solid #334155; color: var(--text); padding: 0.45rem 0.6rem; border-radius: 6px; }
-    button { cursor: pointer; background: var(--accent); border-color: var(--accent); }
-    main { display: grid; grid-template-columns: 1fr 320px; gap: 1rem; padding: 1rem; }
-    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-    .card { background: var(--card); border-radius: 10px; padding: 1rem; overflow: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th, td { text-align: left; padding: 0.4rem; border-bottom: 1px solid #2a3548; vertical-align: top; }
-    tr:hover { background: #243044; cursor: pointer; }
-    .level-error, .level-fatal { color: var(--err); }
-    .muted { color: var(--muted); font-size: 0.8rem; }
-    pre { white-space: pre-wrap; word-break: break-all; font-size: 0.75rem; max-height: 240px; overflow: auto; }
-    #status { margin-left: auto; font-size: 0.85rem; color: var(--muted); }
+    :root { --bg:#0f1419; --card:#1a2332; --text:#e7ecf3; --muted:#8b9cb3; --accent:#3d8bfd; --err:#f87171; --ok:#4ade80; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    header { padding:1rem 1.5rem; border-bottom:1px solid #2a3548; display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; }
+    h1 { margin:0; font-size:1.1rem; }
+    input,select,button { background:var(--card); border:1px solid #334155; color:var(--text); padding:.45rem .6rem; border-radius:6px; }
+    button,.tab.active { background:var(--accent); border-color:var(--accent); cursor:pointer; }
+    .tabs { display:flex; gap:.5rem; }
+    .tab { background:var(--card); border:1px solid #334155; padding:.4rem .8rem; border-radius:6px; cursor:pointer; }
+    main { display:grid; grid-template-columns:1fr 340px; gap:1rem; padding:1rem; }
+    @media(max-width:900px){ main{ grid-template-columns:1fr; } }
+    .card { background:var(--card); border-radius:10px; padding:1rem; overflow:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    th,td { text-align:left; padding:.4rem; border-bottom:1px solid #2a3548; vertical-align:top; }
+    tr:hover { background:#243044; cursor:pointer; }
+    .level-error,.level-fatal { color:var(--err); }
+    .muted { color:var(--muted); font-size:.8rem; }
+    pre { white-space:pre-wrap; word-break:break-all; font-size:.75rem; max-height:200px; overflow:auto; }
+    #status { margin-left:auto; font-size:.85rem; color:var(--muted); }
+    .rec { border:1px solid #334155; border-radius:8px; padding:.6rem; margin-bottom:.5rem; }
+    .score { font-size:1.4rem; color:var(--ok); }
+    .copy { font-size:.75rem; margin-left:.5rem; cursor:pointer; color:var(--accent); }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
   <header>
-    <h1>日志中心</h1>
-    <input id="token" type="password" placeholder="Bearer Token" style="min-width:200px" />
-    <select id="level"><option value="">全部级别</option><option>error</option><option>warn</option><option>info</option></select>
-    <select id="category"><option value="">全部分类</option><option>ai_call</option><option>http</option><option>vendor</option><option>task</option></select>
-    <input id="keyword" placeholder="关键词 FTS" />
+    <h1>事件中心</h1>
+    <input id="token" type="password" placeholder="Bearer Token" style="min-width:180px" />
+    <div class="tabs">
+      <div class="tab active" data-tab="logs">日志</div>
+      <div class="tab" data-tab="incidents">事件</div>
+      <div class="tab" data-tab="recommend">推荐</div>
+    </div>
+    <input id="keyword" placeholder="关键词 / traceId" />
     <button id="refresh">刷新</button>
     <span id="status"></span>
   </header>
   <main>
     <section class="card">
-      <table>
-        <thead><tr><th>时间</th><th>级别</th><th>分类</th><th>厂商</th><th>消息</th><th>traceId</th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
+      <div id="panel-logs">
+        <table><thead><tr><th>时间</th><th>级别</th><th>分类</th><th>厂商</th><th>消息</th><th>traceId</th></tr></thead><tbody id="rows"></tbody></table>
+      </div>
+      <div id="panel-incidents" class="hidden">
+        <h3>错误日志</h3><div id="inc-errors"></div>
+        <h3>失败任务</h3><div id="inc-tasks"></div>
+      </div>
+      <div id="panel-recommend" class="hidden">
+        <p>健康评分 <span class="score" id="health">-</span></p>
+        <div id="recs"></div>
+      </div>
     </section>
     <aside class="card">
-      <h3 style="margin-top:0">详情</h3>
-      <div id="detail" class="muted">点击左侧行查看</div>
+      <h3 style="margin-top:0">链路详情</h3>
+      <div id="detail" class="muted">点击行查看 Playbook 诊断</div>
     </aside>
   </main>
   <script>
-    const api = (path, body) => {
-      const token = document.getElementById('token').value.trim();
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) headers.Authorization = 'Bearer ' + token.replace(/^Bearer\s+/i, '');
-      return fetch('/api/logs/' + path, { method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined }).then(r => r.json());
-    };
-    const fmt = (ts) => new Date(ts).toLocaleString();
     let cache = [];
-    async function load() {
+    const headers = () => {
+      const h = { 'Content-Type': 'application/json' };
+      const t = document.getElementById('token').value.trim();
+      if (t) h.Authorization = 'Bearer ' + t.replace(/^Bearer\s+/i, '');
+      return h;
+    };
+    const api = (path, body) => fetch('/api/logs/' + path, { method: body ? 'POST' : 'GET', headers: headers(), body: body ? JSON.stringify(body) : undefined }).then(r => r.json());
+    const fmt = ts => new Date(ts).toLocaleString();
+    document.querySelectorAll('.tab').forEach(el => el.onclick = () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      ['logs','incidents','recommend'].forEach(p => document.getElementById('panel-' + p).classList.toggle('hidden', el.dataset.tab !== p));
+      if (el.dataset.tab === 'incidents') loadIncidents();
+      if (el.dataset.tab === 'recommend') loadRecommend();
+    });
+    async function loadLogs() {
       document.getElementById('status').textContent = '加载中…';
-      const level = document.getElementById('level').value;
-      const category = document.getElementById('category').value;
-      const keyword = document.getElementById('keyword').value;
-      const res = await api('query', { limit: 80, level: level || null, category: category || null, keyword: keyword || null });
-      if (res.code !== 200) { document.getElementById('status').textContent = res.message || '请求失败'; return; }
+      const kw = document.getElementById('keyword').value;
+      const res = await api('query', { limit: 80, keyword: kw || null, traceId: kw && kw.length > 20 ? kw : null });
+      if (res.code !== 200) { document.getElementById('status').textContent = res.message || '失败'; return; }
       cache = res.data?.rows || [];
-      const tbody = document.getElementById('rows');
-      tbody.innerHTML = cache.map((r, i) => `<tr data-i="${i}">
-        <td class="muted">${fmt(r.ts)}</td>
-        <td class="level-${r.level}">${r.level}</td>
-        <td>${r.category || ''}</td>
-        <td>${r.vendorId || ''}</td>
-        <td>${(r.message || '').slice(0, 80)}</td>
-        <td class="muted">${(r.traceId || '').slice(0, 8)}</td>
-      </tr>`).join('');
+      document.getElementById('rows').innerHTML = cache.map((r,i) => `<tr data-i="${i}"><td class="muted">${fmt(r.ts)}</td><td class="level-${r.level}">${r.level}</td><td>${r.category||''}</td><td>${r.vendorId||''}</td><td>${(r.message||'').slice(0,70)}</td><td class="muted">${(r.traceId||'').slice(0,8)}</td></tr>`).join('');
       document.getElementById('status').textContent = `共 ${res.data?.total ?? cache.length} 条`;
     }
-    document.getElementById('rows').addEventListener('click', async (e) => {
-      const tr = e.target.closest('tr');
-      if (!tr) return;
+    async function loadIncidents() {
+      const res = await api('incidents');
+      if (res.code !== 200) return;
+      document.getElementById('inc-errors').innerHTML = (res.data?.errors||[]).map(e => `<div class="rec level-error">${fmt(e.ts)} ${e.message}</div>`).join('') || '<p class="muted">无</p>';
+      document.getElementById('inc-tasks').innerHTML = (res.data?.tasks||[]).map(t => `<div class="rec">${t.taskClass} — ${t.reason||t.state}</div>`).join('') || '<p class="muted">无</p>';
+    }
+    async function loadRecommend() {
+      const res = await api('recommend/list');
+      if (res.code !== 200) return;
+      document.getElementById('health').textContent = ((res.data?.healthScore ?? 0) * 100).toFixed(0) + '%';
+      document.getElementById('recs').innerHTML = (res.data?.recommendations||[]).map(r => `<div class="rec"><b>${r.title}</b><p class="muted">${r.reason}</p></div>`).join('') || '<p class="muted">暂无推荐</p>';
+    }
+    document.getElementById('rows').onclick = async e => {
+      const tr = e.target.closest('tr'); if (!tr) return;
       const row = cache[Number(tr.dataset.i)];
-      let extra = '';
-      if (row.traceId) {
-        const t = await api('trace/' + encodeURIComponent(row.traceId));
-        if (t.code === 200 && t.data?.diagnosis) {
-          extra = `<p><b>诊断</b>: ${t.data.diagnosis.conclusion}</p><ul>${(t.data.diagnosis.suggestions||[]).map(s=>'<li>'+s+'</li>').join('')}</ul>`;
-        }
-      }
-      document.getElementById('detail').innerHTML = `<p><b>${row.level}</b> · ${row.category} · ${row.vendorId || '-'}</p>
-        <p>${row.message}</p><pre>${row.payload || ''}</pre>${extra}`;
-    });
-    document.getElementById('refresh').onclick = load;
-    api('health').then(h => {
-      if (h.code === 200) document.getElementById('status').textContent = 'obs ' + (h.data?.enabled ? 'on' : 'off');
-    }).catch(() => {});
+      const t = await api('trace/' + encodeURIComponent(row.traceId));
+      const d = t.data?.diagnosis;
+      document.getElementById('detail').innerHTML = `<p><b>${row.level}</b> ${row.message}</p>
+        <p>traceId: <code>${row.traceId}</code><span class="copy" onclick="navigator.clipboard.writeText('${row.traceId}')">复制</span></p>
+        ${d ? `<p><b>诊断</b>: ${d.conclusion}</p><ul>${(d.suggestions||[]).map(s=>'<li>'+s+'</li>').join('')}</ul>` : ''}
+        <pre>${row.payload||''}</pre>`;
+    };
+    document.getElementById('refresh').onclick = () => { const tab = document.querySelector('.tab.active').dataset.tab; if (tab==='logs') loadLogs(); if (tab==='incidents') loadIncidents(); if (tab==='recommend') loadRecommend(); };
+    api('health').then(h => { if (h.code===200) document.getElementById('status').textContent = 'obs on'; });
+    loadLogs();
   </script>
 </body>
 </html>

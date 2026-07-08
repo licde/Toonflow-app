@@ -17,6 +17,7 @@ import { isEletron } from "@/utils/getPath";
 import { ensureThumbnail, ThumbnailSize } from "@/utils/image";
 import { getObs } from "@/observability/bootstrap";
 import { traceMiddleware, errorHandler } from "@toonflow/observability";
+import { attachSocketObservability } from "@toonflow/observability";
 
 const app = express();
 const server = http.createServer(app);
@@ -50,6 +51,7 @@ export default async function startServe(randomPort: Boolean = false) {
 
   await u.writeVersion();
   const io = new Server(server, { cors: { origin: "*" } });
+  attachSocketObservability(io, getObs());
   socketInit(io);
 
   if (process.env.NODE_ENV == "dev") await buildRoute();

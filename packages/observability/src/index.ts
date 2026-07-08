@@ -1,6 +1,14 @@
 export * from "./types";
 export * from "./core";
+export * from "./profiles";
+export * from "./presets";
+export * from "./configFile";
 export * from "./analyze";
 export * from "./observability";
 export * from "./transports";
-export { traceMiddleware, errorHandler } from "./express";
+export { traceMiddleware, errorHandler } from "./adapters/express";
+export { attachSocketObservability, wrapNamespace } from "./adapters/socketio";
+export { createAiSdkAdapter, wrapAiSdkCall } from "./adapters/ai-sdk";
+export { createEmbedClient } from "./fusion/embed";
+export { createPushClient } from "./fusion/push";
+export { createMockObservability } from "./testing/mock";

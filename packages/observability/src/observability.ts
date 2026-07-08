@@ -2,7 +2,6 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { EntityRefs, LogCategory, LogEvent, LogLevel, LogSink, SwitchConfig } from "./types";
 import {
-  BALANCED_PROFILE,
   categorizeAiError,
   computeFingerprint,
   extractUpstreamMessage,
@@ -10,7 +9,11 @@ import {
   sanitizeMessage,
   truncatePayload,
 } from "./core";
-import { diagnosePlaybook } from "./analyze";
+import { diagnosePlaybook } from "./analyze/playbooks";
+import { SwitchManager } from "./core/switchManager";
+import { WriteQueue } from "./core/writeQueue";
+import { DegradedChain } from "./core/degraded";
+import { registerShutdownHandlers } from "./core/shutdown";
 
 export interface ObservabilityOptions {
   appId: string;
@@ -35,7 +38,10 @@ export class Observability {
   readonly appVersion?: string;
   readonly logDir?: string;
   private switches: SwitchConfig;
+  private switchManager: SwitchManager;
   private sinks: LogSink[] = [];
+  private writeQueue: WriteQueue;
+  private degraded = new DegradedChain();
   private spanCounters = new Map<string, number>();
   private rateWindow = new Map<string, { count: number; ts: number }>();
   private seenEventIds = new Set<string>();
@@ -55,20 +61,24 @@ export class Observability {
       retentionDays: opts.switches?.retentionDays ?? 30,
       logDir: opts.logDir,
     };
+    this.switchManager = new SwitchManager(this.switches);
+    this.writeQueue = new WriteQueue();
+    this.writeQueue.start();
+    registerShutdownHandlers(this.writeQueue);
+  }
+
+  getDegradedState() {
+    return this.degraded.getState();
   }
 
   registerSink(sink: LogSink) {
     this.sinks.push(sink);
+    this.writeQueue.setSinks([...this.sinks]);
   }
 
   updateSwitches(patch: Partial<SwitchConfig>) {
-    this.switches = {
-      ...this.switches,
-      ...patch,
-      transports: { ...this.switches.transports, ...patch.transports },
-      categories: { ...this.switches.categories, ...patch.categories },
-      features: { ...this.switches.features, ...patch.features },
-    };
+    this.switchManager.update(patch);
+    this.switches = this.switchManager.get();
   }
 
   getSwitches(): SwitchConfig {
@@ -76,9 +86,8 @@ export class Observability {
   }
 
   applyProfile(name: "balanced" | "secure" | "performance" | "debug") {
-    if (name === "balanced") this.updateSwitches(BALANCED_PROFILE as SwitchConfig);
-    if (name === "performance") this.updateSwitches({ level: "warn", categories: { http: false } });
-    if (name === "debug") this.updateSwitches({ level: "debug", features: { ...this.switches.features, promptDebug: true, sampler: false } });
+    this.switchManager.setProfile(name);
+    this.switches = this.switchManager.get();
   }
 
   runWithContext<T>(ctx: Partial<Ctx>, fn: () => T): T {
@@ -167,13 +176,7 @@ export class Observability {
 
     if (!this.shouldLog(event)) return;
 
-    for (const sink of this.sinks) {
-      try {
-        await sink(event);
-      } catch (e) {
-        console.error("[observability sink error]", e);
-      }
-    }
+    this.writeQueue.enqueue(event);
   }
 
   async logAiError(err: unknown, meta: { vendorId?: string; model?: string; module?: string; aiType?: string; latencyMs?: number }) {

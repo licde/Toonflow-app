@@ -1,0 +1,15 @@
+{
+  "appId": "my-app",
+  "profile": "balanced",
+  "switches": {
+    "enabled": true,
+    "level": "info",
+    "transports": {
+      "stdout": true,
+      "file": true,
+      "sqlite": false
+    },
+    "retentionDays": 30
+  },
+  "logDir": "./logs"
+}
