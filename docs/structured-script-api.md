@@ -2,8 +2,8 @@
 
 > 版本：M1 + GCE（导入 → 编译 → 分镜图/视频生成 → 时间轴/可选 ffmpeg 拼接）  
 > 后端路径：`src/services/structuredScript/`、`src/services/generationContext/`、`src/routes/structured/`  
-> 前端面板：`data/web/structured-production/`（访问 `/structured-production/`）  
-> 示例数据：项目根目录 `新版第一集.json`（v1.0，44 镜）
+> 前端面板：`data/web/structured-production/`（开发/调试页 `/structured-production/`；**生产环境建议嵌入主 web 工作台 Tab**）  
+> 前端详细设计（交付开发）：[structured-production-frontend.md](./structured-production-frontend.md)  
 
 ---
 
@@ -34,6 +34,63 @@
 | L0 | 静态 Animatic（分镜图网格 + 时长） | `getStructuredGrid` |
 | L1 | 每镜独立视频片段 | `pollStructured` + grid |
 | L2 | 整集时间轴 | `assembleEpisode` → manifest |
+
+### 1.3 前端集成（推荐）
+
+**独立面板**（`/structured-production/`）仅用于开发联调，与主 web **同源 + 共用 `localStorage.token`**。401「未提供 token」是因为未登录——先在主站 `/` 登录，或在本页手动粘贴 Bearer token。
+
+**生产形态**：在主 Vue 工作台（生产页）增加 **「结构化生产」Tab**，不要单独部署页面。
+
+| 项 | 做法 |
+|----|------|
+| 鉴权 | 复用现有 axios 实例（请求拦截器已带 `Authorization: localStorage.token`） |
+| 上下文 | 从路由/Store 传入 `projectId`、`scriptId`，无需手填 |
+| API | 直接 `POST /api/structured/{action}`，契约见本文 §3 |
+| UI 逻辑 | 可参考 `data/web/structured-production/app.js` 的 `api()` 与按钮流程；或 `window.StructuredProduction.api(path, body)` |
+| ngrok | 前后端同一隧道域名即可；401 是 token 问题，不是 ngrok 本身 |
+
+**Vue Tab 最小 props 契约：**
+
+```typescript
+interface StructuredProductionTabProps {
+  projectId: number;
+  scriptId?: number | null; // 导入成功后回填
+}
+```
+
+**嵌入示例（伪代码）：**
+
+```typescript
+// 与主站 axios 一致
+const structuredApi = (path: string, body: object) =>
+  axios.post(`/api/structured/${path}`, body).then((r) => r.data.data);
+
+// 导入 → 刷新网格
+const { scriptId, storyboardIds } = await structuredApi("importStructured", {
+  projectId,
+  json,
+  episodeIndex: 0,
+});
+const grid = await structuredApi("getStructuredGrid", { projectId, scriptId });
+```
+
+**已知工程约束（其余问题联调时再补）：**
+
+- 批量生成异步，需 `pollStructured` 或任务中心轮询
+- `assembleEpisode` 拼接依赖本机 ffmpeg
+- 结构化 API 与主站一样走 JWT，**不要**为调试单独放开白名单
+- **Agnes 视频/参考图**：生成视频时需把分镜图转为公网 URL；后端 `uploadReferenceAsset` 写入 OSS。若走 ngrok，请设置 `ossURL=https://你的ngrok域名`（与前端同域），否则报 `uploadReferenceAsset is not defined` 或本地 URL 不可访问
+- **道具/纸条镜**：`dialogue.text` / `visualEffect.content` 为中文权威来源；`imagePrompt` 里的英文 text 会被编译器替换
+
+### 1.4 推荐使用流程（Web 工作台）
+
+1. 在 **Toonflow-web** 开发：`yarn dev`，或 `yarn build` 后将产物同步到 `Toonflow-app/data/web`
+2. 生产页 → 选择集 → 打开 **工作台** → 左侧 **结构化生产** Tab（文档图标）
+3. 选择 `新版第一集.json` → **预览编译** → **导入**
+4. **出分镜图** → 检查镜 4 等道具镜中文 → **出视频**
+5. ngrok 调试时启动后端：`ossURL=https://xxx.ngrok-free.dev yarn start`
+
+独立页 `/structured-production/` 仅作后端联调备用，正式体验以 Web Tab 为准。
 
 ---
 
@@ -422,6 +479,40 @@ JSON 修订后同步元数据，**不自动重新生成**。
 
 ---
 
+### 5.11 POST `/api/structured/getStructuredRules`
+
+规则与质量档位下发，避免前端硬编码镜头类型分支。详见 [structured-production-frontend.md §5.1](./structured-production-frontend.md#51-规则与策略)。
+
+### 5.12 POST `/api/structured/validateStructuredShot`
+
+单镜校验与编译预览。详见 [structured-production-frontend.md §5.3](./structured-production-frontend.md#53-校验与历史)。
+
+### 5.13 POST `/api/structured/setStructuredAutoApplyPolicy`
+
+保存可配置自动重生成策略（`enabled`、`autoApplyOnSync`、`scope`、`phases`、`qualityProfileId`）。
+
+### 5.14 POST `/api/structured/applyStructuredPlan`
+
+执行生成计划：支持 `scope: dirty | all | storyboardIds[]`，用于「一键更新 dirty」与「全局重生成」。
+
+### 5.15 POST `/api/structured/getStructuredShotHistory`
+
+单镜历史：原始 prompt/shotMeta、syncRevisions、overrideRevisions。
+
+### 5.16 扩展：`syncStructured` 响应
+
+在原有字段基础上增加 `diffByShot[]` 与可选 `autoApplyResult`（policy 开启且 sync 后自动触发时）。
+
+### 5.17 扩展：`getStructuredGrid` 响应
+
+每镜增加 `reference`、`original`、`lastSyncRevision`、`explain`、`prompt`、`videoDesc`。
+
+---
+
+前端消费字段总表见 [structured-production-frontend.md §5](./structured-production-frontend.md#5-api-契约前端必接)。
+
+---
+
 ## 6. 推荐工作流
 
 ### 6.1 首次导入
@@ -542,7 +633,7 @@ src/routes/structured/              # 12 个 API
   regenerateShot selectStoryboardImage selectStructuredVideo
   pollStructured assembleEpisode batchGenerateFromStructured
 
-data/web/structured-production/   # 独立 UI 面板
+data/web/structured-production/   # 开发面板（auth 与主站共享）；Vue Tab 集成见 §1.3
 docs/structured-script-api.md
 ```
 
@@ -556,7 +647,7 @@ docs/structured-script-api.md
 | TTS 对白 | AudioRouter 路由 + 后期队列 | 接入 MiniMax 等 vendor |
 | FieldHandler | yaml + registry 已建 | 更多 handler 插件 |
 | sync 新增镜 | diff 报告 | 自动 insert 分镜行 |
-| 主工作台 Tab | 独立面板可用 | Vue 仓嵌入 Tab |
+| 主工作台 Tab | 见 §1.3 集成契约 | 在前端仓加 Tab，复用 axios |
 
 ---
 
@@ -582,6 +673,7 @@ yarn start
 | 场景 | HTTP | 说明 |
 |------|------|------|
 | JSON 校验失败 | 400 | Zod 错误信息 |
+| 未登录 / token 无效 | 401 | `未提供token`；先主站登录 |
 | 分镜不存在 | 400 | 生成类 API |
 | 无分镜图生成视频 | 400 | `请先生成分镜图` |
 | 单镜失败（批量） | 200 | 该项含 `error` 字段，不中断其他镜 |

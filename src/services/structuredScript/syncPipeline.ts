@@ -1,16 +1,21 @@
 import u from "@/utils";
-import type { StructuredScriptJson, StructuredShot, SyncDiffResult } from "./types";
+import type { StructuredScriptJson, StructuredShot, SyncDiffResult, ShotDiffEntry } from "./types";
 import { compileImage, compileVideo } from "../generationContext/PromptCompiler";
 import { compileHash } from "./utils";
 import { saveStructuredSource } from "./importPipeline";
+import { diffShotFields, inferImpact, buildRecommendationReason } from "./diffExplainer";
+import { appendSyncRevision } from "./promptHistory";
+import { getAutoApplyPolicy } from "./autoApplyPolicy";
+import { applyStructuredPlan } from "./applyPlan";
 
 export async function syncStructuredEpisode(opts: {
   projectId: number;
   scriptId: number;
   json: StructuredScriptJson;
   episodeIndex?: number;
+  triggerAutoApply?: boolean;
 }): Promise<SyncDiffResult> {
-  const { projectId, scriptId, json, episodeIndex = 0 } = opts;
+  const { projectId, scriptId, json, episodeIndex = 0, triggerAutoApply = true } = opts;
   const ep = json.episodes![episodeIndex];
   if (!ep) throw new Error("episode not found");
 
@@ -52,6 +57,7 @@ export async function syncStructuredEpisode(opts: {
   const archivedShots: number[] = [];
   const dirtyShots: number[] = [];
   const suggestions: SyncDiffResult["suggestions"] = [];
+  const diffByShot: ShotDiffEntry[] = [];
 
   for (const shot of newShots) {
     const img = compileImage(shot, { json, episode: ep });
@@ -63,17 +69,61 @@ export async function syncStructuredEpisode(opts: {
       newShotNosList.push(shot.镜号);
       dirtyShots.push(shot.镜号);
       suggestions.push({ 镜号: shot.镜号, targets: ["image", "video"] });
+      diffByShot.push({
+        shotNo: shot.镜号,
+        hashAfter: hash,
+        changedFields: ["*"],
+        impact: "both",
+        recommendationReason: "新增镜头，需完整生成",
+        handlersHit: { ...(img.compileLog.handlers as object), ...(vid.compileLog.handlers as object) },
+        promptAfter: img.prompt,
+        videoPromptAfter: vid.prompt,
+      });
       continue;
     }
+
+    let beforeShot: StructuredShot | null = null;
+    if (row.shotMeta) {
+      try {
+        beforeShot = JSON.parse(row.shotMeta) as StructuredShot;
+      } catch {
+        beforeShot = null;
+      }
+    }
+
+    const changedFields = beforeShot ? diffShotFields(beforeShot, shot) : ["shotMeta"];
+    const hashBefore = row.promptSourceHash ?? undefined;
+    const imageChanged = row.prompt !== img.prompt;
+    const videoChanged = row.videoPrompt !== vid.prompt;
+    const impact = inferImpact(changedFields, imageChanged, videoChanged);
 
     if (row.promptSourceHash !== hash) {
       changedShots.push(shot.镜号);
       dirtyShots.push(shot.镜号);
       const targets: ("image" | "video")[] = [];
-      if (row.prompt !== img.prompt) targets.push("image");
-      if (row.videoPrompt !== vid.prompt) targets.push("video");
+      if (imageChanged) targets.push("image");
+      if (videoChanged) targets.push("video");
       if (!targets.length) targets.push("image", "video");
       suggestions.push({ storyboardId: row.id, 镜号: shot.镜号, targets });
+
+      const diffEntry: ShotDiffEntry = {
+        shotNo: shot.镜号,
+        storyboardId: row.id,
+        hashBefore,
+        hashAfter: hash,
+        changedFields,
+        impact,
+        recommendationReason: buildRecommendationReason(changedFields, {
+          ...(img.compileLog.handlers as object),
+          ...(vid.compileLog.handlers as object),
+        } as Record<string, unknown>),
+        handlersHit: { ...(img.compileLog.handlers as object), ...(vid.compileLog.handlers as object) },
+        promptBefore: row.prompt ?? undefined,
+        promptAfter: img.prompt,
+        videoPromptBefore: row.videoPrompt ?? undefined,
+        videoPromptAfter: vid.prompt,
+      };
+      diffByShot.push(diffEntry);
 
       await u.db("o_storyboard").where("id", row.id).update({
         prompt: img.prompt,
@@ -83,6 +133,23 @@ export async function syncStructuredEpisode(opts: {
         shotMeta: JSON.stringify(shot),
         promptSourceHash: hash,
         state: "dirty",
+        reason: JSON.stringify({ compileLog: { image: img.compileLog, video: vid.compileLog }, syncDiff: diffEntry }),
+      });
+
+      await appendSyncRevision({
+        projectId,
+        scriptId,
+        storyboardId: row.id!,
+        revision: {
+          at: Date.now(),
+          hashBefore,
+          hashAfter: hash,
+          changedFields,
+          prompt: img.prompt,
+          videoPrompt: vid.prompt,
+          impact,
+          reason: diffEntry.recommendationReason,
+        },
       });
     } else {
       await u.db("o_storyboard").where("id", row.id).update({
@@ -99,11 +166,46 @@ export async function syncStructuredEpisode(opts: {
       if (!newShotNos.has(meta.镜号)) {
         archivedShots.push(meta.镜号);
         await u.db("o_storyboard").where("id", row.id).update({ state: "archived" });
+        diffByShot.push({
+          shotNo: meta.镜号,
+          storyboardId: row.id,
+          changedFields: ["archived"],
+          impact: "both",
+          recommendationReason: "镜头已从 JSON 移除，已归档保留原资源",
+        });
       }
     } catch {
       /* skip */
     }
   }
 
-  return { changedShots, newShots: newShotNosList, archivedShots, dirtyShots, suggestions };
+  const result: SyncDiffResult = {
+    changedShots,
+    newShots: newShotNosList,
+    archivedShots,
+    dirtyShots,
+    suggestions,
+    diffByShot,
+  };
+
+  if (triggerAutoApply && dirtyShots.length) {
+    const policy = await getAutoApplyPolicy(projectId, scriptId);
+    if (policy.enabled && policy.autoApplyOnSync) {
+      const applyResult = await applyStructuredPlan({
+        projectId,
+        scriptId,
+        mode: "syncApply",
+        scope: policy.scope === "all" ? "all" : "dirty",
+        policy,
+      });
+      result.autoApplyResult = {
+        started: !applyResult.skipped,
+        taskId: applyResult.taskId,
+        message: applyResult.message,
+        planSummary: applyResult.planSummary as Record<string, unknown>,
+      };
+    }
+  }
+
+  return result;
 }

@@ -90,6 +90,26 @@ function applyCameraAnchor(prompt: string, shot: StructuredShot, spec?: Record<s
   return prompt;
 }
 
+function applyLocalizedPropText(prompt: string, shot: StructuredShot): string {
+  const vfx = shot.visualEffect as Record<string, unknown> | undefined;
+  const textPropTypes = new Set(["纸条", "短信", "字幕", "屏幕", "通知"]);
+  const isTextProp =
+    shot.type === "PURE-PROP" || (shot.dialogue?.type != null && textPropTypes.has(shot.dialogue.type));
+  const content =
+    (typeof vfx?.content === "string" && vfx.content.trim()) || shot.dialogue?.text?.trim();
+  if (!isTextProp || !content) return prompt;
+
+  let p = prompt
+    .replace(/text:\s*'[^']*'/gi, "")
+    .replace(/text:\s*"[^"]*"/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  const style =
+    (typeof vfx?.style === "string" && vfx.style) ||
+    (shot.dialogue?.type === "纸条" ? "手写体，墨迹晕染，淡黄色纸纹" : "");
+  return `${p}, Chinese text exactly: "${content}"${style ? `, ${style}` : ""}`;
+}
+
 export function compileImage(
   shot: StructuredShot,
   ctx: { json: StructuredScriptJson; episode?: StructuredEpisode; imageModel?: string; videoModel?: string },
@@ -102,6 +122,7 @@ export function compileImage(
 
   let prompt = creative.imageOverride ?? shot.imagePrompt ?? "";
   prompt = stripCrefSref(prompt);
+  prompt = applyLocalizedPropText(prompt, shot);
   prompt = applyTypeRules(prompt, shot, spec);
   prompt = applyProductionSpecColor(prompt, shot, spec);
   prompt = applyPerformance(prompt, shot);

@@ -5,6 +5,7 @@ import type { StructuredScriptJson, StructuredShot } from "./types";
 import { fourViewPrompt, mapStoryboardRow, stripPrompt } from "./mapper";
 
 import { registerDeriveVariants } from "./deriveVariant";
+import { initShotHistoryOnImport } from "./promptHistory";
 
 
 
@@ -301,6 +302,7 @@ export async function importStructuredEpisode(opts: {
 
 
   const storyboardIds: number[] = [];
+  const historyEntries: { storyboardId: number; shot: StructuredShot; prompt: string; videoPrompt: string; videoDesc: string }[] = [];
 
   for (let i = 0; i < shots.length; i++) {
 
@@ -376,13 +378,21 @@ export async function importStructuredEpisode(opts: {
 
     storyboardIds.push(sbId);
 
+    historyEntries.push({
+      storyboardId: sbId,
+      shot,
+      prompt: mapped.prompt,
+      videoPrompt: mapped.videoPrompt,
+      videoDesc: mapped.videoDesc,
+    });
 
-
-    const assetIds = (shot.assetCodes ?? [])
-
-      .map((c) => codeMap.get(c))
-
-      .filter((id): id is number => id != null);
+    const assetIds = Array.from(
+      new Set(
+        (shot.assetCodes ?? [])
+          .map((c) => codeMap.get(c))
+          .filter((id): id is number => id != null),
+      ),
+    );
 
     if (assetIds.length) {
 
@@ -397,6 +407,9 @@ export async function importStructuredEpisode(opts: {
   }
 
 
+
+  await u.db("o_agentWorkData").where({ projectId, episodesId: scriptId, key: "structuredShotHistory" }).delete();
+  await initShotHistoryOnImport({ projectId, scriptId, entries: historyEntries });
 
   await u.db("o_agentWorkData").where({ projectId, episodesId: scriptId, key: "structuredEpisode" }).delete();
 

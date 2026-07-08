@@ -125,4 +125,38 @@ export interface SyncDiffResult {
   archivedShots: number[];
   dirtyShots: number[];
   suggestions: { storyboardId?: number; 镜号: number; targets: ("image" | "video")[] }[];
+  diffByShot: ShotDiffEntry[];
+  autoApplyResult?: {
+    started: boolean;
+    taskId?: number;
+    message?: string;
+    planSummary?: Record<string, unknown>;
+  };
+}
+
+export interface ShotDiffEntry {
+  shotNo: number;
+  storyboardId?: number;
+  hashBefore?: string;
+  hashAfter?: string;
+  changedFields: string[];
+  impact: "image" | "video" | "both";
+  recommendationReason: string;
+  handlersHit?: Record<string, unknown>;
+  promptBefore?: string;
+  promptAfter?: string;
+  videoPromptBefore?: string;
+  videoPromptAfter?: string;
+}
+
+export interface AutoApplyPolicy {
+  enabled: boolean;
+  scope: "dirtyOnly" | "all";
+  autoApplyOnSync: boolean;
+  phases: ("variants" | "images" | "videos" | "assemble")[];
+  qualityProfileId: string;
+  concurrency: number;
+  retry: number;
+  includeArchived: boolean;
+  audioOverride?: boolean;
 }

@@ -606,7 +606,7 @@
             "输出规格": "4K，PNG序列"
           },
           "assetCodes": ["PROP-NOTE"],
-          "imagePrompt": "Isolated hand-written note on clean background, no hands, no person, text: 'I know you have been secretly watching her for ten years. Tonight at midnight, come to the rooftop.', handwritten ink, aged paper, 9:16 --sref PROP-NOTE",
+          "imagePrompt": "Isolated hand-written note on clean background, no hands, no person, handwritten ink, aged yellow paper texture, 9:16 --sref PROP-NOTE",
           "videoPrompt": "text appearing line by line, heartbeat sound intensifying, slow motion, 1.7s duration"
         },
         {
@@ -1926,7 +1926,7 @@
             "输出规格": "4K，PNG序列"
           },
           "assetCodes": ["PROP-PHONE"],
-          "imagePrompt": "Isolated smartphone screen on clean background, no hands, no person, text: 'Someone is waiting for you downstairs.', notification interface, 9:16 --sref PROP-PHONE",
+          "imagePrompt": "Isolated smartphone screen on clean background, no hands, no person, notification interface, 9:16 --sref PROP-PHONE",
           "videoPrompt": "static shot, message appearing on screen, normal speed, 1.5s duration"
         },
         {
