@@ -1,6 +1,11 @@
 {
   "name": "@toonflow/observability-cli",
   "version": "1.0.0",
-  "bin": { "toonflow-obs-init": "./src/init.ts" },
-  "license": "Apache-2.0"
+  "bin": {
+    "toonflow-obs-init": "./src/init.ts"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "init": "tsx src/init.ts"
+  }
 }

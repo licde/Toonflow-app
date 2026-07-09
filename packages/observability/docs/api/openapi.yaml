@@ -127,6 +127,43 @@ paths:
       responses:
         "200":
           description: 已接收
+  /api/logs/ingest/batch:
+    post:
+      tags: [logs]
+      summary: 批量日志注入（Sidecar / 高吞吐）
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/LogIngestRequest"
+      responses:
+        "200":
+          description: "accepted, skipped 计数"
+  /api/logs/recommend/feedback:
+    post:
+      tags: [logs]
+      summary: 推荐反馈闭环
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recommendationId, helpful]
+              properties:
+                recommendationId: { type: string }
+                helpful: { type: boolean }
+                comment: { type: string }
+      responses:
+        "200":
+          description: 已保存
   /api/logs/health:
     get:
       tags: [logs]

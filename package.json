@@ -35,7 +35,9 @@
     "dist:linux": "yarn build && electron-builder --linux",
     "debug:ai": "npx @ai-sdk/devtools",
     "license": "node scripts/license.ts",
-    "vendor2json": "node scripts/vendor2json.ts"
+    "vendor2json": "node scripts/vendor2json.ts",
+    "obs:test": "cd packages/observability && npx tsx --test tests/unit/core.test.ts",
+    "obs:init": "npx tsx packages/observability-cli/src/init.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.35",
