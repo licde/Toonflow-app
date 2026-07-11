@@ -6,12 +6,16 @@ import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import fs from "fs/promises";
 import path from "path";
+import { isRuleEngineEnabled } from "@/ruleEngine/featureFlag";
+import { loadEpisodePackage } from "@/ruleEngine/storage/episodePackageStore";
+import { getCompiledPromptForStoryboard, syncFromFlowData } from "@/ruleEngine/facade";
 const router = express.Router();
 
 export default router.post(
   "/",
   validateFields({
     projectId: z.number(),
+    scriptId: z.number().optional(),
     trackData: z.array(
       z.object({
         trackId: z.number(),
@@ -28,8 +32,55 @@ export default router.post(
     concurrentCount: z.number().optional(), //并发数
   }),
   async (req, res) => {
-    const { trackData, projectId, mode, model, concurrentCount = 5 } = req.body;
+    const { trackData, projectId, scriptId: bodyScriptId, mode, model, concurrentCount = 5 } = req.body;
     try {
+      const ruleEngineOn = await isRuleEngineEnabled(u.db, projectId);
+      if (ruleEngineOn) {
+        const firstTrack = await u.db("o_videoTrack").where("id", trackData[0]?.trackId).select("scriptId").first();
+        const scriptId = bodyScriptId ?? (firstTrack as { scriptId?: number })?.scriptId;
+        if (scriptId) {
+          let pkg = await loadEpisodePackage(u.db, projectId, scriptId);
+          if (!pkg) {
+            const flowRow = await u.db("o_agentWorkData").where({ projectId, episodesId: scriptId, key: "productionAgent" }).first();
+            if (flowRow?.data) {
+              const flow = JSON.parse(flowRow.data as string);
+              pkg = await syncFromFlowData(u.db, {
+                projectId,
+                scriptId,
+                script: flow.script,
+                scriptPlan: flow.scriptPlan,
+                storyboardTable: flow.storyboardTable,
+                storyboard: flow.storyboard,
+              });
+            }
+          }
+          if (pkg) {
+            await u
+              .db("o_videoTrack")
+              .whereIn(
+                "id",
+                trackData.map((t: { trackId: number }) => t.trackId),
+              )
+              .update({ state: "生成中" });
+            const limit = pLimit(concurrentCount ?? 5);
+            const tasks = trackData.map((track: { trackId: number; info: { id: number; sources: string }[] }) =>
+              limit(async () => {
+                const sbItem = track.info.find((i: { sources: string }) => i.sources === "storyboard");
+                const compiled =
+                  sbItem && pkg ? getCompiledPromptForStoryboard(pkg, sbItem.id, "video") : null;
+                const prompt = compiled ?? (sbItem ? (await u.db("o_storyboard").where("id", sbItem.id).select("videoDesc").first())?.videoDesc : null);
+                if (prompt) {
+                  await u.db("o_videoTrack").where({ id: track.trackId }).update({ prompt, state: "已完成" });
+                } else {
+                  await u.db("o_videoTrack").where({ id: track.trackId }).update({ state: "生成失败", reason: "规则引擎未编译 video prompt" });
+                }
+              }),
+            );
+            Promise.all(tasks);
+            return res.status(200).send(success("规则引擎编译提示词已开始"));
+          }
+        }
+      }
       // 预加载公共数据
       const [id, modelData] = model.split(/:(.+)/);
       const projectData = await u.db("o_project").select("*").where({ id: projectId }).first();

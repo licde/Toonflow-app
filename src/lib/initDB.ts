@@ -312,6 +312,10 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
             key: "switchAiDevTool",
             value: "0",
           },
+          {
+            key: "ruleEngineEnabled",
+            value: "1",
+          },
         ]);
       },
     },
@@ -516,6 +520,34 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.integer("updateTime");
         table.primary(["id"]);
         table.unique(["id"]);
+      },
+    },
+    // 规则引擎 — 集数据包
+    {
+      name: "o_episodePackage",
+      builder: (table) => {
+        table.integer("id").notNullable();
+        table.integer("projectId").notNullable();
+        table.integer("scriptId").notNullable();
+        table.text("package");
+        table.integer("version").defaultTo(1);
+        table.integer("createTime");
+        table.integer("updateTime");
+        table.primary(["id"]);
+        table.unique(["projectId", "scriptId"]);
+      },
+    },
+    // 规则引擎 — 项目蓝图 G 层
+    {
+      name: "o_projectBlueprint",
+      builder: (table) => {
+        table.integer("id").notNullable();
+        table.integer("projectId").notNullable();
+        table.text("blueprint");
+        table.integer("createTime");
+        table.integer("updateTime");
+        table.primary(["id"]);
+        table.unique(["projectId"]);
       },
     },
     //视频

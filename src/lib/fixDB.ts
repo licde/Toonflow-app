@@ -190,6 +190,45 @@ export default async (knex: Knex): Promise<void> => {
   if (Number(toonflowVer) < 3.2) {
     u.vendor.writeCode("toonflow", vendorData["toonflow.ts"]);
   }
+
+  // 规则引擎表
+  if (!(await knex.schema.hasTable("o_episodePackage"))) {
+    await knex.schema.createTable("o_episodePackage", (table) => {
+      table.integer("id").notNullable();
+      table.integer("projectId").notNullable();
+      table.integer("scriptId").notNullable();
+      table.text("package");
+      table.integer("version").defaultTo(1);
+      table.integer("createTime");
+      table.integer("updateTime");
+      table.primary(["id"]);
+      table.unique(["projectId", "scriptId"]);
+    });
+  }
+  if (!(await knex.schema.hasTable("o_projectBlueprint"))) {
+    await knex.schema.createTable("o_projectBlueprint", (table) => {
+      table.integer("id").notNullable();
+      table.integer("projectId").notNullable();
+      table.text("blueprint");
+      table.integer("createTime");
+      table.integer("updateTime");
+      table.primary(["id"]);
+      table.unique(["projectId"]);
+    });
+  }
+  const ruleEngineSetting = await u.db("o_setting").where("key", "ruleEngineEnabled").first();
+  if (!ruleEngineSetting) {
+    await u.db("o_setting").insert({ key: "ruleEngineEnabled", value: "1" });
+  }
+
+  // 默认管理员（表存在但无数据时补种，避免登录 400「登录失败」）
+  const adminUser = await u.db("o_user").where("name", "admin").first();
+  if (!adminUser) {
+    const anyUser = await u.db("o_user").first();
+    if (!anyUser) {
+      await u.db("o_user").insert({ id: 1, name: "admin", password: "admin123" });
+    }
+  }
 };
 
 async function tempOnsert(tsCode: string) {

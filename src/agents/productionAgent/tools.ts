@@ -26,9 +26,18 @@ const storyboardSchema = z.object({
   id: z.number().describe("分镜ID，必须为真实id"),
   duration: z.number().describe("持续时长(秒)"),
   prompt: z.string().describe("生成提示词"),
+  videoDesc: z.string().optional().describe("视频描述"),
+  shouldGenerateImage: z.number().optional().describe("是否生成图片 0否 1是"),
   associateAssetsIds: z.array(z.number()).describe("关联资产ID列表"),
   src: z.string().nullable().describe("分镜资源路径"),
   index: z.number().nullable().optional().describe("分镜排序字段"),
+});
+const workbenchVideoListSchema = z.object({
+  id: z.number(),
+  prompt: z.string(),
+  duration: z.number(),
+  storyboardId: z.number(),
+  trackId: z.number(),
 });
 const workbenchDataSchema = z.object({
   name: z.string().describe("项目名称"),
@@ -48,6 +57,12 @@ export const flowDataSchema = z.object({
   assets: z.array(assetItemSchema).describe("衍生资产"),
   storyboardTable: z.string().describe("分镜表"),
   storyboard: z.array(storyboardSchema).describe("分镜面板"),
+  workbench: z
+    .object({
+      videoList: z.array(workbenchVideoListSchema).optional(),
+    })
+    .optional()
+    .describe("工作台数据"),
 });
 
 export type FlowData = z.infer<typeof flowDataSchema>;
@@ -291,6 +306,35 @@ export default (toolCpnfig: ToolConfig) => {
             thinking.complete();
           });
         return true;
+      },
+    }),
+    compile_episode_prompts: tool({
+      description: "规则引擎：编译本集分镜提示词（dry-run）并返回校验报告",
+      inputSchema: jsonSchema<{ script?: string }>(z.object({ script: z.string().optional() }).toJSONSchema()),
+      execute: async ({ script }) => {
+        const thinking = msg.thinking("正在编译分镜提示词...");
+        const { projectId, scriptId } = resTool.data;
+        try {
+          const flowData: FlowData = await new Promise((resolve) => socket.emit("getFlowData", {}, (res: any) => resolve(res)));
+          const { syncFromFlowData, dryRun } = await import("@/ruleEngine/facade");
+          const pkg = await syncFromFlowData(u.db, {
+            projectId,
+            scriptId,
+            script: script ?? flowData.script,
+            scriptPlan: flowData.scriptPlan,
+            storyboardTable: flowData.storyboardTable,
+            storyboard: flowData.storyboard,
+          });
+          const result = await dryRun(u.db, pkg, script ?? flowData.script ?? "");
+          thinking.appendText(`编译完成：${result.shots.length} 镜，BLOCK ${result.report.blockCount}，WARN ${result.report.warnCount}`);
+          thinking.updateTitle("编译完成");
+          thinking.complete();
+          return { shots: result.shots.length, report: result.report };
+        } catch (e) {
+          thinking.appendText("编译失败: " + u.error(e).message);
+          thinking.complete();
+          return "编译失败";
+        }
       },
     }),
   };

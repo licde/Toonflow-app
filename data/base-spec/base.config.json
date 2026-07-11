@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "modalities": ["image", "video", "audio", "effects", "subtitle"],
+  "speechSpeed": 4,
+  "durationMin": 0.3,
+  "shotTypes": ["CHAR-SCENE", "PURE-SCENE", "PURE-PROP", "CHAR-PROP"],
+  "transitionTypes": ["切", "叠化", "快切", "慢放", "淡出", "淡入"],
+  "motionWhitelist": ["static", "slow push", "slow pan", "tracking", "fast cut", "slow motion"],
+  "dialogueLimits": { "monologue": 12, "dialogue": 15 },
+  "platformProfiles": {
+    "9:16": { "vertical": true, "faceRatioMin": 0.35 },
+    "16:9": { "vertical": false, "faceRatioMin": 0.2 }
+  },
+  "pipelineProfiles": {
+    "strict": { "tier0Block": true, "polish": true, "dryRunRequired": true },
+    "standard": { "tier0Block": true, "polish": false, "dryRunRequired": false },
+    "fast": { "tier0Block": false, "polish": false, "dryRunRequired": false },
+    "dry-run": { "tier0Block": true, "polish": false, "dryRunRequired": true, "touch": false }
+  }
+}

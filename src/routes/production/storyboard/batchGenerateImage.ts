@@ -6,6 +6,9 @@ import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { Output, tool } from "ai";
 import { assetItemSchema } from "@/agents/productionAgent/tools";
+import { isRuleEngineEnabled } from "@/ruleEngine/featureFlag";
+import { loadEpisodePackage } from "@/ruleEngine/storage/episodePackageStore";
+import { getCompiledPromptForStoryboard, syncFromFlowData } from "@/ruleEngine/facade";
 const router = express.Router();
 export type AssetData = z.infer<typeof assetItemSchema>;
 
@@ -92,8 +95,28 @@ export default router.post(
     );
 
     const generateTask = async (item: (typeof storyboardData)[number]) => {
+      let promptText = item.prompt!;
+      if (await isRuleEngineEnabled(u.db, projectId)) {
+        let pkg = await loadEpisodePackage(u.db, projectId, scriptId);
+        if (!pkg) {
+          const flowRow = await u.db("o_agentWorkData").where({ projectId, episodesId: scriptId, key: "productionAgent" }).first();
+          if (flowRow?.data) {
+            const flow = JSON.parse(flowRow.data as string);
+            pkg = await syncFromFlowData(u.db, {
+              projectId,
+              scriptId,
+              script: flow.script,
+              scriptPlan: flow.scriptPlan,
+              storyboardTable: flow.storyboardTable,
+              storyboard: flow.storyboard,
+            });
+          }
+        }
+        const compiled = pkg ? getCompiledPromptForStoryboard(pkg, item.id!, "image") : null;
+        if (compiled) promptText = compiled;
+      }
       const repeloadObj = {
-        prompt: item.prompt!,
+        prompt: promptText,
         size: projectSettingData?.imageQuality as "1K" | "2K" | "4K",
         aspectRatio: projectSettingData?.videoRatio as `${number}:${number}`,
       };

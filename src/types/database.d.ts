@@ -1,4 +1,4 @@
-// @db-hash f5d050145d03a52b5b502043bc559ec0
+// @db-hash 34f8d65936f70b706268edcad3258ae4
 //该文件由脚本自动生成，请勿手动修改
 
 export interface memories {
@@ -67,6 +67,15 @@ export interface o_assetsRole2Audio {
   'assetsAudioId'?: number;
   'assetsRoleId'?: number;
 }
+export interface o_episodePackage {
+  'createTime'?: number | null;
+  'id'?: number;
+  'package'?: string | null;
+  'projectId': number;
+  'scriptId': number;
+  'updateTime'?: number | null;
+  'version'?: number | null;
+}
 export interface o_event {
   'createTime'?: number | null;
   'detail'?: string | null;
@@ -97,7 +106,6 @@ export interface o_modelPrompt {
   'id'?: number;
   'model'?: string | null;
   'path'?: string | null;
-  'prompt'?: string | null;
   'vendorId'?: string | null;
 }
 export interface o_novel {
@@ -127,6 +135,13 @@ export interface o_project {
   'userId'?: number | null;
   'videoModel'?: string | null;
   'videoRatio'?: string | null;
+}
+export interface o_projectBlueprint {
+  'blueprint'?: string | null;
+  'createTime'?: number | null;
+  'id'?: number;
+  'projectId': number;
+  'updateTime'?: number | null;
 }
 export interface o_prompt {
   'data'?: string | null;
@@ -237,6 +252,7 @@ export interface DB {
   "o_assets": o_assets;
   "o_assets2Storyboard": o_assets2Storyboard;
   "o_assetsRole2Audio": o_assetsRole2Audio;
+  "o_episodePackage": o_episodePackage;
   "o_event": o_event;
   "o_eventChapter": o_eventChapter;
   "o_image": o_image;
@@ -244,6 +260,7 @@ export interface DB {
   "o_modelPrompt": o_modelPrompt;
   "o_novel": o_novel;
   "o_project": o_project;
+  "o_projectBlueprint": o_projectBlueprint;
   "o_prompt": o_prompt;
   "o_script": o_script;
   "o_scriptAssets": o_scriptAssets;
