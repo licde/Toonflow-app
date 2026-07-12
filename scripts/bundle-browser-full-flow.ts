@@ -1,6 +1,6 @@
 /**
  * 生成 browser_full_flow.bundle.md v2.0.1
- * yarn bundle:browser-full-flow
+ * yarn bundle:browser-full-flow [--tier T1|T3]
  */
 import fs from "fs";
 import path from "path";
@@ -9,7 +9,12 @@ const skillsDir = path.join(process.cwd(), "data", "skills");
 const genDir = path.join(skillsDir, "_generated");
 const chatDir = path.join(skillsDir, "browser_chat");
 const fixturesDir = path.join(process.cwd(), "data", "fixtures");
+const rulePacksDir = path.join(process.cwd(), "data", "rule-packs");
 const outPath = path.join(skillsDir, "browser_full_flow.bundle.md");
+
+const tierArg = process.argv.includes("--tier") ? process.argv[process.argv.indexOf("--tier") + 1] ?? "T3" : "T3";
+const bundleManifest = JSON.parse(fs.readFileSync(path.join(rulePacksDir, "manifest.json"), "utf-8"));
+const sectionManifest = JSON.parse(fs.readFileSync(path.join(rulePacksDir, "bundle_sections.json"), "utf-8"));
 
 function readRel(rel: string): string {
   const p = path.join(skillsDir, rel);
@@ -51,11 +56,11 @@ supersedes: design_flow.bundle.md v1.1
 
 # Browser Chat 全流程 · 优化版 v2.0.1
 
-> 生成时间：${new Date().toISOString()} · 勿手改，改源 skill 后重跑 \`yarn bundle:browser-full-flow\`
+> 生成时间：${new Date().toISOString()} · rulePack ${bundleManifest.rulePackVersion} · tier ${tierArg} · 勿手改，改源 skill 后重跑 \`yarn bundle:browser-full-flow\`
 
 `;
 
-const sections: [string, string][] = [
+const allSections: [string, string][] = [
   ["§0 用法·红线", readRel("browser_flow_orchestration.md")],
   ["§1 输入契约", readChat("00_index.md") + "\n\n" + readChat("appendix/O_production_closure.md")],
   ["§2 改编路径 P", readChat("stages/P0_precheck.md") + "\n\n" + readChat("stages/P03_matrix.md")],
@@ -85,7 +90,7 @@ const sections: [string, string][] = [
   ["附录 G W93-W100", readChat("appendix/G_smart_design_W93.md")],
   ["附录 H 图锚点", readChat("appendix/H_visual_lock_table.md")],
   ["附录 I 六链", readFixture("linkage_chains.json") + "\n\n" + readFixture("linkage_repair_plan.schema.json")],
-  ["附录 J T1 PreDesignPack", readChat("T1_quality_gate.md")],
+  ["附录 J 出口闸门", readChat("T1_quality_gate.md") + "\n\n" + readChat("T3_quality_gate.md")],
   ["附录 K 走廊", readGen("rule_checklists_linkage.md")],
   ["附录 L rePush", readFixture("reverse_route_table.json")],
   ["附录 M QP+模态", readFixture("modality_prompt_slots.json")],
@@ -98,6 +103,14 @@ const sections: [string, string][] = [
   ["附录 V 智能修复", readChat("appendix/V_intelligent_repair.md") + "\n\n" + readFixture("repair_hint_catalog.json")],
   ["附录 W 多端闭环", readChat("appendix/W_multiterm_closure.md") + "\n\n" + readFixture("multi_end_closure_matrix.json")],
 ];
+
+const t1Cfg = sectionManifest.tiers?.T1 ?? {};
+const sections = tierArg === "T3"
+  ? allSections
+  : allSections.filter(([title]) => {
+      if (t1Cfg.excludePrefixes?.some((p: string) => title.startsWith(p))) return false;
+      return true;
+    });
 
 const body = sections.map(([title, content]) => `## ${title}\n\n${content}`).join("\n\n---\n\n");
 const merged = header + body + "\n";

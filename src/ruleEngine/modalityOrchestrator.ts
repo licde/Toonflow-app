@@ -28,7 +28,7 @@ export function buildModalityPromptAudit(
   const perShot: Record<string, string>[] = [];
 
   for (const shot of shots) {
-    const idx = shot.shotIndex ?? 0;
+    const idx = (shot as EpisodeShot & { shotIndex?: number }).shotIndex ?? shot.index ?? 0;
     const row: Record<string, string> = { IMG: "PASS", VID: "PASS", AUD: "PASS", FX: "PASS" };
     const compiled = shot.generation?.compiled;
 

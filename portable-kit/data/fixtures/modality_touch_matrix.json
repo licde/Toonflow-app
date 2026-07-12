@@ -1,0 +1,69 @@
+{
+  "version": "2.0.1",
+  "description": "四模态 × Base/Vendor × tier × rePushTarget",
+  "modalities": {
+    "IMG": {
+      "baseRules": ["V1", "V2", "V3", "V4"],
+      "designSourceFields": ["sceneName", "charCodes", "visualDescription", "emotion"],
+      "vendorRules": ["AG-GATE-04"],
+      "slots": ["subject", "scene", "composition", "lighting", "style", "negative", "cref", "identity"],
+      "tiers": { "T1": "skip", "T2": ["subject", "scene"], "T3": "all" },
+      "rePushTargets": {
+        "cref_missing": "EN",
+        "identity_mismatch": "EN",
+        "pure_negative": "EN"
+      },
+      "dryRunId": "PC-11"
+    },
+    "VID": {
+      "baseRules": ["V9", "QF-VIEW", "QF-DUR", "QF-EXPR-06", "PR-07"],
+      "designSourceFields": ["shotSize", "transitionType", "duration", "emotion"],
+      "vendorRules": ["AG-GATE-01", "AG-GATE-02", "AG-GATE-03", "MODE-AGNES"],
+      "slots": ["motion", "camera", "duration", "lipSync", "identity", "fx"],
+      "tiers": { "T1": "skip", "T2": "skip", "T3": "all" },
+      "rePushTargets": {
+        "video_first_frame_missing": "MD",
+        "motion_overflow": "EN",
+        "duration_clamp": "SB",
+        "native_audio_mismatch": "EN"
+      },
+      "dryRunId": "PC-09",
+      "repairPriority": "P0"
+    },
+    "AUD": {
+      "baseRules": ["R2", "H3", "V74", "PR-10"],
+      "designSourceFields": ["narrative.dialogue.lines", "emotion", "audioMood"],
+      "vendorRules": ["dialogue-native"],
+      "slots": ["lines", "voiceProfile", "emotion", "deliveryType", "identity"],
+      "tiers": { "T1": "skip", "T2": "skip", "T3": "all" },
+      "rePushTargets": {
+        "dialogue_hash_mismatch": "SB",
+        "identity_mismatch": "EN",
+        "native_audio_mismatch": "EN",
+        "pr_os_voice": "SB"
+      },
+      "dryRunId": "PC-10",
+      "repairPriority": "P1"
+    },
+    "FX": {
+      "baseRules": ["V77", "PR-07", "PR-15"],
+      "designSourceFields": ["visualEffect", "markers", "narrative.markers"],
+      "vendorRules": ["F-clamp-3"],
+      "slots": ["type", "intensity", "feasibilityLevel", "degradeHint"],
+      "tiers": { "T1": "skip", "T2": "skip", "T3": "all" },
+      "rePushTargets": {
+        "fx_infeasible": "SB",
+        "pr_vendor_fx": "EN",
+        "F5_unhandled": "W3"
+      },
+      "dryRunId": "PC-12",
+      "repairPriority": "P1"
+    }
+  },
+  "crossModal": {
+    "identityAudit": { "modalities": ["IMG", "VID", "AUD"], "dryRunId": "PC-14" },
+    "modalityPromptAudit": { "requiredT3": ["IMG", "VID", "AUD", "FX"], "dryRunId": "PC-13" },
+    "linkageAudit": { "dryRunId": "PC-08" }
+  },
+  "repairPriorityOrder": ["VID", "IMG", "AUD", "FX", "EN", "SB", "W3"]
+}

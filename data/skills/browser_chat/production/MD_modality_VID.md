@@ -72,3 +72,5 @@ PC-09：首帧/时长/运镜 BLOCK。
 ## 输出
 
 `generation.videoPrompt` + `modalityPromptAudit.VID` + `videoAudioPolicy`
+
+**Bundle 路径**：`preDesignPack.shots[].generation.videoPrompt` 或 `flowData.storyboard[].videoDesc`。标准见 `docs/PROMPT_STANDARD.md` §3。

@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import type { FlowData } from "@/agents/productionAgent/tools";
+import type { FlowData } from "./flowDataTypes";
 import { dryRun, syncFromFlowData } from "../facade";
 import { saveEpisodePackage, loadEpisodePackage } from "../storage/episodePackageStore";
 import { stableHash } from "../utils/hash";
@@ -16,12 +16,16 @@ import { detectBundleType, episodeBundleSchema, normalizeLegacyFlowData, scriptB
 import { resolveContextFromScriptBundle } from "./resolveContext";
 import { syncStoryboardToDb, loadStoryboardFromDb } from "./storyboardSync";
 import { applyPreDesignPack, hasPreDesignShots } from "./preDesignPackAdapter";
-import { productionClosureBlocked, runProductionClosureDryRun } from "./productionClosureDryRun";
-import { designClosureBlocked } from "./designClosureDryRun";
-import { enrichBundleForwardTrace } from "../design/forwardTrace";
-import { buildReverseHints } from "../design/bidirectionalTrace";
-import { runUnifiedClosure } from "../design/unifiedDryRun";
+import { episodeToScriptBundle, inferTierFromBundle, runScriptBundleClosure } from "./closureSummary";
+import { inspectBundle } from "../portable/inspectBundle";
+import type { InspectBundleResult } from "../portable/types";
+import { applySmartProposalsToBundle } from "../design/smartProposalApplier";
+import type { IntValidationSummary } from "./types";
 import { createAutoDesignJob, executeAutoDesignJob, shouldUseLlm } from "./autoDesign";
+import { loadProjectBlueprint, saveProjectBlueprint } from "../storage/episodePackageStore";
+import { auditChatPromptGaps } from "./chatPromptAudit";
+import { loadPlanData } from "./resolveContext";
+import { buildZ108 } from "../packager/zPackager";
 
 async function upsertScript(
   db: Knex,
@@ -110,6 +114,50 @@ async function mergeFlowData(
   return merged;
 }
 
+async function persistBlueprintFromBundle(db: Knex, projectId: number, bundle: ScriptBundle): Promise<void> {
+  const existing = (await loadProjectBlueprint(db, projectId)) ?? {};
+  const merged: Record<string, unknown> = { ...existing };
+
+  const ga = bundle.planData?.globalAnchors;
+  if (ga && typeof ga === "object") {
+    merged.globalAnchors = ga;
+  }
+
+  if (bundle.visualLockTable && Object.keys(bundle.visualLockTable).length) {
+    Object.assign(merged, bundle.visualLockTable);
+  }
+
+  const cd = bundle.characterDesign as { assets?: { code?: string; [key: string]: unknown }[] } | undefined;
+  if (cd?.assets?.length) {
+    const characterAssets: Record<string, unknown> = { ...((merged.characterAssets as Record<string, unknown>) ?? {}) };
+    for (const asset of cd.assets) {
+      if (asset.code) characterAssets[asset.code] = asset;
+    }
+    merged.characterAssets = characterAssets;
+  }
+
+  const ap = bundle.assetPipeline as { sceneColorLock?: Record<string, unknown> } | undefined;
+  if (ap?.sceneColorLock) {
+    merged.sceneColorLock = { ...((merged.sceneColorLock as Record<string, unknown>) ?? {}), ...ap.sceneColorLock };
+  }
+
+  if (Object.keys(merged).length) {
+    await saveProjectBlueprint(db, projectId, merged);
+  }
+}
+
+function mergeFlowDataFromBundle(flowData: FlowData, bundle: ScriptBundle): FlowData {
+  const fd = bundle.flowData;
+  if (!fd) return flowData;
+  const merged = { ...flowData };
+  if (fd.scriptPlan) merged.scriptPlan = fd.scriptPlan;
+  if (fd.storyboardTable) merged.storyboardTable = fd.storyboardTable;
+  if (fd.storyboard?.length) {
+    merged.storyboard = fd.storyboard as FlowData["storyboard"];
+  }
+  return merged;
+}
+
 export function buildDryRunSummary(
   bundle: ScriptBundle | EpisodeBundle,
   opts: ImportOptions,
@@ -123,11 +171,12 @@ export function buildDryRunSummary(
     layers.push("scriptPlan", "storyboardTable", "storyboard");
     storyboardCount = bundle.preDesignPack.shots.length;
     skipAutoDesignSb = true;
-  } else if ("flowData" in bundle) {
-    if (bundle.flowData.scriptPlan) layers.push("scriptPlan");
-    if (bundle.flowData.storyboardTable) layers.push("storyboardTable");
-    if (bundle.flowData.storyboard?.length) layers.push("storyboard");
-    storyboardCount = bundle.flowData.storyboard?.length ?? 0;
+  } else if ("flowData" in bundle && bundle.flowData) {
+    const fd = bundle.flowData;
+    if (fd.scriptPlan) layers.push("scriptPlan");
+    if (fd.storyboardTable) layers.push("storyboardTable");
+    if (fd.storyboard?.length) layers.push("storyboard");
+    storyboardCount = fd.storyboard?.length ?? 0;
   }
 
   const warnings: string[] = [];
@@ -137,19 +186,49 @@ export function buildDryRunSummary(
   let closureChecks;
   let forwardTrace;
   let reverseHints;
-  if ("bundleType" in bundle && bundle.bundleType === "script") {
-    const sb = bundle as ScriptBundle;
-    const tier = sb.modalityPromptAudit ? "T3" : "T1";
-    const enriched = enrichBundleForwardTrace(sb, tier as "T1" | "T3");
-    const unified = runUnifiedClosure(enriched, { tier: tier as "T1" | "T3" });
-    closureChecks = unified;
-    designClosureChecks = unified.dc;
-    productionClosureChecks = unified.pc.length ? unified.pc : runProductionClosureDryRun(sb);
-    intelligentClosureChecks = unified.ic;
-    forwardTrace = enriched.forwardTrace;
-    reverseHints = buildReverseHints(enriched, tier as "T1" | "T3");
-    if (unified.blocked || designClosureBlocked(unified.dc) || productionClosureBlocked(productionClosureChecks)) {
-      warnings.push("unified_closure_checklist 存在 BLOCK 项");
+  let repairHints;
+  let generationClosureChecks;
+
+  const rawForInspect =
+    "bundleType" in bundle && bundle.bundleType === "script"
+      ? bundle
+      : "flowData" in bundle
+        ? { flowData: bundle.flowData, meta: bundle.meta, bundleVersion: (bundle as EpisodeBundle).bundleVersion, rulePackVersion: (bundle as EpisodeBundle).rulePackVersion }
+        : bundle;
+
+  try {
+    const inspected = inspectBundle(rawForInspect, {
+      tier: "bundleType" in bundle && bundle.bundleType === "script" ? inferTierFromBundle(bundle as ScriptBundle) : "T2",
+    });
+    closureChecks = inspected.closureChecks;
+    designClosureChecks = inspected.closureChecks.dc;
+    productionClosureChecks = inspected.closureChecks.pc;
+    intelligentClosureChecks = inspected.closureChecks.ic;
+    generationClosureChecks = inspected.closureChecks.gc;
+    forwardTrace = inspected.forwardTrace;
+    reverseHints = inspected.reverseHints;
+    repairHints = inspected.repairHints;
+    warnings.push(...inspected.warnings);
+  } catch {
+    if ("bundleType" in bundle && bundle.bundleType === "script") {
+      const closure = runScriptBundleClosure(bundle as ScriptBundle, { tier: inferTierFromBundle(bundle as ScriptBundle) });
+      closureChecks = closure.closureChecks;
+      designClosureChecks = closure.designClosureChecks;
+      productionClosureChecks = closure.productionClosureChecks;
+      intelligentClosureChecks = closure.intelligentClosureChecks;
+      forwardTrace = closure.forwardTrace;
+      reverseHints = closure.reverseHints;
+      warnings.push(...closure.warnings);
+    } else if ("flowData" in bundle) {
+      const sb = episodeToScriptBundle(bundle as EpisodeBundle);
+      const closure = runScriptBundleClosure(sb, { tier: "T2" });
+      closureChecks = closure.closureChecks;
+      designClosureChecks = closure.designClosureChecks;
+      productionClosureChecks = closure.productionClosureChecks;
+      intelligentClosureChecks = closure.intelligentClosureChecks;
+      forwardTrace = closure.forwardTrace;
+      reverseHints = closure.reverseHints;
+      warnings.push(...closure.warnings);
     }
   }
 
@@ -163,17 +242,35 @@ export function buildDryRunSummary(
     productionClosureChecks,
     designClosureChecks,
     intelligentClosureChecks,
+    generationClosureChecks,
     closureChecks,
     forwardTrace,
     reverseHints,
+    repairHints,
   };
 }
 
 export async function importScriptBundle(db: Knex, raw: unknown, opts: ImportOptions): Promise<ImportResult> {
   const parsed = scriptBundleSchema.parse(stripCommentFields(raw as Record<string, unknown>));
-  const bundle = parsed as ScriptBundle;
+  let bundle = parsed as ScriptBundle;
+  const proposals = (bundle as ScriptBundle & { smartDesignProposals?: unknown[] }).smartDesignProposals;
+  if (proposals?.length) {
+    bundle = applySmartProposalsToBundle(bundle, proposals as Parameters<typeof applySmartProposalsToBundle>[1]);
+  }
+  const tier = inferTierFromBundle(bundle);
+  const chatPromptGaps = auditChatPromptGaps(bundle, tier);
+  const preImport: InspectBundleResult = opts.validateOnly
+    ? inspectBundle(bundle, { tier })
+    : {
+        tier,
+        blocked: false,
+        rulePackVersion: bundle.rulePackVersion ?? "2.0.1",
+        closureChecks: { dc: [], pc: [], gc: [], ic: [], blocked: false },
+        warnings: chatPromptGaps.map((g) => (g.shotIndex != null ? `[镜${g.shotIndex}] ${g.message}` : g.message)),
+        chatPromptGaps,
+      };
   const mergeStrategy = opts.mergeStrategy ?? "replaceAll";
-  const autoDesign = opts.autoDesign !== false;
+  const autoDesign = opts.autoDesign !== false && !hasPreDesignShots(bundle.preDesignPack);
 
   const scriptId = await upsertScript(db, opts.projectId, bundle.script, bundle.meta, opts.targetScriptId);
   const resolvedContext = await resolveContextFromScriptBundle(db, opts.projectId, scriptId, bundle);
@@ -184,6 +281,7 @@ export async function importScriptBundle(db: Knex, raw: unknown, opts: ImportOpt
       idMap: {},
       resolvedContext,
       dryRun: buildDryRunSummary(bundle, opts, Boolean(opts.targetScriptId)),
+      preImport,
     };
   }
 
@@ -211,6 +309,7 @@ export async function importScriptBundle(db: Knex, raw: unknown, opts: ImportOpt
     const sync = await syncStoryboardToDb(db, opts.projectId, scriptId, applied.storyboard, { replaceAll: mergeStrategy === "replaceAll" });
     idMap = sync.idMap;
     flowData.storyboard = sync.panels as FlowData["storyboard"];
+    flowData = mergeFlowDataFromBundle(flowData, bundle);
     await saveFlowData(db, opts.projectId, scriptId, flowData);
     const pkg = await syncFromFlowData(db, {
       projectId: opts.projectId,
@@ -254,8 +353,11 @@ export async function importScriptBundle(db: Knex, raw: unknown, opts: ImportOpt
       useLlm,
     );
   } else if (!preDesign) {
+    flowData = mergeFlowDataFromBundle(flowData, bundle);
     await saveFlowData(db, opts.projectId, scriptId, flowData);
   }
+
+  await persistBlueprintFromBundle(db, opts.projectId, bundle);
 
   if (bundle.planData) {
     const planRow = await db("o_agentWorkData").where({ projectId: opts.projectId, key: "scriptAgent" }).first();
@@ -272,14 +374,33 @@ export async function importScriptBundle(db: Knex, raw: unknown, opts: ImportOpt
     }
   }
 
-  const pkg = await loadEpisodePackage(db, opts.projectId, scriptId);
+  const pkgAfter = await loadEpisodePackage(db, opts.projectId, scriptId);
   let validationReport;
-  if (pkg) {
-    const dry = await dryRun(db, pkg, bundle.script);
+  let postImport: IntValidationSummary | undefined;
+  if (pkgAfter && (opts.validateOnly || opts.includeValidationReport)) {
+    const dry = await dryRun(db, pkgAfter, bundle.script);
     validationReport = dry.report;
+    postImport = {
+      passed: dry.report.passed,
+      tier0Coverage: {
+        executed: dry.report.ruleCoverage?.hit ?? dry.report.issues?.length ?? 0,
+        registered: dry.report.ruleCoverage?.total ?? 257,
+        triggered: dry.report.issues?.length ?? 0,
+      },
+      issues: dry.report.issues ?? [],
+    };
   }
 
-  return { scriptId, idMap, validationReport, resolvedContext, autoDesignJobId: jobId };
+  return {
+    scriptId,
+    idMap,
+    validationReport,
+    resolvedContext,
+    autoDesignJobId: jobId,
+    preImport,
+    postImport,
+    chatPromptGaps: preImport.chatPromptGaps,
+  };
 }
 
 export async function importEpisodeBundle(db: Knex, raw: unknown, opts: ImportOptions): Promise<ImportResult> {
@@ -345,8 +466,11 @@ export async function importEpisodeBundle(db: Knex, raw: unknown, opts: ImportOp
   }
   await saveEpisodePackage(db, pkg);
 
-  const dry = await dryRun(db, pkg, merged.script);
-  return { scriptId, idMap: sync.idMap, validationReport: dry.report };
+  if (opts.validateOnly || opts.includeValidationReport) {
+    const dry = await dryRun(db, pkg, merged.script);
+    return { scriptId, idMap: sync.idMap, validationReport: dry.report };
+  }
+  return { scriptId, idMap: sync.idMap };
 }
 
 export async function exportScriptBundle(db: Knex, projectId: number, scriptId: number) {
@@ -413,27 +537,97 @@ export async function exportEpisodeBundle(db: Knex, projectId: number, scriptId:
   };
 }
 
+export async function exportFullBundle(db: Knex, projectId: number, scriptId: number) {
+  const base = await exportScriptBundle(db, projectId, scriptId);
+  const ep = await exportEpisodeBundle(db, projectId, scriptId);
+  const planRaw = await loadPlanData(db, projectId);
+  const blueprint = await loadProjectBlueprint(db, projectId);
+  const pkg = await loadEpisodePackage(db, projectId, scriptId);
+
+  let planData: Record<string, unknown> = {};
+  try {
+    for (const [k, v] of Object.entries(planRaw)) {
+      if (v && typeof v === "string" && (v.startsWith("{") || v.startsWith("["))) {
+        planData[k] = JSON.parse(v);
+      } else if (v) {
+        planData[k] = v;
+      }
+    }
+  } catch {
+    planData = { ...planRaw };
+  }
+
+  const shots =
+    ep.flowData.storyboard?.map((p, i) => {
+      const shotPkg = pkg?.shots?.[i];
+      const compiled = shotPkg?.generation?.compiled;
+      return {
+        shotIndex: i + 1,
+        duration: p.duration,
+        visualDescription: p.prompt,
+        generation: {
+          imagePrompt: compiled?.image ?? p.prompt,
+          videoPrompt: compiled?.video ?? p.videoDesc,
+          audioPrompt: compiled?.audio,
+        },
+      };
+    }) ?? [];
+
+  const characterAssets = (blueprint?.characterAssets as Record<string, unknown>) ?? {};
+  const characterDesign =
+    Object.keys(characterAssets).length > 0
+      ? { assets: Object.entries(characterAssets).map(([code, asset]) => ({ code, ...(asset as object) })) }
+      : undefined;
+
+  return {
+    ...base,
+    planData: Object.keys(planData).length ? planData : undefined,
+    designBrief: (blueprint?.designBrief as Record<string, unknown>) ?? undefined,
+    preDesignPack: ep.flowData.scriptPlan
+      ? { scriptPlan: ep.flowData.scriptPlan, shots }
+      : shots.length
+        ? { scriptPlan: "", shots }
+        : undefined,
+    characterDesign,
+    visualLockTable: blueprint ?? undefined,
+    flowData: ep.flowData,
+    Z108: pkg ? buildZ108(pkg) : undefined,
+  };
+}
+
 export async function importSeriesBundle(db: Knex, raw: unknown, opts: Omit<ImportOptions, "targetScriptId">) {
   const { seriesBundleSchema } = await import("./schema");
   const series = seriesBundleSchema.parse(stripCommentFields(raw as Record<string, unknown>));
   const results: ImportResult[] = [];
+  let prevSummary: string | undefined;
   for (const ep of series.episodes) {
+    const cont = (ep as { flowData?: { continuity?: { prevEpisodeSummary?: string } } }).flowData?.continuity?.prevEpisodeSummary;
+    if (prevSummary && cont && cont !== prevSummary) {
+      console.warn(`Series continuity drift at episode after: ${prevSummary.slice(0, 20)}...`);
+    }
     const r = await importEpisodeBundle(db, ep, { ...opts, importMode: opts.importMode ?? "upsert" });
     results.push(r);
+    prevSummary = cont ?? prevSummary;
   }
   return results;
 }
 
 export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions): Promise<DryRunImportSummary> {
+  const preImport = inspectBundle(raw, {
+    tier: (raw as { modalityPromptAudit?: unknown })?.modalityPromptAudit ? "T3" : "T2",
+  });
   const kind = detectBundleType(raw);
+  let summary: DryRunImportSummary;
   if (kind === "script") {
     const bundle = scriptBundleSchema.parse(stripCommentFields(raw as Record<string, unknown>));
     const exists = opts.targetScriptId
       ? Boolean(await db("o_script").where({ id: opts.targetScriptId, projectId: opts.projectId }).first())
       : false;
-    return buildDryRunSummary(bundle as ScriptBundle, { ...opts, validateOnly: true }, exists);
+    summary = buildDryRunSummary(bundle as ScriptBundle, { ...opts, validateOnly: true }, exists);
+  } else {
+    const bundle = kind === "legacy" ? normalizeLegacyFlowData(raw as Record<string, unknown>) : { flowData: (raw as EpisodeBundle).flowData, meta: {} };
+    const exists = Boolean(opts.targetScriptId);
+    summary = buildDryRunSummary({ flowData: bundle.flowData, meta: bundle.meta } as EpisodeBundle, { ...opts, validateOnly: true }, exists);
   }
-  const bundle = kind === "legacy" ? normalizeLegacyFlowData(raw as Record<string, unknown>) : { flowData: (raw as EpisodeBundle).flowData, meta: {} };
-  const exists = Boolean(opts.targetScriptId);
-  return buildDryRunSummary({ flowData: bundle.flowData, meta: bundle.meta } as EpisodeBundle, { ...opts, validateOnly: true }, exists);
+  return { ...summary, preImport, endpoint: "int" as const };
 }

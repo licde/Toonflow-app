@@ -66,3 +66,5 @@ BP L0 → SB charCodes/type → EN subject → MD-IMG imagePrompt
   }
 }
 ```
+
+**Bundle 路径**：`preDesignPack.shots[].generation.imagePrompt` 或 `flowData.storyboard[].prompt`。标准见 `docs/PROMPT_STANDARD.md` §2。

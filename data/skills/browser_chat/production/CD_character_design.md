@@ -38,6 +38,8 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 
 ## 输出
 
+写入 bundle 顶层 `characterDesign`（import 落库 blueprint）。详见 `docs/PROMPT_STANDARD.md` §6。
+
 ```json
 {
   "characterDesign": {

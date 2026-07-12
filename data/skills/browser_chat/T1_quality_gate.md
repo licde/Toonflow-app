@@ -1,14 +1,14 @@
 ---
 name: T1_quality_gate
-description: T1 PreDesignPack 出口质量闸门
+description: T1 PreDesignPack 出口自检（非 JSON 假闸）
 stageId: T1
 outputTag: preDesignQuality
 rulePackVersion: "2.0.1"
 ---
 
-# T1 质量闸门（PreDesignPack）
+# T1 质量自检（PreDesignPack）
 
-T1 档位出口前**最终闸门**。T1 不再只是 script+designBrief，必须含完整 preDesignPack。
+T1 为 T3 路径中的 **分镜检查点**，不是最终出口。最终出口见 `T3_quality_gate.md`。
 
 ## T1 必填产物
 
@@ -16,59 +16,45 @@ T1 档位出口前**最终闸门**。T1 不再只是 script+designBrief，必须
 |------|------------|------|
 | script | W3 | 文学剧本全文 |
 | planData | P/G/W | 预检/锚点/骨架/策略 |
-| designBrief | B | 11 联动字段 |
+| designBrief | B | B1–B13 联动字段 |
 | preDesignPack.scriptPlan | GB | 分场/情绪/过渡 |
-| preDesignPack.shots[] | SB | 每镜 lines 映射 |
-| preDesignPack.externalHashCheck | 自检 | match=true |
-| preDesignPack.preDesignQuality | 本闸门 | overall ≥ B |
-| ruleAudit | 各阶段 | 全链路 pass |
+| preDesignPack.shots[] | SB | 台词映射 + visualDescription |
 | rulePackVersion | — | `"2.0.1"` |
 
-## preDesignPack 结构
+## preDesignPack.shots 结构
 
 ```json
 {
-  "preDesignPack": {
-    "scriptPlan": "...",
-    "shots": [
-      {
-        "id": "shot-1",
-        "narrative": {
-          "dialogue": { "type": "dialogue", "lines": "角色：\"台词\"" },
-          "emotionIntensity": 5,
-          "shotSize": "中景"
-        }
-      }
-    ],
-    "externalHashCheck": { "scriptHash": "...", "linesHash": "...", "match": true },
-    "preDesignQuality": { "overall": "B", "dimensions": {...} },
-    "sceneCodeMap": {}
+  "shotIndex": 1,
+  "type": "CHAR-SCENE",
+  "sceneName": "寝殿",
+  "visualDescription": "婢女俯身",
+  "duration": 2,
+  "narrative": {
+    "dialogue": {
+      "lines": [{ "speaker": "婢女", "text": "殿下醒了。" }]
+    }
   }
 }
 ```
 
-## 出口前自检（G25–G30）
+## 出口前自检（创作清单，不写假 JSON）
 
-1. **台词链**：每句剧本台词 → shots[].dialogue.lines，零删改（R2）
+1. **台词链**：剧本每句台词在 shots 中可追溯，100% 覆盖（可合并，不可丢）
 2. **视听链**：designBrief.B4 → GB emotionCurve → SB emotionIntensity
-3. **hash**：externalHashCheck.match = true
-4. **监督**：supervisionReport.grade ≥ B
-5. **联动**：linkageAudit 六链无 BLOCK 断裂
+3. **visualDescription**：每镜非空
+4. **监督**：supervisionReport.grade ≥ B（若有）
 
-## T1 仍不产出
+## T1 阶段不写
 
-imagePrompt / videoPrompt / audioPrompt / compiled prompt（属 T2 EN / T3 MD）
+`imagePrompt` / `videoPrompt` / `audioPrompt` / `fxPrompt`（属 T3 MD，见 `T3_quality_gate.md`）
 
-## BLOCK 闸门
+## 禁止写入 bundle
 
-| 项 | 条件 |
-|----|------|
-| preDesignQuality.overall | ≥ B |
-| supervisionReport.grade | ≥ B |
-| externalHashCheck.match | true |
-| fixPlan.status | applied 或空 |
-| shots.length | ≥ 剧本台词句数 |
+- `externalHashCheck.match: true` 占位
+- `linkageAudit` 假 pass
+- `ruleAudit.passed: true` 无实测
 
 ## import 说明
 
-有 shots → POST importScript → 落库 o_storyboard，**skip autoDesign SB**。
+有完整 shots → `POST importScript` 落库；**缺 T3 prompt 由外部 inspect 报告**，不在 Chat 填假通过。

@@ -1,0 +1,60 @@
+{
+  "version": "2.0.1",
+  "domains": [
+    "core",
+    "adaptation",
+    "design-seven",
+    "modality",
+    "intelligent"
+  ],
+  "implLevels": [
+    "L0",
+    "L1",
+    "L2",
+    "L3"
+  ],
+  "defaultImplLevel": "L1",
+  "rulePackVersion": "2.0.1",
+  "sections": {
+    "core": {
+      "file": "core.json",
+      "layers": [
+        "P",
+        "G"
+      ]
+    },
+    "adaptation": {
+      "file": "adaptation.json",
+      "layers": [
+        "P",
+        "W"
+      ]
+    },
+    "design-seven": {
+      "file": "design-seven.json",
+      "layers": [
+        "B",
+        "H"
+      ]
+    },
+    "modality": {
+      "file": "modality.json",
+      "layers": [
+        "B",
+        "V"
+      ],
+      "tier": "T3"
+    },
+    "intelligent": {
+      "file": "intelligent.json",
+      "layers": [
+        "Y",
+        "H"
+      ]
+    }
+  },
+  "implLevelStats": {
+    "totalCards": 313,
+    "domains": 5
+  }
+}

@@ -4,9 +4,9 @@
   "stages": [
     {
       "stageId": "P0",
-      "track": "browser",
+      "track": "both",
       "tier": "T1",
-      "name": "源材料预检",
+      "name": "预检",
       "ruleIds": [
         "P1",
         "P2",
@@ -26,140 +26,6 @@
       ]
     },
     {
-      "stageId": "P03",
-      "track": "browser",
-      "tier": "T1",
-      "name": "改编矩阵",
-      "ruleIds": [
-        "P13",
-        "P14",
-        "P15"
-      ]
-    },
-    {
-      "stageId": "P06",
-      "track": "browser",
-      "tier": "T1",
-      "name": "故事核心",
-      "ruleIds": []
-    },
-    {
-      "stageId": "P08",
-      "track": "browser",
-      "tier": "T1",
-      "name": "改编后检",
-      "ruleIds": []
-    },
-    {
-      "stageId": "P09",
-      "track": "browser",
-      "tier": "T1",
-      "name": "改编加固",
-      "ruleIds": []
-    },
-    {
-      "stageId": "G",
-      "track": "both",
-      "tier": "T1",
-      "name": "全局锚点",
-      "ruleIds": [
-        "G1",
-        "G2",
-        "G3",
-        "G4",
-        "G5"
-      ]
-    },
-    {
-      "stageId": "W1",
-      "track": "both",
-      "tier": "T1",
-      "name": "故事骨架",
-      "ruleIds": [
-        "W1",
-        "W2",
-        "W3",
-        "W4",
-        "W5"
-      ]
-    },
-    {
-      "stageId": "W2",
-      "track": "both",
-      "tier": "T1",
-      "name": "改编策略",
-      "ruleIds": [
-        "W6",
-        "W7",
-        "W8",
-        "W9",
-        "W10",
-        "W11",
-        "W12",
-        "W13",
-        "W14",
-        "W15"
-      ]
-    },
-    {
-      "stageId": "W3",
-      "track": "both",
-      "tier": "T1",
-      "name": "分集剧本",
-      "ruleIds": [
-        "W16",
-        "W17",
-        "W18",
-        "W19",
-        "W20",
-        "W21",
-        "W22",
-        "W23",
-        "W24",
-        "W25",
-        "W26",
-        "W27",
-        "W28",
-        "W29",
-        "W30",
-        "W31",
-        "W32",
-        "W33",
-        "W34",
-        "W35",
-        "W36",
-        "W37",
-        "W38",
-        "W39",
-        "W40",
-        "W41",
-        "W42",
-        "W43",
-        "W44",
-        "W45",
-        "W46"
-      ]
-    },
-    {
-      "stageId": "designBrief",
-      "track": "browser",
-      "tier": "T1",
-      "name": "设计联动 brief",
-      "ruleIds": [
-        "B1",
-        "B2",
-        "B3",
-        "B4",
-        "B5",
-        "B6",
-        "B7",
-        "B8",
-        "B9",
-        "B10",
-        "B11"
-      ]
-    },
-    {
       "stageId": "GB",
       "track": "both",
       "tier": "T1",
@@ -170,7 +36,7 @@
       "stageId": "SB",
       "track": "both",
       "tier": "T1",
-      "name": "分镜结构",
+      "name": "分镜表",
       "ruleIds": [
         "V1",
         "V2",
@@ -351,8 +217,8 @@
     {
       "stageId": "EN",
       "track": "both",
-      "tier": "T2",
-      "name": "引擎编译",
+      "tier": "T1",
+      "name": "分镜面板",
       "ruleIds": [
         "M1",
         "M2",
@@ -406,31 +272,17 @@
       ]
     },
     {
-      "stageId": "CD",
-      "track": "browser",
-      "tier": "T2",
-      "name": "角色设计",
-      "ruleIds": []
-    },
-    {
-      "stageId": "AS",
-      "track": "browser",
-      "tier": "T2",
-      "name": "资产流水线",
-      "ruleIds": []
-    },
-    {
-      "stageId": "BP",
-      "track": "browser",
-      "tier": "T2",
-      "name": "蓝图",
-      "ruleIds": []
-    },
-    {
       "stageId": "MD",
       "track": "both",
       "tier": "T3",
-      "name": "四模态 prompt",
+      "name": "模态编译",
+      "ruleIds": []
+    },
+    {
+      "stageId": "GEN",
+      "track": "both",
+      "tier": "T3",
+      "name": "生成反馈",
       "ruleIds": []
     },
     {

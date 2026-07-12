@@ -17,8 +17,8 @@ unified_with:
 # Browser Chat 全流程 · 优化版 v2.0.1（项目计划索引）
 
 > **双目标**：① Browser Chat 外部 bundle；② **与原 V5 内部规则流程统一闭环**（非两套标准）。  
-> 重心：设计→提示词质量走廊。合流点：**import → validate（INT 权威）**。  
-> 完整细节：[browser_chat_full_skill_0b1d04d0.plan.md](../.cursor/plans/browser_chat_full_skill_0b1d04d0.plan.md)
+> 重心：Chat 按 PROMPT_STANDARD 生成四模态 prompt；合流点：**export → inspectBundle 验收 → import 落库（不 BLOCK）**。  
+> 规范：`docs/PROMPT_STANDARD.md`、`docs/CHAT_FULL_PIPELINE_SPEC.md`
 
 ## 版本说明
 
@@ -37,7 +37,7 @@ unified_with:
 规则源（主流程 V5 + 规则层.json + autoFix）  rulePackVersion 2.0.1
     ├── 轨1 内部：scriptAgent → productionAgent → RuleEngine INT → Touch
     ├── 轨2 Chat：browser_full_flow.bundle → SD/SF/QP → ScriptBundle
-    └── 轨3 合流：import → validate（权威）→ QualityGate → 生成 → 反馈
+    └── 轨3 合流：export → inspect 验收 → import 落库 → 可选 smartFix → 生成
 ```
 
 **铁律**：同一 ruleId · 同一 rollback/rePush 表 · 同一 JSON schema · Chat EXT 不替代 INT。

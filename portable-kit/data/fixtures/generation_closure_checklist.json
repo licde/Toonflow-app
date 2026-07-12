@@ -1,0 +1,13 @@
+{
+  "version": "2.0.1",
+  "checks": [
+    { "id": "GC-01", "rule": "feedback 路由合法 target", "severity": "BLOCK" },
+    { "id": "GC-02", "rule": "VID 首帧失败 rePush MD", "severity": "BLOCK" },
+    { "id": "GC-03", "rule": "AUD native 失败 EN 优先", "severity": "BLOCK" },
+    { "id": "GC-04", "rule": "IMG cref 失败 EN/BP", "severity": "BLOCK" },
+    { "id": "GC-05", "rule": "FX 失败 SB/W3", "severity": "BLOCK" },
+    { "id": "GC-06", "rule": "MediaProbe duration ±1s", "severity": "WARN" },
+    { "id": "GC-07", "rule": "MediaProbe hasAudio vs policy", "severity": "WARN" },
+    { "id": "GC-08", "rule": "SF 3轮后 rePushPlan", "severity": "WARN" }
+  ]
+}

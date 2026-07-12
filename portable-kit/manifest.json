@@ -1,0 +1,18 @@
+{
+  "version": "2.0.1",
+  "tier": "T3",
+  "syncedAt": "2026-07-12T22:07:34.261Z",
+  "modules": [
+    "portable",
+    "closure",
+    "bundle",
+    "design",
+    "utils",
+    "validators",
+    "parsers",
+    "compilers",
+    "transform",
+    "vendor-packs"
+  ],
+  "fixtureCount": 19
+}

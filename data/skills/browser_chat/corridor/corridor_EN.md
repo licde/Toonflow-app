@@ -39,7 +39,7 @@ rulePackVersion: "2.0.1"
 2. 按 Y 映射生成 generation 字段
 3. 校验 refs 全部 resolve 到 BP CODE
 4. 计算 compiledHash per shot
-5. 写入 package.storyboard[]
+5. 写入 **ScriptBundle** `preDesignPack.shots[].generation` 与/或 `flowData.storyboard[]`
 
 ## BLOCK 闸门
 

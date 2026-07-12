@@ -1,0 +1,17 @@
+{
+  "version": "2.0.1",
+  "defaultTier": "T3",
+  "tiers": {
+    "T1": {
+      "includeThrough": "§17",
+      "excludePrefixes": ["附录 A", "附录 B"]
+    },
+    "T3": {
+      "includeAll": true
+    }
+  },
+  "sectionOrder": [
+    "s0", "s1", "s2", "s3", "s4", "s5_0", "s5_1", "s5_5", "s6", "s7", "s8", "s9", "s10", "s11", "s12", "s13", "s14", "s15", "s16", "s17",
+    "app_a", "app_b", "app_c", "app_d", "app_e", "app_f", "app_g", "app_h", "app_i", "app_j", "app_k", "app_l", "app_m", "app_n", "app_o", "app_p", "app_q", "app_t", "app_u", "app_v", "app_w"
+  ]
+}

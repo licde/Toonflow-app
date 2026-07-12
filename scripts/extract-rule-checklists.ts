@@ -178,19 +178,13 @@ function renderChecklist(cards: RuleCard[], filter: (c: RuleCard) => boolean, ti
   return md;
 }
 
-function buildFixTemplates(): Record<string, unknown>[] {
-  const ids = [
-    "V1", "V2", "V3", "V4", "V10", "H2", "H3", "H4", "H5", "H9",
-    "R2", "W12", "W13", "B1", "B2", "B3", "MODE-AGNES", "Y8", "Y9", "Y10",
-    "QP-01", "QP-02", "PR-01", "PR-04", "identity_mismatch", "fx_degrade",
-  ];
-  return ids.map((ruleId) => ({
-    ruleId,
-    confidence: 0.85,
-    patchTemplate: { field: "auto", action: "revise" },
-    rePushTarget: FEEDBACK_MAP[ruleId] ?? "SB",
-    description: `Auto-fix template for ${ruleId}`,
-  }));
+interface FixTemplateOut {
+  ruleId: string;
+  confidence: number;
+  patchTemplate: { field: string; action: string; hint?: string };
+  rePushTarget: string;
+  patchKeys?: string[];
+  description: string;
 }
 
 const FEEDBACK_MAP: Record<string, string> = {
@@ -205,7 +199,80 @@ const FEEDBACK_MAP: Record<string, string> = {
   identity_mismatch: "EN",
   fx_degrade: "SB",
   "PR-01": "SB",
+  W1: "W1",
+  B3: "SB",
+  D21: "SB",
+  D22: "W3",
 };
+
+const PATCH_KEY_MAP: Record<string, string[]> = {
+  V1: ["type"],
+  V2: ["prefix"],
+  V3: ["append"],
+  V10: ["trim"],
+  H9: ["append"],
+  R2: ["text"],
+  W12: ["hook"],
+  W13: ["hook"],
+  B1: ["curve"],
+  B2: ["shotSize"],
+  Y8: ["terms"],
+  Y9: ["emotion"],
+  Y10: ["move"],
+};
+
+function loadRouteRePushMap(): Record<string, string> {
+  const routePath = path.join(root, "data", "fixtures", "reverse_route_table.json");
+  const map = { ...FEEDBACK_MAP };
+  if (!fs.existsSync(routePath)) return map;
+  const routes = (JSON.parse(fs.readFileSync(routePath, "utf-8")).routes ?? []) as {
+    trigger: string;
+    ruleIds?: string[];
+    reverseTarget: string;
+  }[];
+  for (const r of routes) {
+    map[r.trigger] = r.reverseTarget;
+    for (const id of r.ruleIds ?? []) map[id] = r.reverseTarget;
+  }
+  return map;
+}
+
+function buildFixTemplates(): FixTemplateOut[] {
+  const json = loadRulesJson();
+  const lib = (json as { autoFixLibrary?: { fixTemplates?: { ruleId: string; template: string }[] } }).autoFixLibrary;
+  const fromLibrary = lib?.fixTemplates ?? [];
+  const rePushMap = loadRouteRePushMap();
+  const byId = new Map<string, FixTemplateOut>();
+
+  for (const entry of fromLibrary) {
+    byId.set(entry.ruleId, {
+      ruleId: entry.ruleId,
+      confidence: 0.85,
+      patchTemplate: { field: "auto", action: "revise", hint: entry.template },
+      rePushTarget: rePushMap[entry.ruleId] ?? "SB",
+      patchKeys: PATCH_KEY_MAP[entry.ruleId],
+      description: entry.template.slice(0, 300),
+    });
+  }
+
+  const extras: FixTemplateOut[] = [
+    "QP-01", "QP-02", "PR-01", "PR-04", "identity_mismatch", "fx_degrade",
+    "AG-GATE-01", "AG-GATE-02", "video_first_frame_missing", "motion_overflow",
+    "native_audio_mismatch", "img_cref_missing", "aud_voice_mismatch", "PR-CAM-01",
+  ].map((ruleId) => ({
+    ruleId,
+    confidence: 0.85,
+    patchTemplate: { field: "auto", action: "revise" },
+    rePushTarget: rePushMap[ruleId] ?? "SB",
+    patchKeys: PATCH_KEY_MAP[ruleId],
+    description: `Runtime trigger template for ${ruleId}`,
+  }));
+  for (const e of extras) {
+    if (!byId.has(e.ruleId)) byId.set(e.ruleId, e);
+  }
+
+  return [...byId.values()];
+}
 
 function main() {
   fs.mkdirSync(outDir, { recursive: true });

@@ -4,200 +4,243 @@
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "type字段值为'[错误值]'，非法。建议修改为CHAR-SCENE/PURE-SCENE/PURE-PROP/CHAR-PROP之一"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for V1"
+    "patchKeys": [
+      "type"
+    ],
+    "description": "type字段值为'[错误值]'，非法。建议修改为CHAR-SCENE/PURE-SCENE/PURE-PROP/CHAR-PROP之一"
   },
   {
     "ruleId": "V2",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "PURE-SCENE未包含'no people, no characters'。建议在imagePrompt开头追加'no people, no characters, '"
     },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for V2"
+    "rePushTarget": "EN",
+    "patchKeys": [
+      "prefix"
+    ],
+    "description": "PURE-SCENE未包含'no people, no characters'。建议在imagePrompt开头追加'no people, no characters, '"
   },
   {
     "ruleId": "V3",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "PURE-PROP未包含'--ar 1:1'或'no hands, no person'。建议在imagePrompt末尾追加'--ar 1:1'，在开头追加'no hands, no person, '"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for V3"
+    "patchKeys": [
+      "append"
+    ],
+    "description": "PURE-PROP未包含'--ar 1:1'或'no hands, no person'。建议在imagePrompt末尾追加'--ar 1:1'，在开头追加'no hands, no person, '"
   },
   {
     "ruleId": "V4",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "CHAR-CODE '[代码]'在characterAssets中未定义。建议检查拼写或在characterAssets中补充该角色定义"
+    },
+    "rePushTarget": "EN",
+    "description": "CHAR-CODE '[代码]'在characterAssets中未定义。建议检查拼写或在characterAssets中补充该角色定义"
+  },
+  {
+    "ruleId": "V5",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "PROP-CODE '[代码]'在anchorProps中未定义。建议检查拼写或在visualLockTable.anchorProps中补充该道具定义"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for V4"
+    "description": "PROP-CODE '[代码]'在anchorProps中未定义。建议检查拼写或在visualLockTable.anchorProps中补充该道具定义"
+  },
+  {
+    "ruleId": "V6",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "sceneName '[名称]'对应的SCENE-CODE未在sceneColorLock中定义。建议在productionSpec.sceneColorLock中补充该场景的色温定义"
+    },
+    "rePushTarget": "SB",
+    "description": "sceneName '[名称]'对应的SCENE-CODE未在sceneColorLock中定义。建议在productionSpec.sceneColorLock中补充该场景的色温定义"
   },
   {
     "ruleId": "V10",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "台词'[内容]'字数[X]超出限制。建议精简至[上限]字以内"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for V10"
+    "patchKeys": [
+      "trim"
+    ],
+    "description": "台词'[内容]'字数[X]超出限制。建议精简至[上限]字以内"
   },
   {
-    "ruleId": "H2",
+    "ruleId": "V13",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "GB",
-    "description": "Auto-fix template for H2"
-  },
-  {
-    "ruleId": "H3",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "女性角色'[角色名]'缺少耳饰或发饰。建议在L5-accessories中补充描述"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for H3"
+    "description": "女性角色'[角色名]'缺少耳饰或发饰。建议在L5-accessories中补充描述"
   },
   {
-    "ruleId": "H4",
+    "ruleId": "V14",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "EN",
-    "description": "Auto-fix template for H4"
-  },
-  {
-    "ruleId": "H5",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "EN",
-    "description": "Auto-fix template for H5"
-  },
-  {
-    "ruleId": "H9",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "男性角色'[角色名]'缺少发型分界或腰部装饰。建议在L2-hairstyle中补充分界描述，或在L4/L5中补充腰部装饰"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for H9"
+    "description": "男性角色'[角色名]'缺少发型分界或腰部装饰。建议在L2-hairstyle中补充分界描述，或在L4/L5中补充腰部装饰"
   },
   {
-    "ruleId": "R2",
+    "ruleId": "V16",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "场景'[场景名]'复杂度[X]超出范围[范围]。建议增加/减少可见元素描述"
+    },
+    "rePushTarget": "SB",
+    "description": "场景'[场景名]'复杂度[X]超出范围[范围]。建议增加/减少可见元素描述"
+  },
+  {
+    "ruleId": "V18",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "本集付费点数量为[X]，少于1个。建议在情绪高点增加付费点标记"
+    },
+    "rePushTarget": "SB",
+    "description": "本集付费点数量为[X]，少于1个。建议在情绪高点增加付费点标记"
+  },
+  {
+    "ruleId": "V25",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "emotionIntensity=[X]≥4但缺少microExpression或physiological子字段。建议补充完整microExpression（flush/eyes/pupil/mouthDetail）和physiological（sweat/breathVisible/pallor/swallow/tremor）"
+    },
+    "rePushTarget": "SB",
+    "description": "emotionIntensity=[X]≥4但缺少microExpression或physiological子字段。建议补充完整microExpression（flush/eyes/pupil/mouthDetail）和physiological（sweat/breathVisible/pallor/swallow/tremor）"
+  },
+  {
+    "ruleId": "V28",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "连续[X]个[景别]镜头（镜号[列表]），超过3镜限制。建议在第[X]镜处插入不同景别"
+    },
+    "rePushTarget": "SB",
+    "description": "连续[X]个[景别]镜头（镜号[列表]），超过3镜限制。建议在第[X]镜处插入不同景别"
+  },
+  {
+    "ruleId": "V44",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "相邻镜[镜号A]([时长A]s)与[镜号B]([时长B]s)时长比值[比值]＞2。建议调整时长使比值≤2"
+    },
+    "rePushTarget": "SB",
+    "description": "相邻镜[镜号A]([时长A]s)与[镜号B]([时长B]s)时长比值[比值]＞2。建议调整时长使比值≤2"
+  },
+  {
+    "ruleId": "V52",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "弹幕诱导点在镜[镜号A]和镜[镜号B]之间仅间隔[X]镜，<3。建议移除或调整诱导点位置"
+    },
+    "rePushTarget": "SB",
+    "description": "弹幕诱导点在镜[镜号A]和镜[镜号B]之间仅间隔[X]镜，<3。建议移除或调整诱导点位置"
+  },
+  {
+    "ruleId": "V79",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "冲突场景'[场景名]'（镜号[列表]）未落在快节奏区。建议调整rhythmZone为fast，并增加切镜频率"
+    },
+    "rePushTarget": "SB",
+    "description": "冲突场景'[场景名]'（镜号[列表]）未落在快节奏区。建议调整rhythmZone为fast，并增加切镜频率"
+  },
+  {
+    "ruleId": "V98",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "镜号[列表]在15s窗口内台词量占比[X]%＞50%。建议将部分台词分散至前后3-5个镜头"
+    },
+    "rePushTarget": "SB",
+    "description": "镜号[列表]在15s窗口内台词量占比[X]%＞50%。建议将部分台词分散至前后3-5个镜头"
+  },
+  {
+    "ruleId": "D21",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "场景'[SCENE-CODE]'锚点复用率仅为[X]%（<80%）。建议在以下镜号中增加核心锚点描述：[列表]"
+    },
+    "rePushTarget": "SB",
+    "description": "场景'[SCENE-CODE]'锚点复用率仅为[X]%（<80%）。建议在以下镜号中增加核心锚点描述：[列表]"
+  },
+  {
+    "ruleId": "D22",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "关键道具'[道具名]'在节点[集数]未出现。建议在该集关键冲突/情感节点加入道具镜头"
     },
     "rePushTarget": "W3",
-    "description": "Auto-fix template for R2"
+    "description": "关键道具'[道具名]'在节点[集数]未出现。建议在该集关键冲突/情感节点加入道具镜头"
   },
   {
-    "ruleId": "W12",
+    "ruleId": "W1",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "第[幕]幕emotionIntensity最大值[X]＞上限[上限]。建议将部分高情绪镜头移至下一幕"
     },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for W12"
-  },
-  {
-    "ruleId": "W13",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for W13"
-  },
-  {
-    "ruleId": "B1",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for B1"
-  },
-  {
-    "ruleId": "B2",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for B2"
+    "rePushTarget": "W1",
+    "description": "第[幕]幕emotionIntensity最大值[X]＞上限[上限]。建议将部分高情绪镜头移至下一幕"
   },
   {
     "ruleId": "B3",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "台词'[内容]'换给其他角色'[角色名]'后仍成立，风格化不足。建议增加角色专属标记词或口头禅"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for B3"
-  },
-  {
-    "ruleId": "MODE-AGNES",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "MD",
-    "description": "Auto-fix template for MODE-AGNES"
-  },
-  {
-    "ruleId": "Y8",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for Y8"
-  },
-  {
-    "ruleId": "Y9",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for Y9"
-  },
-  {
-    "ruleId": "Y10",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for Y10"
+    "description": "台词'[内容]'换给其他角色'[角色名]'后仍成立，风格化不足。建议增加角色专属标记词或口头禅"
   },
   {
     "ruleId": "QP-01",
@@ -207,7 +250,7 @@
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for QP-01"
+    "description": "Runtime trigger template for QP-01"
   },
   {
     "ruleId": "QP-02",
@@ -217,7 +260,7 @@
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for QP-02"
+    "description": "Runtime trigger template for QP-02"
   },
   {
     "ruleId": "PR-01",
@@ -227,7 +270,7 @@
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for PR-01"
+    "description": "Runtime trigger template for PR-01"
   },
   {
     "ruleId": "PR-04",
@@ -237,7 +280,7 @@
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for PR-04"
+    "description": "Runtime trigger template for PR-04"
   },
   {
     "ruleId": "identity_mismatch",
@@ -247,7 +290,7 @@
       "action": "revise"
     },
     "rePushTarget": "EN",
-    "description": "Auto-fix template for identity_mismatch"
+    "description": "Runtime trigger template for identity_mismatch"
   },
   {
     "ruleId": "fx_degrade",
@@ -257,6 +300,86 @@
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for fx_degrade"
+    "description": "Runtime trigger template for fx_degrade"
+  },
+  {
+    "ruleId": "AG-GATE-01",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "MD",
+    "description": "Runtime trigger template for AG-GATE-01"
+  },
+  {
+    "ruleId": "AG-GATE-02",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for AG-GATE-02"
+  },
+  {
+    "ruleId": "video_first_frame_missing",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "MD",
+    "description": "Runtime trigger template for video_first_frame_missing"
+  },
+  {
+    "ruleId": "motion_overflow",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for motion_overflow"
+  },
+  {
+    "ruleId": "native_audio_mismatch",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for native_audio_mismatch"
+  },
+  {
+    "ruleId": "img_cref_missing",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for img_cref_missing"
+  },
+  {
+    "ruleId": "aud_voice_mismatch",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "BP",
+    "description": "Runtime trigger template for aud_voice_mismatch"
+  },
+  {
+    "ruleId": "PR-CAM-01",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for PR-CAM-01"
   }
 ]

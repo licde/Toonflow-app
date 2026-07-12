@@ -28,6 +28,8 @@
     "node_modules",
     "data/**/*.ts",
     "dist",
-    "build"
+    "build",
+    "portable-kit",
+    "docs/toonflow-web"
   ]
 }

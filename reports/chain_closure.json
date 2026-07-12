@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "rulePackVersion": "2.0.1",
+    "generatedAt": "2026-07-12T17:21:48.977Z"
+  },
+  "sourceFunnel": {
+    "rulesJson": 257,
+    "ruleCards": 313,
+    "implLevelMissing": 0
+  },
+  "extractPipeline": {
+    "E1": "PARTIAL",
+    "E2": "CLOSED",
+    "E3": "CLOSED",
+    "E4": "PARTIAL",
+    "E5": "CLOSED",
+    "E6": "GAP"
+  },
+  "flowSteps18": {
+    "P0": "CLOSED",
+    "GB": "CLOSED",
+    "SB": "CLOSED",
+    "EN": "CLOSED",
+    "continuity": "PARTIAL"
+  },
+  "chains11": {
+    "dialogue": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "asset": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "continuity": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "av": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "story": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "scene": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "camera": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "adaptation": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "modality_compile": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "generation": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    },
+    "repair": {
+      "forward": "PASS",
+      "reverseSemantic": "PASS",
+      "dryRun": "PASS",
+      "status": "PASS"
+    }
+  },
+  "derivations": [
+    {
+      "module": "derivation_registry.json",
+      "registered": 11
+    }
+  ],
+  "routingDrift": [],
+  "fixturesUnwired": [
+    "multi_end_closure_matrix.endpointOverrides"
+  ],
+  "stubs": [],
+  "bundleTypes": {
+    "script": "CLOSED",
+    "episode": "CLOSED",
+    "legacy": "PARTIAL",
+    "series": "PARTIAL"
+  },
+  "apiDualClosure": {
+    "validate": "int-tier0",
+    "dryRunImport": "unified+preImport",
+    "inspectBundle": "CLOSED"
+  },
+  "versionCoherence": {
+    "ok": true,
+    "drifts": []
+  },
+  "closureLevels": {
+    "dc": 15,
+    "pc": 14,
+    "gc": 0,
+    "ic": 6,
+    "blocked": false
+  },
+  "runtimeHandlers": 14
+}

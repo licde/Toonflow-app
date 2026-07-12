@@ -7,8 +7,33 @@ import path from "path";
 
 const fixturesDir = path.join(process.cwd(), "data", "fixtures");
 const stageIndexPath = path.join(process.cwd(), "data", "skills", "_generated", "rule_stage_index.json");
+const stageGraphPath = path.join(process.cwd(), "data", "rule-packs", "stage_graph.yaml");
 
-const BROWSER_STAGES = [
+function loadStageGraph(): { stageId: string; track: string; tier: string; name: string }[] {
+  if (!fs.existsSync(stageGraphPath)) return BROWSER_STAGES_FALLBACK;
+  const yaml = fs.readFileSync(stageGraphPath, "utf-8");
+  const stages: { stageId: string; track: string; tier: string; name: string }[] = [];
+  let current: { id?: string; name?: string; layer?: string; tier?: string } = {};
+  for (const line of yaml.split("\n")) {
+    const idMatch = line.match(/^\s+- id:\s*(\S+)/);
+    if (idMatch) {
+      if (current.id) stages.push({ stageId: current.id, track: "both", tier: current.tier ?? "T1", name: current.name ?? current.id });
+      current = { id: idMatch[1] };
+      continue;
+    }
+    const nameMatch = line.match(/^\s+name:\s*(.+)/);
+    if (nameMatch) current.name = nameMatch[1].trim();
+    const layerMatch = line.match(/^\s+layer:\s*(\S+)/);
+    if (layerMatch) current.layer = layerMatch[1];
+    const tierMatch = line.match(/^\s+tier:\s*(\S+)/);
+    if (tierMatch) current.tier = tierMatch[1];
+  }
+  if (current.id) stages.push({ stageId: current.id, track: "both", tier: current.tier ?? "T1", name: current.name ?? current.id });
+  stages.push({ stageId: "validate", track: "internal", tier: "all", name: "RuleEngine validate" });
+  return stages.length > 1 ? stages : BROWSER_STAGES_FALLBACK;
+}
+
+const BROWSER_STAGES_FALLBACK = [
   { stageId: "P0", track: "browser", tier: "T1", name: "源材料预检" },
   { stageId: "P03", track: "browser", tier: "T1", name: "改编矩阵" },
   { stageId: "P06", track: "browser", tier: "T1", name: "故事核心" },
@@ -52,7 +77,7 @@ function main() {
   const unified = {
     version: "2.0.1",
     rulePackVersion: "2.0.1",
-    stages: BROWSER_STAGES.map((s) => ({
+    stages: loadStageGraph().map((s) => ({
       ...s,
       ruleIds: stageRules[s.stageId] ?? [],
     })),

@@ -1,0 +1,16 @@
+{
+  "version": "2.0.1",
+  "chains": {
+    "dialogue": { "trigger": "dialogue_hash_mismatch", "preserveFields": ["script"], "ruleId": "R2" },
+    "av": { "trigger": "emotion_composition", "preserveFields": [] },
+    "scene": { "trigger": "scene_break", "preserveFields": [] },
+    "story": { "trigger": "story_link_broken", "preserveFields": ["script"], "ruleId": "W41" },
+    "camera": { "trigger": "shot_camera_invalid", "preserveFields": [], "ruleId": "PR-CAM-01" },
+    "adaptation": { "trigger": "story_link_broken", "preserveFields": ["script", "planData"] },
+    "asset": { "trigger": "img_cref_missing", "preserveFields": [] },
+    "continuity": { "trigger": "narrative_graph_broken", "preserveFields": ["continuity"] },
+    "modality_compile": { "trigger": "modality_slot_missing", "preserveFields": [] },
+    "generation": { "trigger": "generation_feedback", "preserveFields": [] },
+    "repair": { "trigger": "generation_feedback", "preserveFields": [] }
+  }
+}

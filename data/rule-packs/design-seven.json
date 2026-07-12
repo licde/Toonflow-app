@@ -1,0 +1,111 @@
+{
+  "domain": "design-seven",
+  "version": "2.0.1",
+  "rules": [
+    {
+      "ruleId": "B1",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B2",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B3",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B4",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B5",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B6",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B7",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B8",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B9",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B10",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B11",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "H1",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H2",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H3",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H4",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H5",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H6",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H7",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H8",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H9",
+      "implLevel": "L1",
+      "layer": "H"
+    },
+    {
+      "ruleId": "H10",
+      "implLevel": "L1",
+      "layer": "H"
+    }
+  ]
+}

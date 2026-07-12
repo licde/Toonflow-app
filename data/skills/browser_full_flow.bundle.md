@@ -10,7 +10,7 @@ supersedes: design_flow.bundle.md v1.1
 
 # Browser Chat 全流程 · 优化版 v2.0.1
 
-> 生成时间：2026-07-12T11:09:29.794Z · 勿手改，改源 skill 后重跑 `yarn bundle:browser-full-flow`
+> 生成时间：2026-07-12T22:14:28.076Z · rulePack 2.0.1 · tier T3 · 勿手改，改源 skill 后重跑 `yarn bundle:browser-full-flow`
 
 ## §0 用法·红线
 
@@ -18,23 +18,23 @@ supersedes: design_flow.bundle.md v1.1
 
 ## §0 红线 · 三层边界
 
-**CAN**：分阶段对话；P/W/designBrief/GB/SB；T2/T3 分镜与 prompt；输出 JSON；L2 ruleAudit 自检。
+**CAN**：分阶段对话；P/W/designBrief/GB/SB/CD/AS/BP/EN/MD×4；输出 JSON；对照 PROMPT_STANDARD 自检。
 
-**CANNOT**：调用 Toonflow API/Socket；声称已 import/validate/生图；T1 输出 image/video/audioPrompt；跳过 BLOCK；跳过 GB→SB；自造 ruleId。
+**CANNOT**：调用 Toonflow API/Socket；声称已 import/生图；跳过 GB→SB→CD→BP；自造 ruleId；填假 ruleAudit/linkageAudit/hash pass。
 
 | 层 | 职责 |
 |----|------|
-| L1 Runner | 对话产品，Skill 不变 |
-| L2 Skill | 标准唯一，rule_cards 对齐 |
-| L3 validate | import 后 RuleEngine 权威 |
+| L1 Chat | 按技能生成正确 prompt 与资产包 |
+| L2 外部校验 | export 后 `inspectBundle` 验收（不挡 import） |
+| L3 Import | 原样落库 |
 
-## §1 三档路径
+## §1 默认路径（T3 一气呵成）
 
-| 档位 | 必经 | 出口 | 内部 |
-|------|------|------|------|
-| **T1** | P?→G→W→designBrief→**GB→SB** | ScriptBundle+preDesignPack | importScript；有 shots 则 skip SB |
-| **T2** | T1+CD→AS→BP→EN | EpisodeBundle-lite | importBundle |
-| **T3** | T2+MD×4 | EpisodeBundle-full | importBundle→生成 |
+| 档位 | 必经 | 出口 |
+|------|------|------|
+| **T3（默认）** | P?→G→W→designBrief→GB→SB→CD→AS→BP→EN→MD×4 | ScriptBundle 全量（含四模态 prompt） |
+| T1 | 同上至 SB | 仅策划/分镜（不推荐单独出口） |
+| T2 | T1+CD→AS→BP→EN | 含资产，无四模态 |
 
 ## §2 双路径
 
@@ -43,17 +43,18 @@ supersedes: design_flow.bundle.md v1.1
 
 ## §3 阶段闸门（摘要）
 
-| 阶段 | 出口 | BLOCK 未过 |
-|------|------|------------|
+| 阶段 | 出口 | 未过 |
+|------|------|------|
 | P0–P09 | planData.* | 不得进 W |
 | G | globalAnchors | 不得进 W |
-| W1–W3 | script | 不得 SD-S |
-| SD-S | supervisionReport | C/D 不得下一阶段 |
-| designBrief | 11 字段 | 不得 GB |
+| W1–W3 | script | 不得 GB |
+| designBrief | B1–B13 | 不得 GB |
 | GB | scriptPlan | 不得 SB |
-| SB | shots[].dialogue.lines | 不得 SF 终检 |
-| SF | fixPlan 修订 | 不得 output T1 |
-| T1 | preDesignQuality≥B | — |
+| SB | shots 台词全覆盖 + visualDescription | 不得 CD |
+| CD/AS/BP | 资产锚点 | 不得 EN |
+| EN | generation 编译字段 | 不得 MD |
+| MD×4 | 四模态 prompt | 不得 export |
+| T3_quality_gate | 对照 PROMPT_STANDARD | 修订后 export |
 
 ## §4 G 层锚点模板
 
@@ -61,41 +62,37 @@ supersedes: design_flow.bundle.md v1.1
 
 ## §5 设计→提示词质量走廊
 
-W3 → designBrief → GB → SB → EN → MD。每阶段挂载 SPEC/LINK/SD/SF。
+W3 → designBrief → GB → SB → CD → AS → BP → EN → MD×4。详见 `browser_chat/corridor/` 与 `docs/PROMPT_STANDARD.md`。
 
-详见 `browser_chat/corridor/` 与附录 K。
-
-## §6 V5 内部 vs Browser Chat 双轨
+## §6 V5 内部 vs Browser Chat
 
 | stageId | V5 内部 | Browser Chat |
 |---------|---------|--------------|
 | P/W | scriptAgent | stages/P*, W* |
 | GB/SB | productionAgent | corridor_GB/SB |
-| EN/MD | RuleEngine+Touch | T2/T3 production/* |
-| validate | INT ~8→扩展 | EXT L2 + import 合流 |
+| CD/BP/MD | RuleEngine+Touch | production/* + T3_quality_gate |
+| 验收 | dryRun | 外部 inspectBundle |
 
-共享：`rule_flow_unified.json`、`reverse_route_table.json`、`fix_templates.json`。
+## §7 ScriptBundle 契约（T3 全量）
 
-## §7 ScriptBundle 契约（T1）
-
-必填：`script`, `meta`, `planData`, `designBrief`, `preDesignPack`, `ruleAudit`, `rulePackVersion: "2.0.1"`。
-
-可选：`smartDetection`, `fixPlan`, `linkageAudit`, `rePushPlan`, `qualityDiagnostics`, `identityAudit`, `fxFeasibilityAudit`, `narrativeCausalityGraph`, `debutIntroPack`。
+必填：`script`, `meta`, `planData`, `designBrief`, `preDesignPack`, `rulePackVersion: "2.0.1"`  
+T2+：`characterDesign`, `assetPipeline`, `visualLockTable`  
+T3：每镜 `generation` 或 `flowData.storyboard[]`  
+可选：`modalityPromptAudit`, `debutIntroPack`（**禁止**假 pass 审计字段）
 
 ## §8 导入说明
 
-T1 → `#/production?import=1` → POST importScript → validate → productionAgent。
-
-T2/T3 → POST importBundle。
+export JSON → 可选 `inspectBundle` 验收 → `POST importScript` **落库不验证** → 制作页生成。
 
 ## §9 正推/反推
 
-检测 fail → `rePushPlan[]` → reverseTarget stage → 修订 → 重检（maxRounds=3）。
+检测 fail → `rePushPlan[]` → 修订对应 stage → 重检（maxRounds=3）。
 
 ## 引用套件
 
-- `browser_chat/manifest.json` — 文件索引
-- `browser_chat/stages/` — 分阶段 skill
+- `docs/PROMPT_STANDARD.md` — 生成与验收标准
+- `docs/CHAT_FULL_PIPELINE_SPEC.md` — 全链路规范
+- `browser_chat/T3_quality_gate.md` — T3 出口清单
 - `browser_chat/production/` — T2/T3 制作 skill
 - `browser_chat/corridor/` — 质量走廊
 
@@ -860,28 +857,34 @@ rulePackVersion: "2.0.1"
 
 ## 台词映射铁律（R2）
 
-1. 剧本每句 `{角色}：{台词}` → 恰好一镜 lines
-2. 禁止删改字词、调换语序、合并台词
-3. OS/VO 单独成镜，type 标注 os/vo
-4. 出口前计算 linesHash，与 scriptHash 对照
+1. 剧本每句 `{角色}：{台词}` 须在 shots 中可追溯
+2. **100% 覆盖**：可合并多句入一镜，**禁止删改字词、禁止丢句**
+3. OS/VO/系统音单独标注 type
+4. 出口前人工核对台词数 ≥ 剧本可枚举句数
+
+## 每镜必填 visualDescription
+
+| 字段 | 说明 |
+|------|------|
+| visualDescription | 画面主体与动作（供 EN subject / MD-IMG） |
 
 ## 执行步骤
 
 1. 按 scriptPlan 分场拆镜
 2. 为每句台词创建 shot，填入 dialogue.lines
 3. 标 shotSize + emotionIntensity + duration + rhythmZone
-4. 为信息镜填 markers；标 spatialRelation 对齐 B13
-5. 跑 externalHashCheck 预检
-6. 写入 preDesignPack.shots[]
+4. 为每镜填 **visualDescription**（必填）
+5. 标 shotSize + emotionIntensity + duration + rhythmZone
+6. 为信息镜填 markers；标 spatialRelation 对齐 B13
+7. 写入 preDesignPack.shots[]
 
 ## BLOCK 闸门
 
 | 项 | 条件 |
 |----|------|
-| R2 | 台词零删改，覆盖率 100% |
-| H3 | hash 一致 |
-| 镜数 | ≥ 台词句数 |
-| 禁越界 | 无 imagePrompt/videoPrompt/audioPrompt |
+| R2 | 台词 100% 覆盖，零丢句 |
+| visualDescription | 每镜非空 |
+| 禁越界 | SB 阶段不写四模态 prompt（属 MD） |
 
 ## 严禁产出
 
@@ -889,7 +892,7 @@ compiled prompt、API 参数、vendor 字段、Touch 配置。
 
 ## 下游
 
-通过 → T1_quality_gate 或 corridor_EN（T2）；台词问题 → rePush W3 或 SB 拆镜。
+通过 → CD（T2）→ EN → MD；台词问题 → rePush W3 或 SB 补镜。
 
 ---
 name: corridor_EN
@@ -932,7 +935,7 @@ rulePackVersion: "2.0.1"
 2. 按 Y 映射生成 generation 字段
 3. 校验 refs 全部 resolve 到 BP CODE
 4. 计算 compiledHash per shot
-5. 写入 package.storyboard[]
+5. 写入 **ScriptBundle** `preDesignPack.shots[].generation` 与/或 `flowData.storyboard[]`
 
 ## BLOCK 闸门
 
@@ -1216,7 +1219,7 @@ rulePackVersion: 2.0.1
 ## §7 T1 ScriptBundle schema
 
 {
-  "_comment": "ScriptBundle v2.0.1 官方样例 — Browser Chat T1 出口 / 制作页导入",
+  "_comment": "ScriptBundle v2.0.1 T3 正例 — Browser Chat 全链路出口",
   "bundleVersion": "browser-chat-optimized",
   "rulePackVersion": "2.0.1",
   "bundleType": "script",
@@ -1224,17 +1227,9 @@ rulePackVersion: 2.0.1
     "episodeKey": "ep-01",
     "episodeName": "第1集",
     "episodeIndex": 1,
-    "projectId": 0,
-    "scriptId": 0,
-    "provenance": {
-      "source": "external-chat",
-      "chapterRange": "1-3",
-      "novelTitle": ""
-    }
+    "provenance": { "source": "external-chat" }
   },
   "script": "场1 寝殿 日 内\n\n婢女：\"殿下醒了。\"\n\n裴青梧：\"我知道。\"",
-  "characters": ["裴青梧", "婢女"],
-  "scenes": ["寝殿"],
   "planData": {
     "globalAnchors": {
       "G1": "裴青梧：认命 vs 觉醒",
@@ -1242,10 +1237,11 @@ rulePackVersion: 2.0.1
     }
   },
   "designBrief": {
+    "B1": "ep-01",
+    "B4": [4, 5, 6],
+    "B5": ["钩子：苏醒", "承接：认命"],
     "emotionCurveOutline": [4, 5, 6],
-    "infoLinkageChain": ["钩子：苏醒", "承接：认命"],
-    "arcToneMap": { "裴青梧": "认命期→短句" },
-    "visualLockHints": ["寝殿烛火 4500K"]
+    "infoLinkageChain": ["钩子：苏醒", "承接：认命"]
   },
   "preDesignPack": {
     "scriptPlan": "# 导演规划\n\n## 场1：寝殿\n- 情绪：5\n",
@@ -1254,42 +1250,68 @@ rulePackVersion: 2.0.1
         "shotIndex": 1,
         "type": "CHAR-SCENE",
         "sceneName": "寝殿",
-        "duration": 4,
+        "duration": 2,
         "shotSize": "MS",
-        "emotion": 5,
+        "visualDescription": "婢女俯身唤醒殿下",
+        "charCodes": ["CHAR-MAID"],
+        "narrative": {
+          "dialogue": { "lines": [{ "speaker": "婢女", "text": "殿下醒了。" }] },
+          "markers": [{ "type": "钩子", "desc": "苏醒" }]
+        },
+        "generation": {
+          "imagePrompt": "婢女, 寝殿烛火暖光, 中景半身, 侧光4500K, 古言写实, no text watermark, --cref CHAR-MAID --ar 16:9",
+          "videoPrompt": "中景 static, slow push, duration 2s, motion-from-frame",
+          "audioPrompt": "婢女, 轻柔女声, 正常语速, 关切"
+        }
+      },
+      {
+        "shotIndex": 2,
+        "type": "CHAR-SCENE",
+        "sceneName": "寝殿",
+        "duration": 2,
+        "shotSize": "CU",
         "visualDescription": "裴青梧苏醒，烛火映面",
         "charCodes": ["CHAR-PEIQINGWU"],
         "narrative": {
-          "dialogue": {
-            "lines": [
-              { "speaker": "婢女", "text": "殿下醒了。" },
-              { "speaker": "裴青梧", "text": "我知道。" }
-            ]
-          }
+          "dialogue": { "lines": [{ "speaker": "裴青梧", "text": "我知道。" }] },
+          "markers": [{ "type": "承接", "desc": "认命" }]
+        },
+        "generation": {
+          "imagePrompt": "裴青梧, 寝殿内景, 特写面部, 烛火暖光, 古言写实, --cref CHAR-PEIQINGWU --ar 16:9",
+          "videoPrompt": "特写 static, subtle drift, duration 2s, lipSync on, motion-from-frame",
+          "audioPrompt": "裴青梧, 清冷女声, 短句, 认命"
         }
       }
-    ],
-    "externalHashCheck": { "match": true, "hash": "demo" },
-    "preDesignQuality": { "overall": "B", "supervision": "B" }
+    ]
   },
-  "continuity": {
-    "characterState": { "裴青梧": "认命期" },
-    "unresolvedHooks": []
+  "characterDesign": {
+    "assets": [
+      {
+        "code": "CHAR-MAID",
+        "name": "婢女",
+        "L0": { "identity": "侍女", "gender": "女" },
+        "L3": { "costume": "浅色素衣" }
+      },
+      {
+        "code": "CHAR-PEIQINGWU",
+        "name": "裴青梧",
+        "L0": { "identity": "真千金", "gender": "女" },
+        "L3": { "costume": "白色寝衣" },
+        "L5": { "timbre": "清冷" }
+      }
+    ]
   },
-  "anchors": {
-    "visual": ["寝殿烛火"],
-    "emotionCarry": "苏醒→认命"
+  "visualLockTable": {
+    "characterAssets": {
+      "CHAR-MAID": { "L0": { "gender": "女" } },
+      "CHAR-PEIQINGWU": { "L0": { "gender": "女" }, "L5": { "timbre": "清冷" } }
+    },
+    "sceneColorLock": {
+      "SCENE-BEDROOM": { "name": "寝殿", "colorTemp": "暖", "dominantHue": "米黄" }
+    }
   },
-  "ruleAudit": {
-    "W3": { "passed": true, "blockers": [], "checkedRuleIds": ["R2", "W12"] },
-    "SB": { "passed": true, "blockers": [], "checkedRuleIds": ["V10"] }
-  },
-  "debutIntroPack": {
-    "characters": [{ "code": "CHAR-PEIQINGWU", "firstShotIndex": 1, "introTemplate": "establishing_MS" }],
-    "scenes": [{ "code": "SCENE-BEDROOM", "firstShotIndex": 1, "introTemplate": "establishing_WS" }]
-  },
-  "productionReasonableness": { "items": [], "blockCount": 0 },
-  "linkageAudit": { "chains": [{ "chain": "dialogue", "broken": false }, { "chain": "story", "broken": false }] }
+  "continuity": { "characterState": { "裴青梧": "认命期" } },
+  "anchors": { "visual": ["寝殿烛火"], "emotionCarry": "苏醒→认命" }
 }
 
 ---
@@ -1388,23 +1410,23 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 
 ## §0 红线 · 三层边界
 
-**CAN**：分阶段对话；P/W/designBrief/GB/SB；T2/T3 分镜与 prompt；输出 JSON；L2 ruleAudit 自检。
+**CAN**：分阶段对话；P/W/designBrief/GB/SB/CD/AS/BP/EN/MD×4；输出 JSON；对照 PROMPT_STANDARD 自检。
 
-**CANNOT**：调用 Toonflow API/Socket；声称已 import/validate/生图；T1 输出 image/video/audioPrompt；跳过 BLOCK；跳过 GB→SB；自造 ruleId。
+**CANNOT**：调用 Toonflow API/Socket；声称已 import/生图；跳过 GB→SB→CD→BP；自造 ruleId；填假 ruleAudit/linkageAudit/hash pass。
 
 | 层 | 职责 |
 |----|------|
-| L1 Runner | 对话产品，Skill 不变 |
-| L2 Skill | 标准唯一，rule_cards 对齐 |
-| L3 validate | import 后 RuleEngine 权威 |
+| L1 Chat | 按技能生成正确 prompt 与资产包 |
+| L2 外部校验 | export 后 `inspectBundle` 验收（不挡 import） |
+| L3 Import | 原样落库 |
 
-## §1 三档路径
+## §1 默认路径（T3 一气呵成）
 
-| 档位 | 必经 | 出口 | 内部 |
-|------|------|------|------|
-| **T1** | P?→G→W→designBrief→**GB→SB** | ScriptBundle+preDesignPack | importScript；有 shots 则 skip SB |
-| **T2** | T1+CD→AS→BP→EN | EpisodeBundle-lite | importBundle |
-| **T3** | T2+MD×4 | EpisodeBundle-full | importBundle→生成 |
+| 档位 | 必经 | 出口 |
+|------|------|------|
+| **T3（默认）** | P?→G→W→designBrief→GB→SB→CD→AS→BP→EN→MD×4 | ScriptBundle 全量（含四模态 prompt） |
+| T1 | 同上至 SB | 仅策划/分镜（不推荐单独出口） |
+| T2 | T1+CD→AS→BP→EN | 含资产，无四模态 |
 
 ## §2 双路径
 
@@ -1413,17 +1435,18 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 
 ## §3 阶段闸门（摘要）
 
-| 阶段 | 出口 | BLOCK 未过 |
-|------|------|------------|
+| 阶段 | 出口 | 未过 |
+|------|------|------|
 | P0–P09 | planData.* | 不得进 W |
 | G | globalAnchors | 不得进 W |
-| W1–W3 | script | 不得 SD-S |
-| SD-S | supervisionReport | C/D 不得下一阶段 |
-| designBrief | 11 字段 | 不得 GB |
+| W1–W3 | script | 不得 GB |
+| designBrief | B1–B13 | 不得 GB |
 | GB | scriptPlan | 不得 SB |
-| SB | shots[].dialogue.lines | 不得 SF 终检 |
-| SF | fixPlan 修订 | 不得 output T1 |
-| T1 | preDesignQuality≥B | — |
+| SB | shots 台词全覆盖 + visualDescription | 不得 CD |
+| CD/AS/BP | 资产锚点 | 不得 EN |
+| EN | generation 编译字段 | 不得 MD |
+| MD×4 | 四模态 prompt | 不得 export |
+| T3_quality_gate | 对照 PROMPT_STANDARD | 修订后 export |
 
 ## §4 G 层锚点模板
 
@@ -1431,41 +1454,37 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 
 ## §5 设计→提示词质量走廊
 
-W3 → designBrief → GB → SB → EN → MD。每阶段挂载 SPEC/LINK/SD/SF。
+W3 → designBrief → GB → SB → CD → AS → BP → EN → MD×4。详见 `browser_chat/corridor/` 与 `docs/PROMPT_STANDARD.md`。
 
-详见 `browser_chat/corridor/` 与附录 K。
-
-## §6 V5 内部 vs Browser Chat 双轨
+## §6 V5 内部 vs Browser Chat
 
 | stageId | V5 内部 | Browser Chat |
 |---------|---------|--------------|
 | P/W | scriptAgent | stages/P*, W* |
 | GB/SB | productionAgent | corridor_GB/SB |
-| EN/MD | RuleEngine+Touch | T2/T3 production/* |
-| validate | INT ~8→扩展 | EXT L2 + import 合流 |
+| CD/BP/MD | RuleEngine+Touch | production/* + T3_quality_gate |
+| 验收 | dryRun | 外部 inspectBundle |
 
-共享：`rule_flow_unified.json`、`reverse_route_table.json`、`fix_templates.json`。
+## §7 ScriptBundle 契约（T3 全量）
 
-## §7 ScriptBundle 契约（T1）
-
-必填：`script`, `meta`, `planData`, `designBrief`, `preDesignPack`, `ruleAudit`, `rulePackVersion: "2.0.1"`。
-
-可选：`smartDetection`, `fixPlan`, `linkageAudit`, `rePushPlan`, `qualityDiagnostics`, `identityAudit`, `fxFeasibilityAudit`, `narrativeCausalityGraph`, `debutIntroPack`。
+必填：`script`, `meta`, `planData`, `designBrief`, `preDesignPack`, `rulePackVersion: "2.0.1"`  
+T2+：`characterDesign`, `assetPipeline`, `visualLockTable`  
+T3：每镜 `generation` 或 `flowData.storyboard[]`  
+可选：`modalityPromptAudit`, `debutIntroPack`（**禁止**假 pass 审计字段）
 
 ## §8 导入说明
 
-T1 → `#/production?import=1` → POST importScript → validate → productionAgent。
-
-T2/T3 → POST importBundle。
+export JSON → 可选 `inspectBundle` 验收 → `POST importScript` **落库不验证** → 制作页生成。
 
 ## §9 正推/反推
 
-检测 fail → `rePushPlan[]` → reverseTarget stage → 修订 → 重检（maxRounds=3）。
+检测 fail → `rePushPlan[]` → 修订对应 stage → 重检（maxRounds=3）。
 
 ## 引用套件
 
-- `browser_chat/manifest.json` — 文件索引
-- `browser_chat/stages/` — 分阶段 skill
+- `docs/PROMPT_STANDARD.md` — 生成与验收标准
+- `docs/CHAT_FULL_PIPELINE_SPEC.md` — 全链路规范
+- `browser_chat/T3_quality_gate.md` — T3 出口清单
 - `browser_chat/production/` — T2/T3 制作 skill
 - `browser_chat/corridor/` — 质量走廊
 
@@ -1737,9 +1756,9 @@ round > 3 → 停止自动重推，上报用户决策。
   "stages": [
     {
       "stageId": "P0",
-      "track": "browser",
+      "track": "both",
       "tier": "T1",
-      "name": "源材料预检",
+      "name": "预检",
       "ruleIds": [
         "P1",
         "P2",
@@ -1759,140 +1778,6 @@ round > 3 → 停止自动重推，上报用户决策。
       ]
     },
     {
-      "stageId": "P03",
-      "track": "browser",
-      "tier": "T1",
-      "name": "改编矩阵",
-      "ruleIds": [
-        "P13",
-        "P14",
-        "P15"
-      ]
-    },
-    {
-      "stageId": "P06",
-      "track": "browser",
-      "tier": "T1",
-      "name": "故事核心",
-      "ruleIds": []
-    },
-    {
-      "stageId": "P08",
-      "track": "browser",
-      "tier": "T1",
-      "name": "改编后检",
-      "ruleIds": []
-    },
-    {
-      "stageId": "P09",
-      "track": "browser",
-      "tier": "T1",
-      "name": "改编加固",
-      "ruleIds": []
-    },
-    {
-      "stageId": "G",
-      "track": "both",
-      "tier": "T1",
-      "name": "全局锚点",
-      "ruleIds": [
-        "G1",
-        "G2",
-        "G3",
-        "G4",
-        "G5"
-      ]
-    },
-    {
-      "stageId": "W1",
-      "track": "both",
-      "tier": "T1",
-      "name": "故事骨架",
-      "ruleIds": [
-        "W1",
-        "W2",
-        "W3",
-        "W4",
-        "W5"
-      ]
-    },
-    {
-      "stageId": "W2",
-      "track": "both",
-      "tier": "T1",
-      "name": "改编策略",
-      "ruleIds": [
-        "W6",
-        "W7",
-        "W8",
-        "W9",
-        "W10",
-        "W11",
-        "W12",
-        "W13",
-        "W14",
-        "W15"
-      ]
-    },
-    {
-      "stageId": "W3",
-      "track": "both",
-      "tier": "T1",
-      "name": "分集剧本",
-      "ruleIds": [
-        "W16",
-        "W17",
-        "W18",
-        "W19",
-        "W20",
-        "W21",
-        "W22",
-        "W23",
-        "W24",
-        "W25",
-        "W26",
-        "W27",
-        "W28",
-        "W29",
-        "W30",
-        "W31",
-        "W32",
-        "W33",
-        "W34",
-        "W35",
-        "W36",
-        "W37",
-        "W38",
-        "W39",
-        "W40",
-        "W41",
-        "W42",
-        "W43",
-        "W44",
-        "W45",
-        "W46"
-      ]
-    },
-    {
-      "stageId": "designBrief",
-      "track": "browser",
-      "tier": "T1",
-      "name": "设计联动 brief",
-      "ruleIds": [
-        "B1",
-        "B2",
-        "B3",
-        "B4",
-        "B5",
-        "B6",
-        "B7",
-        "B8",
-        "B9",
-        "B10",
-        "B11"
-      ]
-    },
-    {
       "stageId": "GB",
       "track": "both",
       "tier": "T1",
@@ -1903,7 +1788,7 @@ round > 3 → 停止自动重推，上报用户决策。
       "stageId": "SB",
       "track": "both",
       "tier": "T1",
-      "name": "分镜结构",
+      "name": "分镜表",
       "ruleIds": [
         "V1",
         "V2",
@@ -2084,8 +1969,8 @@ round > 3 → 停止自动重推，上报用户决策。
     {
       "stageId": "EN",
       "track": "both",
-      "tier": "T2",
-      "name": "引擎编译",
+      "tier": "T1",
+      "name": "分镜面板",
       "ruleIds": [
         "M1",
         "M2",
@@ -2139,31 +2024,17 @@ round > 3 → 停止自动重推，上报用户决策。
       ]
     },
     {
-      "stageId": "CD",
-      "track": "browser",
-      "tier": "T2",
-      "name": "角色设计",
-      "ruleIds": []
-    },
-    {
-      "stageId": "AS",
-      "track": "browser",
-      "tier": "T2",
-      "name": "资产流水线",
-      "ruleIds": []
-    },
-    {
-      "stageId": "BP",
-      "track": "browser",
-      "tier": "T2",
-      "name": "蓝图",
-      "ruleIds": []
-    },
-    {
       "stageId": "MD",
       "track": "both",
       "tier": "T3",
-      "name": "四模态 prompt",
+      "name": "模态编译",
+      "ruleIds": []
+    },
+    {
+      "stageId": "GEN",
+      "track": "both",
+      "tier": "T3",
+      "name": "生成反馈",
       "ruleIds": []
     },
     {
@@ -2746,6 +2617,8 @@ BP L0 → SB charCodes/type → EN subject → MD-IMG imagePrompt
 }
 ```
 
+**Bundle 路径**：`preDesignPack.shots[].generation.imagePrompt` 或 `flowData.storyboard[].prompt`。标准见 `docs/PROMPT_STANDARD.md` §2。
+
 # MD 视频模态（VID · Agnes 默认）
 
 ## slots
@@ -2812,6 +2685,8 @@ PC-09：首帧/时长/运镜 BLOCK。
 ## 输出
 
 `generation.videoPrompt` + `modalityPromptAudit.VID` + `videoAudioPolicy`
+
+**Bundle 路径**：`preDesignPack.shots[].generation.videoPrompt` 或 `flowData.storyboard[].videoDesc`。标准见 `docs/PROMPT_STANDARD.md` §3。
 
 # MD 音频模态（AUD）
 
@@ -3175,7 +3050,26 @@ rulePackVersion: "2.0.1"
     { "forward": "W3.script", "preserveOnRePush": true, "rePushPreserve": "script" },
     { "forward": "globalAnchors", "preserveOnRePush": true, "rePushPreserve": "globalAnchors" },
     { "forward": "designBrief.B4", "preserveOnRePush": false, "rePushPreserve": null }
-  ]
+  ],
+  "tracks": {
+    "ext": { "dryRunLevels": ["DC", "PC", "GC", "IC"], "authority": "export" },
+    "int": { "dryRunLevels": ["DC", "PC", "GC", "IC"], "authority": "validate" }
+  },
+  "qpIndex": {
+    "QP-03": { "chain": "dialogue", "repairHintId": "RH-QP-03", "reverseTarget": "W3" },
+    "QP-14": { "chain": "camera", "repairHintId": "RH-QP-14", "reverseTarget": "EN" }
+  },
+  "chains": {
+    "dialogue": { "rePushTarget": "SB" },
+    "scene": { "rePushTarget": "SB" },
+    "camera": { "rePushTarget": "EN" },
+    "story": { "rePushTarget": "W3" },
+    "av": { "rePushTarget": "GB" },
+    "adaptation": { "rePushTarget": "W2" },
+    "modality_compile": { "rePushTarget": "EN" },
+    "generation": { "rePushTarget": "MD" },
+    "repair": { "rePushTarget": "SF" }
+  }
 }
 
 {
@@ -3269,6 +3163,8 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 5. 写入 visualLockTable.characterAssets（供 BP）
 
 ## 输出
+
+写入 bundle 顶层 `characterDesign`（import 落库 blueprint）。详见 `docs/PROMPT_STANDARD.md` §6。
 
 ```json
 {
@@ -3799,6 +3695,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P1",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3814,6 +3712,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P2",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3829,6 +3729,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P3",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3844,6 +3746,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P4",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3859,6 +3763,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P5",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3874,6 +3780,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P6",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3889,6 +3797,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P7",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3904,6 +3814,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P8",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3919,6 +3831,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P9",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3934,6 +3848,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P10",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3949,6 +3865,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P11",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3964,6 +3882,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P12",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3979,6 +3899,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P13",
       "layer": "P",
       "stage": "P03",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -3994,6 +3916,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P14",
       "layer": "P",
       "stage": "P03",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4009,6 +3933,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P15",
       "layer": "P",
       "stage": "P03",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4024,6 +3950,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P16",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4039,6 +3967,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P17",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4054,6 +3984,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "P18",
       "layer": "P",
       "stage": "P0",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4069,6 +4001,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "G1",
       "layer": "G",
       "stage": "G",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4084,6 +4018,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "G2",
       "layer": "G",
       "stage": "G",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4099,6 +4035,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "G3",
       "layer": "G",
       "stage": "G",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4114,6 +4052,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "G4",
       "layer": "G",
       "stage": "G",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4129,6 +4069,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "G5",
       "layer": "G",
       "stage": "G",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4144,6 +4086,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W1",
       "layer": "W",
       "stage": "W1",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4159,6 +4103,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W2",
       "layer": "W",
       "stage": "W1",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4174,6 +4120,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W3",
       "layer": "W",
       "stage": "W1",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4189,6 +4137,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W4",
       "layer": "W",
       "stage": "W1",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4204,6 +4154,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W5",
       "layer": "W",
       "stage": "W1",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4219,6 +4171,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W6",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4234,6 +4188,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W7",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4249,6 +4205,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W8",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4264,6 +4222,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W9",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4279,6 +4239,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W10",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4294,6 +4256,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W11",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4309,6 +4273,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W12",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4324,6 +4290,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W13",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4339,6 +4307,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W14",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4354,6 +4324,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W15",
       "layer": "W",
       "stage": "W2",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4369,6 +4341,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W16",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "structured",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4384,6 +4358,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W17",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4399,6 +4375,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W18",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4414,6 +4392,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W19",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4429,6 +4409,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W20",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4444,6 +4426,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W21",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4459,6 +4443,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W22",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4474,6 +4460,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W23",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4489,6 +4477,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W24",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4504,6 +4494,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W25",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4519,6 +4511,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W26",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4534,6 +4528,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W27",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4549,6 +4545,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W28",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4564,6 +4562,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W29",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4579,6 +4579,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W30",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4594,6 +4596,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W31",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4609,6 +4613,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W32",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4624,6 +4630,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W33",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4639,6 +4647,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W34",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4654,6 +4664,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W35",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4669,6 +4681,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W36",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4684,6 +4698,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W37",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4699,6 +4715,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W38",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4714,6 +4732,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W39",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4729,6 +4749,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W40",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4744,6 +4766,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W41",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4759,6 +4783,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W42",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4774,6 +4800,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W43",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4789,6 +4817,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W44",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4804,6 +4834,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W45",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4819,6 +4851,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "W46",
       "layer": "W",
       "stage": "W3",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4834,6 +4868,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V1",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4849,6 +4885,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V2",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4864,6 +4902,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V3",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4879,6 +4919,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V4",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4894,6 +4936,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V5",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4909,6 +4953,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V6",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4924,6 +4970,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V7",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4939,6 +4987,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V8",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4954,6 +5004,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V9",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4969,6 +5021,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V10",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4984,6 +5038,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V11",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -4999,6 +5055,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V12",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5014,6 +5072,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V13",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5029,6 +5089,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V14",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5044,6 +5106,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V15",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5059,6 +5123,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V16",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5074,6 +5140,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V17",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5089,6 +5157,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V18",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5104,6 +5174,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V19",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5119,6 +5191,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V20",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5134,6 +5208,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V21",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5149,6 +5225,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V22",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5164,6 +5242,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V23",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5179,6 +5259,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V24",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5194,6 +5276,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V25",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5209,6 +5293,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V26",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5224,6 +5310,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V27",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5239,6 +5327,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V28",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5254,6 +5344,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V29",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5269,6 +5361,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V30",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5284,6 +5378,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V31",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5299,6 +5395,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V32",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5314,6 +5412,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V33",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5329,6 +5429,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V34",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5344,6 +5446,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V35",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5359,6 +5463,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V36",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5374,6 +5480,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V37",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5389,6 +5497,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V38",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5404,6 +5514,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V39",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5419,6 +5531,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V40",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5434,6 +5548,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V41",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5449,6 +5565,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V42",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5464,6 +5582,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V43",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5479,6 +5599,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V44",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5494,6 +5616,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V45",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5509,6 +5633,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V46",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5524,6 +5650,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V47",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5539,6 +5667,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V48",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5554,6 +5684,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V49",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5569,6 +5701,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V50",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5584,6 +5718,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V51",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5599,6 +5735,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V52",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5614,6 +5752,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V53",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5629,6 +5769,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V54",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5644,6 +5786,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V55",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5659,6 +5803,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V56",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5674,6 +5820,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V57",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5689,6 +5837,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V58",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5704,6 +5854,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V59",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5719,6 +5871,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V60",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5734,6 +5888,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V61",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5749,6 +5905,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V62",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5764,6 +5922,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V63",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5779,6 +5939,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V64",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5794,6 +5956,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V65",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5809,6 +5973,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V66",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5824,6 +5990,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V67",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5839,6 +6007,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V68",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5854,6 +6024,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V69",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5869,6 +6041,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V70",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5884,6 +6058,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V71",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5899,6 +6075,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V72",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5914,6 +6092,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V73",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5929,6 +6109,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V74",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5944,6 +6126,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V75",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5959,6 +6143,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V76",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5974,6 +6160,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V77",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -5989,6 +6177,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V78",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6004,6 +6194,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V79",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6019,6 +6211,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V80",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6034,6 +6228,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V81",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6049,6 +6245,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V82",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6064,6 +6262,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V83",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6079,6 +6279,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V84",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6094,6 +6296,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V85",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6109,6 +6313,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V86",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6124,6 +6330,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V87",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6139,6 +6347,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V88",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6154,6 +6364,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V89",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6169,6 +6381,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V90",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6184,6 +6398,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V91",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6199,6 +6415,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V92",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6214,6 +6432,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V93",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6229,6 +6449,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V94",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6244,6 +6466,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V95",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6259,6 +6483,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V96",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6274,6 +6500,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V97",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6289,6 +6517,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "V98",
       "layer": "V",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6304,6 +6534,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M1",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6319,6 +6551,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M2",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6334,6 +6568,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M3",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6349,6 +6585,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M4",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6364,6 +6602,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M5",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6379,6 +6619,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M6",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6394,6 +6636,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M7",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6409,6 +6653,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M8",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6424,6 +6670,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M9",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6439,6 +6687,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M10",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6454,6 +6704,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M11",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6469,6 +6721,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M12",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6484,6 +6738,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M13",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6499,6 +6755,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M14",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6514,6 +6772,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M15",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6529,6 +6789,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "M16",
       "layer": "M",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6544,6 +6806,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S1",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6559,6 +6823,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S2",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6574,6 +6840,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S3",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6589,6 +6857,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S4",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6604,6 +6874,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S5",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6619,6 +6891,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S6",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6634,6 +6908,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S7",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6649,6 +6925,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S8",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6664,6 +6942,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S9",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6679,6 +6959,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S10",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6694,6 +6976,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S11",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6709,6 +6993,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S12",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6724,6 +7010,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S13",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6739,6 +7027,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S14",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6754,6 +7044,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S15",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6769,6 +7061,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S16",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6784,6 +7078,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S17",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6799,6 +7095,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S18",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6814,6 +7112,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S19",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6829,6 +7129,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S20",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6844,6 +7146,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S21",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6859,6 +7163,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S22",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6874,6 +7180,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "S23",
       "layer": "S",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6889,6 +7197,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I1",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6904,6 +7214,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I2",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6919,6 +7231,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I3",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6934,6 +7248,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I4",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6949,6 +7265,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I5",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6964,6 +7282,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I6",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6979,6 +7299,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I7",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -6994,6 +7316,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I8",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7009,6 +7333,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I9",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7024,6 +7350,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I10",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7039,6 +7367,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I11",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7054,6 +7384,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I12",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7069,6 +7401,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I13",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7084,6 +7418,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I14",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7099,6 +7435,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I15",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7114,6 +7452,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "I16",
       "layer": "I",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7129,6 +7469,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X1",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7144,6 +7486,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X2",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7159,6 +7503,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X3",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7174,6 +7520,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X4",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7189,6 +7537,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X5",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7204,6 +7554,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X6",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7219,6 +7571,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X7",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7234,6 +7588,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X8",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7249,6 +7605,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X9",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7264,6 +7622,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X10",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7279,6 +7639,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X11",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7294,6 +7656,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X12",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7309,6 +7673,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X13",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7324,6 +7690,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X14",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7339,6 +7707,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X15",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7354,6 +7724,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X16",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7369,6 +7741,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X17",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7384,6 +7758,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X18",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7399,6 +7775,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X19",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7414,6 +7792,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X20",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7429,6 +7809,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "X21",
       "layer": "X",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7444,6 +7826,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y1",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7459,6 +7843,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y2",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7474,6 +7860,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y3",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7489,6 +7877,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y4",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7504,6 +7894,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y5",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7519,6 +7911,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y6",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7534,6 +7928,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y7",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7549,6 +7945,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y8",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7564,6 +7962,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y9",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7579,6 +7979,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Y10",
       "layer": "Y",
       "stage": "EN",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7594,6 +7996,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z1",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7609,6 +8013,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z2",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7624,6 +8030,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z3",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7639,6 +8047,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z4",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7654,6 +8064,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z5",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7669,6 +8081,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z6",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7684,6 +8098,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z7",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7699,6 +8115,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z8",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7714,6 +8132,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z9",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7729,6 +8149,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z10",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7744,6 +8166,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z11",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7759,6 +8183,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z12",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7774,6 +8200,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z13",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7789,6 +8217,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z14",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7804,6 +8234,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z15",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7819,6 +8251,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z16",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7834,6 +8268,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "Z17",
       "layer": "Z",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -7849,6 +8285,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B1",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7864,6 +8302,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B2",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7879,6 +8319,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B3",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7894,6 +8336,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B4",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7909,6 +8353,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B5",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7924,6 +8370,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B6",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7939,6 +8387,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B7",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7954,6 +8404,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B8",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7969,6 +8421,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B9",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7984,6 +8438,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B10",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -7999,6 +8455,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "B11",
       "layer": "B",
       "stage": "designBrief",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8014,6 +8472,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D1",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8029,6 +8489,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D2",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8044,6 +8506,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D3",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8059,6 +8523,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D4",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8074,6 +8540,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D5",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8089,6 +8557,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D6",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8104,6 +8574,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D7",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8119,6 +8591,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D8",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8134,6 +8608,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D9",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8149,6 +8625,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D10",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8164,6 +8642,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D11",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8179,6 +8659,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D12",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8194,6 +8676,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D13",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8209,6 +8693,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D14",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8224,6 +8710,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D15",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8239,6 +8727,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D16",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8254,6 +8744,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D17",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8269,6 +8761,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D18",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8284,6 +8778,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D19",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8299,6 +8795,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D20",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8314,6 +8812,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D21",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8329,6 +8829,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "D22",
       "layer": "D",
       "stage": "SB",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": false,
@@ -8344,6 +8846,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H1",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8359,6 +8863,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H2",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8374,6 +8880,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H3",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8389,6 +8897,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H4",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8404,6 +8914,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H5",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8419,6 +8931,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H6",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8434,6 +8948,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H7",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8449,6 +8965,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H8",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8464,6 +8982,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H9",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8479,6 +8999,8 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "ruleId": "H10",
       "layer": "H",
       "stage": "validate",
+      "implLevel": "checklist",
+      "runtimeHandler": null,
       "dimensions": {
         "spec": true,
         "link": true,
@@ -8503,200 +9025,243 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "type字段值为'[错误值]'，非法。建议修改为CHAR-SCENE/PURE-SCENE/PURE-PROP/CHAR-PROP之一"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for V1"
+    "patchKeys": [
+      "type"
+    ],
+    "description": "type字段值为'[错误值]'，非法。建议修改为CHAR-SCENE/PURE-SCENE/PURE-PROP/CHAR-PROP之一"
   },
   {
     "ruleId": "V2",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "PURE-SCENE未包含'no people, no characters'。建议在imagePrompt开头追加'no people, no characters, '"
     },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for V2"
+    "rePushTarget": "EN",
+    "patchKeys": [
+      "prefix"
+    ],
+    "description": "PURE-SCENE未包含'no people, no characters'。建议在imagePrompt开头追加'no people, no characters, '"
   },
   {
     "ruleId": "V3",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "PURE-PROP未包含'--ar 1:1'或'no hands, no person'。建议在imagePrompt末尾追加'--ar 1:1'，在开头追加'no hands, no person, '"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for V3"
+    "patchKeys": [
+      "append"
+    ],
+    "description": "PURE-PROP未包含'--ar 1:1'或'no hands, no person'。建议在imagePrompt末尾追加'--ar 1:1'，在开头追加'no hands, no person, '"
   },
   {
     "ruleId": "V4",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "CHAR-CODE '[代码]'在characterAssets中未定义。建议检查拼写或在characterAssets中补充该角色定义"
+    },
+    "rePushTarget": "EN",
+    "description": "CHAR-CODE '[代码]'在characterAssets中未定义。建议检查拼写或在characterAssets中补充该角色定义"
+  },
+  {
+    "ruleId": "V5",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "PROP-CODE '[代码]'在anchorProps中未定义。建议检查拼写或在visualLockTable.anchorProps中补充该道具定义"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for V4"
+    "description": "PROP-CODE '[代码]'在anchorProps中未定义。建议检查拼写或在visualLockTable.anchorProps中补充该道具定义"
+  },
+  {
+    "ruleId": "V6",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "sceneName '[名称]'对应的SCENE-CODE未在sceneColorLock中定义。建议在productionSpec.sceneColorLock中补充该场景的色温定义"
+    },
+    "rePushTarget": "SB",
+    "description": "sceneName '[名称]'对应的SCENE-CODE未在sceneColorLock中定义。建议在productionSpec.sceneColorLock中补充该场景的色温定义"
   },
   {
     "ruleId": "V10",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "台词'[内容]'字数[X]超出限制。建议精简至[上限]字以内"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for V10"
+    "patchKeys": [
+      "trim"
+    ],
+    "description": "台词'[内容]'字数[X]超出限制。建议精简至[上限]字以内"
   },
   {
-    "ruleId": "H2",
+    "ruleId": "V13",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "GB",
-    "description": "Auto-fix template for H2"
-  },
-  {
-    "ruleId": "H3",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "女性角色'[角色名]'缺少耳饰或发饰。建议在L5-accessories中补充描述"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for H3"
+    "description": "女性角色'[角色名]'缺少耳饰或发饰。建议在L5-accessories中补充描述"
   },
   {
-    "ruleId": "H4",
+    "ruleId": "V14",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "EN",
-    "description": "Auto-fix template for H4"
-  },
-  {
-    "ruleId": "H5",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "EN",
-    "description": "Auto-fix template for H5"
-  },
-  {
-    "ruleId": "H9",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "男性角色'[角色名]'缺少发型分界或腰部装饰。建议在L2-hairstyle中补充分界描述，或在L4/L5中补充腰部装饰"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for H9"
+    "description": "男性角色'[角色名]'缺少发型分界或腰部装饰。建议在L2-hairstyle中补充分界描述，或在L4/L5中补充腰部装饰"
   },
   {
-    "ruleId": "R2",
+    "ruleId": "V16",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "场景'[场景名]'复杂度[X]超出范围[范围]。建议增加/减少可见元素描述"
+    },
+    "rePushTarget": "SB",
+    "description": "场景'[场景名]'复杂度[X]超出范围[范围]。建议增加/减少可见元素描述"
+  },
+  {
+    "ruleId": "V18",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "本集付费点数量为[X]，少于1个。建议在情绪高点增加付费点标记"
+    },
+    "rePushTarget": "SB",
+    "description": "本集付费点数量为[X]，少于1个。建议在情绪高点增加付费点标记"
+  },
+  {
+    "ruleId": "V25",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "emotionIntensity=[X]≥4但缺少microExpression或physiological子字段。建议补充完整microExpression（flush/eyes/pupil/mouthDetail）和physiological（sweat/breathVisible/pallor/swallow/tremor）"
+    },
+    "rePushTarget": "SB",
+    "description": "emotionIntensity=[X]≥4但缺少microExpression或physiological子字段。建议补充完整microExpression（flush/eyes/pupil/mouthDetail）和physiological（sweat/breathVisible/pallor/swallow/tremor）"
+  },
+  {
+    "ruleId": "V28",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "连续[X]个[景别]镜头（镜号[列表]），超过3镜限制。建议在第[X]镜处插入不同景别"
+    },
+    "rePushTarget": "SB",
+    "description": "连续[X]个[景别]镜头（镜号[列表]），超过3镜限制。建议在第[X]镜处插入不同景别"
+  },
+  {
+    "ruleId": "V44",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "相邻镜[镜号A]([时长A]s)与[镜号B]([时长B]s)时长比值[比值]＞2。建议调整时长使比值≤2"
+    },
+    "rePushTarget": "SB",
+    "description": "相邻镜[镜号A]([时长A]s)与[镜号B]([时长B]s)时长比值[比值]＞2。建议调整时长使比值≤2"
+  },
+  {
+    "ruleId": "V52",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "弹幕诱导点在镜[镜号A]和镜[镜号B]之间仅间隔[X]镜，<3。建议移除或调整诱导点位置"
+    },
+    "rePushTarget": "SB",
+    "description": "弹幕诱导点在镜[镜号A]和镜[镜号B]之间仅间隔[X]镜，<3。建议移除或调整诱导点位置"
+  },
+  {
+    "ruleId": "V79",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "冲突场景'[场景名]'（镜号[列表]）未落在快节奏区。建议调整rhythmZone为fast，并增加切镜频率"
+    },
+    "rePushTarget": "SB",
+    "description": "冲突场景'[场景名]'（镜号[列表]）未落在快节奏区。建议调整rhythmZone为fast，并增加切镜频率"
+  },
+  {
+    "ruleId": "V98",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "镜号[列表]在15s窗口内台词量占比[X]%＞50%。建议将部分台词分散至前后3-5个镜头"
+    },
+    "rePushTarget": "SB",
+    "description": "镜号[列表]在15s窗口内台词量占比[X]%＞50%。建议将部分台词分散至前后3-5个镜头"
+  },
+  {
+    "ruleId": "D21",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "场景'[SCENE-CODE]'锚点复用率仅为[X]%（<80%）。建议在以下镜号中增加核心锚点描述：[列表]"
+    },
+    "rePushTarget": "SB",
+    "description": "场景'[SCENE-CODE]'锚点复用率仅为[X]%（<80%）。建议在以下镜号中增加核心锚点描述：[列表]"
+  },
+  {
+    "ruleId": "D22",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise",
+      "hint": "关键道具'[道具名]'在节点[集数]未出现。建议在该集关键冲突/情感节点加入道具镜头"
     },
     "rePushTarget": "W3",
-    "description": "Auto-fix template for R2"
+    "description": "关键道具'[道具名]'在节点[集数]未出现。建议在该集关键冲突/情感节点加入道具镜头"
   },
   {
-    "ruleId": "W12",
+    "ruleId": "W1",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "第[幕]幕emotionIntensity最大值[X]＞上限[上限]。建议将部分高情绪镜头移至下一幕"
     },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for W12"
-  },
-  {
-    "ruleId": "W13",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for W13"
-  },
-  {
-    "ruleId": "B1",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for B1"
-  },
-  {
-    "ruleId": "B2",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for B2"
+    "rePushTarget": "W1",
+    "description": "第[幕]幕emotionIntensity最大值[X]＞上限[上限]。建议将部分高情绪镜头移至下一幕"
   },
   {
     "ruleId": "B3",
     "confidence": 0.85,
     "patchTemplate": {
       "field": "auto",
-      "action": "revise"
+      "action": "revise",
+      "hint": "台词'[内容]'换给其他角色'[角色名]'后仍成立，风格化不足。建议增加角色专属标记词或口头禅"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for B3"
-  },
-  {
-    "ruleId": "MODE-AGNES",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "MD",
-    "description": "Auto-fix template for MODE-AGNES"
-  },
-  {
-    "ruleId": "Y8",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for Y8"
-  },
-  {
-    "ruleId": "Y9",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for Y9"
-  },
-  {
-    "ruleId": "Y10",
-    "confidence": 0.85,
-    "patchTemplate": {
-      "field": "auto",
-      "action": "revise"
-    },
-    "rePushTarget": "SB",
-    "description": "Auto-fix template for Y10"
+    "description": "台词'[内容]'换给其他角色'[角色名]'后仍成立，风格化不足。建议增加角色专属标记词或口头禅"
   },
   {
     "ruleId": "QP-01",
@@ -8706,7 +9271,7 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for QP-01"
+    "description": "Runtime trigger template for QP-01"
   },
   {
     "ruleId": "QP-02",
@@ -8716,7 +9281,7 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for QP-02"
+    "description": "Runtime trigger template for QP-02"
   },
   {
     "ruleId": "PR-01",
@@ -8726,7 +9291,7 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for PR-01"
+    "description": "Runtime trigger template for PR-01"
   },
   {
     "ruleId": "PR-04",
@@ -8736,7 +9301,7 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for PR-04"
+    "description": "Runtime trigger template for PR-04"
   },
   {
     "ruleId": "identity_mismatch",
@@ -8746,7 +9311,7 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "action": "revise"
     },
     "rePushTarget": "EN",
-    "description": "Auto-fix template for identity_mismatch"
+    "description": "Runtime trigger template for identity_mismatch"
   },
   {
     "ruleId": "fx_degrade",
@@ -8756,7 +9321,87 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "action": "revise"
     },
     "rePushTarget": "SB",
-    "description": "Auto-fix template for fx_degrade"
+    "description": "Runtime trigger template for fx_degrade"
+  },
+  {
+    "ruleId": "AG-GATE-01",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "MD",
+    "description": "Runtime trigger template for AG-GATE-01"
+  },
+  {
+    "ruleId": "AG-GATE-02",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for AG-GATE-02"
+  },
+  {
+    "ruleId": "video_first_frame_missing",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "MD",
+    "description": "Runtime trigger template for video_first_frame_missing"
+  },
+  {
+    "ruleId": "motion_overflow",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for motion_overflow"
+  },
+  {
+    "ruleId": "native_audio_mismatch",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for native_audio_mismatch"
+  },
+  {
+    "ruleId": "img_cref_missing",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for img_cref_missing"
+  },
+  {
+    "ruleId": "aud_voice_mismatch",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "BP",
+    "description": "Runtime trigger template for aud_voice_mismatch"
+  },
+  {
+    "ruleId": "PR-CAM-01",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "auto",
+      "action": "revise"
+    },
+    "rePushTarget": "EN",
+    "description": "Runtime trigger template for PR-CAM-01"
   }
 ]
 
@@ -8875,19 +9520,19 @@ import → o_projectBlueprint（合流 P1）。
 
 ---
 
-## 附录 J T1 PreDesignPack
+## 附录 J 出口闸门
 
 ---
 name: T1_quality_gate
-description: T1 PreDesignPack 出口质量闸门
+description: T1 PreDesignPack 出口自检（非 JSON 假闸）
 stageId: T1
 outputTag: preDesignQuality
 rulePackVersion: "2.0.1"
 ---
 
-# T1 质量闸门（PreDesignPack）
+# T1 质量自检（PreDesignPack）
 
-T1 档位出口前**最终闸门**。T1 不再只是 script+designBrief，必须含完整 preDesignPack。
+T1 为 T3 路径中的 **分镜检查点**，不是最终出口。最终出口见 `T3_quality_gate.md`。
 
 ## T1 必填产物
 
@@ -8895,62 +9540,108 @@ T1 档位出口前**最终闸门**。T1 不再只是 script+designBrief，必须
 |------|------------|------|
 | script | W3 | 文学剧本全文 |
 | planData | P/G/W | 预检/锚点/骨架/策略 |
-| designBrief | B | 11 联动字段 |
+| designBrief | B | B1–B13 联动字段 |
 | preDesignPack.scriptPlan | GB | 分场/情绪/过渡 |
-| preDesignPack.shots[] | SB | 每镜 lines 映射 |
-| preDesignPack.externalHashCheck | 自检 | match=true |
-| preDesignPack.preDesignQuality | 本闸门 | overall ≥ B |
-| ruleAudit | 各阶段 | 全链路 pass |
+| preDesignPack.shots[] | SB | 台词映射 + visualDescription |
 | rulePackVersion | — | `"2.0.1"` |
 
-## preDesignPack 结构
+## preDesignPack.shots 结构
 
 ```json
 {
-  "preDesignPack": {
-    "scriptPlan": "...",
-    "shots": [
-      {
-        "id": "shot-1",
-        "narrative": {
-          "dialogue": { "type": "dialogue", "lines": "角色：\"台词\"" },
-          "emotionIntensity": 5,
-          "shotSize": "中景"
-        }
-      }
-    ],
-    "externalHashCheck": { "scriptHash": "...", "linesHash": "...", "match": true },
-    "preDesignQuality": { "overall": "B", "dimensions": {...} },
-    "sceneCodeMap": {}
+  "shotIndex": 1,
+  "type": "CHAR-SCENE",
+  "sceneName": "寝殿",
+  "visualDescription": "婢女俯身",
+  "duration": 2,
+  "narrative": {
+    "dialogue": {
+      "lines": [{ "speaker": "婢女", "text": "殿下醒了。" }]
+    }
   }
 }
 ```
 
-## 出口前自检（G25–G30）
+## 出口前自检（创作清单，不写假 JSON）
 
-1. **台词链**：每句剧本台词 → shots[].dialogue.lines，零删改（R2）
+1. **台词链**：剧本每句台词在 shots 中可追溯，100% 覆盖（可合并，不可丢）
 2. **视听链**：designBrief.B4 → GB emotionCurve → SB emotionIntensity
-3. **hash**：externalHashCheck.match = true
-4. **监督**：supervisionReport.grade ≥ B
-5. **联动**：linkageAudit 六链无 BLOCK 断裂
+3. **visualDescription**：每镜非空
+4. **监督**：supervisionReport.grade ≥ B（若有）
 
-## T1 仍不产出
+## T1 阶段不写
 
-imagePrompt / videoPrompt / audioPrompt / compiled prompt（属 T2 EN / T3 MD）
+`imagePrompt` / `videoPrompt` / `audioPrompt` / `fxPrompt`（属 T3 MD，见 `T3_quality_gate.md`）
 
-## BLOCK 闸门
+## 禁止写入 bundle
 
-| 项 | 条件 |
-|----|------|
-| preDesignQuality.overall | ≥ B |
-| supervisionReport.grade | ≥ B |
-| externalHashCheck.match | true |
-| fixPlan.status | applied 或空 |
-| shots.length | ≥ 剧本台词句数 |
+- `externalHashCheck.match: true` 占位
+- `linkageAudit` 假 pass
+- `ruleAudit.passed: true` 无实测
 
 ## import 说明
 
-有 shots → POST importScript → 落库 o_storyboard，**skip autoDesign SB**。
+有完整 shots → `POST importScript` 落库；**缺 T3 prompt 由外部 inspect 报告**，不在 Chat 填假通过。
+
+---
+name: T3_quality_gate
+description: T3 全链路出口质量闸门 — 四模态 prompt + 资产包
+stageId: T3
+outputTag: exportReady
+rulePackVersion: "2.0.1"
+---
+
+# T3 质量闸门（全链路出口）
+
+T3 为 **默认出口**。export 前对照 `docs/PROMPT_STANDARD.md` 自检。
+
+## T3 必填产物
+
+| 字段 | 来源 | 说明 |
+|------|------|------|
+| T1 全套 | GB/SB | script + preDesignPack + 台词 100% + visualDescription |
+| characterDesign | CD | L0–L6 + CHAR-CODE |
+| assetPipeline | AS | 场景/道具 |
+| visualLockTable | BP | cref 可解析 |
+| generation×4 | MD | 每镜 image/video/audio/fx |
+| rulePackVersion | — | `"2.0.1"` |
+
+## 每镜 generation 结构
+
+```json
+{
+  "shotIndex": 1,
+  "visualDescription": "婢女俯身唤醒",
+  "charCodes": ["CHAR-MAID"],
+  "generation": {
+    "imagePrompt": "婢女, 寝殿烛火, 中景, 暖光, 古言写实, no text, --cref CHAR-MAID --ar 16:9",
+    "videoPrompt": "中景 static, slow push, duration 2s, motion-from-frame",
+    "audioPrompt": "婢女, 轻柔女声, 正常语速, 关切",
+    "fxPrompt": ""
+  }
+}
+```
+
+或写入 `flowData.storyboard[]`：`prompt` / `videoDesc` / `duration`。
+
+## 出口前自检（对照 PROMPT_STANDARD §8）
+
+1. 台词覆盖率 100%（可合并，不可丢）
+2. 每镜 visualDescription 非空
+3. characterDesign 覆盖主角/反派
+4. visualLockTable 解析全部 charCodes
+5. 每镜 imagePrompt + videoPrompt 非空
+6. 台词镜 audioPrompt 非空
+
+## 禁止写入 bundle
+
+- `ruleAudit: { passed: true }` 假通过
+- `linkageAudit` 假六链 pass
+- `externalHashCheck: { match: true }` demo 值
+
+## 下游
+
+export JSON → 外部 `inspectBundle` 验收 → `POST importScript` 落库（不挡 import）。
 
 ---
 
@@ -9187,7 +9878,8 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
   "exportGate": {
     "description": "G71：全部 BLOCK 级 PC 项 PASS 才允许 T3 export",
     "requiredIds": ["PC-01", "PC-02", "PC-03", "PC-04", "PC-06", "PC-07", "PC-08", "PC-09", "PC-10", "PC-11", "PC-12", "PC-13", "PC-14"]
-  }
+  },
+  "t2Subset": ["PC-01", "PC-02", "PC-03", "PC-04", "PC-05"]
 }
 
 ---
@@ -9200,6 +9892,7 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
   "modalities": {
     "IMG": {
       "baseRules": ["V1", "V2", "V3", "V4"],
+      "designSourceFields": ["sceneName", "charCodes", "visualDescription", "emotion"],
       "vendorRules": ["AG-GATE-04"],
       "slots": ["subject", "scene", "composition", "lighting", "style", "negative", "cref", "identity"],
       "tiers": { "T1": "skip", "T2": ["subject", "scene"], "T3": "all" },
@@ -9212,6 +9905,7 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     },
     "VID": {
       "baseRules": ["V9", "QF-VIEW", "QF-DUR", "QF-EXPR-06", "PR-07"],
+      "designSourceFields": ["shotSize", "transitionType", "duration", "emotion"],
       "vendorRules": ["AG-GATE-01", "AG-GATE-02", "AG-GATE-03", "MODE-AGNES"],
       "slots": ["motion", "camera", "duration", "lipSync", "identity", "fx"],
       "tiers": { "T1": "skip", "T2": "skip", "T3": "all" },
@@ -9226,6 +9920,7 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     },
     "AUD": {
       "baseRules": ["R2", "H3", "V74", "PR-10"],
+      "designSourceFields": ["narrative.dialogue.lines", "emotion", "audioMood"],
       "vendorRules": ["dialogue-native"],
       "slots": ["lines", "voiceProfile", "emotion", "deliveryType", "identity"],
       "tiers": { "T1": "skip", "T2": "skip", "T3": "all" },
@@ -9240,6 +9935,7 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     },
     "FX": {
       "baseRules": ["V77", "PR-07", "PR-15"],
+      "designSourceFields": ["visualEffect", "markers", "narrative.markers"],
       "vendorRules": ["F-clamp-3"],
       "slots": ["type", "intensity", "feasibilityLevel", "degradeHint"],
       "tiers": { "T1": "skip", "T2": "skip", "T3": "all" },
@@ -9441,7 +10137,26 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     { "forward": "W3.script", "preserveOnRePush": true, "rePushPreserve": "script" },
     { "forward": "globalAnchors", "preserveOnRePush": true, "rePushPreserve": "globalAnchors" },
     { "forward": "designBrief.B4", "preserveOnRePush": false, "rePushPreserve": null }
-  ]
+  ],
+  "tracks": {
+    "ext": { "dryRunLevels": ["DC", "PC", "GC", "IC"], "authority": "export" },
+    "int": { "dryRunLevels": ["DC", "PC", "GC", "IC"], "authority": "validate" }
+  },
+  "qpIndex": {
+    "QP-03": { "chain": "dialogue", "repairHintId": "RH-QP-03", "reverseTarget": "W3" },
+    "QP-14": { "chain": "camera", "repairHintId": "RH-QP-14", "reverseTarget": "EN" }
+  },
+  "chains": {
+    "dialogue": { "rePushTarget": "SB" },
+    "scene": { "rePushTarget": "SB" },
+    "camera": { "rePushTarget": "EN" },
+    "story": { "rePushTarget": "W3" },
+    "av": { "rePushTarget": "GB" },
+    "adaptation": { "rePushTarget": "W2" },
+    "modality_compile": { "rePushTarget": "EN" },
+    "generation": { "rePushTarget": "MD" },
+    "repair": { "rePushTarget": "SF" }
+  }
 }
 
 {
@@ -9475,8 +10190,26 @@ IC dryRun：intelligent_closure_checklist.json
 {
   "version": "2.0.1",
   "hints": [
+    { "id": "RH-QP-01", "qpId": "QP-01", "symptom": "场数过少", "action": "在 W3 补场", "chatTemplate": "请增加场次，确保每集场数满足最低要求。" },
+    { "id": "RH-QP-02", "qpId": "QP-02", "symptom": "画面描述空泛", "action": "重写 SB 画面描述", "chatTemplate": "请将分镜画面描述改为具体可拍的可视细节，避免抽象词。" },
     { "id": "RH-QP-03", "qpId": "QP-03", "ruleId": "R2", "symptom": "台词与源不一致", "action": "逐句对齐 W3 剧本到 SB.lines", "chatTemplate": "请对照剧本原文，修正分镜台词，禁止删改字词。" },
+    { "id": "RH-QP-04", "qpId": "QP-04", "symptom": "对白密度异常", "action": "调整 SB 台词密度", "chatTemplate": "请调整对白密度：台词镜保持一句一镜，旁白镜减少对白。" },
+    { "id": "RH-QP-05", "qpId": "QP-05", "symptom": "角色称谓混乱", "action": "统一 W3 角色称谓", "chatTemplate": "请统一剧本中的角色称谓，与 globalAnchors 一致。" },
+    { "id": "RH-QP-06", "qpId": "QP-06", "symptom": "情绪单调", "action": "补 GB 情绪曲线", "chatTemplate": "请在全局 Brief 中补充情绪起伏与峰值场。" },
+    { "id": "RH-QP-07", "qpId": "QP-07", "symptom": "钩子不足", "action": "强化 W1 开场钩子", "chatTemplate": "请加强开场 30 秒内的视觉或情感钩子。" },
+    { "id": "RH-QP-08", "qpId": "QP-08", "symptom": "张力不足", "action": "升级 W2 冲突", "chatTemplate": "请在对峙场增加 stakes 升级与阻碍。" },
+    { "id": "RH-QP-09", "qpId": "QP-09", "symptom": "吸引力弱", "action": "重写 W3 低吸引力场", "chatTemplate": "请重写吸引力不足的场次，增加悬念或情感峰值。" },
+    { "id": "RH-QP-10", "qpId": "QP-10", "symptom": "信息链断裂", "action": "补 designBrief 信息链", "chatTemplate": "请在 designBrief 中补全因果链与伏笔承接。" },
+    { "id": "RH-QP-11", "qpId": "QP-11", "symptom": "资产引用缺失", "action": "补 AS 资产绑定", "chatTemplate": "请为角色/场景补全资产引用与 cref 绑定。" },
+    { "id": "RH-QP-12", "qpId": "QP-12", "symptom": "cref 未绑定", "action": "绑定 EN cref", "chatTemplate": "请在 EN-IMG 中绑定角色 cref 与场景资产。" },
+    { "id": "RH-QP-13", "qpId": "QP-13", "symptom": "跨镜色温跳变", "action": "统一 SB 色温", "chatTemplate": "请统一相邻镜头的色温与光线描述。" },
     { "id": "RH-QP-14", "qpId": "QP-14", "ruleId": "PR-CAM-01", "symptom": "运镜不可执行", "action": "改用运镜白名单重编译 EN-VID", "chatTemplate": "请将运镜改为 slow pan / gentle push 等白名单词。" },
+    { "id": "RH-QP-15", "qpId": "QP-15", "symptom": "时长与台词不匹配", "action": "对齐 SB 时长与台词", "chatTemplate": "请调整镜时长或拆分台词，使口型时长可执行。" },
+    { "id": "RH-QP-16", "qpId": "QP-16", "symptom": "模态 slot 缺失", "action": "补 EN 模态 slot", "chatTemplate": "请补全 EN 四模态 slot（IMG/VID/AUD/FX）。" },
+    { "id": "RH-QP-17", "qpId": "QP-17", "symptom": "FX 词不可实现", "action": "降级 SB FX 描述", "chatTemplate": "请将 FX 改为 F2 可执行描述或拆镜后期处理。" },
+    { "id": "RH-QP-18", "qpId": "QP-18", "symptom": "identity 冲突", "action": "重编译 EN 身份词", "chatTemplate": "请统一 IMG/VID/AUD 性别与身份词，与 BP L0 一致。" },
+    { "id": "RH-QP-19", "qpId": "QP-19", "symptom": "debut 缺 establishing", "action": "补 SB establishing 镜", "chatTemplate": "请为首登场角色/场景补 establishing 全景镜。" },
+    { "id": "RH-QP-20", "qpId": "QP-20", "symptom": "跨集衔接弱", "action": "补 W3 集间衔接", "chatTemplate": "请在上集结尾与本集开场补 continuity 承接。" },
     { "id": "RH-W93", "ruleId": "W93", "symptom": "爆点不够", "action": "增情绪峰值场", "chatTemplate": "建议在 W3 或 SB 增加对峙升级场。" },
     { "id": "RH-AG-GATE-01", "ruleId": "AG-GATE-01", "symptom": "缺首位帧", "action": "生成首帧分镜图", "chatTemplate": "请先生成分镜参考图再写 MD-VID singleImage。" },
     { "id": "RH-identity", "ruleId": "identity_mismatch", "symptom": "跨模态性别冲突", "action": "重编译 EN 全模态", "chatTemplate": "请统一 IMG/VID/AUD 性别词与 BP L0。" }

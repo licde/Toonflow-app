@@ -1,0 +1,551 @@
+{
+  "domain": "modality",
+  "version": "2.0.1",
+  "rules": [
+    {
+      "ruleId": "B1",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B2",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B3",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B4",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B5",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B6",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B7",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B8",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B9",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B10",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "B11",
+      "implLevel": "L1",
+      "layer": "B"
+    },
+    {
+      "ruleId": "V1",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V2",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V3",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V4",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V5",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V6",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V7",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V8",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V9",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V10",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V11",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V12",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V13",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V14",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V15",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V16",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V17",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V18",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V19",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V20",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V21",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V22",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V23",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V24",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V25",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V26",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V27",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V28",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V29",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V30",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V31",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V32",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V33",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V34",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V35",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V36",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V37",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V38",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V39",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V40",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V41",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V42",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V43",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V44",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V45",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V46",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V47",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V48",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V49",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V50",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V51",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V52",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V53",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V54",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V55",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V56",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V57",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V58",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V59",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V60",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V61",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V62",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V63",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V64",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V65",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V66",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V67",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V68",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V69",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V70",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V71",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V72",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V73",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V74",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V75",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V76",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V77",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V78",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V79",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V80",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V81",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V82",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V83",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V84",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V85",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V86",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V87",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V88",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V89",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V90",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V91",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V92",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V93",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V94",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V95",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V96",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V97",
+      "implLevel": "L1",
+      "layer": "V"
+    },
+    {
+      "ruleId": "V98",
+      "implLevel": "L1",
+      "layer": "V"
+    }
+  ]
+}

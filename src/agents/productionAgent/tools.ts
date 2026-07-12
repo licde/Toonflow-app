@@ -51,21 +51,10 @@ const posterItemSchema = z.object({
   id: z.number().describe("海报ID"),
   image: z.string().describe("海报图片路径"),
 });
-export const flowDataSchema = z.object({
-  script: z.string().describe("剧本内容"),
-  scriptPlan: z.string().describe("拍摄计划"),
-  assets: z.array(assetItemSchema).describe("衍生资产"),
-  storyboardTable: z.string().describe("分镜表"),
-  storyboard: z.array(storyboardSchema).describe("分镜面板"),
-  workbench: z
-    .object({
-      videoList: z.array(workbenchVideoListSchema).optional(),
-    })
-    .optional()
-    .describe("工作台数据"),
-});
-
-export type FlowData = z.infer<typeof flowDataSchema>;
+export type { FlowData, EpisodeFlowData } from "@/ruleEngine/bundle/flowDataTypes";
+export { flowDataSchema } from "@/ruleEngine/bundle/flowDataTypes";
+import type { FlowData } from "@/ruleEngine/bundle/flowDataTypes";
+import { flowDataSchema } from "@/ruleEngine/bundle/flowDataTypes";
 
 const keySchema = z.enum(Object.keys(flowDataSchema.shape) as [keyof FlowData, ...Array<keyof FlowData>]);
 const flowDataKeyLabels = Object.fromEntries(

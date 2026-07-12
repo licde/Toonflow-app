@@ -33,28 +33,34 @@ rulePackVersion: "2.0.1"
 
 ## 台词映射铁律（R2）
 
-1. 剧本每句 `{角色}：{台词}` → 恰好一镜 lines
-2. 禁止删改字词、调换语序、合并台词
-3. OS/VO 单独成镜，type 标注 os/vo
-4. 出口前计算 linesHash，与 scriptHash 对照
+1. 剧本每句 `{角色}：{台词}` 须在 shots 中可追溯
+2. **100% 覆盖**：可合并多句入一镜，**禁止删改字词、禁止丢句**
+3. OS/VO/系统音单独标注 type
+4. 出口前人工核对台词数 ≥ 剧本可枚举句数
+
+## 每镜必填 visualDescription
+
+| 字段 | 说明 |
+|------|------|
+| visualDescription | 画面主体与动作（供 EN subject / MD-IMG） |
 
 ## 执行步骤
 
 1. 按 scriptPlan 分场拆镜
 2. 为每句台词创建 shot，填入 dialogue.lines
 3. 标 shotSize + emotionIntensity + duration + rhythmZone
-4. 为信息镜填 markers；标 spatialRelation 对齐 B13
-5. 跑 externalHashCheck 预检
-6. 写入 preDesignPack.shots[]
+4. 为每镜填 **visualDescription**（必填）
+5. 标 shotSize + emotionIntensity + duration + rhythmZone
+6. 为信息镜填 markers；标 spatialRelation 对齐 B13
+7. 写入 preDesignPack.shots[]
 
 ## BLOCK 闸门
 
 | 项 | 条件 |
 |----|------|
-| R2 | 台词零删改，覆盖率 100% |
-| H3 | hash 一致 |
-| 镜数 | ≥ 台词句数 |
-| 禁越界 | 无 imagePrompt/videoPrompt/audioPrompt |
+| R2 | 台词 100% 覆盖，零丢句 |
+| visualDescription | 每镜非空 |
+| 禁越界 | SB 阶段不写四模态 prompt（属 MD） |
 
 ## 严禁产出
 
@@ -62,4 +68,4 @@ compiled prompt、API 参数、vendor 字段、Touch 配置。
 
 ## 下游
 
-通过 → T1_quality_gate 或 corridor_EN（T2）；台词问题 → rePush W3 或 SB 拆镜。
+通过 → CD（T2）→ EN → MD；台词问题 → rePush W3 或 SB 补镜。

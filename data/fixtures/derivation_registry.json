@@ -1,0 +1,16 @@
+{
+  "version": "2.0.1",
+  "derivations": [
+    { "chainId": "dialogue", "sourceField": "W3.script", "targetField": "SB.narrative.dialogue.lines", "ruleId": "R2" },
+    { "chainId": "av", "sourceField": "designBrief.B4", "targetField": "SB.emotion", "ruleId": "B4" },
+    { "chainId": "scene", "sourceField": "designBrief.B6", "targetField": "SB.sceneName", "ruleId": "B6" },
+    { "chainId": "story", "sourceField": "designBrief.B5", "targetField": "SB.markers", "ruleId": "W41" },
+    { "chainId": "camera", "sourceField": "designBrief.B12", "targetField": "SB.transitionType", "ruleId": "PR-CAM-01" },
+    { "chainId": "adaptation", "sourceField": "P03.matrix", "targetField": "W3.script", "ruleId": "P03" },
+    { "chainId": "asset", "sourceField": "CD.L0", "targetField": "EN.cref", "ruleId": "V4" },
+    { "chainId": "continuity", "sourceField": "continuity.prevEpisodeSummary", "targetField": "W3.script", "ruleId": "W-CONT" },
+    { "chainId": "modality_compile", "sourceField": "EN.compile", "targetField": "MD.prompts", "ruleId": "M1" },
+    { "chainId": "generation", "sourceField": "MD.prompts", "targetField": "generationFeedback", "ruleId": "H5" },
+    { "chainId": "repair", "sourceField": "SD.fixPlan", "targetField": "rePushPlan", "ruleId": "IC-06" }
+  ]
+}

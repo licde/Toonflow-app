@@ -1,0 +1,11 @@
+{
+  "version": "2.0.1",
+  "checks": [
+    { "id": "IC-01", "rule": "QP 触发有 repairHint", "severity": "WARN" },
+    { "id": "IC-02", "rule": "W93 未确认不 merge", "severity": "BLOCK" },
+    { "id": "IC-03", "rule": "supervision C/D blockNext", "severity": "BLOCK" },
+    { "id": "IC-04", "rule": "autoApplicable confidence≥0.8", "severity": "WARN" },
+    { "id": "IC-05", "rule": "forwardTrace/reverseHints 成对", "severity": "WARN" },
+    { "id": "IC-06", "rule": "单链 repair 多链 rePush", "severity": "INFO" }
+  ]
+}

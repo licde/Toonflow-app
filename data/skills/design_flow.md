@@ -1,12 +1,15 @@
 ---
 name: design_flow
 description: >-
-  统一设计流程主编排（内外共用）。输入原故事/剧本，经导演规划→分镜表→分镜面板三阶段产出 EpisodeBundle；
-  每阶段结束触发规则校验；适用于浏览器 Chat、Cursor 及内部 ProductionAgent 设计模式。
-version: "1.0.0"
-rulePackVersion: "2.0.0"
+  统一设计流程主编排（内外共用）。v2.0.1 详见 docs/MIGRATION_v1_to_v2.md 与 docs/rule-engine-portable.md
+version: "2.0.1"
+rulePackVersion: "2.0.1"
 stages: [P0, GB, SB, EN]
+redirect: docs/rule-engine-portable.md
 ---
+
+> **v2.0.1 更新**：闭环预检请优先使用 `inspectBundle()` / `POST /api/ruleEngine/inspectBundle`（零 DB）。
+> 外部 Chat 仍用 `design_flow.bundle.md`；迁移说明见 [MIGRATION_v1_to_v2.md](../docs/MIGRATION_v1_to_v2.md)。
 
 # 统一设计流程（design_flow）
 

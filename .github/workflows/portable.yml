@@ -1,0 +1,70 @@
+name: Portable Rule Engine CI
+
+on:
+  push:
+    paths:
+      - "src/ruleEngine/**"
+      - "data/fixtures/**"
+      - "scripts/test-*.ts"
+      - "scripts/audit-*.ts"
+      - "scripts/extract-*.ts"
+      - "portable-kit/**"
+      - ".github/workflows/portable.yml"
+  pull_request:
+    paths:
+      - "src/ruleEngine/**"
+      - "data/fixtures/**"
+      - "scripts/**"
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  portable-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+
+      - name: Install
+        run: yarn install --frozen-lockfile
+
+      - name: Typecheck
+        run: yarn lint
+
+      - name: Golden — inspectBundle
+        run: yarn test:inspect-bundle
+
+      - name: Golden — unified closure
+        run: yarn test:unified-closure-golden
+
+      - name: Golden — autofix from library
+        run: yarn test:autofix-from-json
+
+      - name: Golden — gap chains (11-chain)
+        run: yarn test:gap-chains
+
+      - name: Audit — routing drift
+        run: yarn audit:routing-drift
+
+      - name: Audit — qp coverage
+        run: yarn audit:qp-coverage
+
+      - name: Audit — source traceability
+        run: yarn audit:source-traceability
+
+      - name: Audit — full chain closure
+        run: yarn audit:full-chain-closure
+
+      - name: Sync portable-kit
+        run: yarn sync:portable-kit
+
+      - name: Portable-kit self-test
+        run: node portable-kit/run.mjs
+        env:
+          FIXTURES_ROOT: ${{ github.workspace }}/portable-kit/data/fixtures
