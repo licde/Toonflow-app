@@ -1,0 +1,48 @@
+{
+  "version": "2.0.1",
+  "description": "十链+七维+四模态+边界+优先级 单一扩展入口",
+  "repairPriorityOrder": ["VID", "IMG", "AUD", "FX", "MD", "EN", "SB", "BP", "designBrief", "W3", "W2", "P03"],
+  "boundaries": {
+    "T1": { "CAN": ["script", "shots", "lines", "emotion", "transition abstract"], "CANNOT": ["imagePrompt", "videoPrompt", "audioPrompt", "fxPrompt", "API"] },
+    "T2": { "CAN": ["CD", "BP", "EN draft", "IMG subject"], "CANNOT": ["full MD×4", "generate"] },
+    "T3": { "CAN": ["MD×4", "Vendor", "audit", "generate after L0"], "CANNOT": ["skip modalityAudit"] },
+    "EN": { "CAN": ["compile Y"], "CANNOT": ["change lines", "call API"] },
+    "MD": { "CAN": ["prompt slots"], "CANNOT": ["change SB narrative"] }
+  },
+  "dimensions": {
+    "adaptation": { "chain": "adaptation", "stages": ["P03", "W2", "W3"], "dryRunId": "DC-15" },
+    "dialogue": { "chain": "dialogue", "dryRunId": "DC-01" },
+    "scene": { "chain": "scene", "dryRunId": "DC-06" },
+    "story": { "chain": "story", "dryRunId": "DC-03" },
+    "camera": { "chain": "camera", "dryRunId": "DC-09" },
+    "av": { "chain": "av", "dryRunId": "DC-04" },
+    "IMG": { "modality": true, "dryRunId": "PC-11" },
+    "VID": { "modality": true, "dryRunId": "PC-09" },
+    "AUD": { "modality": true, "dryRunId": "PC-10" },
+    "FX": { "modality": true, "dryRunId": "PC-12" }
+  },
+  "preservePairs": [
+    { "forward": "W3.script", "preserveOnRePush": true, "rePushPreserve": "script" },
+    { "forward": "globalAnchors", "preserveOnRePush": true, "rePushPreserve": "globalAnchors" },
+    { "forward": "designBrief.B4", "preserveOnRePush": false, "rePushPreserve": null }
+  ],
+  "tracks": {
+    "ext": { "dryRunLevels": ["DC", "PC", "GC", "IC"], "authority": "export" },
+    "int": { "dryRunLevels": ["DC", "PC", "GC", "IC"], "authority": "validate" }
+  },
+  "qpIndex": {
+    "QP-03": { "chain": "dialogue", "repairHintId": "RH-QP-03", "reverseTarget": "W3" },
+    "QP-14": { "chain": "camera", "repairHintId": "RH-QP-14", "reverseTarget": "EN" }
+  },
+  "chains": {
+    "dialogue": { "rePushTarget": "SB" },
+    "scene": { "rePushTarget": "SB" },
+    "camera": { "rePushTarget": "EN" },
+    "story": { "rePushTarget": "W3" },
+    "av": { "rePushTarget": "GB" },
+    "adaptation": { "rePushTarget": "W2" },
+    "modality_compile": { "rePushTarget": "EN" },
+    "generation": { "rePushTarget": "MD" },
+    "repair": { "rePushTarget": "SF" }
+  }
+}

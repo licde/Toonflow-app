@@ -1,0 +1,13 @@
+{
+  "_comment": "G87 golden · 台词镜不足 DC-01 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-dialogue-break", "episodeIndex": 1 },
+  "script": "场1 测试\n\n男主：\"你好。\"\n\n女主：\"再见。\"",
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{ "shotIndex": 1, "duration": 3, "narrative": { "dialogue": { "lines": [{ "speaker": "男主", "text": "你好。" }] } } }],
+    "externalHashCheck": { "match": true }
+  }
+}

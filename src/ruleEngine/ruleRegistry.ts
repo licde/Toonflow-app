@@ -11,7 +11,7 @@ export interface RuleDefinition {
   failureMode: "BLOCK" | "WARN" | "SKIP";
 }
 
-const RULE_PACK_VERSION = "2.0.0";
+const RULE_PACK_VERSION = "2.0.1";
 
 let cachedRules: RuleDefinition[] | null = null;
 

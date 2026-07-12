@@ -1,0 +1,25 @@
+{
+  "_comment": "G78 golden · Agnes singleImage 缺首帧必 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "defaultVendor": "agnesai",
+  "videoAudioPolicy": "native",
+  "meta": { "episodeKey": "golden-vid-first-frame", "episodeIndex": 1 },
+  "script": "场1 测试\n\n男主：\"你好。\"",
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{
+      "shotIndex": 1,
+      "duration": 5,
+      "videoMode": "singleImage",
+      "shouldGenerateImage": 1,
+      "referenceImage": null,
+      "narrative": { "dialogue": { "lines": [{ "speaker": "男主", "text": "你好。" }] } }
+    }],
+    "externalHashCheck": { "match": true }
+  },
+  "modalityPromptAudit": {
+    "items": [{ "shotIndex": 1, "modality": "VID", "ruleId": "AG-GATE-01", "severity": "BLOCK", "issue": "缺首位帧" }]
+  }
+}

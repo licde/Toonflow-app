@@ -1,0 +1,16 @@
+{
+  "_comment": "G89 golden · 视听偏差 DC-04 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-av-drift", "episodeIndex": 1 },
+  "script": "场1\n\n男主：\"你好。\"",
+  "designBrief": { "emotionCurveOutline": [2, 3, 4] },
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [
+      { "shotIndex": 1, "duration": 3, "emotion": 9, "narrative": { "dialogue": { "lines": [{ "speaker": "男主", "text": "你好。" }] } } }
+    ],
+    "externalHashCheck": { "match": true }
+  }
+}

@@ -1,0 +1,246 @@
+# 附录 B 设计执行规则
+
+rulePackVersion: 2.0.1
+
+## SB
+
+- [ ] **V1** V1 — type字段必须为以下枚举之一：CHAR-SCENE（角色+场景）、PURE-SCENE（纯场景无角色）、PURE-PROP（纯道具无角色）、CHAR-PROP（角色+道具联动）。CHAR-SCENE必须引用CHAR-CODE；PURE-S
+- [ ] **V2** V2 — 当type='PURE-SCENE'时，imagePrompt的前10个词内必须包含'no people, no characters'，且全文中至少出现一次。检测方式：正则匹配 /^.{0,100}no people/ 和 /no cha
+- [ ] **V3** V3 — 当type='PURE-PROP'时，imagePrompt必须包含'no hands, no person'且必须包含'--ar 1:1'。若imagePrompt中未出现'--ar 1:1'，校验失败并触发H9自动修复（追加'--ar 
+- [ ] **V4** V4 — 当type='CHAR-SCENE'或'CHAR-PROP'时，assetCodes中必须包含至少一个CHAR-CODE，且该代码必须在characterAssets中已定义。若引用未定义的角色代码，校验失败并报错'未找到角色资产：[COD
+- [ ] **V5** V5 — 当type='CHAR-PROP'时，assetCodes中必须包含至少一个PROP-CODE，且该代码必须在visualLockTable.anchorProps中已定义。若引用未定义的道具代码，校验失败并报错'未找到道具资产：[CODE
+- [ ] **V6** V6 — 每镜的sceneName必须匹配一个SCENE-CODE，且该SCENE-CODE必须在productionSpec.sceneColorLock中已定义。若sceneName对应的SCENE-CODE未在sceneColorLock中找到
+- [ ] **V7** V7 — 对于同一SCENE-CODE的所有镜头，colorTone对应的colorTemp必须在sceneColorLock中该场景baseTemp的±200K范围内。检测方式：colorTone→colorTempMapping→与baseTem
+- [ ] **V8** V8 — performance必须包含以下全部子字段：bodyWeight、shoulders、breath、gaze、hands、mouth、transition、microExpression、physiological。microExpres
+- [ ] **V9** V9 — transitionType必须为枚举值：切、叠化、快切、慢放、淡出、淡入。duration必须与镜号保持一致（后镜的起始时间=前镜的终止时间），且duration≥0.3s。检测方式：检查duration中'起始-结束s'格式，起始=上一
+- [ ] **V10** V10 — 独白：去除标点符号（，。！？、；：“”‘’（））后≤12个中文字符。对话：去除标点后≤15个中文字符。省略号（……）按3个字符计。检测方式：正则过滤标点后统计中文字符数
+- [ ] **V11** V11 — 对于同一道具（如咖啡杯、纸条），相邻两个镜头的道具状态必须一致。若不一致，必须存在一个中间'动作过渡镜'（如手拿取、放下、泼洒）来合理解释状态变化。检测方式：提取相邻镜头中同一PROP-CODE的状态字段，逐一比对
+- [ ] **V12** V12 — 同一角色在所有集数中必须使用相同的CHAR-CODE。但允许同一角色在同一集内有多个'状态'（如日常、深夜、特殊事件），每个状态需在visualLock中预先定义。若出现未预定义的服装/发型组合，触发V12警告（非强制失败）
+- [ ] **V13** V13 — 对于女性角色，CHAR-CODE对应的L5-accessories中必须包含：①至少一件耳饰（直径≥3mm，可见于画面），②至少一件发饰（装饰性，非功能性发绳）。检测方式：在L5-accessories中搜索'发'或'夹'或'簪'或'箍'；
+- [ ] **V14** V14 — 对于男性角色，CHAR-CODE对应的L2-hairstyle必须包含明确的朝向分界描述（如'右分4:6'、'左偏分'、'后梳'）。L4-outerwear或L5-accessories必须包含腰部装饰描述（腰带/腰链/腰封/系带）。检测方
+- [ ] **V15** V15 — 女性角色L1-makeup.intensity必须≥2（即至少底妆+眉形修饰）。男性角色L1-makeup.intensity必须≥1（即至少底妆均匀肤色）。检测方式：检查L1-makeup.intensity数值是否达标
+- [ ] **V16** V16 — 室内场景：SCENE-CODE对应的空间描述中，可见元素总数必须在3-5之间。室外场景：可见元素总数必须在4-7之间。空镜头（如天空、夜景）元素计数可为1-2。检测方式：解析sceneGenerationRules中的complexity描
+- [ ] **V17** V17 — 每集前3镜必须包含至少一个视觉钩子（如纸条特写、人物出场、声音提示）。每集前6镜必须包含标题卡（如'偷窥者'）。检测方式：检查前3镜中是否有'视觉钩子'标注；检查前6镜中是否有'标题卡'或'episodeTitle'显示
+- [ ] **V18** V18 — 每集productLayer.paypoints中至少包含1个付费点。每个付费点必须标注类型（信息揭晓/情绪高点/悬念强化/视觉奇观）。检测方式：检查paypoints数组长度≥1且每个元素含type字段
+- [ ] **V19** V19 — 每集productLayer.emotionCurve中，甜度/爽度/虐度/悬念度四个维度，至少有两个维度数值≥3。检测方式：检查四维数值，统计≥3的数量≥2
+- [ ] **V20** V20 — 每集开头（第1-2镜）必须包含前情回顾（字幕/画外音/快速剪辑）。每集结尾（最后2镜）必须包含下集预告（字幕/画面+文字）。检测方式：检查第1-2镜是否有'recap'标注或'前情回顾'内容；检查最后2镜是否有'preview'标注或'下集
+- [ ] **V21** V21 — projectBlueprint.title必须存在且不为空字符串。检测方式：检查title字段是否为空或undefined
+- [ ] **V22** V22 — 每集的productLayer.episodeTitle和productLayer.summary必须存在。summary字数≤50字。检测方式：检查两个字段是否存在，统计summary字数
+- [ ] **V23** V23 — narrative.chapterMapping中，每集必须有对应的章节映射。每项必须包含集数、对应章节、核心事件三个字段。检测方式：检查chapterMapping数组长度是否与总集数一致，每项是否包含三个字段
+- [ ] **V24** V24 — 每镜的sceneName格式必须为'[地点]_[序号]_[时间]'，其中地点必须在SCENE-CODE中定义，序号为两位数字，时间为场景描述。检测方式：正则匹配 /^[A-Z]+_\d{2}_.+/
+- [ ] **V25** V25 — 当emotionIntensity≥4时，performance.microExpression必须包含全部四个子字段，performance.physiological必须包含全部五个子字段。任一缺失即触发V25失败
+- [ ] **V26** V26 — visualFocus.层级必须与shotType匹配。A级只能用特写/大特写；B级只能用中景/近景；C级只能用中景/全景；D级只能用全景/远景；E级只能用特写。检测方式：检查visualFocus.层级与shotType的组合是否在映射表
+- [ ] **V27** V27 — visualFocus.层级与cameraAngle必须匹配。检测方式：检查层级与机位的组合是否在映射表中
+- [ ] **V28** V28 — 在storyboard序列中，连续出现同一景别（如特写→特写→特写）的数量≤3。第4个同景别出现即触发V28失败
+- [ ] **V29** V29 — 对于CHAR-SCENE类型镜头，characterFacing与composition中的留白方向必须匹配。检测方式：面向桌面/门口/右侧→留白方向对应
+- [ ] **V30** V30 — 当dialogue中标记为'情绪爆发'或emotion≥5时，对应的visualFocus.层级必须为A级（特写）。检测方式：检查dialogue.emotion≥5的镜头，其visualFocus.层级是否为'A'
+- [ ] **V31** V31 — 当emotionIntensity≥4时，shotType不得为'全景'或'远景'。必须使用中景、近景、特写或大特写
+- [ ] **V32** V32 — 当dialogue字数≥10（对话）或≥8（独白）时，该镜的duration（结束-起始）必须≥3s。检测方式：解析time字段计算实际时长
+- [ ] **V33** V33 — 相邻两镜的emotionIntensity差值≥3时，cameraAngle必须不同。检测方式：遍历相邻镜头，差值≥3时检查cameraAngle是否变化
+- [ ] **V34** V34 — 在F型（正反打）或C型（过肩）镜头中，前后镜的视线方向必须形成对应。如前一镜A右看（面向右侧），后一镜B左看（面向左侧）。检测方式：检查连续对话镜头的视线方向是否相反匹配
+- [ ] **V35** V35 — 当sound.音效或sound.BGM中包含'心跳'或'heartbeat'时，performance.physiological中必须有breathVisible（呼吸变化）或pupil（瞳孔变化）的描述，且不为'正常'或'—'
+- [ ] **V36** V36 — 当dialogue.type='对话'且emotion≥4时，performance.transition中必须标注动作先于台词的时序（如'抬手→开口'、'闭眼→台词'）。检测方式：检查transition字段是否包含'→'且动作为先
+- [ ] **V37** V37 — 相邻两镜emotionIntensity均≥5时，中间必须至少存在一个缓冲镜（无对话、无动作、全景/中景、时长≥1.5s）。检测方式：识别强情绪连续区段，检查中间是否有缓冲镜
+- [ ] **V38** V38 — 与V7相同，但明确colorTone必须引用colorToneMapping中定义的枚举值。检测方式：检查colorTone字段是否在colorToneMapping的key中
+- [ ] **V39** V39 — 同一场景中所有PROP-CODE在相邻镜头中的状态必须一致，除非有动作过渡镜。检测方式：按场景分组，逐道具检查连续性
+- [ ] **V40** V40 — 相邻两镜emotionIntensity差值≤3。差值＞3触发V40失败
+- [ ] **V41** V41 — continuityTracking中的道具、角色状态、人格切换标记必须与已生成的分镜数据一致。检测方式：逐条比对continuityTracking中的出现集数/镜号与分镜中的assetCodes
+- [ ] **V42** V42 — 每镜的visualId必须存在，且格式为'[CHAR-CODE]-[状态]'。检测方式：正则匹配 /^[A-Z]+-[A-Z]+-[a-zA-Z]+$/
+- [ ] **V43** V43 — 当镜头涉及人格切换时，必须包含personalitySwitch对象，含enabled:true、from:'CHAR-CODE'、to:'CHAR-CODE'、progress:'X%'。检测方式：检查personalitySwitch字
+- [ ] **V44** V44 — 相邻两镜的时长比值≤2。即长镜/短镜≤2。检测方式：计算所有相邻镜头的时长比值，最大值≤2
+- [ ] **V45** V45 — 分镜时长 ≥ 朗读时长 + 动作时长（0.5-1.5s）+ 视听建立（0.5s）+ 0.3s缓冲。检测方式：计算dialogue朗读时长与duration的实际差值
+- [ ] **V46** V46 — 关键动作的镜头duration必须≥对应动作的最小可视时间。检测方式：从performance.action中提取动作关键词，比对最小时间
+- [ ] **V47** V47 — 新环境音出现时，第一个包含该环境音的镜头duration≥0.5s。新BGM出现时，第一个包含该BGM的镜头duration≥1.0s。检测方式：检查sound字段中的环境音/BGM与上一镜是否变化，如有变化则检查时长
+- [ ] **V48** V48 — 连续动作序列的总时长（各镜duration之和）必须≥动作完成所需时间。检测方式：识别连续动作序列（如走→跑→停），累加时长，比对动作所需时间
+- [ ] **V49** V49 — 任意30秒窗口内，信息点数量≤3。检测方式：滑动窗口统计所有信息点（出场角色数+新道具数+关键台词数+情绪转折次数）
+- [ ] **V50** V50 — productLayer.记忆点数组长度≥2，且每个记忆点包含visual+emotional描述。检测方式：检查记忆点数组长度和内容完整性
+- [ ] **V51** V51 — 连续3个以上镜头在同一情绪维度（甜/虐/爽/悬念）均≥4时，必须插入至少1个其他维度≥2的缓冲镜头。检测方式：按情绪维度分组统计连续高位长度
+- [ ] **V52** V52 — bulletCommentInduce=true的镜头之间，间隔至少3个镜头（即两个诱导点之间至少有3个非诱导镜头）。检测方式：统计bulletCommentInduce=true的镜号差值≥4
+- [ ] **V53** V53 — 当shotType='特写'或'大特写'时，imagePrompt中必须包含'face fills'或'60% frame'或类似的面部占比描述。检测方式：正则匹配 /face/ 和 /60%/ 或 /fills frame/
+- [ ] **V54** V54 — productLayer.coverImage.faceShot必须存在且不为空，productLayer.coverImage.tagline必须存在且≤15字。检测方式：检查两个子字段
+- [ ] **V55** V55 — 每镜sound必须包含environment（环境音）、sfx（音效）、bgm（背景音乐）、dialogue（台词层级）四个子字段。检测方式：检查sound对象是否包含四个key
+- [ ] **V56** V56 — 每镜lighting必须包含key（主光方向）、fill（辅光方向）、back（背光方向）三个子字段。检测方式：检查lighting对象是否包含三个key
+- [ ] **V57** V57 — 同一SCENE-CODE的所有镜头，其colorPalette中描述的颜色，与sceneColorLock中该场景的tone颜色RGB值差值≤10%。检测方式：提取colorPalette颜色值，与sceneColorLock基准值比对
+- [ ] **V58** V58 — videoPrompt中必须包含速度描述词（slow/normal/fast/ultra），且与emotionIntensity匹配。检测方式：提取videoPrompt中的速度词，比对emotionIntensity映射表
+- [ ] **V59** V59 — visualFocus.焦点位置必须存在，且不得为'—'或空。检测方式：检查visualFocus.焦点位置字段是否存在
+- [ ] **V60** V60 — 每集productLayer.lut必须存在，包含primaryColor、secondaryColor、highlight、shadow四个子字段。检测方式：检查lut对象完整性
+- [ ] **V61** V61 — 每集productLayer.transitionStyle必须存在且不为空。检测方式：检查transitionStyle字段是否存在
+- [ ] **V62** V62 — 需要特效的镜头必须包含visualEffect对象，且包含type、content、animation、duration、outputSpec五个子字段。检测方式：检查visualEffect对象完整性
+- [ ] **V63** V63 — productionSpec.shootingSchedule必须存在，按SCENE-CODE分组，列出该场景下的所有镜号。检测方式：检查shootingSchedule是否存在且按场景分组
+- [ ] **V64** V64 — 所有素材命名必须符合'[SCENE-CODE]_[镜号]_v[版本]_[分辨率]'格式。检测方式：正则匹配 /^[A-Z]+_\d{2}_v\d+\.\d+_\d+p$/
+- [ ] **V65** V65 — 每镜videoPrompt必须包含：①镜头运动（static/push/track等）、②主体动作描述、③环境变化（如有）、④情绪氛围词、⑤时长描述。检测方式：检查五个要素是否齐全
+- [ ] **V66** V66 — videoPrompt必须按'镜头运动, 主体动作, 环境变化, 情绪氛围, 时长'顺序排列。检测方式：检查videoPrompt是否包含逗号分隔的五个部分
+- [ ] **V67** V67 — videoPrompt中描述的'X秒持续'或'X秒循环'的时长≤该镜duration-0.3s。检测方式：提取videoPrompt中的数字时长，与duration比对
+- [ ] **V68** V68 — videoPrompt必须包含速度描述词。检测方式：正则匹配 /normal speed|slow motion|ultra slow motion|fast speed/
+- [ ] **V69** V69 — 每镜imagePrompt必须包含'--cref'或'--sref'引用，且引用的CODE必须在assetCodes中出现。检测方式：检查imagePrompt中是否包含--cref或--sref
+- [ ] **V70** V70 — imagePrompt中必须包含cameraAngle名称（如'front view'、'side view'）和colorTone对应的色调描述（如'cool blue'、'warm yellow'）。检测方式：检查imagePrompt
+- [ ] **V71** V71 — videoPrompt中的速度词必须与transitionType匹配。检测方式：提取transitionType与videoPrompt中的关键词比对
+- [ ] **V72** V72 — imagePrompt中的--cref参数引用的CODE必须在assetCodes中且以'CHAR-'开头。--sref引用的CODE必须以'PROP-'或'SCENE-'开头。检测方式：正则匹配并校验前缀
+- [ ] **V73** V73 — dialogue.type必须在subtitleRules中有对应的样式定义。检测方式：检查dialogue.type是否为'对话'/'独白'/'内心OS'/'短信'/'字幕'
+- [ ] **V74** V74 — 配音时长计算：字数 ÷ 角色L6语速 + 0.3s。检测方式：从L6中提取语速，计算配音时长，与duration比对
+- [ ] **V75** V75 — dialogue不为空时，videoPrompt必须包含'lip sync'或'mouth moving'。检测方式：检查dialogue存在时，videoPrompt是否包含口型关键词
+- [ ] **V76** V76 — duration必须≥朗读时长+动作时长+0.3s。检测方式：计算朗读时长+动作时长+0.3s，与duration比对
+- [ ] **V77** V77 — 当visualEffect存在时，visualEffect.duration必须等于分镜的duration。检测方式：比对visualEffect.duration与duration是否相等
+- [ ] **V78** V78 — emotionIntensity与rhythmZone的映射关系：1-2→slow/medium；3-4→medium/fast；5→fast。检测方式：检查emotionIntensity与rhythmZone的组合是否符合映射表
+- [ ] **V79** V79 — 当sceneName匹配冲突/动作场景时，rhythmZone必须为'fast'。检测方式：sceneName关键词匹配（CONF/TEA/CEO）→检查rhythmZone是否为fast
+- [ ] **V80** V80 — 在storyboard序列中，连续rhythmZone='fast'的镜头总时长≤20s。检测方式：滑动窗口累加fast区时长
+- [ ] **V81** V81 — 在storyboard序列中，连续rhythmZone='slow'的镜头总时长≤10s。检测方式：滑动窗口累加slow区时长
+- [ ] **V82** V82 — 当连续同节奏区段达到上限（fast=20s/slow=10s）时，必须插入至少1个相反节奏的缓冲镜。检测方式：检查同节奏区段末尾是否有节奏切换
+- [ ] **V83** V83 — 当相邻两镜出现①新信息揭晓、②场景切换、③情绪变化≥3时，必须伴随rhythmZone变化。检测方式：比对相邻镜的这三个条件与rhythmZone变化
+- [ ] **V84** V84 — bulletCommentInduce=true的镜头emotionIntensity≥4；paypoints标记的镜头emotionIntensity≥4或处于上升趋势；记忆点标记的镜头emotionIntensity≥4。检测方式：逐项
+- [ ] **V85** V85 — bulletCommentInduce=true的镜头，其bulletText字段必须存在且不为空，且内容包含'悬念'/'名场面'/'神反转'或类似标记。检测方式：检查bulletText字段存在性
+- [ ] **V86** V86 — paypoints中每个付费点所在镜头的emotionIntensity ≥ 该集平均emotionIntensity + 1。检测方式：计算该集平均emotionIntensity，逐个比对
+- [ ] **V87** V87 — 每集末尾2-3镜的钩子内容必须评估强度。检测方式：提取结尾部分，统计悬念类型数量
+- [ ] **V88** V88 — productLayer.记忆点中每个记忆点的描述必须包含至少3个视觉关键词。检测方式：提取描述中的视觉词汇计数≥3
+- [ ] **V89** V89 — 每集结尾必须包含一个明确的问题（通过dialogue或字幕提出）。检测方式：检查结尾3镜是否包含'?'或'吗'或'会……吗'
+- [ ] **V90** V90 — 角色CHAR-XXX的所有dialogue中，必须至少使用一次该角色的标志性口头禅（如温如珏的'……十年了'），且语速描述与L6一致。检测方式：检查dialogue中是否包含L6中的口头禅关键词
+- [ ] **V91** V91 — 每集独白数量/总dialogue数量在30%-40%之间。检测方式：统计独白数/总台词数
+- [ ] **V92** V92 — rhythmZone='fast'时，台词频率≥0.33句/s；rhythmZone='slow'时，台词频率≤0.17句/s。检测方式：统计各区段台词数与时长比值
+- [ ] **V93** V93 — dialogue中必须包含function字段，值为'plot'/'reveal'/'character'。检测方式：检查dialogue对象是否含function字段
+- [ ] **V94** V94 — 同一角色在同一sceneName中，表达同一信息（关键词相同）不超过2次。检测方式：按角色+场景分组，统计关键词重复次数≤2
+- [ ] **V95** V95 — 对话台词中书面语词汇（'因此'、'然而'、'此外'、'之'、'其'等）占比≤20%。检测方式：正则匹配书面语词汇，统计占比
+- [ ] **V96** V96 — CHAR-XXX的dialogue中，每集至少出现一次L6-personality中的标志性口头禅。检测方式：按集检查口头禅出现次数≥1
+- [ ] **V97** V97 — 当dialogue文本与emotionIntensity明显矛盾时（如台词说'没事'但emotion=5），必须在performance中标注矛盾线索（如'语气与台词不符'、'视线躲闪'）。检测方式：检查矛盾场景的performance中是
+- [ ] **V98** V98 — 在storyboard序列中，任意15s窗口内，所有包含dialogue的镜头总时长≤7.5s（即50%）。检测方式：滑动窗口统计包含dialogue的镜头时长
+- [ ] **I1** I1 — 见V80和V81，检测方式：连续fast区总时长≤20s，连续slow区总时长≤10s
+- [ ] **I2** I2 — 统计各emotionIntensity级别的平均镜长，检查是否在对应范围。检测方式：按emotionIntensity分组统计平均duration
+- [ ] **I3** I3 — transitionType与emotionIntensity的映射：1-2→切；3→切；4→快切；5→慢放。检测方式：检查transitionType与emotionIntensity的组合
+- [ ] **I4** I4 — 见X17，检测方式：sceneName关键词匹配transitionType
+- [ ] **I5** I5 — 见V83，检测方式：检查触发条件与rhythmZone变化的同步性
+- [ ] **I6** I6 — 统计台词密度与平均镜长的相关系数。检测方式：按场景分区统计密度与镜长
+- [ ] **I7** I7 — camera字段必须与emotionIntensity+情绪类型匹配。检测方式：检查camera描述是否包含对应关键词
+- [ ] **I8** I8 — 统计每镜的信息点数量（新角色/道具/关键动作），检查duration是否匹配。检测方式：计数信息点，比对duration
+- [ ] **I9** I9 — 识别对话交锋场景，检查transitionType和平均镜长。检测方式：统计连续对话镜头的间隔时间
+- [ ] **I10** I10 — 检查emotionIntensity≥5的镜头是否使用慢放，且duration是否延长。检测方式：统计高情绪镜头的transitionType和duration
+- [ ] **I11** I11 — 检查sceneName变化或时间描述变化时的transitionType。检测方式：比对前后镜的sceneName和时间描述
+- [ ] **I12** I12 — 检查低情绪落点镜头的transitionType是否为'淡出'或'黑屏'。检测方式：识别低情绪落点，检查transitionType
+- [ ] **I13** I13 — sound环境音或BGM的音量描述（dB值）应与emotionIntensity匹配。检测方式：提取sound中的dB数值与emotion比对
+- [ ] **I14** I14 — 统计动作频率与音效频率的相关系数。检测方式：计数action和sfx的出现频率
+- [ ] **I15** I15 — 检查emotionIntensity变化≥3的镜头是否伴随BGM变化。检测方式：比对前后镜的BGM描述
+- [ ] **I16** I16 — 见V83完整描述
+- [ ] **X1** X1 — 检测连续emotion上升的镜头序列，检查shotType是否按'全景→中景→近景→特写'顺序递进。检测方式：标记emotion连续上升段，检查shotType递进序列
+- [ ] **X2** X2 — 根据sceneName或type判断场景类型，检查transitionType是否匹配。检测方式：场景分类→检查transitionType
+- [ ] **X3** X3 — 检查角色L6主动性变化方向与shotType变化方向的匹配
+- [ ] **X4** X4 — 检查同框角色的shotType随剧情推进的变化方向
+- [ ] **X5** X5 — 检查transitionDuration与emotionIntensity的匹配。检测方式：transitionDuration数值应在对应范围内
+- [ ] **X6** X6 — 根据sceneName判断空间类型，检查transitionType是否匹配
+- [ ] **X7** X7 — 统计信息点数量，检查shotType选择
+- [ ] **X8** X8 — 统计assetCodes中角色数，检查shotType选择
+- [ ] **X9** X9 — 检查dialogue连续切换时cameraAngle是否为F或C
+- [ ] **X10** X10 — 识别连续动作密集区段，检查transitionType是否为快切
+- [ ] **X11** X11 — 检查transitionType='叠化'时的transitionDuration是否与emotionIntensity匹配
+- [ ] **X12** X12 — 计算emotionIntensity与shotType（编码化）的相关系数，应>0.5
+- [ ] **X13** X13 — 同一sceneName持续超过30s时，检查平均镜长是否随时间递减
+- [ ] **X14** X14 — 检查情绪类型关键词与transitionType的匹配
+- [ ] **X15** X15 — 检查shotType与camera运动描述的匹配
+- [ ] **X16** X16 — 检查visualEffect.type='系统UI'时transitionType是否为'闪切'或'UI弹出'
+- [ ] **X17** X17 — 检测方式：根据sceneName关键词（CONF/CEO/TEA→切；FLASHBACK/MEMORY→叠化；ACTION/CHASE→快切）检查transitionType
+- [ ] **X18** X18 — 检测高→低情绪变化的镜头，检查transitionType和duration
+- [ ] **X19** X19 — 检查visualFocus.层级与shotType的匹配（同V26）
+- [ ] **X20** X20 — 检查performance.gaze描述与shotType的匹配
+- [ ] **X21** X21 — 检测emotionIntensity连续上升≥3级的段落，检查shotType是否完成至少3级递进（如全景→中景→近景或中景→近景→特写）。检测方式：标记上升段落，检查shotType变化级数
+- [ ] **Z1** Z1 — imagePrompt中必须包含分辨率描述。检测方式：检查imagePrompt是否包含'1920x1080'或'1080p'或'4K'
+- [ ] **Z2** Z2 — videoPrompt中必须包含帧率或时长描述。检测方式：检查videoPrompt是否包含'fps'或时长
+- [ ] **Z3** Z3 — 检查同一CHAR-CODE的所有imagePrompt中'--cref'后的值是否一致
+- [ ] **Z4** Z4 — 检查同一SCENE-CODE的所有imagePrompt中'--sref'后的值是否一致
+- [ ] **Z5** Z5 — 检查同一PROP-CODE的所有imagePrompt中'--sref'后的值是否一致
+- [ ] **Z6** Z6 — 检查imagePrompt是否包含质量描述词。检测方式：正则匹配 /hyper-realistic|8K|cinematic lighting/
+- [ ] **Z7** Z7 — 检查imagePrompt是否包含背景控制词
+- [ ] **Z8** Z8 — 检查imagePrompt是否包含光线描述词
+- [ ] **Z9** Z9 — 检查imagePrompt是否包含9:16比例描述
+- [ ] **Z10** Z10 — 检查角色四视图的imagePrompt是否包含'#B8B8B8'或'solid light grey'
+- [ ] **Z11** Z11 — 检查提示词长度是否超限
+- [ ] **Z12** Z12 — 检查visualEffect是否包含outputSpec字段
+- [ ] **Z13** Z13 — 检查productionSpec.versionManagement.namingSpec是否存在
+- [ ] **Z14** Z14 — 见Z16
+- [ ] **Z15** Z15 — 见Z17
+- [ ] **Z16** Z16 — 检测方式：在productionSpec中必须包含aiFailover字段，且包含Step1-Step4
+- [ ] **Z17** Z17 — 检测方式：检查versionTracking中是否包含版本号和修订记录
+- [ ] **D1** D1 — 检查visualLockTable中每个SCENE-CODE是否包含核心锚点描述
+- [ ] **D2** D2 — 见D21
+- [ ] **D3** D3 — 检查visualLockTable中anchorProps是否包含significance字段
+- [ ] **D4** D4 — 见D22
+- [ ] **D5** D5 — 检查sceneName与assetCodes中的道具对应关系
+- [ ] **D6** D6 — 检查sceneName与lighting的匹配
+- [ ] **D7** D7 — 见V7/V38/V57
+- [ ] **D8** D8 — 检查道具出现时是否伴随绑定角色的CHAR-CODE
+- [ ] **D9** D9 — 检查道具出现时的emotionIntensity是否匹配
+- [ ] **D10** D10 — 检查sceneName变化时的transitionType是否为叠化或包含过渡元素
+- [ ] **D11** D11 — 检查同一场景的composition描述中，空间元素位置是否一致
+- [ ] **D12** D12 — 检查continuityTracking中道具状态变化是否完整
+- [ ] **D13** D13 — 检查sceneName是否区分昼夜
+- [ ] **D14** D14 — 见D21
+- [ ] **D15** D15 — 检查同一场景的positionInScene中相对位置描述是否一致
+- [ ] **D16** D16 — 检查sound.environment与sceneName的匹配
+- [ ] **D17** D17 — 检查imagePrompt是否包含道具材质描述
+- [ ] **D18** D18 — 检查sceneGenerationRules中是否包含尺度描述
+- [ ] **D19** D19 — 检查关键道具组合出现时的意义一致性
+- [ ] **D20** D20 — 检查composition是否包含层次描述
+- [ ] **D21** D21 — 检测方式：统计同一SCENE-CODE的镜头数，检查核心锚点（visualLockTable中定义的该场景锚点）出现的比例是否>80%。若<80%，触发H9修复建议：'场景[SCENE-CODE]锚点复用率仅X%，建议新增至少[X]个锚点镜
+- [ ] **D22** D22 — 检测方式：检查visualLockTable.anchorProps中每个道具的appearanceSchedule，在每个标记的节点集数中检查该道具是否出现。若缺失，触发H9修复建议：'关键道具[道具名]在[集数]未出现，建议在该集关键冲
+
+## EN
+
+- [ ] **M1** M1 — 当意图为DIALOG时，shotType必须为中景/近景，cameraAngle必须为F（正反打）或C（过肩）。检测方式：从visualFocus或场景推断意图，检查shotType与cameraAngle
+- [ ] **M2** M2 — 以M1的DIALOG为例：情绪2→中景；情绪3→中近景；情绪4→近景；情绪5→特写。检测方式：检查shotType与emotionIntensity是否按此映射
+- [ ] **M3** M3 — 当意图为CONFLICT时，shotType必须为近景/特写，transitionType必须为快切，cameraAngle可选手持（无固定机位）。检测方式：从场景推断意图，检查shotType/transitionType/cameraA
+- [ ] **M4** M4 — 当意图为ACTION时，shotType为全景/中景，cameraAngle为B（侧拍）或主观视角，transitionType为快切
+- [ ] **M5** M5 — 当意图为EMOTION时，shotType为近景/特写，cameraAngle为E（特写推近）或A（平视），transitionType为慢放
+- [ ] **M6** M6 — 当意图为REVEAL时，shotType为特写/大特写，cameraAngle为E，transitionType为慢放
+- [ ] **M7** M7 — 见M16
+- [ ] **M8** M8 — camera中包含'推近'时，速度描述词必须与emotionIntensity匹配（同V58）
+- [ ] **M9** M9 — 当该镜包含≥2个新信息点时，shotType必须为全景/中景（不得为特写）。检测方式：统计assetCodes中首次出现的数量
+- [ ] **M10** M10 — F型cameraAngle的连续两个镜头，shotType必须相同。检测方式：检查F型镜头的相邻景别是否一致
+- [ ] **M11** M11 — C型cameraAngle的imagePrompt中必须包含'out of focus shoulder'或'shoulder blurred'。检测方式：检查imagePrompt是否包含虚化关键词
+- [ ] **M12** M12 — 当角色L6的主动性≥7时，cameraAngle多用D（仰拍/低角度）。主动性≤3时，多用A/D（平视/俯拍）。检测方式：检查L6主动性数值与cameraAngle选择是否匹配
+- [ ] **M13** M13 — shotType为近景/特写且emotionIntensity≥4时，cameraAngle应标记为'手持'或'微晃'。检测方式：检查cameraAngle字段是否包含'手持'或'晃'
+- [ ] **M14** M14 — 统计台词密度，检查cameraAngle变化频率是否匹配
+- [ ] **M15** M15 — 当emotionIntensity≥4且duration≥3s时，camera必须包含'slow'描述；当duration≤1.5s时，camera应为'static'。检测方式：检查camera字段与duration的匹配关系
+- [ ] **M16** M16 — CONFLICT+办公室：用冷白+灰蓝色调，camera为F正反打，强调压抑感；CONFLICT+天台：用暖紫+深蓝色调，camera为D俯拍+摇移，强调开阔与孤立；CONFLICT+走廊：用冷白+阴影，camera为B侧拍+拉远，强调压迫
+- [ ] **S1** S1 — 见S21
+- [ ] **S2** S2 — 见S22
+- [ ] **S3** S3 — 见S23
+- [ ] **S4** S4 — 当emotionIntensity上升（≥4）且同框时，positionInScene中两人距离应小于同场景中其他同框镜头的平均距离。检测方式：对比同场景同框镜头的position描述
+- [ ] **S5** S5 — 当两人对话时，power高的一方凝视时间更长（表现在performance.gaze中'锁眼'持续），power低的一方先移开视线（'移开'出现在前）。检测方式：检查performance.gaze与角色L6主动性的对应关系
+- [ ] **S6** S6 — 权威角色：cameraAngle为A（平视）或D（俯拍，镜头低于角色），角色居中被框在窗框/门框内。弱势角色：cameraAngle为D（俯拍，镜头高于角色），角色居角/边缘。检测方式：检查cameraAngle与角色L6主动性的匹配
+- [ ] **S7** S7 — sceneColorLock已包含此映射，检测方式：检查colorTone与sceneColorLock的tone是否一致
+- [ ] **S8** S8 — 当emotionIntensity≥4且同框时，cameraAnchor应标记'背景虚化'；当emotionIntensity≤2时，应标记'背景清晰'。检测方式：检查imagePrompt中是否包含'bokeh'或'blurred bac
+- [ ] **S9** S9 — 当该镜包含≥3个新信息点时，sceneGenerationRules.complexity应降低（室内≤3元素，室外≤4元素）。检测方式：统计新信息点数量，检查scene复杂度
+- [ ] **S10** S10 — power高的角色positionInScene应高于power低的角色（如'站立' vs '坐'）。检测方式：提取positionInScene中的高度关键词，比对L6主动性
+- [ ] **S11** S11 — 当emotionIntensity≤2且同框时，画面不应有明显分割；当emotionIntensity≥4且为CONFLICT意图时，画面应有明确分割（如办公室桌、光线明暗分界）。检测方式：检查composition中是否有'分割'或'对立
+- [ ] **S12** S12 — colorToneMapping中已有saturation字段。检测方式：检查colorTone的saturation是否与emotionIntensity匹配（emotion每增加1，saturation增加约15%）
+- [ ] **S13** S13 — colorToneMapping中已有contrast字段。检测方式：检查colorTone的contrast是否与情绪类型匹配
+- [ ] **S14** S14 — 当dialogue为亲密/暧昧内容时，shotType应为特写（面部占比≥60%）；当dialogue为公事/冷淡内容时，shotType应为中景（面部占比30-50%）。检测方式：检查dialogue内容情感倾向与shotType的匹配
+- [ ] **S15** S15 — 见S23
+- [ ] **S16** S16 — 当emotionIntensity≥4且情绪类型为'恐惧'/'压抑'时，lighting中应出现'阴影覆盖面部'；类型为'分裂'/'雪辞出现'时，lighting应出现'半边脸阴影'。检测方式：检查lighting描述是否包含阴影关键词
+- [ ] **S17** S17 — 角色首次出场时，lighting应有'变亮'或'聚光'描述；角色离场时，lighting应有'渐暗'或'阴影覆盖'描述。检测方式：检查lighting中是否有'变亮'/'聚光'或'渐暗'/'阴影覆盖'
+- [ ] **S18** S18 — 当emotionIntensity≥4且关系状态为'亲密'时，positionInScene应标记距离≤0.5m；当emotionIntensity≤2时，距离应≥1.5m。检测方式：从positionInScene提取距离描述
+- [ ] **S19** S19 — 当emotionIntensity≥4且情绪类型为'孤独'/'疏离'时，composition应含'大范围留白'；类型为'焦虑'/'紧张'时，应含'挤压构图'。检测方式：检查composition中是否有留白或挤压描述
+- [ ] **S20** S20 — D22已补充道具频率强化检查。检测方式：见D22
+- [ ] **S21** S21 — 相邻两镜的colorTone变化时，必须在3镜内完成完整渐变路径，不得直接跳变（如冷蓝→暖黄）。检测方式：检查连续colorTone变化的路径是否包含中间过渡色
+- [ ] **S22** S22 — 见S6完整描述。检测方式：检查cameraAngle与角色L6主动性+场景权力关系的匹配
+- [ ] **S23** S23 — 当角色在某一集中首次出场时，lighting必须包含'聚光'或'背光勾勒'或'顶光骤亮'；非首次出场时可使用'漫反射'或'自然光'。检测方式：检查角色首次出场镜头的lighting描述
+- [ ] **Y1** Y1 — 见V69
+- [ ] **Y2** Y2 — 见V65-V68
+- [ ] **Y3** Y3 — 见Y9
+- [ ] **Y4** Y4 — imagePrompt中必须包含lighting描述（如'top light'、'side light'）。检测方式：检查imagePrompt是否包含lighting中的方向词
+- [ ] **Y5** Y5 — imagePrompt中必须包含shotType对应的英文词。检测方式：检查imagePrompt是否包含shotType的英文翻译
+- [ ] **Y6** Y6 — imagePrompt中必须包含colorTone对应的色调描述（如'cool blue'、'warm yellow'）。检测方式：检查imagePrompt是否包含colorToneMapping中的tone描述词
+- [ ] **Y7** Y7 — videoPrompt中必须包含时长描述。检测方式：提取videoPrompt中的数字，与duration比对
+- [ ] **Y8** Y8 — imagePrompt中必须包含CHAR-CODE对应L0-baseModel中的核心描述词（如'round soft jawline'、'tiny mole'）。检测方式：提取L0描述关键词，检查是否出现在imagePrompt中
+- [ ] **Y9** Y9 — 检测方式：提取imagePrompt中的强度词，检查是否与emotionIntensity+情绪类型匹配
+- [ ] **Y10** Y10 — 检测方式：提取camera字段关键词，检查是否出现在videoPrompt的前10个词内
+
+## validate
+
+- [ ] **H1** H1 — 检测方式：对每层的关键字段，检查上一层是否有对应的设计依据
+- [ ] **H2** H2 — 检查validation报告中是否包含所有257条规则的状态
+- [ ] **H3** H3 — 检查continuityTracking中跨集状态是否一致
+- [ ] **H4** H4 — 对比emotionalArc的每阶段描述与对应集数的emotionCurve类型
+- [ ] **H5** H5 — 检测方式：见W2
+- [ ] **H6** H6 — 统计paypoints在各幕的分布，检查是否分散
+- [ ] **H7** H7 — 见V98
+- [ ] **H8** H8 — 检查各集中同一CHAR-CODE的视觉描述是否一致
+- [ ] **H9** H9 — 检测方式：检查validation报告中是否包含autoFix字段
+- [ ] **H10** H10 — 检测方式：检查ruleEngine中是否包含version和lastUpdated字段，且version版本号在项目迭代中有递进
+

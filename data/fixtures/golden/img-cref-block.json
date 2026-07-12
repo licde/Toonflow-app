@@ -1,0 +1,24 @@
+{
+  "_comment": "G79 golden · IMG cref 缺失必 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "defaultVendor": "agnesai",
+  "meta": { "episodeKey": "golden-img-cref", "episodeIndex": 1 },
+  "script": "场1 测试",
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{
+      "shotIndex": 1,
+      "type": "CHAR-SCENE",
+      "duration": 3,
+      "charCodes": ["CHAR-HERO"],
+      "visualDescription": "男主特写"
+    }],
+    "externalHashCheck": { "match": true }
+  },
+  "modalityPromptAudit": {
+    "items": [{ "shotIndex": 1, "modality": "IMG", "ruleId": "V4", "severity": "BLOCK", "issue": "CHAR-SCENE 缺 --cref" }],
+    "perShot": [{ "IMG": "BLOCK", "VID": "PASS", "AUD": "PASS", "FX": "PASS" }]
+  }
+}

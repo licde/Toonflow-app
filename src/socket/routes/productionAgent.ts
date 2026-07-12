@@ -56,13 +56,16 @@ export default (nsp: Namespace) => {
       callback?.({ success: true });
     });
 
+    const mode = socket.handshake.auth.mode as string | undefined;
+    const designMode = mode === "design";
+
     socket.on("chat", async (data: { content: string }) => {
       const { content } = data;
       abortController?.abort();
       abortController = new AbortController();
       const currentController = abortController;
 
-      const msg = resTool.newMessage("assistant", "视频策划");
+      const msg = resTool.newMessage("assistant", designMode ? "设计对话" : "视频策划");
       const ctx: agent.AgentContext = {
         socket,
         isolationKey,
@@ -75,7 +78,11 @@ export default (nsp: Namespace) => {
       };
 
       try {
-        await agent.runDecisionAI(ctx);
+        if (designMode) {
+          await agent.runDesignAI(ctx);
+        } else {
+          await agent.runDecisionAI(ctx);
+        }
       } catch (err: any) {
         if (err.name !== "AbortError" && !currentController.signal.aborted) {
           console.error("[productionAgent] chat error:", u.error(err).message);

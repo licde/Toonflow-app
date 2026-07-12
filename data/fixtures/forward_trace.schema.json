@@ -1,0 +1,23 @@
+{
+  "$schema": "forward_trace.schema.json",
+  "version": "2.0.1",
+  "traceItem": {
+    "dimension": "dialogue|scene|story|camera|av|adaptation|script|IMG|VID|AUD|FX",
+    "chainId": "string",
+    "sourceStage": "string",
+    "sourceField": "string",
+    "targetStage": "string",
+    "targetField": "string",
+    "derivation": "string",
+    "preserveOnRePush": true,
+    "modality": "IMG|VID|AUD|FX|null",
+    "vendorGate": "string|null"
+  },
+  "reverseHintItem": {
+    "chainId": "string",
+    "symptom": "string",
+    "reverseTarget": "string",
+    "fixTemplateRef": "string",
+    "qpId": "string|null"
+  }
+}

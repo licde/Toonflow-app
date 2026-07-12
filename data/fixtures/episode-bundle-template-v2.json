@@ -1,0 +1,33 @@
+{
+  "_comment": "EpisodeBundle v2.0.1 · T2 lite / T3 full",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "meta": {
+    "episodeKey": "ep-01",
+    "episodeName": "第1集",
+    "episodeIndex": 1,
+    "projectId": 0,
+    "scriptId": 0
+  },
+  "flowData": {
+    "script": "场1 寝殿 日\n\n婢女：\"殿下醒了。\"",
+    "scriptPlan": "# 导演规划\n\n## 场1：寝殿\n- 情绪：5",
+    "storyboardTable": "| 镜 | 类型 | 场景 | 台词 | 时长 |\n| 1 | CHAR-SCENE | 寝殿 | 婢女：\"殿下醒了。\" | 4s |",
+    "assets": [],
+    "storyboard": [
+      {
+        "clientId": "sb-1",
+        "duration": 4,
+        "prompt": "裴青梧，寝殿，苏醒",
+        "videoDesc": "MS static, 4s",
+        "shouldGenerateImage": 1,
+        "state": "未生成",
+        "index": 0
+      }
+    ],
+    "workbench": { "videoList": [] }
+  },
+  "modalityAudit": {
+    "perShot": [{ "shotIndex": 1, "IMG": "PASS", "VID": "PASS", "AUD": "PASS", "FX": "N/A" }]
+  }
+}

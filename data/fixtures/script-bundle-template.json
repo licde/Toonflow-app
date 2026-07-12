@@ -1,0 +1,30 @@
+{
+  "_comment": "ScriptBundle v1.1 官方样例 — 外部 Chat 产出 / 制作页粘贴导入",
+  "bundleVersion": "1.1.0",
+  "bundleType": "script",
+  "meta": {
+    "episodeKey": "ep-01",
+    "episodeName": "第1集",
+    "episodeIndex": 1,
+    "projectId": 0,
+    "scriptId": 0,
+    "provenance": {
+      "source": "external-chat",
+      "chapterRange": "1-3",
+      "novelTitle": ""
+    }
+  },
+  "script": "场1 寝殿 日\n\n婢女：\"殿下醒了。\"\n\n裴青梧：\"我知道。\"",
+  "characters": ["裴青梧", "婢女"],
+  "scenes": ["寝殿", "宫门"],
+  "continuity": {
+    "prevEpisodeSummary": "（第2集起建议填写；第1集可省略）",
+    "characterState": { "裴青梧": "认命期" },
+    "unresolvedHooks": [],
+    "recapHint": ""
+  },
+  "anchors": {
+    "visual": ["寝殿烛火"],
+    "emotionCarry": "苏醒→认命"
+  }
+}

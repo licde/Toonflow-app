@@ -1,0 +1,15 @@
+{
+  "version": "2.0.1",
+  "character": {
+    "establishing_MS": { "shotSize": "MS", "copyHint": "首次出场：姓名/身份/视觉特征一句", "fxHint": "F1光晕可选" },
+    "establishing_CU": { "shotSize": "CU", "copyHint": "特写强调身份", "fxHint": null }
+  },
+  "scene": {
+    "establishing_WS": { "shotSize": "WS", "copyHint": "环境两句", "fxHint": null },
+    "establishing_LS": { "shotSize": "LS", "copyHint": "空间关系", "fxHint": null }
+  },
+  "prop": {
+    "establishing_CU": { "shotSize": "CU", "copyHint": "道具初始状态", "fxHint": null }
+  },
+  "recapLight": { "shotSize": "MS", "copyHint": "ep≥2 轻量 recap，不重复 full intro" }
+}

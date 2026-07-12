@@ -1,0 +1,248 @@
+/**
+ * 双源提取 P/G/W + 规则层.json → rule_cards, fix_templates, checklists
+ * yarn extract:rule-checklists
+ */
+import fs from "fs";
+import path from "path";
+
+const root = process.cwd();
+const mainFlowPath = path.join(root, "主流程.txt");
+const rulesPath = path.join(root, "规则层.json");
+const outDir = path.join(root, "data", "skills", "_generated");
+
+interface RuleCard {
+  ruleId: string;
+  layer: string;
+  stage: string;
+  implLevel: "guideline" | "checklist" | "structured" | "audit";
+  severity: "BLOCK" | "WARN" | "INFO";
+  title: string;
+  checkPrompt: string;
+  passCriteria: string;
+  failAction: string;
+  outputField: string | null;
+  sourceText: string;
+  linkedRules: string[];
+}
+
+const STAGE_MAP: Record<string, string> = {
+  P: "P0",
+  G: "G",
+  W: "W3",
+  B: "designBrief",
+  V: "SB",
+  M: "EN",
+  S: "EN",
+  Y: "EN",
+  H: "validate",
+  R: "W3",
+};
+
+function parseMainFlowPgw(): RuleCard[] {
+  const text = fs.readFileSync(mainFlowPath, "utf-8");
+  const cards: RuleCard[] = [];
+  const pMatch = text.match(/P1-P6[\s\S]*?P13-P18[\s\S]*?改造方向/);
+  if (pMatch) {
+    for (let i = 1; i <= 6; i++) {
+      cards.push({
+        ruleId: `P${i}`,
+        layer: "P",
+        stage: "P0",
+        implLevel: "checklist",
+        severity: "BLOCK",
+        title: `六维度评分 P${i}`,
+        checkPrompt: `对源材料维度 P${i} 评分 1-10 并附理由`,
+        passCriteria: "有分数与段落定位",
+        failAction: "补全评分后重检",
+        outputField: "planData.preCheck",
+        sourceText: "主流程.txt §3.1",
+        linkedRules: ["P7"],
+      });
+    }
+    for (let i = 7; i <= 18; i++) {
+      cards.push({
+        ruleId: `P${i}`,
+        layer: "P",
+        stage: i <= 12 ? "P0" : i <= 15 ? "P03" : "P0",
+        implLevel: "checklist",
+        severity: i <= 12 ? "BLOCK" : "WARN",
+        title: `P层规则 P${i}`,
+        checkPrompt: `检查 P${i} 合规`,
+        passCriteria: "符合主流程 P 层边界",
+        failAction: "修订 P 阶段产出",
+        outputField: "planData",
+        sourceText: "主流程.txt §3.1",
+        linkedRules: [],
+      });
+    }
+  }
+  for (let i = 1; i <= 5; i++) {
+    cards.push({
+      ruleId: `G${i}`,
+      layer: "G",
+      stage: "G",
+      implLevel: "structured",
+      severity: "BLOCK",
+      title: `全局锚点 G${i}`,
+      checkPrompt: `G${i} 锚点已写入 planData.globalAnchors`,
+      passCriteria: "字段非空且可观测",
+      failAction: "补全 G 锚点",
+      outputField: "planData.globalAnchors",
+      sourceText: "主流程.txt §3.2",
+      linkedRules: [],
+    });
+  }
+  for (let i = 1; i <= 46; i++) {
+    const stage = i <= 5 ? "W1" : i <= 15 ? "W2" : "W3";
+    cards.push({
+      ruleId: `W${i}`,
+      layer: "W",
+      stage,
+      implLevel: i <= 16 ? "structured" : "checklist",
+      severity: i >= 41 ? "BLOCK" : "WARN",
+      title: `编剧规则 W${i}`,
+      checkPrompt: `W${i} 自检`,
+      passCriteria: "符合主流程 W 层定义",
+      failAction: "修订 W 阶段",
+      outputField: stage === "W3" ? "script" : "planData",
+      sourceText: "主流程.txt §3.3",
+      linkedRules: [],
+    });
+  }
+  return cards;
+}
+
+function loadRulesJson(): Record<string, unknown> {
+  const raw = fs.readFileSync(rulesPath, "utf-8");
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const fixed = raw.replace(/\\([^"\\/bfnrtu])/g, "\\\\$1");
+    return JSON.parse(fixed);
+  }
+}
+
+function parseRulesJson(): RuleCard[] {
+  const json = loadRulesJson();
+  const plan = (json as { ruleDetailPlan?: Record<string, unknown> }).ruleDetailPlan ?? json;
+  const cards: RuleCard[] = [];
+  for (const [layerKey, layerVal] of Object.entries(plan)) {
+    if (!layerKey.includes("层") || typeof layerVal !== "object") continue;
+    const layerPrefix = layerKey.charAt(0);
+    for (const [ruleId, ruleVal] of Object.entries(layerVal as Record<string, unknown>)) {
+      if (ruleId === "count" || ruleId === "description" || typeof ruleVal !== "object") continue;
+      const r = ruleVal as { current?: string; 完善后内容?: string };
+      const content = r["完善后内容"] ?? r.current ?? "";
+      cards.push({
+        ruleId,
+        layer: layerPrefix,
+        stage: STAGE_MAP[layerPrefix] ?? "SB",
+        implLevel: "checklist",
+        severity: ruleId.startsWith("H") ? "BLOCK" : "WARN",
+        title: ruleId,
+        checkPrompt: content.slice(0, 200),
+        passCriteria: content.slice(0, 300),
+        failAction: `修订 ${STAGE_MAP[layerPrefix] ?? "SB"} 或触发 fixPlan`,
+        outputField: null,
+        sourceText: "规则层.json",
+        linkedRules: [],
+      });
+    }
+  }
+  return cards;
+}
+
+function dedupeCards(cards: RuleCard[]): RuleCard[] {
+  const map = new Map<string, RuleCard>();
+  for (const c of cards) {
+    if (!map.has(c.ruleId)) map.set(c.ruleId, c);
+  }
+  return [...map.values()];
+}
+
+function renderChecklist(cards: RuleCard[], filter: (c: RuleCard) => boolean, title: string): string {
+  const byStage = new Map<string, RuleCard[]>();
+  for (const c of cards.filter(filter)) {
+    const list = byStage.get(c.stage) ?? [];
+    list.push(c);
+    byStage.set(c.stage, list);
+  }
+  let md = `# ${title}\n\nrulePackVersion: 2.0.1\n\n`;
+  for (const [stage, list] of byStage) {
+    md += `## ${stage}\n\n`;
+    for (const c of list) {
+      md += `- [ ] **${c.ruleId}** ${c.title} — ${c.checkPrompt.slice(0, 120)}\n`;
+    }
+    md += "\n";
+  }
+  return md;
+}
+
+function buildFixTemplates(): Record<string, unknown>[] {
+  const ids = [
+    "V1", "V2", "V3", "V4", "V10", "H2", "H3", "H4", "H5", "H9",
+    "R2", "W12", "W13", "B1", "B2", "B3", "MODE-AGNES", "Y8", "Y9", "Y10",
+    "QP-01", "QP-02", "PR-01", "PR-04", "identity_mismatch", "fx_degrade",
+  ];
+  return ids.map((ruleId) => ({
+    ruleId,
+    confidence: 0.85,
+    patchTemplate: { field: "auto", action: "revise" },
+    rePushTarget: FEEDBACK_MAP[ruleId] ?? "SB",
+    description: `Auto-fix template for ${ruleId}`,
+  }));
+}
+
+const FEEDBACK_MAP: Record<string, string> = {
+  H2: "GB",
+  H3: "SB",
+  H4: "EN",
+  H5: "EN",
+  V1: "SB",
+  V10: "SB",
+  R2: "W3",
+  "MODE-AGNES": "MD",
+  identity_mismatch: "EN",
+  fx_degrade: "SB",
+  "PR-01": "SB",
+};
+
+function main() {
+  fs.mkdirSync(outDir, { recursive: true });
+  const pgw = parseMainFlowPgw();
+  const jsonRules = parseRulesJson();
+  const all = dedupeCards([...pgw, ...jsonRules]);
+
+  fs.writeFileSync(path.join(outDir, "rule_cards.json"), JSON.stringify(all, null, 2), "utf-8");
+
+  const pgwMd = renderChecklist(all, (c) => ["P", "G", "W"].includes(c.layer), "P+G+W 规则自检");
+  fs.writeFileSync(path.join(outDir, "rule_checklists_pgw.md"), pgwMd, "utf-8");
+
+  const linkageMd = renderChecklist(all, (c) => c.layer === "B" || c.ruleId === "H1", "设计联动 B+H1");
+  fs.writeFileSync(path.join(outDir, "rule_checklists_linkage.md"), linkageMd, "utf-8");
+
+  const designMd = renderChecklist(
+    all,
+    (c) => !["P", "G", "W"].includes(c.layer) && c.layer !== "B",
+    "附录 B 设计执行规则",
+  );
+  fs.writeFileSync(path.join(outDir, "rule_checklists_design_appendix.md"), designMd, "utf-8");
+
+  const fixTemplates = buildFixTemplates();
+  fs.writeFileSync(path.join(outDir, "fix_templates.json"), JSON.stringify(fixTemplates, null, 2), "utf-8");
+
+  const stageIndex = all.reduce(
+    (acc, c) => {
+      acc[c.stage] = acc[c.stage] ?? [];
+      if (!acc[c.stage].includes(c.ruleId)) acc[c.stage].push(c.ruleId);
+      return acc;
+    },
+    {} as Record<string, string[]>,
+  );
+  fs.writeFileSync(path.join(outDir, "rule_stage_index.json"), JSON.stringify(stageIndex, null, 2), "utf-8");
+
+  console.log(`rule_cards: ${all.length}, fix_templates: ${fixTemplates.length}`);
+  console.log("输出:", outDir);
+}
+
+main();

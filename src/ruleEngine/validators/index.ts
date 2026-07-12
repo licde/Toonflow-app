@@ -39,7 +39,14 @@ export function buildValidationReport(
     warnCount,
     issues,
     stageStatus,
-    ruleCoverage: { total: rules.length, hit: hitIds.size, tier0Hit: tier0.filter((r) => hitIds.has(r.id)).length },
+    ruleCoverage: {
+      total: rules.length,
+      hit: hitIds.size,
+      tier0Hit: tier0.filter((r) => hitIds.has(r.id)).length,
+      executed: hitIds.size,
+      registered: rules.length,
+      skipped: Math.max(0, rules.length - hitIds.size),
+    },
     rulePackVersion: getRulePackVersion(),
   };
 }

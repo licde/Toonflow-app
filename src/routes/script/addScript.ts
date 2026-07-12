@@ -36,6 +36,6 @@ export default router.post(
       }
     }
 
-    res.status(200).send(success({ message: "添加剧本成功" }));
+    res.status(200).send(success({ message: "添加剧本成功", scriptId }));
   },
 );

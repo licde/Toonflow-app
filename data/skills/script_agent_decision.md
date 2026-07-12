@@ -68,9 +68,29 @@
 
 ## 改编流水线
 
-改编流水线包含三个阶段，**必须按顺序执行**：
+**novel 改编完整路径**（主流程 V5.0）：
 ```
-项目初始化 → 阶段1: 故事骨架 → 阶段2: 改编策略 → 阶段3: 剧本编写
+项目初始化 → P0预检 → P0.3矩阵 → P0.6故事核心 → P0.8后检 → P0.9加固 → W1骨架 → W2策略 → W3剧本 → 进制作
+```
+
+| P/W 阶段 | 子 Agent 工具 | planData 字段 |
+|----------|---------------|---------------|
+| P0 预检 | `run_sub_agent_preCheck` | `preCheck` |
+| P0.3 矩阵 | `run_sub_agent_adaptationMatrix` | `adaptationMatrix` |
+| P0.6 核心 | `run_sub_agent_storyCore` | `storyCore` |
+| P0.8 后检 | `run_sub_agent_postCheck` + 监督 | `postCheck` |
+| P0.9 加固 | `run_sub_agent_reinforcement` | `reinforcement` |
+| W1 骨架 | `run_sub_agent_storySkeleton` | `storySkeleton` |
+| W2 策略 | `run_sub_agent_adaptationStrategy` | `adaptationStrategy` |
+| W3 剧本 | `run_sub_agent_script` | `o_script` |
+
+**script 原创**：可跳过 P 阶段，直写 W3；须在对话中记录跳过原因。
+
+**P0.8 未通过时禁止批量派发 W3 剧本任务**（novel 项目）。
+
+改编流水线 W 层三阶段，**必须按顺序执行**：
+```
+项目初始化 → [P 阶段 novel] → 阶段1: 故事骨架 → 阶段2: 改编策略 → 阶段3: 剧本编写
 ```
 
 | 阶段 | 触发词 |

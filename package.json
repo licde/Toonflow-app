@@ -33,7 +33,21 @@
     "debug:ai": "npx @ai-sdk/devtools",
     "license": "node scripts/license.ts",
     "vendor2json": "node scripts/vendor2json.ts",
-    "test:rule-engine": "tsx scripts/test-rule-engine.ts"
+    "test:rule-engine": "tsx scripts/test-rule-engine.ts",
+    "test:bundle-roundtrip": "tsx scripts/test-bundle-roundtrip.ts",
+    "test:production-closure-golden": "tsx scripts/test-production-closure-golden.ts",
+    "test:unified-closure-golden": "tsx scripts/test-unified-closure-golden.ts",
+    "test:design-closure-golden": "tsx scripts/test-design-closure-golden.ts",
+    "test:forward-trace": "tsx scripts/test-forward-trace.ts",
+    "test:reverse-route": "tsx scripts/test-reverse-route.ts",
+    "test:multiterm-closure": "tsx scripts/test-multiterm-closure.ts",
+    "test:intelligent-closure-golden": "tsx scripts/test-intelligent-closure-golden.ts",
+    "bundle:design-flow": "tsx scripts/bundle-design-flow.ts",
+    "extract:rule-checklists": "tsx scripts/extract-rule-checklists.ts",
+    "extract:rule-flow-unified": "tsx scripts/extract-rule-flow-unified.ts",
+    "audit:rule-application": "tsx scripts/audit-rule-application.ts",
+    "bundle:browser-full-flow": "tsx scripts/extract-rule-checklists.ts && tsx scripts/extract-rule-flow-unified.ts && tsx scripts/bundle-browser-full-flow.ts",
+    "build:integrate": "node -e \"console.log('请在 Toonflow-web 目录执行: yarn build:integrate')\""
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.35",

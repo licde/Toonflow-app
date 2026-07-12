@@ -1,0 +1,26 @@
+{
+  "_comment": "G65 golden · 男设计/女 prompt 必 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-identity-fail", "episodeIndex": 1 },
+  "script": "场1 测试\n\n男主：\"你好。\"",
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{ "shotIndex": 1, "duration": 3, "narrative": { "dialogue": { "lines": [{ "speaker": "男主", "text": "你好。" }] } } }],
+    "externalHashCheck": { "match": true }
+  },
+  "identityAudit": {
+    "perShot": [{
+      "shotIndex": 1,
+      "charCode": "CHAR-HERO",
+      "designGender": "male",
+      "slots": {
+        "IMG": { "genderTerms": ["woman"], "match": false },
+        "VID": { "genderTerms": ["woman"], "match": false },
+        "AUD": { "voiceProfile": "female", "match": false }
+      },
+      "severity": "BLOCK"
+    }]
+  }
+}

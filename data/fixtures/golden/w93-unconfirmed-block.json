@@ -1,0 +1,20 @@
+{
+  "_comment": "G102 golden · W93 未确认 IC-02 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-w93-unconfirmed", "episodeIndex": 1 },
+  "script": "场1 测试",
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{ "shotIndex": 1, "duration": 3 }],
+    "externalHashCheck": { "match": true }
+  },
+  "smartDesignProposals": [{
+    "ruleId": "W93",
+    "trigger": "爆点不够",
+    "proposal": "增场",
+    "targetStage": "W3",
+    "status": "pending_user_confirm"
+  }]
+}

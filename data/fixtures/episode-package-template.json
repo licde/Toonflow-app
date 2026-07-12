@@ -1,0 +1,52 @@
+{
+  "_comment": "规则引擎 EpisodePackage 测试模板 — 通过「导入测试数据」或 API saveEpisodePackage 写入",
+  "version": 1,
+  "scriptId": 0,
+  "projectId": 0,
+  "scriptMeta": {
+    "density": { "dialogue": 2, "action": 0, "emotion": 5 },
+    "goldenFormula": "3-15-45",
+    "characters": ["裴青梧", "婢女"],
+    "hook": "殿下醒了"
+  },
+  "episodeBeat": {
+    "emotionCurve": [4, 5, 4],
+    "markers": { "recapSlots": [1], "previewSlots": [] },
+    "scenes": [{ "name": "寝殿" }, { "name": "宫门" }]
+  },
+  "shots": [
+    {
+      "id": "shot-1",
+      "storyboardId": 1,
+      "index": 0,
+      "narrative": {
+        "type": "CHAR-SCENE",
+        "sceneName": "寝殿",
+        "lines": "婢女：\"殿下醒了。\"",
+        "dialogue": { "type": "dialogue", "lines": "婢女：\"殿下醒了。\"" },
+        "duration": 2,
+        "emotionIntensity": 4,
+        "transitionType": "切",
+        "sound": { "dialogue": true, "bgm": "none" }
+      },
+      "generation": {}
+    },
+    {
+      "id": "shot-2",
+      "storyboardId": 2,
+      "index": 1,
+      "narrative": {
+        "type": "CHAR-SCENE",
+        "sceneName": "宫门",
+        "lines": "裴青梧：\"我知道。\"",
+        "dialogue": { "type": "dialogue", "lines": "裴青梧：\"我知道。\"" },
+        "duration": 3,
+        "emotionIntensity": 5,
+        "transitionType": "切"
+      },
+      "generation": {}
+    }
+  ],
+  "rulePackVersion": "2.0.1",
+  "updatedAt": 0
+}

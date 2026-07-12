@@ -1,0 +1,24 @@
+{
+  "version": "2.0.1",
+  "description": "T3 export / import dryRun 共用清单（G64/G71/G73-G85）",
+  "checks": [
+    { "id": "PC-01", "field": "identityAudit", "rule": "全镜 PASS", "severity": "BLOCK", "acceptance": "G56,G64,G65" },
+    { "id": "PC-02", "field": "fxFeasibilityAudit", "rule": "无未处理 F5", "severity": "BLOCK", "acceptance": "G57,G70,G81" },
+    { "id": "PC-03", "field": "productionReasonableness", "rule": "PR-01~16 无 BLOCK", "severity": "BLOCK", "acceptance": "G59,G66-G69" },
+    { "id": "PC-04", "field": "narrativeCausalityGraph", "rule": "broken 为空或有 reverseHints", "severity": "BLOCK", "acceptance": "G60" },
+    { "id": "PC-05", "field": "debutIntroPack", "rule": "主角色/主场景齐全", "severity": "WARN", "acceptance": "G61,G62" },
+    { "id": "PC-06", "field": "modalityPromptAudit", "rule": "T3 四模态 slot 合规", "severity": "BLOCK", "acceptance": "G71" },
+    { "id": "PC-07", "field": "externalHashCheck", "rule": "T1 match=true", "severity": "BLOCK", "acceptance": "G71" },
+    { "id": "PC-08", "field": "linkageAudit", "rule": "六链无 broken", "severity": "BLOCK", "acceptance": "G71" },
+    { "id": "PC-09", "field": "modalityPromptAudit.VID", "rule": "首帧/时长/运镜（Agnes singleImage）", "severity": "BLOCK", "acceptance": "G74,G78" },
+    { "id": "PC-10", "field": "modalityPromptAudit.AUD", "rule": "native 或 TTS 路径 + voiceProfile", "severity": "BLOCK", "acceptance": "G73,G75,G80" },
+    { "id": "PC-11", "field": "modalityPromptAudit.IMG", "rule": "cref/identity/PURE 词合规", "severity": "BLOCK", "acceptance": "G79" },
+    { "id": "PC-12", "field": "fxFeasibilityAudit", "rule": "无 F5；F4 有 postProductionOnly", "severity": "BLOCK", "acceptance": "G81" },
+    { "id": "PC-13", "field": "modalityPromptAudit", "rule": "T3 四 slot 齐全", "severity": "BLOCK", "acceptance": "G71,G84" },
+    { "id": "PC-14", "field": "identityAudit", "rule": "IMG/VID/AUD 跨模态一致", "severity": "BLOCK", "acceptance": "G65,G72" }
+  ],
+  "exportGate": {
+    "description": "G71：全部 BLOCK 级 PC 项 PASS 才允许 T3 export",
+    "requiredIds": ["PC-01", "PC-02", "PC-03", "PC-04", "PC-06", "PC-07", "PC-08", "PC-09", "PC-10", "PC-11", "PC-12", "PC-13", "PC-14"]
+  }
+}

@@ -16,25 +16,41 @@ export default router.post(
     const row = await u.db("o_agentWorkData").where({ projectId: projectId, key: agentType }).first();
 
     if (!row) {
+      const empty = {
+        preCheck: "",
+        adaptationMatrix: "",
+        storyCore: "",
+        postCheck: "",
+        reinforcement: "",
+        globalAnchors: "",
+        storySkeleton: "",
+        adaptationStrategy: "",
+        script: "",
+      };
       const [id] = await u.db("o_agentWorkData").insert({
         projectId: projectId,
         key: agentType,
-        data: JSON.stringify({
-          storySkeleton: "",
-          adaptationStrategy: "",
-        }),
+        data: JSON.stringify(empty),
       });
       return res.status(200).send(
         success({
-          data: {
-            storySkeleton: "",
-            adaptationStrategy: "",
-          },
-          id
+          data: empty,
+          id,
         }),
       );
     }
-    const data = JSON.parse(row.data ?? "{}");
+    const defaults = {
+      preCheck: "",
+      adaptationMatrix: "",
+      storyCore: "",
+      postCheck: "",
+      reinforcement: "",
+      globalAnchors: "",
+      storySkeleton: "",
+      adaptationStrategy: "",
+      script: "",
+    };
+    const data = { ...defaults, ...JSON.parse(row.data ?? "{}") };
     data.script = await u.db("o_script").where({ projectId }).select("id", "name", "content");
 
     res.status(200).send(success({ data, id: row.id }));

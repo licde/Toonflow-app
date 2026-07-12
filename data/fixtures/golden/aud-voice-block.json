@@ -1,0 +1,30 @@
+{
+  "_comment": "G80 golden · AUD voiceProfile 与 BP 冲突必 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "defaultVendor": "agnesai",
+  "videoAudioPolicy": "native",
+  "meta": { "episodeKey": "golden-aud-voice", "episodeIndex": 1 },
+  "script": "场1 测试\n\n男主：\"你好。\"",
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{
+      "shotIndex": 1,
+      "duration": 4,
+      "generate_audio": true,
+      "narrative": { "dialogue": { "lines": [{ "speaker": "男主", "text": "你好。" }] } }
+    }],
+    "externalHashCheck": { "match": true }
+  },
+  "modalityPromptAudit": {
+    "items": [{
+      "shotIndex": 1,
+      "modality": "AUD",
+      "ruleId": "SD-AUD-02",
+      "severity": "BLOCK",
+      "issue": "voiceProfile=female 与 BP male 冲突"
+    }]
+  },
+  "audioRoute": "dialogue-native"
+}

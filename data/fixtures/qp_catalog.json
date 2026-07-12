@@ -1,0 +1,25 @@
+{
+  "version": "2.0.1",
+  "items": [
+    { "id": "QP-01", "label": "场数过少", "severity": "BLOCK", "reverseTarget": "W3", "chain": "story" },
+    { "id": "QP-02", "label": "画面描述空泛", "severity": "BLOCK", "reverseTarget": "SB", "chain": "av" },
+    { "id": "QP-03", "label": "台词与源不一致", "severity": "BLOCK", "reverseTarget": "W3", "chain": "dialogue" },
+    { "id": "QP-04", "label": "对白密度异常", "severity": "WARN", "reverseTarget": "SB", "chain": "dialogue" },
+    { "id": "QP-05", "label": "角色称谓混乱", "severity": "BLOCK", "reverseTarget": "W3", "chain": "dialogue" },
+    { "id": "QP-06", "label": "情绪单调", "severity": "WARN", "reverseTarget": "GB", "chain": "av" },
+    { "id": "QP-07", "label": "钩子不足", "severity": "WARN", "reverseTarget": "W1", "chain": "story" },
+    { "id": "QP-08", "label": "张力不足", "severity": "WARN", "reverseTarget": "W2", "chain": "story" },
+    { "id": "QP-09", "label": "吸引力弱", "severity": "WARN", "reverseTarget": "W3", "chain": "story" },
+    { "id": "QP-10", "label": "信息链断裂", "severity": "BLOCK", "reverseTarget": "designBrief", "chain": "story" },
+    { "id": "QP-11", "label": "资产引用缺失", "severity": "BLOCK", "reverseTarget": "AS", "chain": "asset" },
+    { "id": "QP-12", "label": "cref 未绑定", "severity": "BLOCK", "reverseTarget": "EN", "chain": "asset" },
+    { "id": "QP-13", "label": "跨镜色温跳变", "severity": "WARN", "reverseTarget": "SB", "chain": "av" },
+    { "id": "QP-14", "label": "运镜不可执行", "severity": "BLOCK", "reverseTarget": "EN", "chain": "camera", "ruleId": "PR-CAM-01" },
+    { "id": "QP-15", "label": "时长与台词不匹配", "severity": "BLOCK", "reverseTarget": "SB", "chain": "dialogue" },
+    { "id": "QP-16", "label": "模态 slot 缺失", "severity": "BLOCK", "reverseTarget": "EN", "chain": "av" },
+    { "id": "QP-17", "label": "FX 词不可实现", "severity": "BLOCK", "reverseTarget": "SB", "chain": "av" },
+    { "id": "QP-18", "label": "identity 冲突", "severity": "BLOCK", "reverseTarget": "EN", "chain": "asset" },
+    { "id": "QP-19", "label": "debut 缺 establishing", "severity": "WARN", "reverseTarget": "SB", "chain": "story" },
+    { "id": "QP-20", "label": "跨集衔接弱", "severity": "WARN", "reverseTarget": "W3", "chain": "continuity" }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "_comment": "G57 golden · F5 未降级必 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-fx-f5", "episodeIndex": 1 },
+  "script": "场1 测试",
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{ "shotIndex": 1, "duration": 3, "visualDescription": "时间倒流全身" }],
+    "externalHashCheck": { "match": true }
+  },
+  "fxFeasibilityAudit": {
+    "items": [{ "shotIndex": 1, "designedFx": "时间倒流", "feasibility": "F5", "aiCapability": "none" }]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "version": "2.0.1",
+  "dimensions": {
+    "adaptation": { "stages": ["P03", "W2"], "chain": "adaptation", "rules": ["P13", "P14", "W6-W15", "W99"] },
+    "script": { "stages": ["W1", "W3"], "chain": "story", "rules": ["W12", "W13", "W16-W46"] },
+    "dialogue": { "stages": ["W3", "SB"], "chain": "dialogue", "rules": ["R2", "H3", "V74", "PR-10"] },
+    "scene": { "stages": ["B", "AS", "BP", "SB"], "chain": "scene", "rules": ["V5", "sceneColorLock"] },
+    "story_push": { "stages": ["B", "SB"], "chain": "story", "rules": ["B5", "W41", "PR-08"] },
+    "camera": { "stages": ["B", "SB", "EN"], "chain": "camera", "rules": ["V83", "S4", "PR-CAM-01", "QP-14"] },
+    "av": { "stages": ["B", "GB", "SB"], "chain": "av", "rules": ["B4", "B9", "Y9", "QP-06"] }
+  }
+}

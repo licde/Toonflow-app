@@ -1,0 +1,91 @@
+{
+  "_comment": "ScriptBundle v2.0.1 官方样例 — Browser Chat T1 出口 / 制作页导入",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": {
+    "episodeKey": "ep-01",
+    "episodeName": "第1集",
+    "episodeIndex": 1,
+    "projectId": 0,
+    "scriptId": 0,
+    "provenance": {
+      "source": "external-chat",
+      "chapterRange": "1-3",
+      "novelTitle": ""
+    }
+  },
+  "script": "场1 寝殿 日 内\n\n婢女：\"殿下醒了。\"\n\n裴青梧：\"我知道。\"",
+  "characters": ["裴青梧", "婢女"],
+  "scenes": ["寝殿"],
+  "planData": {
+    "globalAnchors": {
+      "G1": "裴青梧：认命 vs 觉醒",
+      "G3": "古言虐恋 70% / 爽 30%"
+    }
+  },
+  "designBrief": {
+    "emotionCurveOutline": [4, 5, 6],
+    "infoLinkageChain": ["钩子：苏醒", "承接：认命"],
+    "arcToneMap": { "裴青梧": "认命期→短句" },
+    "visualLockHints": ["寝殿烛火 4500K"]
+  },
+  "preDesignPack": {
+    "scriptPlan": "# 导演规划\n\n## 场1：寝殿\n- 情绪：5\n",
+    "shots": [
+      {
+        "shotIndex": 1,
+        "type": "CHAR-SCENE",
+        "sceneName": "寝殿",
+        "duration": 2,
+        "shotSize": "MS",
+        "emotion": 5,
+        "visualDescription": "婢女俯身",
+        "charCodes": ["CHAR-MAID"],
+        "narrative": {
+          "dialogue": {
+            "lines": [{ "speaker": "婢女", "text": "殿下醒了。" }]
+          },
+          "markers": [{ "type": "钩子", "desc": "苏醒" }]
+        }
+      },
+      {
+        "shotIndex": 2,
+        "type": "CHAR-SCENE",
+        "sceneName": "寝殿",
+        "duration": 2,
+        "shotSize": "CU",
+        "emotion": 5,
+        "visualDescription": "裴青梧苏醒，烛火映面",
+        "charCodes": ["CHAR-PEIQINGWU"],
+        "narrative": {
+          "dialogue": {
+            "lines": [{ "speaker": "裴青梧", "text": "我知道。" }]
+          },
+          "markers": [{ "type": "承接", "desc": "认命" }]
+        }
+      }
+    ],
+    "externalHashCheck": { "match": true, "hash": "demo" },
+    "preDesignQuality": { "overall": "B", "supervision": "B" }
+  },
+  "continuity": {
+    "characterState": { "裴青梧": "认命期" },
+    "unresolvedHooks": []
+  },
+  "anchors": {
+    "visual": ["寝殿烛火"],
+    "emotionCarry": "苏醒→认命"
+  },
+  "ruleAudit": {
+    "W3": { "passed": true, "blockers": [], "checkedRuleIds": ["R2", "W12"] },
+    "SB": { "passed": true, "blockers": [], "checkedRuleIds": ["V10"] }
+  },
+    "debutIntroPack": {
+    "characters": [{ "code": "CHAR-PEIQINGWU", "firstShotIndex": 2, "introTemplate": "establishing_MS" }],
+    "scenes": [{ "code": "SCENE-BEDROOM", "firstShotIndex": 1, "introTemplate": "establishing_WS" }]
+  },
+  "fxFeasibilityAudit": { "items": [{ "shotIndex": 1, "level": "F1" }] },
+  "productionReasonableness": { "items": [], "blockCount": 0 },
+  "linkageAudit": { "chains": [{ "chain": "dialogue", "broken": false }, { "chain": "story", "broken": false }] }
+}

@@ -9,6 +9,12 @@ export const ScriptSchema = z.object({
   content: z.string().describe("剧本内容"),
 });
 export const planData = z.object({
+  preCheck: z.string().describe("源材料预检 P0"),
+  adaptationMatrix: z.string().describe("改编矩阵 P0.3"),
+  storyCore: z.string().describe("故事核心 P0.6"),
+  postCheck: z.string().describe("后检 P0.8"),
+  reinforcement: z.string().describe("加固 P0.9"),
+  globalAnchors: z.string().describe("G层全局锚点"),
   storySkeleton: z.string().describe("故事骨架"),
   adaptationStrategy: z.string().describe("改编策略"),
   script: z.string().describe("剧本内容"),

@@ -1,0 +1,20 @@
+{
+  "version": "2.0.1",
+  "description": "linkageRepairPlan 六链修复契约",
+  "itemSchema": {
+    "chain": "dialogue|asset|continuity|av|story|repair",
+    "brokenAt": "string",
+    "repairAction": "string",
+    "targetStage": "string",
+    "ruleIds": ["string"]
+  },
+  "example": {
+    "linkageRepairPlan": [{
+      "chain": "dialogue",
+      "brokenAt": "shot-3.lines hash",
+      "repairAction": "恢复 R2 原文",
+      "targetStage": "SB",
+      "ruleIds": ["R2", "H3"]
+    }]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "_comment": "生产画布 flowData 测试模板 — 导入后保存到 o_agentWorkData",
+  "script": "婢女：\"殿下醒了。\"\n裴青梧：\"我知道。\"",
+  "scriptPlan": "情绪：4\n第一场：寝殿\n情绪：5\n第二场：宫门",
+  "storyboardTable": "| 镜 | 类型 | 场景 | 台词 | 时长 |\n| 1 | CHAR-SCENE | 寝殿 | 婢女：\"殿下醒了。\" | 2s |\n| 2 | CHAR-SCENE | 宫门 | 裴青梧：\"我知道。\" | 3s |",
+  "assets": [],
+  "storyboard": [
+    {
+      "id": 1,
+      "duration": 2,
+      "prompt": "裴青梧·认命期，中景，寝殿烛火",
+      "videoDesc": "medium shot static, 2s",
+      "shouldGenerateImage": 1,
+      "associateAssetsIds": [],
+      "src": null,
+      "state": "未生成"
+    },
+    {
+      "id": 2,
+      "duration": 3,
+      "prompt": "裴青梧·认命期，全景，宫门",
+      "videoDesc": "wide shot static, 3s",
+      "shouldGenerateImage": 1,
+      "associateAssetsIds": [],
+      "src": null,
+      "state": "未生成"
+    }
+  ],
+  "workbench": { "videoList": [] }
+}

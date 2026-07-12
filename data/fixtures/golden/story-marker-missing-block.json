@@ -1,0 +1,14 @@
+{
+  "_comment": "G90 golden · 故事 marker 缺失 DC-03 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-story-marker-missing", "episodeIndex": 1 },
+  "script": "场1\n\n男主：\"你好。\"",
+  "designBrief": { "infoLinkageChain": ["伏笔：玉佩"] },
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{ "shotIndex": 1, "duration": 3, "narrative": { "dialogue": { "lines": [{ "speaker": "男主", "text": "你好。" }] } } }],
+    "externalHashCheck": { "match": true }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "_comment": "G60 golden · 因果断边必 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-graph-broken", "episodeIndex": 1 },
+  "script": "场1 测试",
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{ "shotIndex": 1, "duration": 3 }],
+    "externalHashCheck": { "match": true }
+  },
+  "narrativeCausalityGraph": {
+    "nodes": [{ "id": "E1", "type": "event", "label": "发现密信" }, { "id": "E2", "type": "event", "label": "对峙" }],
+    "edges": [],
+    "broken": [{ "from": "E1", "to": "E2", "reason": "缺少 cause 边" }],
+    "reverseHints": []
+  }
+}

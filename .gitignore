@@ -11,6 +11,8 @@ dist
 coverage
 *.lcov
 
+*data/web/*
+
 # logs
 logs
 _.log

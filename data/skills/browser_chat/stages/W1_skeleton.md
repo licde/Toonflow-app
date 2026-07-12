@@ -1,0 +1,62 @@
+---
+name: W1_skeleton
+description: W1 故事骨架 storySkeleton XML 产出
+stageId: W1
+outputTag: storySkeleton
+rulePackVersion: "2.0.1"
+---
+
+# W1 故事骨架
+
+基于 G 层锚点与 storyCore（改编）或用户口述（原创），产出 `<storySkeleton>` XML。W2 策略与 W3 剧本均引用本产出。
+
+## 入口条件
+
+- `planData.globalAnchors` G1–G5 已通过
+- 【项目配置】集数、单集时长、章节范围已确认
+
+## 骨架必含区块
+
+| 区块 | 要点 |
+|------|------|
+| 故事核 | ≤50 字 + 心理级爽点 + 金手指约束 |
+| 隐线 | 主角弧光轨迹 |
+| 人物小传 | 大三角 ≤4 人，五要素齐全 |
+| 三幕结构 | 功能/核心问题/幕末转折 |
+| 分集决策 | 模式A(≤20集) 或 模式B(>20集) |
+| 付费卡点 | ≈10%/30%/50%/70%/90% |
+| 股价级反转登记表 | 全剧 ≈3 个 |
+
+## 执行步骤
+
+1. 读取 globalAnchors + storyCore（如有）
+2. 阐述思路 200–300 字（核心吸引力、三幕、分集策略）
+3. 按 XML 模板一次性完整输出 `<storySkeleton>...</storySkeleton>`
+4. 内部自查：表格行数 = 总集数 N；每集有集末钩子
+5. 写入 `planData.storySkeleton`
+
+## 关键约束
+
+- 压缩比 ≤40%；人物 ≤4
+- 前10集 ≈10 个可剪 30 秒投流爆点
+- 矛盾达高级/升级级别（两个好人不同选择）
+- 金手指非同质化（市面 >10 次须升级）
+
+## 输出标签
+
+```xml
+<storySkeleton rulePackVersion="2.0.1">
+  <!-- 故事核 / 隐线 / 人物小传 / 三幕 / 分集 / 删减 / 付费卡点 / 反转登记表 -->
+</storySkeleton>
+```
+
+## BLOCK 闸门
+
+- XML 一次性完整输出
+- 分集数 = 项目配置 N
+- 股价级反转 ≈3 且预埋集 < 揭晓集
+- 每集有集末钩子
+
+## 下游
+
+通过 → W2_strategy；可选触发 supervision_review（骨架审核）。

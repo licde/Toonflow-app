@@ -1,0 +1,18 @@
+{
+  "_comment": "G88 golden · 场景未映射 DC-06 BLOCK",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-scene-break", "episodeIndex": 1 },
+  "script": "场1 寝殿\n\n男主：\"你好。\"",
+  "characters": ["男主"],
+  "scenes": ["寝殿"],
+  "designBrief": {
+    "assetHints": { "scenes": ["寝殿"] }
+  },
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{ "shotIndex": 1, "duration": 3, "narrative": { "dialogue": { "lines": [{ "speaker": "男主", "text": "你好。" }] } } }],
+    "externalHashCheck": { "match": true }
+  }
+}

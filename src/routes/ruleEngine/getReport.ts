@@ -24,6 +24,12 @@ export default router.post(
       if (!pkg) return res.status(404).send(error("EpisodePackage 不存在"));
       const dry = await dryRun(u.db, pkg, script ?? "");
       const payload: Record<string, unknown> = { report: dry.report, coverage: dry.report.ruleCoverage, stageStatus: dry.report.stageStatus };
+      const cov = dry.report.ruleCoverage;
+      payload.coverageDetail = {
+        executed: cov.executed ?? cov.hit,
+        registered: cov.registered ?? cov.total,
+        skipped: cov.skipped ?? Math.max(0, (cov.registered ?? cov.total) - (cov.executed ?? cov.hit)),
+      };
       if (includeExport) payload.export = exportPackage(pkg);
       return res.status(200).send(success(payload));
     } catch (e) {

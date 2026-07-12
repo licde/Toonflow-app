@@ -1,0 +1,16 @@
+{
+  "version": "2.0.1",
+  "ends": [
+    { "id": "ext", "name": "Browser Chat", "dryRunLevels": ["DC", "PC", "GC", "IC"], "rulePackVersion": "2.0.1" },
+    { "id": "int", "name": "RuleEngine INT", "dryRunLevels": ["DC", "PC", "GC", "IC"], "rulePackVersion": "2.0.1" },
+    { "id": "agent", "name": "V5 Agents", "dryRunLevels": ["DC", "PC"], "orchestration": "browser_flow_orchestration.md" },
+    { "id": "fe", "name": "Toonflow-web", "dryRunLevels": ["display"], "apiSurface": ["validate", "dryRunImport", "applyAutoFix"] },
+    { "id": "electron", "name": "Electron", "dryRunLevels": [], "versionBanner": true }
+  ],
+  "unifiedResponseSchema": {
+    "closureChecks": { "dc": [], "pc": [], "gc": [], "ic": [] },
+    "rePushPlan": [],
+    "forwardTrace": {},
+    "repairHints": []
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "_comment": "G92 golden · 故事 FX 未处理 DC-07 WARN",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "golden-story-fx-unhandled", "episodeIndex": 1 },
+  "script": "场1\n\n男主：\"你好。\"",
+  "designBrief": { "infoLinkageChain": ["伏笔：玉佩未收"] },
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{
+      "shotIndex": 1,
+      "duration": 3,
+      "visualEffect": "火焰吞噬全场",
+      "narrative": {
+        "dialogue": { "lines": [{ "speaker": "男主", "text": "你好。" }] },
+        "markers": [{ "type": "伏笔", "desc": "玉佩" }]
+      }
+    }],
+    "externalHashCheck": { "match": true }
+  }
+}

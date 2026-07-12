@@ -1,0 +1,15 @@
+{
+  "version": "2.0.1",
+  "levels": {
+    "F0": { "label": "原生可出", "strategy": "direct", "examples": ["雨", "光晕", "慢动作"] },
+    "F1": { "label": "prompt可出", "strategy": "strengthen_prompt", "examples": ["简单粒子", "刀光"] },
+    "F2": { "label": "需降级", "strategy": "degradeFixPlan", "examples": ["全身火焰→手部光效"] },
+    "F3": { "label": "需拆镜", "strategy": "split_shot", "examples": ["变身+爆炸同镜"] },
+    "F4": { "label": "后期合成", "strategy": "postProductionOnly", "examples": ["时间倒流", "复杂合成"] },
+    "F5": { "label": "不可实现", "strategy": "rePush_W3_SB", "examples": ["物理违反"] }
+  },
+  "vendorOverrides": {
+    "default": { "maxLevel": "F3" },
+    "agnes": { "maxLevel": "F2" }
+  }
+}

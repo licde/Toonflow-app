@@ -1,0 +1,4700 @@
+{
+  "version": "2.0.1",
+  "rules": [
+    {
+      "ruleId": "P1",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P2",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P3",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P4",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P5",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P6",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P7",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P8",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P9",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P10",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P11",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P12",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P13",
+      "layer": "P",
+      "stage": "P03",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P14",
+      "layer": "P",
+      "stage": "P03",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P15",
+      "layer": "P",
+      "stage": "P03",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P16",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P17",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "P18",
+      "layer": "P",
+      "stage": "P0",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "G1",
+      "layer": "G",
+      "stage": "G",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "G2",
+      "layer": "G",
+      "stage": "G",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "G3",
+      "layer": "G",
+      "stage": "G",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "G4",
+      "layer": "G",
+      "stage": "G",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "G5",
+      "layer": "G",
+      "stage": "G",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W1",
+      "layer": "W",
+      "stage": "W1",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W2",
+      "layer": "W",
+      "stage": "W1",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W3",
+      "layer": "W",
+      "stage": "W1",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W4",
+      "layer": "W",
+      "stage": "W1",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W5",
+      "layer": "W",
+      "stage": "W1",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W6",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W7",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W8",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W9",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W10",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W11",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W12",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W13",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W14",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W15",
+      "layer": "W",
+      "stage": "W2",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W16",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W17",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W18",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W19",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W20",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W21",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W22",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W23",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W24",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W25",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W26",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W27",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W28",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W29",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W30",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W31",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W32",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W33",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W34",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W35",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W36",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W37",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W38",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W39",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W40",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W41",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W42",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W43",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W44",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W45",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "W46",
+      "layer": "W",
+      "stage": "W3",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "V1",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V2",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V3",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V4",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V5",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V6",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V7",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V8",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V9",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V10",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V11",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V12",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V13",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V14",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V15",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V16",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V17",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V18",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V19",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V20",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V21",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V22",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V23",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V24",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V25",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V26",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V27",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V28",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V29",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V30",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V31",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V32",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V33",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V34",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V35",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V36",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V37",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V38",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V39",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V40",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V41",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V42",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V43",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V44",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V45",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V46",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V47",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V48",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V49",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V50",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V51",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V52",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V53",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V54",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V55",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V56",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V57",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V58",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V59",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V60",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V61",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V62",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V63",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V64",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V65",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V66",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V67",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V68",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V69",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V70",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V71",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V72",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V73",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V74",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V75",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V76",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V77",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V78",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V79",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V80",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V81",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V82",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V83",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V84",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V85",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V86",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V87",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V88",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V89",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V90",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V91",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V92",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V93",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V94",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V95",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V96",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V97",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "V98",
+      "layer": "V",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "INT-1"
+    },
+    {
+      "ruleId": "M1",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M2",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M3",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M4",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M5",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M6",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M7",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M8",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M9",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M10",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M11",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M12",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M13",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M14",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M15",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "M16",
+      "layer": "M",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S1",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S2",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S3",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S4",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S5",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S6",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S7",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S8",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S9",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S10",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S11",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S12",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S13",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S14",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S15",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S16",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S17",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S18",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S19",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S20",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S21",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S22",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "S23",
+      "layer": "S",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I1",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I2",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I3",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I4",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I5",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I6",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I7",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I8",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I9",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I10",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I11",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I12",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I13",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I14",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I15",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "I16",
+      "layer": "I",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X1",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X2",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X3",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X4",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X5",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X6",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X7",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X8",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X9",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X10",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X11",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X12",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X13",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X14",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X15",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X16",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X17",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X18",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X19",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X20",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "X21",
+      "layer": "X",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y1",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y2",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y3",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y4",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y5",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y6",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y7",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y8",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y9",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Y10",
+      "layer": "Y",
+      "stage": "EN",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z1",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z2",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z3",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z4",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z5",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z6",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z7",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z8",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z9",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z10",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z11",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z12",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z13",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z14",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z15",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z16",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "Z17",
+      "layer": "Z",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B1",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B2",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B3",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B4",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B5",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B6",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B7",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B8",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B9",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B10",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "B11",
+      "layer": "B",
+      "stage": "designBrief",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "EXT L2",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D1",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D2",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D3",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D4",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D5",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D6",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D7",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D8",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D9",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D10",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D11",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D12",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D13",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D14",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D15",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D16",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D17",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D18",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D19",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D20",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D21",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "D22",
+      "layer": "D",
+      "stage": "SB",
+      "dimensions": {
+        "spec": true,
+        "link": false,
+        "sd": false,
+        "sf": false,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "planned",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H1",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H2",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H3",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H4",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H5",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H6",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H7",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H8",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H9",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    },
+    {
+      "ruleId": "H10",
+      "layer": "H",
+      "stage": "validate",
+      "dimensions": {
+        "spec": true,
+        "link": true,
+        "sd": true,
+        "sf": true,
+        "trace": true
+      },
+      "browserTrack": "T2/T3",
+      "internalTrack": "INT validate",
+      "wave": "P0"
+    }
+  ]
+}

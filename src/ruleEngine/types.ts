@@ -22,7 +22,7 @@ export interface ValidationReport {
   warnCount: number;
   issues: ValidationIssue[];
   stageStatus: Record<PipelineStage, "pass" | "warn" | "block" | "skip">;
-  ruleCoverage: { total: number; hit: number; tier0Hit: number };
+  ruleCoverage: { total: number; hit: number; tier0Hit: number; executed?: number; registered?: number; skipped?: number };
   rulePackVersion: string;
 }
 

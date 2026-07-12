@@ -19,3 +19,7 @@ export * from "./compilers/promptCompiler";
 export * from "./transform/emotionBridge";
 export * from "./matcher/ruleSelector";
 export * from "./ports/generationFeedback";
+export * from "./bundle/types";
+export { importScriptBundle, importEpisodeBundle, exportScriptBundle, exportEpisodeBundle, dryRunImport, importSeriesBundle } from "./bundle/importAdapter";
+export { getAutoDesignJob, createAutoDesignJob } from "./bundle/autoDesign";
+export { generateContinuityFromPrev } from "./bundle/continuity";

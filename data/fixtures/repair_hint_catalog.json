@@ -1,0 +1,10 @@
+{
+  "version": "2.0.1",
+  "hints": [
+    { "id": "RH-QP-03", "qpId": "QP-03", "ruleId": "R2", "symptom": "台词与源不一致", "action": "逐句对齐 W3 剧本到 SB.lines", "chatTemplate": "请对照剧本原文，修正分镜台词，禁止删改字词。" },
+    { "id": "RH-QP-14", "qpId": "QP-14", "ruleId": "PR-CAM-01", "symptom": "运镜不可执行", "action": "改用运镜白名单重编译 EN-VID", "chatTemplate": "请将运镜改为 slow pan / gentle push 等白名单词。" },
+    { "id": "RH-W93", "ruleId": "W93", "symptom": "爆点不够", "action": "增情绪峰值场", "chatTemplate": "建议在 W3 或 SB 增加对峙升级场。" },
+    { "id": "RH-AG-GATE-01", "ruleId": "AG-GATE-01", "symptom": "缺首位帧", "action": "生成首帧分镜图", "chatTemplate": "请先生成分镜参考图再写 MD-VID singleImage。" },
+    { "id": "RH-identity", "ruleId": "identity_mismatch", "symptom": "跨模态性别冲突", "action": "重编译 EN 全模态", "chatTemplate": "请统一 IMG/VID/AUD 性别词与 BP L0。" }
+  ]
+}

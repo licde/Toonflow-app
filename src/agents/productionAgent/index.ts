@@ -94,6 +94,41 @@ export async function runDecisionAI(ctx: AgentContext) {
   });
 }
 
+/** 设计模式：加载 design_flow.md，不派发六阶段 sub-agent（后期可切换为完整 Agent） */
+export async function runDesignAI(ctx: AgentContext) {
+  const { isolationKey, text, abortSignal } = ctx;
+  const memory = new Memory("productionAgent", isolationKey);
+  await memory.add("user", text);
+
+  const skill = path.join(u.getPath("skills"), "browser_flow_orchestration.md");
+  const prompt = await fs.promises.readFile(skill, "utf-8");
+  const mem = buildMemPrompt(await memory.get(text));
+
+  const { fullStream } = await u.Ai.Text("productionAgent:decisionAgent", ctx.thinkConfig.think, ctx.thinkConfig.thinlLevel).stream({
+    messages: [
+      { role: "system", content: prompt + "\n\n【设计模式】按 GB→SB→EN 三阶段引导用户；每阶段结束提示宿主调用 validate/importBundle。" },
+      { role: "assistant", content: mem },
+      { role: "user", content: text },
+    ],
+    abortSignal,
+    tools: {
+      ...memory.getTools(),
+      ...useTools({ resTool: ctx.resTool, msg: ctx.msg }),
+    },
+    onFinish: async (completion) => {
+      await memory.add("assistant:design", removeAllXmlTags(completion.text));
+    },
+  });
+
+  let currentMsg = ctx.msg;
+  await consumeFullStream(fullStream, currentMsg, () => {
+    if (ctx.msg === currentMsg) return currentMsg;
+    currentMsg.complete();
+    currentMsg = ctx.msg;
+    return currentMsg;
+  });
+}
+
 async function createSubAgent(parentCtx: AgentContext) {
   const { resTool, abortSignal } = parentCtx;
   const memory = new Memory("productionAgent", parentCtx.isolationKey);

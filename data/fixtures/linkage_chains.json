@@ -1,0 +1,16 @@
+{
+  "version": "2.0.1",
+  "chains": [
+    { "id": "dialogue", "nodes": ["W3.script", "SB.narrative.dialogue.lines", "EN.AUD", "VID.lipSync", "MD-AUD.lines"], "rollback": ["W3", "SB", "EN", "MD"] },
+    { "id": "asset", "nodes": ["CD.L0", "BP.visualLockTable", "SB.charCodes", "EN.cref", "IMG.cref"], "rollback": ["CD", "BP", "SB", "EN", "MD"] },
+    { "id": "continuity", "nodes": ["continuity.prevEpisodeSummary", "GB前情", "W3 W-CONT", "Pipeline写回"], "rollback": ["W3", "continuity"] },
+    { "id": "av", "nodes": ["designBrief.B4", "GB.emotionCurve", "SB.emotion", "EN.Y9", "MD-AUD.emotion", "MD-VID.expr"], "rollback": ["designBrief", "GB", "SB", "EN"] },
+    { "id": "story", "nodes": ["W1", "designBrief.B5", "SB.markers", "narrativeCausalityGraph", "FX.feasibility"], "rollback": ["W1", "W3", "SB"] },
+    { "id": "scene", "nodes": ["designBrief.B6", "GB场表", "SB.sceneName", "BP.sceneColorLock", "IMG.scene"], "rollback": ["B", "GB", "SB", "BP", "EN"] },
+    { "id": "camera", "nodes": ["designBrief.B12", "SB.shotSize", "SB.transitionType", "EN.motion", "MD-VID.camera"], "rollback": ["brief", "SB", "EN", "MD"] },
+    { "id": "adaptation", "nodes": ["P03.matrix", "W2.adaptationStrategy", "W3.script", "designBrief"], "rollback": ["P03", "W2", "W3"] },
+    { "id": "modality_compile", "nodes": ["EN.compile", "MD-IMG", "MD-VID", "MD-AUD", "MD-FX", "modalityPromptAudit"], "rollback": ["EN", "MD"] },
+    { "id": "generation", "nodes": ["MD.prompts", "VendorPack", "generate", "MediaProbe", "generationFeedback"], "rollback": ["MD", "EN", "SB"] },
+    { "id": "repair", "nodes": ["SD", "fixPlan", "linkageRepairPlan", "rePushPlan"], "rollback": "reverse_route_table" }
+  ]
+}

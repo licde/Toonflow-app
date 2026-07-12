@@ -138,6 +138,74 @@ function createSubAgent(parentCtx: AgentContext) {
     })
     .toJSONSchema();
 
+  function makeAdaptationTool(
+    toolName: string,
+    description: string,
+    skillFile: string,
+    xmlTag: string,
+    agentKey: `${string}:${string}`,
+    memoryKey: string,
+  ) {
+    return tool({
+      description,
+      inputSchema: jsonSchema<{ prompt: string }>(promptInput),
+      execute: async ({ prompt }) => {
+        const skill = path.join(u.getPath("skills"), skillFile);
+        const systemPrompt = await fs.promises.readFile(skill, "utf-8");
+        const formatPrompt = `\n你必须使用如下XML格式写入工作区：\n<${xmlTag}>内容</${xmlTag}>`;
+        return runAgent({
+          key: agentKey,
+          prompt,
+          system: systemPrompt + formatPrompt,
+          name: "改编策划",
+          memoryKey,
+          messages: [{ role: "user", content: prompt + formatPrompt }],
+        });
+      },
+    });
+  }
+
+  const run_sub_agent_preCheck = makeAdaptationTool(
+    "preCheck",
+    "运行P0源材料预检 subAgent",
+    "adaptation_execution_precheck.md",
+    "preCheck",
+    "scriptAgent:storySkeletonAgent",
+    "assistant:execution:preCheck",
+  );
+  const run_sub_agent_adaptationMatrix = makeAdaptationTool(
+    "adaptationMatrix",
+    "运行P0.3改编矩阵 subAgent",
+    "adaptation_execution_matrix.md",
+    "adaptationMatrix",
+    "scriptAgent:adaptationStrategyAgent",
+    "assistant:execution:adaptationMatrix",
+  );
+  const run_sub_agent_storyCore = makeAdaptationTool(
+    "storyCore",
+    "运行P0.6故事核心 subAgent",
+    "adaptation_execution_story_core.md",
+    "storyCore",
+    "scriptAgent:storySkeletonAgent",
+    "assistant:execution:storyCore",
+  );
+  const run_sub_agent_postCheck = makeAdaptationTool(
+    "postCheck",
+    "运行P0.8后检 subAgent",
+    "adaptation_execution_postcheck.md",
+    "postCheck",
+    "scriptAgent:supervisionAgent",
+    "assistant:execution:postCheck",
+  );
+  const run_sub_agent_reinforcement = makeAdaptationTool(
+    "reinforcement",
+    "运行P0.9加固 subAgent",
+    "adaptation_execution_reinforce.md",
+    "reinforcement",
+    "scriptAgent:supervisionAgent",
+    "assistant:execution:reinforcement",
+  );
+
   const run_sub_agent_storySkeleton = tool({
     description: "运行执行subAgent来完成故事骨架相关任务",
     inputSchema: jsonSchema<{ prompt: string }>(promptInput),
@@ -226,6 +294,11 @@ function createSubAgent(parentCtx: AgentContext) {
   });
 
   return {
+    run_sub_agent_preCheck,
+    run_sub_agent_adaptationMatrix,
+    run_sub_agent_storyCore,
+    run_sub_agent_postCheck,
+    run_sub_agent_reinforcement,
     run_sub_agent_storySkeleton,
     run_sub_agent_adaptationStrategy,
     run_sub_agent_script,
