@@ -10,6 +10,8 @@ rulePackVersion: "2.0.1"
 
 T3 出口闸门：检查四模态 prompt 完整性、合规性与锚点一致性。对应用户话术「prompt 不齐/不合规」（QP-modality）。
 
+**Slot SSOT**：必填槽位定义以 `data/fixtures/modality_prompt_slots.json` 为准；本技能与 `corridor_EN` / `promptIR` 须与其一致。
+
 ## 审计维度
 
 | 维度 | 检查 | ruleId |

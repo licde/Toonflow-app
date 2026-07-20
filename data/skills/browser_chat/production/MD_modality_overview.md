@@ -23,7 +23,7 @@ T3 档位：在 EN compile 基础上，为每 shot 生成 IMG/VID/AUD/FX 四模�
 | IMG | imagePrompt | Y.subject + refs | L0 Gate |
 | VID | videoPrompt | Y.spatial + performance | L0 Gate |
 | AUD | audioPrompt | dialogue + voiceLock | L0 Gate |
-| FX | fxPrompt | fxFeasibility F 等级 | L1 可选 |
+| FX | fxPrompt | fxFeasibility F 等级 + visualEffect | **双轨 MUST**：F0 声明 **或** 散文 fxPrompt |
 
 ## modalityAudit 结构
 
@@ -64,12 +64,14 @@ T3 档位：在 EN compile 基础上，为每 shot 生成 IMG/VID/AUD/FX 四模�
 
 - 每镜 IMG + VID 至少 ready
 - 有台词镜 AUD 必须 ready
+- **FX 双轨**：每镜要么 `fxFeasibility/fxLevel: F0`（无特效），要么非空散文 `generation.fxPrompt`（禁字母 `F1`–`F5`）
 - F4+ FX 须有 degrade 或 skip 说明
 - blockGenerate=false 方可触达生成
 
 ## 严禁
 
 跳过 Touch L0 Gate 直接声称已生成。
+假写 `modalityPromptAudit.FX=pass` 而槽空或仅字母等级。
 
 ## 下游
 

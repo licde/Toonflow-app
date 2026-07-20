@@ -1,0 +1,1385 @@
+{
+  "version": "2.0.1",
+  "description": "全局闭环检测注册表 SSOT — DC/PC/GC/IC + GAP + PR",
+  "generatedAt": "2026-07-14T08:32:31.813Z",
+  "entries": [
+    {
+      "id": "DC-01",
+      "level": "DC",
+      "domain": "NAR",
+      "chainId": "dialogue",
+      "description": "R2 lines 覆盖率 100%",
+      "fieldPaths": [
+        "dialogue"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true,
+      "repairHintId": "RH-QP-03"
+    },
+    {
+      "id": "DC-02",
+      "level": "DC",
+      "domain": "NAR",
+      "chainId": "narrative_drive",
+      "description": "linesHash match",
+      "fieldPaths": [
+        "dialogue"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-03",
+      "level": "DC",
+      "domain": "NAR",
+      "chainId": "narrative_drive",
+      "description": "B5 markers ↔ SB.markers",
+      "fieldPaths": [
+        "story"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-04",
+      "level": "DC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "B4 与 SB.emotion 偏差 ≤2",
+      "fieldPaths": [
+        "av"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-05",
+      "level": "DC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "B7/B8 多集非空",
+      "fieldPaths": [
+        "continuity"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-06",
+      "level": "DC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "B6.scenes ↔ SB.sceneName",
+      "fieldPaths": [
+        "scene"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-07",
+      "level": "DC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "markers payoff 或 FX 等级",
+      "fieldPaths": [
+        "story_fx"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-08",
+      "level": "DC",
+      "domain": "PKG",
+      "chainId": "packaging",
+      "description": "charCodes ↔ script 角色",
+      "fieldPaths": [
+        "asset"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-09",
+      "level": "DC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "transition/rhythm 合法",
+      "fieldPaths": [
+        "camera"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-10",
+      "level": "DC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "B9 或 T3 AUD 标注",
+      "fieldPaths": [
+        "av_modality"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-11",
+      "level": "DC",
+      "domain": "PKG",
+      "chainId": "packaging",
+      "description": "debutIntroPack",
+      "fieldPaths": [
+        "debut"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-12",
+      "level": "DC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "T3 前 EN 草案",
+      "fieldPaths": [
+        "compile"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "INFO",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-13",
+      "level": "DC",
+      "domain": "DSG",
+      "chainId": "linkage",
+      "description": "十链无 broken",
+      "fieldPaths": [
+        "linkage"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true,
+      "repairHintId": "RH-QP-10"
+    },
+    {
+      "id": "DC-14",
+      "level": "DC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "≥5 trace dialogue+av+scene",
+      "fieldPaths": [
+        "forwardTrace"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-15",
+      "level": "DC",
+      "domain": "ADP",
+      "chainId": "adaptation",
+      "description": "W2 策略与 P03 矩阵一致",
+      "fieldPaths": [
+        "adaptation"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "DC-16",
+      "level": "DC",
+      "domain": "AS",
+      "chainId": "asset",
+      "description": "说话人∪上镜码 ⊆ CD+VLT（非 stub，须 L0.identity）",
+      "fieldPaths": [
+        "characterDesign.assets",
+        "dialogue.speaker",
+        "charCodes"
+      ],
+      "tier": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "export"
+      ],
+      "severity": "BLOCK",
+      "handler": "designClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction",
+        "exportGate"
+      ],
+      "implemented": true,
+      "repairHintId": "RH-DC-16"
+    },
+    {
+      "id": "PC-01",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "全镜 PASS",
+      "fieldPaths": [
+        "identityAudit"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-02",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "无未处理 F5",
+      "fieldPaths": [
+        "fxFeasibilityAudit"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-03",
+      "level": "PC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "PR-01~16 无 BLOCK",
+      "fieldPaths": [
+        "productionReasonableness"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-04",
+      "level": "PC",
+      "domain": "NAR",
+      "chainId": "narrative_drive",
+      "description": "broken 为空或有 reverseHints",
+      "fieldPaths": [
+        "narrativeCausalityGraph"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-05",
+      "level": "PC",
+      "domain": "PKG",
+      "chainId": "packaging",
+      "description": "主角色/主场景齐全",
+      "fieldPaths": [
+        "debutIntroPack"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "WARN",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-06",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "T3 四模态 slot 合规",
+      "fieldPaths": [
+        "modalityPromptAudit"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-07",
+      "level": "PC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "T1 match=true",
+      "fieldPaths": [
+        "externalHashCheck"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-08",
+      "level": "PC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "六链无 broken",
+      "fieldPaths": [
+        "linkageAudit"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-09",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "首帧/时长/运镜（Agnes singleImage）",
+      "fieldPaths": [
+        "modalityPromptAudit.VID"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-10",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "native 或 TTS 路径 + voiceProfile",
+      "fieldPaths": [
+        "modalityPromptAudit.AUD"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-11",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "cref/identity/PURE 词合规",
+      "fieldPaths": [
+        "modalityPromptAudit.IMG"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-12",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "无 F5；F4 有 postProductionOnly",
+      "fieldPaths": [
+        "fxFeasibilityAudit"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-13",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "T3 四 slot 齐全",
+      "fieldPaths": [
+        "modalityPromptAudit"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "PC-14",
+      "level": "PC",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "IMG/VID/AUD 跨模态一致",
+      "fieldPaths": [
+        "identityAudit"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "handler": "productionClosureDryRun",
+      "runtimeHooks": [
+        "inspectBundle",
+        "dryRunImport",
+        "preflightProduction"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GC-01",
+      "level": "GC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "feedback 路由合法 target",
+      "fieldPaths": [
+        "GC-01"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "post-generate",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "checkVideoStateList",
+        "pollingImage",
+        "generationFeedback"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GC-02",
+      "level": "GC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "VID 首帧失败 rePush MD",
+      "fieldPaths": [
+        "GC-02"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "post-generate",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "checkVideoStateList",
+        "pollingImage",
+        "generationFeedback"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GC-03",
+      "level": "GC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "AUD native 失败 EN 优先",
+      "fieldPaths": [
+        "GC-03"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "post-generate",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "checkVideoStateList",
+        "pollingImage",
+        "generationFeedback"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GC-04",
+      "level": "GC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "IMG cref 失败 EN/BP",
+      "fieldPaths": [
+        "GC-04"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "post-generate",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "checkVideoStateList",
+        "pollingImage",
+        "generationFeedback"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GC-05",
+      "level": "GC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "FX 失败 SB/W3",
+      "fieldPaths": [
+        "GC-05"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "post-generate",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "checkVideoStateList",
+        "pollingImage",
+        "generationFeedback"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GC-06",
+      "level": "GC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "MediaProbe duration ±1s",
+      "fieldPaths": [
+        "GC-06"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "post-generate"
+      ],
+      "severity": "WARN",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "checkVideoStateList",
+        "pollingImage",
+        "generationFeedback"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GC-07",
+      "level": "GC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "MediaProbe hasAudio vs policy",
+      "fieldPaths": [
+        "GC-07"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "post-generate"
+      ],
+      "severity": "WARN",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "checkVideoStateList",
+        "pollingImage",
+        "generationFeedback"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GC-08",
+      "level": "GC",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "SF 3轮后 rePushPlan",
+      "fieldPaths": [
+        "GC-08"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "post-generate",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "checkVideoStateList",
+        "pollingImage",
+        "generationFeedback"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "IC-01",
+      "level": "IC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "QP 触发有 repairHint",
+      "fieldPaths": [
+        "IC-01"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import"
+      ],
+      "severity": "WARN",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "inspectBundle"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "IC-02",
+      "level": "IC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "W93 未确认不 merge",
+      "fieldPaths": [
+        "IC-02"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import"
+      ],
+      "severity": "BLOCK",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "inspectBundle"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "IC-03",
+      "level": "IC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "supervision C/D blockNext",
+      "fieldPaths": [
+        "IC-03"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import"
+      ],
+      "severity": "BLOCK",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "inspectBundle"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "IC-04",
+      "level": "IC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "autoApplicable confidence≥0.8",
+      "fieldPaths": [
+        "IC-04"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import"
+      ],
+      "severity": "WARN",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "inspectBundle"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "IC-05",
+      "level": "IC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "forwardTrace/reverseHints 成对",
+      "fieldPaths": [
+        "IC-05"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import"
+      ],
+      "severity": "WARN",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "inspectBundle"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "IC-06",
+      "level": "IC",
+      "domain": "DSG",
+      "chainId": "designBrief",
+      "description": "单链 repair 多链 rePush",
+      "fieldPaths": [
+        "IC-06"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import"
+      ],
+      "severity": "INFO",
+      "handler": "closureRegistry",
+      "runtimeHooks": [
+        "inspectBundle"
+      ],
+      "implemented": true
+    },
+    {
+      "id": "GEN-01",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "高情绪镜缺 shotDesign.performance",
+      "fieldPaths": [
+        "shotDesign.performance",
+        "narrative.emotionIntensity"
+      ],
+      "tier": [
+        "T2",
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "generationApplyAudit",
+      "runtimeHooks": [
+        "preflightProduction",
+        "inspectBundle"
+      ],
+      "implemented": true,
+      "level": "GAP"
+    },
+    {
+      "id": "GEN-04",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "lipSyncPolicy 与 videoPrompt 一致",
+      "fieldPaths": [
+        "shotDesign.lipSyncPolicy",
+        "generation.videoPrompt"
+      ],
+      "tier": [
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "generationApplyAudit",
+      "runtimeHooks": [
+        "preflightProduction"
+      ],
+      "implemented": true,
+      "level": "GAP"
+    },
+    {
+      "id": "RET-01",
+      "domain": "RET",
+      "chainId": "retention",
+      "description": "ep1 缺 opening5s 钩子",
+      "fieldPaths": [
+        "retentionPlan.ep1.opening5s"
+      ],
+      "tier": [
+        "T3"
+      ],
+      "stage": [
+        "import"
+      ],
+      "severity": "WARN",
+      "handler": "retentionAudit",
+      "runtimeHooks": [
+        "inspectBundle"
+      ],
+      "implemented": true,
+      "level": "GAP"
+    },
+    {
+      "id": "RET-02",
+      "domain": "RET",
+      "chainId": "retention",
+      "description": "ep1 rhythm31545 三拍",
+      "fieldPaths": [
+        "retentionPlan.ep1.first30s.rhythm31545"
+      ],
+      "tier": [
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "retentionAudit",
+      "runtimeHooks": [
+        "preflightProduction",
+        "inspectBundle"
+      ],
+      "implemented": true,
+      "level": "GAP"
+    },
+    {
+      "id": "NAR-01",
+      "domain": "NAR",
+      "chainId": "narrative_drive",
+      "description": "informationLedger emotionTarget",
+      "fieldPaths": [
+        "informationLedger.emotionTarget"
+      ],
+      "tier": [
+        "T3"
+      ],
+      "stage": [
+        "import"
+      ],
+      "severity": "WARN",
+      "handler": "narrativeDriveAudit",
+      "runtimeHooks": [
+        "inspectBundle"
+      ],
+      "implemented": true,
+      "level": "GAP"
+    },
+    {
+      "id": "MOD-01",
+      "domain": "MOD",
+      "chainId": "modality_compile",
+      "description": "台词镜缺 audioPrompt",
+      "fieldPaths": [
+        "generation.audioPrompt"
+      ],
+      "tier": [
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "WARN",
+      "handler": "modalityChainAudit",
+      "runtimeHooks": [
+        "preflightProduction"
+      ],
+      "implemented": true,
+      "level": "GAP"
+    },
+    {
+      "id": "PR-04",
+      "domain": "NAR",
+      "chainId": "dialogue",
+      "description": "台词镜须有角色",
+      "fieldPaths": [
+        "charCodes",
+        "narrative.dialogue.lines"
+      ],
+      "tier": [
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "prValidator.checkDialogueHasCharacter",
+      "runtimeHooks": [
+        "preflightProduction",
+        "inspectBundle"
+      ],
+      "implemented": true,
+      "level": "PR"
+    },
+    {
+      "id": "PR-09",
+      "domain": "NAR",
+      "chainId": "dialogue",
+      "description": "镜时长 ≥ 台词朗读所需秒数",
+      "fieldPaths": [
+        "duration",
+        "narrative.dialogue.lines"
+      ],
+      "tier": [
+        "T3"
+      ],
+      "stage": [
+        "preflight",
+        "pre-generate"
+      ],
+      "severity": "BLOCK",
+      "modality": "VID",
+      "handler": "prValidator.checkDialogueDuration",
+      "runtimeHooks": [
+        "preflightProduction",
+        "batchGenerateVideo"
+      ],
+      "implemented": true,
+      "repairHintId": "RH-PR-09",
+      "level": "PR"
+    },
+    {
+      "id": "PR-14",
+      "domain": "GEN",
+      "chainId": "generation_apply",
+      "description": "高强度情绪镜时长≥2s",
+      "fieldPaths": [
+        "emotion",
+        "duration"
+      ],
+      "tier": [
+        "T3"
+      ],
+      "stage": [
+        "import",
+        "preflight"
+      ],
+      "severity": "BLOCK",
+      "handler": "prValidator.checkHighEmotionDuration",
+      "runtimeHooks": [
+        "preflightProduction"
+      ],
+      "implemented": true,
+      "level": "PR"
+    }
+  ]
+}

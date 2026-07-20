@@ -102,11 +102,21 @@ T1 → CD → AS → BP → corridor_EN → [MD×4] → 生成
 
 Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`multi_end_closure_matrix.json`
 
+## Chat 多轮会话协议（narrativeBrief 持久）
+
+1. **每轮 export 片段**须含当前完整 `planData.narrativeBrief`（累积，禁止只输出增量丢失字段）
+2. **@引用**：用户 `@narrativeBrief` / `@sceneMeta` 时须展开对应 JSON 摘要后再写剧本
+3. **阶段边界**：改编路径 P0→P03 须保留 `recommendedMatrixDraft[]`；P03 确认后 `userConfirmed: true`
+4. **自检回流**：export 前对照 `modality_closure_checklist` + `closureReport` 模板（missing/optimize）自修
+5. **契约对齐**：`adaptationMatrixStructured` 与 API `confirmMatrixChoices` Zod 同构
+
 ## §7 ScriptBundle 字段对照
 
 | 字段 | 产出 Skill |
 |------|------------|
 | script | W3_script |
+| planData.narrativeBrief | P0/P03/P06/G/W1/W2/W3 累积 |
+| planData.sceneMeta | W3_script sidecar |
 | planData | P*/G/W* |
 | designBrief | design_brief |
 | preDesignPack | corridor_GB + corridor_SB |
@@ -127,6 +137,19 @@ Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`mu
 
 - `data/fixtures/linkage_chains.json`
 - `data/fixtures/fx_feasibility_matrix.json`
+## 导入与修复操作指南
+
+| 文档 | 用途 |
+|------|------|
+| `preview_vs_import_guide.md` | 预览更新 vs 落库、Chat 修复后再验证、DC-16 配角入册 |
+| `closure_field_change_guide.md` | 字段闭环变更范围说明 |
+| `design_compliance_gate.md` | T3 设计合规闸（exportGate 强制调用） |
+| `T3_quality_gate.md` | T3 出口硬闸 + DC-16/RH-DC-16 |
+| `stages/W3_narrative_selfcheck.md` | W3 叙事自检（NAR-14/15 服务器重验） |
+| `production/CD_character_design.md` | CD L0–L6；DC-16 最小骨架 code+name+L0.identity |
+| `docs/image-quality-chain.md` | A→B→C 三层闭环（设计/定妆/生成） |
+| `docs/quality-loop/README.md` | exportGate / stub≠PASS / soft_patch 边界 |
+
 - `data/fixtures/debut_intro_templates.json`
 - `data/fixtures/rule_flow_unified.json`
 - `data/skills/_generated/rule_cards.json`

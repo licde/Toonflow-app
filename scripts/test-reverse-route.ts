@@ -22,4 +22,34 @@ const cam = routes.routes.find((r: { trigger: string }) => r.trigger === "shot_c
 if (!cam?.ruleIds?.includes("PR-CAM-01")) { console.error("✗ reverse_route PR-CAM-01"); failed++; }
 else console.log("✓ reverse_route PR-CAM-01");
 
+for (const [trigger, target] of [
+  ["mode_rules_mismatch", "MD"],
+  ["prompt_gen_media_missing", "AS"],
+  ["derive_parent_ref_missing", "AS"],
+  ["image_mode_ref_mismatch", "EN"],
+  ["vendor_passthrough", "INFRA"],
+  ["tls_socket", "INFRA"],
+  ["missing_scene", "SB"],
+] as const) {
+  if (resolveReverseTarget(trigger) !== target) {
+    console.error(`✗ ${trigger} → ${resolveReverseTarget(trigger)} expect ${target}`);
+    failed++;
+  } else console.log(`✓ ${trigger} → ${target}`);
+}
+
+const missingSceneRoute = routes.routes.find((r: { trigger: string }) => r.trigger === "missing_scene");
+if (!missingSceneRoute || missingSceneRoute.reverseTarget !== "SB" || missingSceneRoute.reverseTarget === "INFRA") {
+  console.error("✗ reverse_route missing_scene → SB (not INFRA)");
+  failed++;
+} else if (!Array.isArray(missingSceneRoute.forwardStages) || !missingSceneRoute.forwardStages.includes("BP")) {
+  console.error("✗ reverse_route missing_scene forwardStages should include BP");
+  failed++;
+} else console.log("✓ reverse_route missing_scene → SB/BP");
+
+const tlsRoute = routes.routes.find((r: { trigger: string }) => r.trigger === "tls_socket");
+if (!tlsRoute || tlsRoute.reverseTarget !== "INFRA") {
+  console.error("✗ reverse_route tls_socket → INFRA");
+  failed++;
+} else console.log("✓ reverse_route tls_socket");
+
 process.exit(failed ? 1 : 0);

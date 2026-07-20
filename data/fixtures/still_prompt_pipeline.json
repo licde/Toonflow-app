@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "description": "Still prompt pipeline stage contract SSOT — literary body before design tail",
+  "minLiteraryChars": 24,
+  "stripBeforeMeasure": [
+    "FX:",
+    "QF-EXPR",
+    "no subtitle",
+    "no watermark",
+    "no Logo",
+    "identity[",
+    "--cref",
+    "--sref",
+    "--ar",
+    "keep face identity",
+    "mediaSlots["
+  ],
+  "stageOrder": [
+    "literaryBody",
+    "hardConstraints",
+    "identityBinding",
+    "anchors",
+    "recipe",
+    "designTail",
+    "identityTokens"
+  ],
+  "imageDesignTail": {
+    "allowFxOneLine": true,
+    "exprGuard": "append_only_if_literary_ok",
+    "negativeAV": "append_only_if_literary_ok"
+  },
+  "collapse": {
+    "action": "silent_restore_composed",
+    "maxRounds": 1
+  }
+}

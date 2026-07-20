@@ -56,11 +56,21 @@ export function validatePackage(
   config: ResolvedConfig,
   script: string,
   storyboardRows: { id: number; filePath?: string | null; shouldGenerateImage?: number }[] = [],
+  opts?: {
+    planData?: import("../bundle/types").ScriptBundle["planData"];
+    /** When set, shot-level gates (V* / MODE-AGNES) only run on these storyboard ids. */
+    storyboardIds?: number[];
+  },
 ): ValidationReport {
+  // undefined = all shots; [] / ids = only those (empty ⇒ skip shot-level gates)
+  const scopedShots =
+    opts?.storyboardIds != null
+      ? pkg.shots.filter((s) => s.storyboardId != null && opts.storyboardIds!.includes(s.storyboardId))
+      : pkg.shots;
   const issues: ValidationIssue[] = [
-    ...validateTier0Shots(pkg.shots, config),
-    ...dialogueFidelityGate(pkg, script),
-    ...modeAgnesGate(pkg.shots, storyboardRows, config.videoVendor),
+    ...validateTier0Shots(scopedShots, config),
+    ...dialogueFidelityGate(pkg, script, { planData: opts?.planData }),
+    ...modeAgnesGate(scopedShots, storyboardRows, config.videoVendor),
   ];
   return buildValidationReport(pkg.projectId, pkg.scriptId, issues);
 }

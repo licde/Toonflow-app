@@ -220,13 +220,16 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
     payload.extra_body.image = images;
   }
 
-  logger(`POST ${apiBase}/images/generations`);
+  logger(
+    `POST ${apiBase}/images/generations promptType=${typeof config.prompt} promptLen=${String(config.prompt ?? "").length} refs=${config.referenceList?.length ?? 0}`,
+  );
   let response: any;
   try {
     response = await axios.post(`${apiBase}/images/generations`, payload, { headers: getHeaders(), timeout: 120000 });
   } catch (error: any) {
     const message = extractApiError(error);
-    logger(`图像生成失败: ${message}`);
+    const status = error?.response?.status;
+    logger(`图像生成失败: status=${status} message=${message}`);
     throw new Error(message);
   }
 
@@ -329,11 +332,15 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
       const status = String(resp.data?.status || "").toLowerCase();
 
       if (status === "completed" || status === "success" || status === "succeeded") {
+        // Never treat remixed_from_video_id (an id) as a downloadable URL
         const videoUrl =
-          resp.data?.remixed_from_video_id ||
           resp.data?.url ||
           resp.data?.video_url ||
-          resp.data?.data?.url;
+          resp.data?.data?.url ||
+          (typeof resp.data?.output === "string" && /^https?:\/\//i.test(resp.data.output) ? resp.data.output : null);
+        if (!videoUrl || !/^https?:\/\//i.test(String(videoUrl))) {
+          return { completed: true, error: "任务完成但缺少可下载视频 URL（忽略 remixed_from_video_id）" };
+        }
         return { completed: true, data: videoUrl };
       }
       if (status === "failed" || status === "error") {

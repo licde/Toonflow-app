@@ -46,17 +46,22 @@ export function buildVideoIR(shot: EpisodeShot, config: ResolvedConfig): PromptI
   };
 }
 
+import { loadVideoAudioPolicy } from "../fixtures/policyFixtures";
+
 export function buildAudioIR(shot: EpisodeShot, config: ResolvedConfig): PromptIR {
   const n = shot.narrative;
   const lines = n.dialogue?.lines ?? n.lines ?? "";
   const hasSfx = Boolean(n.sound?.sfx);
   const hasDialogue = Boolean(lines);
+  const chatAudio = shot.generation.audioPrompt?.trim();
+  const policy = loadVideoAudioPolicy();
+  const generateAudio = hasDialogue || hasSfx || Boolean(chatAudio);
   return {
     modality: "audio",
     tags: hasDialogue ? [n.dialogue?.type ?? "dialogue"] : hasSfx ? ["sfx-native"] : ["ambient"],
-    narrative: lines || n.sound?.sfx || n.sound?.env || "环境音",
+    narrative: chatAudio || (typeof lines === "string" ? lines : "") || n.sound?.sfx || n.sound?.env || "环境音",
     constraints: [],
-    apiParams: { generate_audio: hasDialogue || hasSfx, speechSpeed: config.speechSpeed },
+    apiParams: { generate_audio: generateAudio, speechSpeed: config.speechSpeed, defaultPolicy: policy.defaultPolicy },
   };
 }
 
@@ -74,14 +79,19 @@ export function irToPrompt(ir: PromptIR): string {
   return parts.filter(Boolean).join(", ");
 }
 
+export function buildFxIR(shot: EpisodeShot): string {
+  return shot.generation.fxPrompt?.trim() || "";
+}
+
 export function compileShot(shot: EpisodeShot, config: ResolvedConfig): EpisodeShot {
   const imageIR = buildImageIR(shot, config);
   const videoIR = buildVideoIR(shot, config);
   const audioIR = buildAudioIR(shot, config);
+  const fx = buildFxIR(shot);
   const image = shot.generation.manualOverride?.image ? (shot.generation.imagePrompt ?? irToPrompt(imageIR)) : irToPrompt(imageIR);
   const video = shot.generation.manualOverride?.video ? (shot.generation.videoPrompt ?? irToPrompt(videoIR)) : irToPrompt(videoIR);
-  const audio = irToPrompt(audioIR);
-  const compiled = { image, video, audio, hash: stableHash({ image, video, audio }) };
+  const audio = shot.generation.audioPrompt?.trim() || irToPrompt(audioIR);
+  const compiled = { image, video, audio, fx: fx || undefined, hash: stableHash({ image, video, audio, fx }) };
   return {
     ...shot,
     generation: {

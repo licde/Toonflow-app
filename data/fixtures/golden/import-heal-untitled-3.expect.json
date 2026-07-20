@@ -1,0 +1,7 @@
+{
+  "exportAllowed": false,
+  "minSalvageCount": 0,
+  "mustIncludeServerFixed": [],
+  "mustIncludeChatMustFix": ["DC-16"],
+  "note": "Sprint anti-stuck: orphan/F0 declare-only heal may clear MOD-02; DC-16 still Chat-fix"
+}

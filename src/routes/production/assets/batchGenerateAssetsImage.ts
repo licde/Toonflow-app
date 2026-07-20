@@ -5,6 +5,11 @@ import sharp from "sharp";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { Output } from "ai";
+import { touchPromptForVendor } from "@/ruleEngine/compilers/vendorPromptAdapter";
+import { precheckContentPolicy } from "@/ruleEngine/compilers/contentPolicyAdapter";
+import { classifyGenerationFailure } from "@/ruleEngine/bundle/generationFailureHelper";
+import { buildRePushPlan } from "@/ruleEngine/design/reverseRouteEngine";
+import { resolveAssetDerivativeAspect, type AssetStillType } from "@/ruleEngine/bundle/assetStillPrompt";
 const router = express.Router();
 
 export default router.post(
@@ -16,9 +21,9 @@ export default router.post(
     concurrentCount: z.number().min(1).optional(),
   }),
   async (req, res) => {
-    const { assetIds, projectId, scriptId, concurrentCount = 5 } = req.body;
+    const { assetIds, projectId, scriptId, concurrentCount = 2 } = req.body;
 
-    const projectSettingData = await u.db("o_project").where("id", projectId).select("imageModel", "imageQuality", "artStyle").first();
+    const projectSettingData = await u.db("o_project").where("id", projectId).select("imageModel", "imageQuality", "artStyle", "videoRatio").first();
 
     const assetsDataArr = await u.db("o_assets").whereIn("id", assetIds).select("id", "describe", "name", "type", "assetsId");
     const parentIds = assetsDataArr.map((item) => item.assetsId).filter((id) => id !== null);
@@ -85,11 +90,31 @@ export default router.post(
         await u.db("o_assets").where("id", item.id).update({ prompt: text });
 
       const imageBase64 = imageUrlRecord[item.assetsId!] ? await u.oss.getImageBase64(imageUrlRecord[item.assetsId!]) : null;
-      try {
-        const repeloadObj = {
+      if (item.assetsId && !imageBase64) {
+        const msg = "DERIVE_PARENT_REF_MISSING";
+        const feedback = await classifyGenerationFailure({
+          modality: "image",
+          shotId: String(item.id),
+          error: msg,
           prompt: text,
+        });
+        const rePushPlan = buildRePushPlan(["derive_parent_ref_missing"]);
+        await u.db("o_image").where({ id: imageId }).update({
+          state: "生成失败",
+          errorReason: JSON.stringify({ message: "衍生缺少父图", feedback, rePushPlan }),
+        });
+        return { id: item.id!, state: "生成失败", src: "" };
+      }
+      try {
+        const touched = touchPromptForVendor(text, undefined);
+        const policy = precheckContentPolicy(touched.vendorPrompt);
+        const vendorPrompt = policy.hasSensitiveTerms ? policy.softenedPrompt : touched.vendorPrompt;
+        const stillType = (["role", "scene", "tool"].includes(String(item.type)) ? item.type : "role") as AssetStillType;
+        const aspectRatio = resolveAssetDerivativeAspect(stillType);
+        const repeloadObj = {
+          prompt: vendorPrompt,
           size: projectSettingData?.imageQuality as "1K" | "2K" | "4K",
-          aspectRatio: "16:9" as `${number}:${number}`,
+          aspectRatio: aspectRatio as `${number}:${number}`,
         };
         const imageCls = await u.Ai.Image(projectSettingData?.imageModel as `${string}:${string}`).run(
           {
@@ -98,7 +123,7 @@ export default router.post(
           },
           {
             taskClass: "生成图片",
-            describe: "资产图片生成",
+            describe: `衍生${stillType}图：${item.name || item.id}`,
             relatedObjects: JSON.stringify(repeloadObj),
             projectId: projectId,
           },
@@ -106,16 +131,31 @@ export default router.post(
         const savePath = `/${projectId}/assets/${scriptId}/${item.type}/${u.uuid()}.jpg`;
         await imageCls.save(savePath);
         await u.db("o_image").where({ id: imageId }).update({ state: "已完成", filePath: savePath });
+        try {
+          const { invalidateStoryboardsForAsset } = await import("@/ruleEngine/heal/applyStoryboardLifecycle");
+          await invalidateStoryboardsForAsset(u.db, item.id!);
+        } catch {
+          /* lifecycle best-effort */
+        }
         return {
           id: item.id!,
           state: "已完成",
           src: await u.oss.getSmallImageUrl(savePath),
         };
       } catch (e) {
+        const errMsg = u.error(e).message;
+        const feedback = await classifyGenerationFailure({
+          modality: "image",
+          shotId: String(item.id),
+          error: errMsg,
+          prompt: text,
+        });
+        const trigger = feedback.category === "vendor_passthrough" ? null : feedback.ruleId || feedback.category;
+        const rePushPlan = trigger ? buildRePushPlan([String(trigger)]) : [];
         await u
           .db("o_image")
           .where({ id: imageId })
-          .update({ state: "生成失败", errorReason: u.error(e).message });
+          .update({ state: "生成失败", errorReason: JSON.stringify({ message: errMsg, feedback, rePushPlan }) });
         return {
           id: item.id!,
           state: "生成失败",

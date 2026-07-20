@@ -28,8 +28,16 @@ rulePackVersion: "2.0.1"
 | narrative.duration | 预估秒数 | — |
 | narrative.transitionType | 切/淡入/叠化 | PR-CAM-01 |
 | narrative.rhythmZone | 起/承/转/合（引用 B12） | DC-05 |
-| narrative.markers | 伏笔/揭晓/钩子标记 | PR-09, DC-06 |
+| narrative.markers | 伏笔/揭晓/钩子标记；可含 infoId/causeId/effectId | PR-09, DC-06 |
 | narrative.spatialRelation | 轴线/站位（引用 B13） | PR-06, PR-14 |
+| retentionTier | ep1: 0-2s / 2-5s / 5-30s / body / endHook | RET |
+| shotDesign | T2+ 构图/表演/锚点（高情绪≥4 必填 performance） | GEN |
+| lines[].lineId/functions/causedByActionId | 台词功能链，对齐 dialoguePlan | NAR |
+| clip30sCandidate / rhythm31545 | 投流与 3-15-45 标注 | VIR |
+| audioCue | W3 sceneMeta.avCausality.audioBeat（**string**；禁止 `{beat,type}` object） |
+| visualEffect / fxLevel | W3 fxIntent（**visualEffect 为 string** `"F1: 描述"`；fxLevel 可选 `"F1"`） |
+
+无 AV 意图时**省略**上述可选字段；禁止写 `null`。
 
 ## 台词映射铁律（R2）
 

@@ -1,4 +1,6 @@
 import type { PreDesignPack, PreDesignShot, StoryboardPanelInput } from "./types";
+import { enrichShotGenerationFromDesign } from "./modalityChainAudit";
+import { parsePromptRefs } from "../compilers/vendorPromptAdapter";
 
 function linesToText(shot: PreDesignShot): string {
   const lines = shot.narrative?.dialogue?.lines ?? [];
@@ -15,21 +17,51 @@ export function preDesignShotsToStoryboardTable(shots: PreDesignShot[]): string 
   return rows.join("\n");
 }
 
-export function preDesignShotsToPanels(shots: PreDesignShot[]): StoryboardPanelInput[] {
+export function preDesignShotsToPanels(
+  shots: PreDesignShot[],
+  opts?: {
+    enrichFromDesign?: boolean;
+    visualLockTable?: Record<string, unknown>;
+    codeToAssetId?: Record<string, number>;
+  },
+): StoryboardPanelInput[] {
   return shots.map((s, i) => {
-    const idx = s.shotIndex ?? i + 1;
-    const gen = s.generation;
-    const desc = s.visualDescription ?? linesToText(s);
-    const chars = s.charCodes?.join(", ") ?? "";
-    const imagePrompt = gen?.imagePrompt?.trim();
+    const shot = opts?.enrichFromDesign ? enrichShotGenerationFromDesign(s, { visualLockTable: opts.visualLockTable }) : s;
+    const idx = shot.shotIndex ?? i + 1;
+    const gen = shot.generation;
+    const desc = shot.visualDescription ?? linesToText(shot);
+    const chars = shot.charCodes?.join(", ") ?? "";
+    let imagePrompt = gen?.imagePrompt?.trim() || "";
     const videoPrompt = gen?.videoPrompt?.trim();
+    const sceneCode = (shot as { sceneCode?: string }).sceneCode;
+    const crefCodes = parsePromptRefs(imagePrompt || "").crefs;
+    const srefCodes = parsePromptRefs(imagePrompt || "").srefs;
+    if (sceneCode && !srefCodes.length && imagePrompt && !/--sref\s+/i.test(imagePrompt)) {
+      imagePrompt = `${imagePrompt} --sref ${sceneCode}`;
+    }
+    const allCharCodes = [...new Set([...(shot.charCodes ?? []), ...crefCodes])];
+    const associateAssetsIds: number[] = [];
+    for (const code of allCharCodes) {
+      const id = opts?.codeToAssetId?.[code] ?? opts?.codeToAssetId?.[code.toUpperCase()];
+      if (id) associateAssetsIds.push(id);
+    }
+    if (sceneCode) {
+      const sid = opts?.codeToAssetId?.[sceneCode];
+      if (sid) associateAssetsIds.push(sid);
+    }
+    const rawFx = gen?.fxPrompt?.trim();
+    const fxPrompt = rawFx && !/^F[0-5]$/i.test(rawFx) ? rawFx : undefined;
     return {
       clientId: `sb-${idx}`,
-      duration: s.duration ?? 3,
-      prompt: imagePrompt || [chars, s.sceneName, desc].filter(Boolean).join("，").slice(0, 2000),
-      videoDesc: videoPrompt || `${s.shotSize ?? "medium shot"} static, ${s.duration ?? 3}s`,
+      duration: shot.duration ?? 3,
+      prompt: imagePrompt || [chars, shot.sceneName, sceneCode, desc].filter(Boolean).join("，").slice(0, 2000),
+      videoDesc:
+        videoPrompt ||
+        `${shot.shotSize ?? "medium shot"} ${(shot as { camera?: string }).camera ?? "static"}, ${shot.duration ?? 3}s`,
+      audioPrompt: gen?.audioPrompt?.trim(),
+      fxPrompt,
       shouldGenerateImage: 1,
-      associateAssetsIds: [],
+      associateAssetsIds: [...new Set(associateAssetsIds)],
       track: String(idx),
       state: "未生成",
       index: idx - 1,
@@ -37,7 +69,14 @@ export function preDesignShotsToPanels(shots: PreDesignShot[]): StoryboardPanelI
   });
 }
 
-export function applyPreDesignPack(pack: PreDesignPack): {
+export function applyPreDesignPack(
+  pack: PreDesignPack,
+  opts?: {
+    enrichFromDesign?: boolean;
+    visualLockTable?: Record<string, unknown>;
+    codeToAssetId?: Record<string, number>;
+  },
+): {
   scriptPlan: string;
   storyboardTable: string;
   storyboard: StoryboardPanelInput[];
@@ -45,7 +84,7 @@ export function applyPreDesignPack(pack: PreDesignPack): {
   return {
     scriptPlan: pack.scriptPlan,
     storyboardTable: preDesignShotsToStoryboardTable(pack.shots),
-    storyboard: preDesignShotsToPanels(pack.shots),
+    storyboard: preDesignShotsToPanels(pack.shots, opts),
   };
 }
 

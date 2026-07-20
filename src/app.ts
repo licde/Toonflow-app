@@ -140,13 +140,19 @@ export default async function startServe(randomPort: Boolean = false) {
   console.log("文件目录:", assetsDir);
   app.use("/assets", express.static(assetsDir, { acceptRanges: false }));
 
-  // data/web 静态网站
+  // data/web 唯一前端根（禁止静默回退 web_new）
   const webDir = u.getPath("web");
-  if (fs.existsSync(webDir)) {
+  if (fs.existsSync(path.join(webDir, "index.html"))) {
     console.log("静态网站目录:", webDir);
+    app.use((req, res, next) => {
+      if (req.path === "/" || req.path === "/index.html") {
+        res.setHeader("Cache-Control", "no-cache");
+      }
+      next();
+    });
     app.use(express.static(webDir, { acceptRanges: false }));
   } else {
-    console.warn("静态网站目录不存在:", webDir);
+    console.warn("静态网站目录不存在或不完整 (data/web/index.html):", webDir);
   }
 
   app.use(async (req, res, next) => {

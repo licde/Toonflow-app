@@ -41,8 +41,20 @@
     "story": { "rePushTarget": "W3" },
     "av": { "rePushTarget": "GB" },
     "adaptation": { "rePushTarget": "W2" },
+    "adaptation_deep": { "rePushTarget": "P03" },
+    "retention": { "rePushTarget": "W3" },
+    "narrative_drive": { "rePushTarget": "W3" },
+    "packaging": { "rePushTarget": "SB" },
+    "generation_apply": { "rePushTarget": "SB" },
+    "viral_clip": { "rePushTarget": "W1" },
     "modality_compile": { "rePushTarget": "EN" },
+    "modality_feasibility": { "rePushTarget": "W3" },
     "generation": { "rePushTarget": "MD" },
     "repair": { "rePushTarget": "SF" }
-  }
+  },
+  "smartBoundaries": {
+    "CAN": ["fixPlan from *Gaps", "linkageRepairPlan single chain", "rePushPlan multi chain round<=3", "smartProposalApplier with userConfirmed"],
+    "CANNOT": ["change W3 dialogue text R2", "fake linkageAudit/ruleAudit pass", "import overwrite Chat prompts", "T1 require full MD×4"]
+  },
+  "gapDomains": ["adaptationGaps", "retentionGaps", "narrativeDriveGaps", "packagingGaps", "generationApplyGaps", "designSpecGaps", "scriptViralGaps", "modalityGaps", "chatPromptGaps"]
 }

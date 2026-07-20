@@ -1,0 +1,172 @@
+/**
+ * Burn-time quality gate failure envelope — RH + rePushPlan (parity with identity fail).
+ */
+import { buildRePushPlan } from "../design/reverseRouteEngine";
+import { readFixtureJson } from "../utils/fixturesPath";
+import type { QualityDecisionKind } from "./qualityDecision";
+import { buildPrimaryBlock, type GateStage, type PrimaryBlock } from "./primaryBlock";
+import { buildDc01HumanEnvelope } from "../heal/dc01Envelope";
+
+const BLOCK_TO_TRIGGER: Record<string, string> = {
+  "LANG-01": "lang_vid_mismatch",
+  "LANG-AUD-01": "lang_aud_mismatch",
+  "LIP-01": "pr_lip_duration",
+  "PR-09": "pr_lip_duration",
+  "CAM-SPEAK": "cam_speak",
+  "FX-GRADE-01": "fx_infeasible",
+  "FX-FALSE-GREEN": "fx_empty",
+  "VP-CONFLICT": "vp_conflict",
+  "DC-09": "cam_whitelist",
+  "PR-CAM-01": "cam_whitelist",
+  "NAR-14": "narrative_split_hint",
+  "NAR-15": "narrative_split_hint",
+  "IMG-CREF": "img_cref_missing",
+  "IMG-STILL-QA": "img_still_weak",
+  "QF-EXPR-01": "qf_expr_face",
+  "DC-01": "dialogue_hash_mismatch",
+  R2: "dialogue_hash_mismatch",
+  H3: "dialogue_hash_mismatch",
+};
+
+export interface BurnGateBlock {
+  id: string;
+  message: string;
+  reverseTrigger?: string;
+}
+
+export type BurnNextStep =
+  | "chat_repair"
+  | "soft_patch"
+  | "split_shot"
+  | "batch_still"
+  | "retry_shot"
+  | "burn"
+  | "raise_duration"
+  | "regen_storyboard_hq";
+
+/** Canonical enum list for FE/BE contract CI. */
+export const BURN_NEXT_STEPS: BurnNextStep[] = [
+  "chat_repair",
+  "soft_patch",
+  "split_shot",
+  "batch_still",
+  "retry_shot",
+  "burn",
+  "raise_duration",
+  "regen_storyboard_hq",
+];
+
+export interface BurnGateEnvelope {
+  rePushPlan: ReturnType<typeof buildRePushPlan>;
+  repairHints: { id: string; chatTemplate?: string; ruleId?: string }[];
+  triggers: string[];
+  nextStep: BurnNextStep;
+  /** Alias for FE — same as nextStep (D14). */
+  primaryNextStep: BurnNextStep;
+  userMessage: string;
+  ctaLabel: string;
+  userMessageKey: string;
+  suggestedValue?: number | string;
+  fieldPath?: string;
+  stage?: GateStage;
+  decision?: QualityDecisionKind;
+  splitHint?: string;
+}
+
+export function triggersFromBurnBlocks(blocks: BurnGateBlock[]): string[] {
+  const triggers: string[] = [];
+  for (const b of blocks) {
+    const t = b.reverseTrigger || BLOCK_TO_TRIGGER[b.id];
+    if (t) triggers.push(t);
+  }
+  return [...new Set(triggers)];
+}
+
+export function buildBurnGateEnvelope(
+  blocks: BurnGateBlock[],
+  opts?: {
+    decision?: QualityDecisionKind;
+    splitHint?: string;
+    nextStep?: BurnNextStep;
+    suggestedValue?: number | string;
+    fieldPath?: string;
+    stage?: GateStage;
+    primary?: Partial<PrimaryBlock>;
+  },
+): BurnGateEnvelope {
+  const triggers = triggersFromBurnBlocks(blocks);
+  const rePushPlan = triggers.length ? buildRePushPlan(triggers) : [];
+  const catalog = readFixtureJson<{
+    hints?: { id: string; ruleId: string; qpId?: string; chatTemplate?: string; checkIds?: string[] }[];
+  }>("repair_hint_catalog.json", { hints: [] });
+  const idSet = new Set([...blocks.map((b) => b.id), ...triggers]);
+  const repairHints = (catalog.hints ?? [])
+    .filter(
+      (h) =>
+        idSet.has(h.ruleId) ||
+        idSet.has(h.id) ||
+        (h.qpId && idSet.has(h.qpId)) ||
+        (h.checkIds?.some((c) => idSet.has(c)) ?? false),
+    )
+    .map((h) => ({ id: h.id, chatTemplate: h.chatTemplate, ruleId: h.ruleId }))
+    .slice(0, 8);
+
+  let nextStep: BurnNextStep =
+    opts?.nextStep ??
+    (triggers.includes("img_cref_missing")
+      ? "batch_still"
+      : triggers.includes("img_still_weak")
+        ? "regen_storyboard_hq"
+        : triggers.includes("dialogue_hash_mismatch")
+          ? "soft_patch"
+          : triggers.includes("narrative_split_hint") ||
+              triggers.includes("pr_lip_duration") ||
+              triggers.includes("fx_infeasible")
+            ? blocks.some((b) => /拆镜|split|NAR-14|F3/i.test(`${b.id} ${b.message}`))
+              ? "split_shot"
+              : triggers.includes("pr_lip_duration")
+                ? "raise_duration"
+                : "split_shot"
+            : triggers.some((t) => t.startsWith("lang_") || t === "vp_conflict" || t === "cam_speak" || t === "qf_expr_face")
+              ? "soft_patch"
+              : "chat_repair");
+
+  if (opts?.decision === "soft_defer" && !opts?.nextStep) nextStep = "retry_shot";
+  if (opts?.decision === "soft_patch" && !opts?.nextStep) nextStep = "soft_patch";
+  if (opts?.decision === "split_shot" && !opts?.nextStep) nextStep = "split_shot";
+  if (opts?.decision === "rePush_design" && triggers.includes("img_cref_missing") && !opts?.nextStep) nextStep = "batch_still";
+  // Explicit nextStep always wins
+  if (opts?.nextStep) nextStep = opts.nextStep;
+
+  let userMessageOverride = opts?.primary?.userMessage;
+  let ctaOverride: string | undefined;
+  if (!userMessageOverride && triggers.includes("dialogue_hash_mismatch")) {
+    const dcBlock = blocks.find((b) => b.id === "DC-01" || /台词|dialogue/i.test(b.message));
+    const env = buildDc01HumanEnvelope({ message: dcBlock?.message });
+    userMessageOverride = env.userMessage;
+    if (nextStep === "soft_patch") ctaOverride = env.ctaLabel;
+  }
+
+  const primary = buildPrimaryBlock(nextStep, {
+    suggestedValue: opts?.suggestedValue ?? opts?.primary?.suggestedValue,
+    fieldPath: opts?.fieldPath ?? opts?.primary?.fieldPath,
+    stage: opts?.stage ?? opts?.primary?.stage ?? "burn",
+    userMessageOverride,
+  });
+
+  return {
+    rePushPlan,
+    repairHints,
+    triggers,
+    nextStep,
+    primaryNextStep: primary.primaryNextStep,
+    userMessage: primary.userMessage,
+    ctaLabel: ctaOverride ?? primary.ctaLabel,
+    userMessageKey: primary.userMessageKey,
+    suggestedValue: primary.suggestedValue,
+    fieldPath: primary.fieldPath,
+    stage: primary.stage,
+    decision: opts?.decision,
+    splitHint: opts?.splitHint,
+  };
+}

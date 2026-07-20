@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "asrEnabled": false,
+  "voiceBindHardOnHq": true,
+  "voiceBindHardOnDraft": false,
+  "requireAudioPassForDialogueBurn": true,
+  "silenceEnergyThreshold": 0.02,
+  "items": {
+    "dialogue_in_audio": true,
+    "audio_xor": true,
+    "lang_aud": true,
+    "dual_ssot_sync": true,
+    "av_beat": true,
+    "emotion_slot": true
+  }
+}

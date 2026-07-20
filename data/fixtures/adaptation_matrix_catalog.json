@@ -1,0 +1,51 @@
+{
+  "version": "2.0.1",
+  "baseDimensions": [
+    { "dimId": "gender_structure", "name": "性别结构", "choices": ["keep", "adjust", "swap", "ensemble"], "group": "base" },
+    { "dimId": "scene_structure", "name": "场景结构", "choices": ["linear", "flashback", "dual_line", "condense"], "group": "base" },
+    { "dimId": "character_anchor", "name": "人物锚点", "choices": ["keep_core", "reshape", "merge", "split"], "group": "base" },
+    { "dimId": "relation_network", "name": "关系网络", "choices": ["triangle", "multi", "opposition", "mentor"], "group": "base" },
+    { "dimId": "emotion_logic", "name": "情感逻辑", "choices": ["angst", "sweet", "power", "blend"], "group": "base" },
+    { "dimId": "conflict_design", "name": "冲突设计", "choices": ["pvp", "pvs", "pve", "layered"], "group": "base" },
+    { "dimId": "visual_style", "name": "视觉风格", "choices": ["ancient_real", "modern_clean", "cinematic", "stylized"], "group": "base" },
+    { "dimId": "narrative_structure", "name": "叙事结构", "choices": ["three_act", "four_beat", "episodic"], "group": "base" },
+    { "dimId": "core_prop", "name": "核心道具", "choices": ["keep", "amplify", "replace"], "group": "base" },
+    { "dimId": "dialogue_strategy", "name": "台词策略", "choices": ["faithful", "colloquial", "compress"], "group": "base" },
+    { "dimId": "music_mood", "name": "音乐氛围", "choices": ["warm", "tense", "epic", "minimal"], "group": "base" },
+    { "dimId": "rhythm_plan", "name": "节奏规划", "choices": ["fast", "medium", "slow_with_breath"], "group": "base" }
+  ],
+  "deepDimensions": [
+    { "dimId": "D01_nameMap", "name": "姓名改编", "choices": ["keep", "modernize", "localize", "full_rename"], "structuredField": "deepAdaptation.nameMap", "group": "deep" },
+    { "dimId": "D02_relationMap", "name": "关系改编", "choices": ["keep", "simplify", "invert", "expand"], "structuredField": "deepAdaptation.relationMap", "group": "deep" },
+    { "dimId": "D03_substitutions", "name": "元素平替", "choices": ["keep", "partial", "full"], "structuredField": "deepAdaptation.substitutions", "group": "deep" },
+    { "dimId": "D04_settingProfile", "name": "背景迁移", "choices": ["keep", "era_shift", "world_shift"], "structuredField": "deepAdaptation.settingProfile", "group": "deep" }
+  ],
+  "viralDimensions": [
+    { "dimId": "V01_openingCard", "name": "开篇一卡", "choices": ["strict_3ep", "micro_compress", "standard"], "group": "viral" },
+    { "dimId": "V02_clipDensity", "name": "30秒投流爆点", "choices": ["high", "medium", "profile"], "group": "viral" },
+    { "dimId": "V03_paypointLayout", "name": "付费卡点", "choices": ["standard_5", "front_load", "custom"], "group": "viral" },
+    { "dimId": "V04_episodeRhythm", "name": "单集节奏", "choices": ["strict_31545", "relaxed"], "group": "viral" },
+    { "dimId": "V05_genreFramework", "name": "类型节奏", "choices": ["甜宠", "虐恋", "战神", "重生", "萌宝"], "group": "viral" },
+    { "dimId": "V06_conflictLadder", "name": "矛盾阶梯", "choices": ["level_3", "level_4", "escalate_fast"], "group": "viral" }
+  ],
+  "retentionDimensions": [
+    { "dimId": "R01_ep1_opening5s", "name": "第一集前5秒钩子", "choices": ["crisis", "identity_contrast", "emotion_hit", "combo"], "group": "retention" },
+    { "dimId": "R02_ep1_first30s", "name": "第一集前30秒", "choices": ["audience_knows", "character_knows", "partial_both", "strict_31545"], "group": "retention" },
+    { "dimId": "R03_ep1_endHook", "name": "第一集集末钩", "choices": ["prop", "emotion_rebound", "camera_mismatch"], "group": "retention" },
+    { "dimId": "R04_epN_retention", "name": "后续集留人", "choices": ["spring_tension", "one_reversal_per_ep", "genre_frame"], "group": "retention" }
+  ],
+  "causalityDimensions": [
+    { "dimId": "C01_eventCausality", "name": "事件因果密度", "choices": ["strict", "standard", "relaxed"], "group": "causality" },
+    { "dimId": "C02_infoGapStrategy", "name": "信息差策略", "choices": ["audience_knows", "character_knows", "alternate", "none"], "group": "causality" },
+    { "dimId": "C03_dialogueDensity", "name": "台词密度", "choices": ["short_drama_high", "standard", "action_heavy"], "group": "causality" },
+    { "dimId": "C04_showDontTell", "name": "展示不要告诉", "choices": ["strict", "standard"], "group": "causality" }
+  ],
+  "dialogueDimensions": [
+    { "dimId": "DLG01_subtextStyle", "name": "潜台词风格", "choices": ["efficient", "standard"], "group": "dialogue" },
+    { "dimId": "DLG02_lineFunction", "name": "台词功能要求", "choices": ["all_tagged", "key_only"], "group": "dialogue" },
+    { "dimId": "DLG03_avDialogueOrder", "name": "声画因果", "choices": ["action_first", "sync"], "group": "dialogue" }
+  ],
+  "openingDimensions": [
+    { "dimId": "O01_openingProfile", "name": "开场3-10s方案", "choices": ["O1_crisis_first", "O2_contrast_reveal", "O3_conflict_tableau", "O4_emotion_av_peak", "O5_debut_intro_merged"], "group": "opening" }
+  ]
+}

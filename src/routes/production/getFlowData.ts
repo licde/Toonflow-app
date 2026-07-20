@@ -3,6 +3,7 @@ import u from "@/utils";
 import { z } from "zod";
 import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { mergeAssociateAssetIds } from "@/ruleEngine/compilers/referenceListBuilder";
 const router = express.Router();
 import { FlowData } from "@/agents/productionAgent/tools";
 
@@ -21,9 +22,15 @@ export default router.post(
       .select("data")
       .first();
 
-    const scriptData = await u.db("o_script").where("projectId", projectId).where("id", episodesId).first();
+    const scriptData = await u.db("o_script").where({ projectId, id: episodesId }).first();
     const scriptAssets = await u.db("o_scriptAssets").where("scriptId", episodesId);
-    const assetIds = scriptAssets.map((i) => i.assetId);
+    let assetIds = scriptAssets.map((i) => i.assetId);
+    const storyboardRows = await u.db("o_storyboard").where("scriptId", episodesId).select("id");
+    if (storyboardRows.length) {
+      const sbIds = storyboardRows.map((r) => r.id!);
+      const linked = await u.db("o_assets2Storyboard").whereIn("storyboardId", sbIds).pluck("assetId");
+      assetIds = [...new Set([...assetIds, ...(linked as number[])])];
+    }
     const assetsData = await u
       .db("o_assets")
       .leftJoin("o_image", "o_assets.imageId", "o_image.id")
@@ -53,6 +60,7 @@ export default router.post(
             type: item.type ?? "",
             prompt: item.prompt ?? "",
             desc: item.describe ?? "",
+            remark: item.remark ?? "",
             src: item.filePath && (await u.oss.getSmallImageUrl(item.filePath!)),
             derive: await Promise.all(
               childAssetsData
@@ -110,7 +118,12 @@ export default router.post(
           }
           assets2StoryboardMap[i.storyboardId!].push(i.assetId!);
         });
-        const flowData = JSON.parse(sqlData!.data ?? "{}");
+        const savedFlow = JSON.parse(sqlData!.data ?? "{}");
+        const flowData = savedFlow;
+        const panelExtras = new Map<number, { audioPrompt?: string; fxPrompt?: string }>();
+        for (const p of (savedFlow.storyboard ?? []) as { id?: number; audioPrompt?: string; fxPrompt?: string }[]) {
+          if (p.id) panelExtras.set(p.id, { audioPrompt: p.audioPrompt, fxPrompt: p.fxPrompt });
+        }
         flowData.assets = await Promise.all(
           assetsData.map(async (item) => ({
             id: item.id,
@@ -118,8 +131,12 @@ export default router.post(
             type: item.type ?? "",
             prompt: item.prompt ?? "",
             desc: item.describe ?? "",
+            remark: item.remark ?? "",
             src: item.filePath && (await u.oss.getSmallImageUrl(item.filePath!)),
             flowId: item.flowId,
+            /** 本集已关联（o_scriptAssets ∪ 镜绑定） */
+            inEpisode: true,
+            episodeBadge: "本集",
             derive: await Promise.all(
               childAssetsData
                 .filter((child) => child.assetsId === item.id)
@@ -134,25 +151,60 @@ export default router.post(
                   state: child.state ?? "未生成",
                   errorReason: child?.errorReason ?? "",
                   flowId: child.flowId,
+                  inEpisode: true,
                 })),
             ),
           })),
         );
-        flowData.storyboard = storyboardData
-          .map((i) => ({
-            id: i.id,
-            index: i.index,
-            duration: i.duration ? +i.duration : 0,
-            prompt: i.prompt,
-            associateAssetsIds: assets2StoryboardMap[i.id!] ?? [],
-            src: i.filePath,
-            state: i.state,
-            videoDesc: i.videoDesc,
-            shouldGenerateImage: i.shouldGenerateImage,
-            reason: i?.reason ?? "",
-            flowId: i.flowId,
-          }))
-          .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+        // Project pool (shared) with episode membership for picker UX
+        const episodeIdSet = new Set(assetIds);
+        const projectPool = await u
+          .db("o_assets")
+          .leftJoin("o_image", "o_assets.imageId", "o_image.id")
+          .select("o_assets.id", "o_assets.name", "o_assets.type", "o_image.filePath")
+          .where("o_assets.projectId", projectId)
+          .whereNull("o_assets.assetsId")
+          .limit(500);
+        flowData.projectAssets = await Promise.all(
+          projectPool.map(async (item) => ({
+            id: item.id,
+            name: item.name ?? "",
+            type: item.type ?? "",
+            src: item.filePath && (await u.oss.getSmallImageUrl(item.filePath!)),
+            inEpisode: episodeIdSet.has(item.id!),
+            episodeBadge: episodeIdSet.has(item.id!) ? "本集" : undefined,
+          })),
+        );
+        flowData.storyboard = (
+          await Promise.all(
+            storyboardData.map(async (i) => {
+              const extra = panelExtras.get(i.id!);
+              const refMerge = await mergeAssociateAssetIds(
+                u.db,
+                projectId,
+                assets2StoryboardMap[i.id!] ?? [],
+                i.prompt ?? "",
+                (extra as { charCodes?: string[] } | undefined)?.charCodes ?? [],
+              );
+              return {
+                id: i.id,
+                index: i.index,
+                duration: i.duration ? +i.duration : 0,
+                prompt: i.prompt,
+                associateAssetsIds: refMerge.assetIds,
+                referenceWarnings: refMerge.warnings,
+                src: i.filePath,
+                state: i.state,
+                videoDesc: i.videoDesc,
+                audioPrompt: (i as { audioPrompt?: string }).audioPrompt || extra?.audioPrompt,
+                fxPrompt: (i as { fxPrompt?: string }).fxPrompt || extra?.fxPrompt,
+                shouldGenerateImage: i.shouldGenerateImage,
+                reason: i?.reason ?? "",
+                flowId: i.flowId,
+              };
+            }),
+          )
+        ).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
         flowData.script = scriptData?.content ?? "";
         res.status(200).send(success(flowData));
       } catch (err) {

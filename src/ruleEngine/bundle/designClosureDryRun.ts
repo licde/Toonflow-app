@@ -1,7 +1,11 @@
 import type { ProductionClosureCheck, ScriptBundle } from "../bundle/types";
-import { dialogueLineCountMismatch, traceCoverageOk } from "../design/forwardTrace";
-import { validateLinkageChains } from "../design/linkageValidator";
+import { traceCoverageOk } from "../design/forwardTrace";
 import { readFixtureJson } from "../utils/fixturesPath";
+import { dc01Adapter } from "../precheckLoop/adapters/dc01";
+import { dc13Adapter } from "../precheckLoop/adapters/dc13";
+import type { PrecheckScope } from "../precheckLoop/types";
+import { isAllowedTransition, loadCameraMotionWhitelist } from "../qualityGate/cameraWhitelist";
+import { auditCastCoverage } from "./designExportHelpers";
 
 function loadChecklist(): { id: string; severity: string }[] {
   return readFixtureJson<{ checks?: { id: string; severity: string }[] }>("design_closure_checklist.json", { checks: [] }).checks ?? [];
@@ -10,8 +14,6 @@ function loadChecklist(): { id: string; severity: string }[] {
 function sev(id: string, def: string): string {
   return loadChecklist().find((c) => c.id === id)?.severity ?? def;
 }
-
-const CAMERA_TRANSITIONS = new Set(["切", "淡入", "淡出", "叠化", "cut", "fade", "dissolve"]);
 
 type Brief = {
   emotionCurveOutline?: number[];
@@ -49,17 +51,24 @@ function shotsOf(bundle: ScriptBundle): Shot[] {
   return (bundle.preDesignPack?.shots ?? []) as Shot[];
 }
 
-export function runDesignClosureDryRun(bundle: ScriptBundle): ProductionClosureCheck[] {
+export function runDesignClosureDryRun(
+  bundle: ScriptBundle,
+  opts?: { scope?: PrecheckScope },
+): ProductionClosureCheck[] {
   const checks: ProductionClosureCheck[] = [];
   const h = bundle.preDesignPack?.externalHashCheck;
   const brief = briefOf(bundle);
   const shots = shotsOf(bundle);
+  const filtered =
+    opts?.scope?.mode === "filtered" || opts?.scope?.storyboardIds != null;
 
+  const dc01 = dc01Adapter.diagnose({ bundle, scope: opts?.scope });
   checks.push({
     id: "DC-01",
-    passed: !dialogueLineCountMismatch(bundle),
-    message: dialogueLineCountMismatch(bundle) ? "台词镜覆盖率不足" : "R2 coverage OK",
-    severity: sev("DC-01", "BLOCK"),
+    passed: dc01.passed,
+    message: dc01.message,
+    severity: dc01.passed ? sev("DC-01", "BLOCK") : dc01.severity,
+    detail: dc01.evidence,
   });
 
   checks.push({
@@ -71,11 +80,17 @@ export function runDesignClosureDryRun(bundle: ScriptBundle): ProductionClosureC
 
   const b5 = brief.infoLinkageChain ?? brief.B5 ?? [];
   const hasMarkers = shots.some((s) => (s.markers?.length ?? s.narrative?.markers?.length ?? 0) > 0);
+  const dc03Broken = b5.length > 0 && !hasMarkers;
   checks.push({
     id: "DC-03",
-    passed: !b5.length || hasMarkers,
-    message: !b5.length || hasMarkers ? "story markers OK" : "B5 无 SB.markers",
-    severity: sev("DC-03", "BLOCK"),
+    passed: !dc03Broken || filtered,
+    message: !dc03Broken
+      ? "story markers OK"
+      : filtered
+        ? "B5 无 SB.markers（局部触达未 BLOCK）"
+        : "B5 无 SB.markers",
+    severity: filtered && dc03Broken ? "WARN" : sev("DC-03", "BLOCK"),
+    detail: dc03Broken ? { shotScope: filtered ? "filtered" : "full", b5Count: b5.length } : undefined,
   });
 
   const b4 = brief.emotionCurveOutline ?? brief.B4;
@@ -83,11 +98,12 @@ export function runDesignClosureDryRun(bundle: ScriptBundle): ProductionClosureC
   const avDrift = b4?.length && emotions.length
     ? Math.max(...emotions.map((e) => Math.min(...b4.map((b) => Math.abs(e - b)))))
     : 0;
+  const dc04Broken = Boolean(b4?.length && avDrift > 2);
   checks.push({
     id: "DC-04",
-    passed: !b4?.length || avDrift <= 2,
-    message: avDrift <= 2 ? "av emotion OK" : `B4 偏差 ${avDrift}`,
-    severity: sev("DC-04", "BLOCK"),
+    passed: !dc04Broken || filtered,
+    message: !dc04Broken ? "av emotion OK" : filtered ? `B4 偏差 ${avDrift}（局部触达未 BLOCK）` : `B4 偏差 ${avDrift}`,
+    severity: filtered && dc04Broken ? "WARN" : sev("DC-04", "BLOCK"),
   });
 
   const cont = bundle.continuity;
@@ -103,16 +119,16 @@ export function runDesignClosureDryRun(bundle: ScriptBundle): ProductionClosureC
   const sceneBroken = scenes.length > 0 && shots.length > 0 && sbScenes.size === 0;
   checks.push({
     id: "DC-06",
-    passed: !sceneBroken,
-    message: sceneBroken ? "B6 场景未映射 SB" : "scene OK",
-    severity: sev("DC-06", "BLOCK"),
+    passed: !sceneBroken || filtered,
+    message: !sceneBroken ? "scene OK" : filtered ? "B6 场景未映射（局部触达未 BLOCK）" : "B6 场景未映射 SB",
+    severity: filtered && sceneBroken ? "WARN" : sev("DC-06", "BLOCK"),
   });
 
   const fxAudit = bundle.fxFeasibilityAudit as { items?: unknown[] } | undefined;
   checks.push({
     id: "DC-07",
-    passed: !b5.length || hasMarkers || (fxAudit?.items?.length ?? 0) > 0,
-    message: "story→fx",
+    passed: !b5.length || hasMarkers || (fxAudit?.items?.length ?? 0) > 0 || filtered,
+    message: filtered && dc03Broken ? "story→fx（局部触达 WARN）" : "story→fx",
     severity: sev("DC-07", "WARN"),
   });
 
@@ -121,20 +137,27 @@ export function runDesignClosureDryRun(bundle: ScriptBundle): ProductionClosureC
   const charBroken = scriptChars.length > 0 && shots.length > 0 && shotChars.size === 0;
   checks.push({
     id: "DC-08",
-    passed: !charBroken,
-    message: charBroken ? "charCodes 缺失" : "asset OK",
-    severity: sev("DC-08", "BLOCK"),
+    passed: !charBroken || filtered,
+    message: !charBroken ? "asset OK" : filtered ? "charCodes 缺失（局部触达未 BLOCK）" : "charCodes 缺失",
+    severity: filtered && charBroken ? "WARN" : sev("DC-08", "BLOCK"),
   });
 
-  const badCamera = shots.some((s) => {
+  const wl = loadCameraMotionWhitelist();
+  const badCameraShots = shots.filter((s) => {
     const t = s.narrative?.transitionType;
-    return t && !CAMERA_TRANSITIONS.has(t);
+    return Boolean(t && !isAllowedTransition(String(t), wl));
   });
+  const badCamera = badCameraShots.length > 0;
   checks.push({
     id: "DC-09",
     passed: !badCamera,
-    message: badCamera ? "transition 非法" : "camera OK",
-    severity: sev("DC-09", "WARN"),
+    message: badCamera
+      ? `transition 非法: ${badCameraShots.map((s) => s.narrative?.transitionType).join(",")}`
+      : "camera OK",
+    severity: badCamera ? "BLOCK" : sev("DC-09", "WARN"),
+    detail: badCamera
+      ? { allowed: wl.transitions, defaultTransition: wl.defaultTransition }
+      : undefined,
   });
 
   const b9 = brief.B9 ?? brief.audioMood;
@@ -161,13 +184,13 @@ export function runDesignClosureDryRun(bundle: ScriptBundle): ProductionClosureC
     severity: sev("DC-12", "INFO"),
   });
 
-  const linkage = validateLinkageChains(bundle);
-  const broken = linkage.filter((l) => l.broken);
+  const dc13 = dc13Adapter.diagnose({ bundle, scope: opts?.scope });
   checks.push({
     id: "DC-13",
-    passed: broken.length === 0,
-    message: broken.length ? `linkage ${broken.length} broken` : "linkage OK",
-    severity: sev("DC-13", "BLOCK"),
+    passed: dc13.passed,
+    message: dc13.message,
+    severity: dc13.passed ? sev("DC-13", "BLOCK") : dc13.severity,
+    detail: dc13.evidence,
   });
 
   checks.push({
@@ -183,6 +206,26 @@ export function runDesignClosureDryRun(bundle: ScriptBundle): ProductionClosureC
     passed: !plan?.adaptationMatrix || !!plan?.W2,
     message: "adaptation chain",
     severity: sev("DC-15", "WARN"),
+  });
+
+  const cast = auditCastCoverage(bundle);
+  const dc16Broken = cast.block;
+  checks.push({
+    id: "DC-16",
+    passed: !dc16Broken || filtered,
+    message: !dc16Broken
+      ? "cast CD coverage OK"
+      : filtered
+        ? `配角入册缺口（局部触达未 BLOCK）: ${cast.labels.join("、")}`
+        : `配角未入册或仅 stub/缺 L0.identity: ${cast.labels.join("、")}`,
+    severity: filtered && dc16Broken ? "WARN" : sev("DC-16", "BLOCK"),
+    detail: dc16Broken
+      ? {
+          missingSpeakers: cast.missingSpeakers,
+          missingCodes: cast.missingCodes,
+          stubOrIncomplete: cast.stubOrIncomplete,
+        }
+      : undefined,
   });
 
   return checks;

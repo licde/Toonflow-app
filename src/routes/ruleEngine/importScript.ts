@@ -4,6 +4,8 @@ import { z } from "zod";
 import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { importScriptBundle } from "@/ruleEngine/bundle/importAdapter";
+import { ExportGateBlockError, formatExportGateBlockPayload } from "@/ruleEngine/exportGate";
+import { SchemaShapeBlockError } from "@/ruleEngine/bundle/schemaShapeErrors";
 
 const router = express.Router();
 
@@ -17,20 +19,36 @@ export default router.post(
     mergeStrategy: z.enum(["replaceAll", "mergeLayers", "preserveMedia"]).optional(),
     autoDesign: z.boolean().optional(),
     validateOnly: z.boolean().optional(),
+    includeValidationReport: z.boolean().optional(),
   }),
   async (req, res) => {
     try {
-      const { projectId, bundle, targetScriptId, importMode, mergeStrategy, autoDesign, validateOnly } = req.body;
-      const result = await importScriptBundle(u.db, bundle, {
+      const { projectId, bundle, targetScriptId, importMode, mergeStrategy, autoDesign, validateOnly, includeValidationReport } =
+        req.body;
+      const result = await importScriptBundle(u.db, typeof bundle === "string" ? bundle : bundle, {
         projectId,
         targetScriptId,
         importMode: importMode ?? "upsert",
-        mergeStrategy: mergeStrategy ?? "replaceAll",
+        mergeStrategy,
         autoDesign: autoDesign !== false,
         validateOnly: validateOnly === true,
+        includeValidationReport: includeValidationReport === true,
       });
       return res.status(200).send(success(result));
     } catch (e) {
+      if (e instanceof SchemaShapeBlockError) {
+        return res.status(400).send(
+          error(e.message, {
+            code: e.payload.code,
+            issues: e.payload.issues,
+            repairHints: e.payload.repairHints,
+            chatRepairText: e.payload.chatRepairText,
+          }),
+        );
+      }
+      if (e instanceof ExportGateBlockError) {
+        return res.status(400).send(error(e.message, formatExportGateBlockPayload(e.details)));
+      }
       return res.status(400).send(error(u.error(e).message));
     }
   },

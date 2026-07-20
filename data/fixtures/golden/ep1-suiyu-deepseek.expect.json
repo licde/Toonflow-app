@@ -1,0 +1,20 @@
+{
+  "roles": 5,
+  "scenes": 5,
+  "props": 5,
+  "minDerivatives": 10,
+  "shots": 38,
+  "requiredForwardChains": ["dialogue", "scene", "av", "asset"],
+  "modalitiesT3": ["IMG", "VID", "AUD", "FX"],
+  "promptCompile": { "image": "required", "video": "required" },
+  "symptomRoutes": {
+    "img_cref_missing": "EN",
+    "video_first_frame_missing": "MD",
+    "dialogue_hash_mismatch": "SB"
+  },
+  "genE2E": {
+    "requireAssetPort": true,
+    "derivePrompt": "坐照，双手交叠",
+    "minReferences": 1
+  }
+}

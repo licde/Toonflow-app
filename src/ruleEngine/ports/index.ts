@@ -14,13 +14,19 @@ export interface GenerationFeedbackInput {
   shotId: string;
   error: string;
   vendorCode?: string;
+  prompt?: string;
+}
+
+export interface GenerationFeedbackResult {
+  ruleId?: string;
+  category?: string;
+  suggestedPrompt?: string;
+  contentPolicyWarnings?: string[];
+  upstreamPatches: { fieldPath: string; rollbackLayer: string; suggestion: string }[];
 }
 
 export interface GenerationFeedbackPort {
-  classifyFailure(input: GenerationFeedbackInput): Promise<{
-    ruleId?: string;
-    upstreamPatches: { fieldPath: string; rollbackLayer: string; suggestion: string }[];
-  }>;
+  classifyFailure(input: GenerationFeedbackInput): Promise<GenerationFeedbackResult>;
 }
 
 export interface GenerationJob {

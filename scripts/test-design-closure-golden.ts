@@ -1,4 +1,4 @@
-/** yarn test:design-closure-golden — DC-01~15 golden */
+/** yarn test:design-closure-golden — DC-01~16 golden */
 import fs from "fs";
 import path from "path";
 import { runDesignClosureDryRun, designClosureBlocked } from "@/ruleEngine/bundle/designClosureDryRun";
@@ -25,6 +25,14 @@ for (const c of cases) {
   const ok = blocked === c.expectBlock;
   console.log(`${ok ? "✓" : "✗"} ${c.id} ${c.file} blocked=${blocked}`);
   if (!ok) failed++;
+
+  const dc16 = dc.find((x) => x.id === "DC-16");
+  if (!dc16) {
+    console.error(`✗ ${c.id} missing DC-16 check in dryRun`);
+    failed++;
+  } else {
+    console.log(`✓ ${c.id} DC-16 present passed=${dc16.passed}`);
+  }
 }
 
 process.exit(failed ? 1 : 0);

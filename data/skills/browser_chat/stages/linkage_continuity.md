@@ -39,8 +39,7 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
         "nodes": [
           { "stage": "W3", "field": "script", "ruleId": "R2" },
           { "stage": "SB", "field": "shots[].dialogue.lines", "ruleId": "H3" }
-        ],
-        "breakPoint": null
+        ]
       }
     ],
     "blockExport": false
@@ -75,7 +74,7 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 - 十链均有 status 判定
 - 台词链 externalHashCheck.match = true
 - 视听链偏差 ≤2（B4 vs emotionCurve）
-- 故事链 B5 每条有 payoffEp 或本集收
+- 故事链 B5：`payoffEp` 仅未来集号（number）；本集收用 `payoffLabel: "本集收"`
 - blockExport = false 方可 T1 出口
 
 ## 与 linkageRepairPlan

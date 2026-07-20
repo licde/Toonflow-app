@@ -82,3 +82,36 @@ effect: 轻微粒子光晕 | level: F1 | degrade: static overlay
 ```
 
 报告格式：`{ "id": "CHAT-IMG-01", "shotIndex": 3, "message": "缺 imagePrompt" }`
+
+## 9. shotDesign → prompt roundtrip（GEN）
+
+T2+ 每镜可选 `shotDesign`（composition/blocking/performance/cameraAnchor/lipSyncPolicy）。
+
+| shotDesign | imagePrompt | videoPrompt |
+|------------|-------------|-------------|
+| composition.foreground + blocking.bodyAction | subject 动作 | motion 参考 |
+| performance.microExpression | 首帧 eyes/mouth 词 | **不写**（QF-EXPR-06） |
+| cameraAnchor.bgBlur | bokeh/blur | static/slow push |
+| lipSyncPolicy=subtle_natural | — | `subtle lip sync, natural mouth movement` |
+
+验收：`inspectBundle.generationApplyGaps`（GEN-01~07）；参考 `compileFromShotDesign`。
+
+## 10. Tier 分级（inspectBundle / closureReport）
+
+| Tier | 模态四槽 missing | chatPromptGaps BLOCK |
+|------|------------------|----------------------|
+| T1 | 跳过 MD×4 / MOD 域 | 仅台词/SB |
+| T2 | 跳过 video/audio/fx missing | + CD/BP |
+| T3 | 全检 IMG/VID/AUD/FX | 全检 |
+
+`auditAllBundleGaps(bundle, tier)` 与 `auditChatPromptGaps(bundle, tier)` 须传入正确 tier，避免 T1/T2 误报 T3 模态 missing。
+
+## 视频质量链（摘要）
+
+完整契约见 [video-quality-chain.md](./video-quality-chain.md)。要点：
+
+1. **意图优先**：`implementationPlan` → `buildPromptIR` 写回四槽；Chat stub（如 `中景 static, duration 2s`）不得阻断。
+2. **语言**：`[Audio]` / `audioPrompt` 写源语言台词；运镜壳英文。
+3. **时长**：`max(shot, lipMin)` 后厂商桶 snap；超预算拆镜。
+4. **消毒**：`sanitizeVideoPrompt` 消解 No dialogue∩台词、多 duration/景别、重复 motion-from-frame。
+5. **FX**：`fxLevel≠F0` 必须可执行散文，禁止 `fxPrompt:"F2"` 洗绿。

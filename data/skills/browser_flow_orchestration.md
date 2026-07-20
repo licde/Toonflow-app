@@ -17,8 +17,8 @@ mode: external
 | 层 | 职责 |
 |----|------|
 | L1 Chat | 按技能生成正确 prompt 与资产包 |
-| L2 外部校验 | export 后 `inspectBundle` 验收（不挡 import） |
-| L3 Import | 原样落库 |
+| L2 外部校验 | export 前 `exportGate` / `inspectBundle` 服务器验收 |
+| L3 Import | 仅接收已过 export gate 的 bundle |
 
 ## §1 默认路径（T3 一气呵成）
 
@@ -39,8 +39,9 @@ mode: external
 |------|------|------|
 | P0–P09 | planData.* | 不得进 W |
 | G | globalAnchors | 不得进 W |
-| W1–W3 | script | 不得 GB |
-| designBrief | B1–B13 | 不得 GB |
+| W1–W2 | storySkeleton / adaptationStrategy | 不得 W3 |
+| W3 | script + narrativeSelfcheck | 不得 designBrief |
+| designBrief | B1–B23 | 不得 GB |
 | GB | scriptPlan | 不得 SB |
 | SB | shots 台词全覆盖 + visualDescription | 不得 CD |
 | CD/AS/BP | 资产锚点 | 不得 EN |
@@ -72,9 +73,31 @@ T2+：`characterDesign`, `assetPipeline`, `visualLockTable`
 T3：每镜 `generation` 或 `flowData.storyboard[]`  
 可选：`modalityPromptAudit`, `debutIntroPack`（**禁止**假 pass 审计字段）
 
+### planData.narrativeBrief（累积 handoff）
+
+各阶段写入并传递，W3 步骤 0 强制读取：
+
+- `adaptationConstraints[]` — P03 matrix choice + reason
+- `deepAdaptation` — D01–D04 子对象
+- `storyKernel` / `mustResolveIssues[]` — P06
+- `reconstructionTrace[]` — P06→W3 可追溯链
+- `empathyPlan` / `densityBudget` — P0/G/W2
+- `retentionBeats` / `infoDeliveryPlan[]` / `dialogueRules`
+- `implementationPlan[]` — W3→SB→EN→MD 正推锚点
+- `seriesContinuity` — W1 ep2+ carryInfo
+
+### planData.sceneMeta[]
+
+W3 每场 sidecar：`avCausality`, `fxIntent`, `densityScore`, `opening5sHook`
+
+### 闸门
+
+W3 未过 `W3_narrative_selfcheck` → **禁止** designBrief / export。
+
 ## §8 导入说明
 
-export JSON → 可选 `inspectBundle` 验收 → `POST importScript` **落库不验证** → 制作页生成。
+export JSON → **必须** `POST /api/ruleEngine/exportGate` 验收 → `POST importScript` 落库。  
+T3 默认 `blockOnQualityGate=true`；若 `exportGate.exportAllowed !== true`，不得 import。
 
 ## §9 正推/反推
 

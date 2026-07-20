@@ -45,6 +45,16 @@ rulePackVersion: "2.0.1"
 3. 写场间过渡（切/淡入/叠化），不写具体光影
 4. 同步构造 episodeBeat.emotionCurve + rhythmZones（对齐 B12）
 5. 对照 designBrief.B4 情绪弧线一致性；B12 每场至少一区
+6. 从 `planData.narrativeBrief` 抄入 **sceneCausalBeats**（每场 infoIds + avPeak）与 **infoIds[]**（对齐 informationLedger）
+
+## narrativeBrief → GB 抄入规则
+
+| narrativeBrief 字段 | GB 字段 |
+|---------------------|---------|
+| infoDeliveryPlan[].infoId | 逐场注意事项 + sceneCausalBeats |
+| retentionBeats.opening5s | Sc1 情绪峰值说明 |
+| reconstructionTrace[].newBeat | 对应场 beat 备注 |
+| empathyPlan.squeezeMoments | 场级情绪挤压窗口 |
 
 ## BLOCK 闸门（rollbackLayer GB）
 

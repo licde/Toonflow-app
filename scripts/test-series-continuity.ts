@@ -12,19 +12,24 @@ function main() {
   const p = path.join(process.cwd(), "data/fixtures/script-bundle-template-v2.json");
   const base = scriptBundleSchema.parse(stripCommentFields(JSON.parse(fs.readFileSync(p, "utf-8")))) as ScriptBundle;
 
-  const r1 = inspectBundle(base, { tier: "T1" });
-  const withCont: ScriptBundle = {
+  const ep1Empty: ScriptBundle = { ...base, continuity: undefined };
+  const withPrev: ScriptBundle = {
     ...base,
     continuity: { prevEpisodeSummary: "上集：主角发现线索", characterState: { hero: "警觉" } },
   };
-  const r2 = inspectBundle(withCont, { tier: "T1" });
 
-  const t1 = (r1.forwardTrace as { traces?: { chainId: string }[] })?.traces?.some((t) => t.chainId === "continuity");
-  const t2 = (r2.forwardTrace as { traces?: { chainId: string }[] })?.traces?.some((t) => t.chainId === "continuity");
+  const rEmpty = inspectBundle(ep1Empty, { tier: "T1" });
+  const rRecap = inspectBundle(base, { tier: "T1" });
+  const rPrev = inspectBundle(withPrev, { tier: "T1" });
 
-  console.log(`${!t1 ? "✓" : "✗"} ep1 no continuity trace when empty`);
-  console.log(`${t2 ? "✓" : "✗"} ep2 continuity trace when prevEpisodeSummary set`);
-  if (t1 || !t2) process.exit(1);
+  const emptyTrace = (rEmpty.forwardTrace as { traces?: { chainId: string }[] })?.traces?.some((t) => t.chainId === "continuity");
+  const recapTrace = (rRecap.forwardTrace as { traces?: { chainId: string }[] })?.traces?.some((t) => t.chainId === "continuity");
+  const prevTrace = (rPrev.forwardTrace as { traces?: { chainId: string }[] })?.traces?.some((t) => t.chainId === "continuity");
+
+  console.log(`${!emptyTrace ? "✓" : "✗"} ep1 empty continuity no trace`);
+  console.log(`${recapTrace ? "✓" : "✗"} ep1 recapHint has continuity trace`);
+  console.log(`${prevTrace ? "✓" : "✗"} ep2 prevEpisodeSummary has continuity trace`);
+  if (emptyTrace || !recapTrace || !prevTrace) process.exit(1);
   console.log("\n=== series continuity OK ===");
 }
 

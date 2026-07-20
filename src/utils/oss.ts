@@ -50,12 +50,17 @@ class OSS {
     if (!prefix) prefix = "oss";
     await this.ensureInit();
     const safePath = normalizeUserPath(userRelPath);
-    // URL 始终使用 /，所以这里需要将系统分隔符转回 /
-    let url = `/${prefix}/`;
-    if (process.env.ossURL && process.env.ossURL !== "") url = process.env.ossURL + `/${prefix}/`;
-    if (process.env.NODE_ENV == "dev") url = `http://localhost:10588/${prefix}/`;
-    if (isEletron()) url = `http://localhost:${process.env.PORT}/${prefix}/`;
-    return `${url}${safePath.split(path.sep).join("/")}`;
+    // URL 始终使用 /，所以这里需要将系统路径分隔符转回 /
+    const rel = safePath.split(path.sep).join("/");
+    const ossUrl = (process.env.ossURL ?? "").trim().replace(/\/+$/, "");
+    // ossURL（ngrok / CDN）优先，避免被 dev/Electron localhost 覆盖导致 Agnes 无法拉取参考图
+    if (ossUrl) {
+      return `${ossUrl}/${prefix}/${rel}`;
+    }
+    let base = `/${prefix}/`;
+    if (isEletron()) base = `http://localhost:${process.env.PORT}/${prefix}/`;
+    else if (process.env.NODE_ENV == "dev") base = `http://localhost:10588/${prefix}/`;
+    return `${base}${rel}`;
   }
 
   /**

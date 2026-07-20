@@ -59,7 +59,7 @@ export default router.post(
         { script: scriptRow.content ?? "", context: ctx, fromStage: stage },
         async (output) => {
           flowData = { ...flowData, scriptPlan: output.scriptPlan, storyboardTable: output.storyboardTable, storyboard: output.storyboard as FlowData["storyboard"] };
-          const sync = await syncStoryboardToDb(u.db, projectId, scriptId, output.storyboard, { replaceAll: stage !== "EN" });
+          const sync = await syncStoryboardToDb(u.db, projectId, scriptId, output.storyboard, { replaceAll: true });
           flowData.storyboard = sync.panels as FlowData["storyboard"];
           await saveFlowData(projectId, scriptId, flowData);
           const pkg = await syncFromFlowData(u.db, { projectId, scriptId, ...flowData });

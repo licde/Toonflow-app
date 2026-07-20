@@ -12,7 +12,7 @@ rulePackVersion: "2.0.1"
 
 ## 入口条件
 
-- `planData.adaptationMatrix` 已通过 P03 BLOCK
+- `planData.adaptationMatrixStructured.userConfirmed` = true（P03 + confirmMatrixChoices）
 - 源材料摘要可用
 
 ## 产出字段
@@ -27,11 +27,11 @@ rulePackVersion: "2.0.1"
 
 ## 执行步骤
 
-1. 从 adaptationMatrix.recommendedConfig 提取改编约束
+1. 从 `adaptationMatrixStructured` + `adaptationProfile` 提取改编约束（含 deepAdaptation）
 2. 写 narrativeKernel（≤50 字，含心理级爽点类型）
 3. 立 characterAnchors，人物 ≤4（大三角原则）
 4. 排 eventSequence ≥3 行，标注解决的 P-00x
-5. 逐条记录 changeLog，附因果逻辑
+5. 逐条记录 changeLog（必填 `matrixDim` + `densityImpact`）；写入 `narrativeBrief.reconstructionTrace[]` + `storyKernel` / `mustResolveIssues[]`
 
 ## 边界条件
 

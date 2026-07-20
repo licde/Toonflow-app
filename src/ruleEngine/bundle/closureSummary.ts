@@ -5,7 +5,7 @@ import { runUnifiedClosure } from "../design/unifiedDryRun";
 import { productionClosureBlocked, runProductionClosureDryRunForTier } from "./productionClosureDryRun";
 import { designClosureBlocked } from "./designClosureDryRun";
 import { getRulePackVersion } from "../ruleRegistry";
-import { scriptBundleSchema, stripCommentFields } from "./schema";
+import { prepareBundleWithLog, scriptBundleSchema } from "./schema";
 import type { ClosureTier } from "../portable/types";
 
 export interface ScriptClosureResult {
@@ -63,22 +63,30 @@ export function runScriptBundleClosure(
   const warnings: string[] = [];
   const enriched = enrichBundleForwardTrace(bundle, tier);
   const unified = runUnifiedClosure(enriched, { tier, genError: opts.genError, sfRound: opts.sfRound });
-  const productionClosureChecks = unified.pc.length
-    ? unified.pc
-    : tier === "T2" || tier === "T3"
-      ? runProductionClosureDryRunForTier(enriched, tier)
+  const pcTier: "T2" | "T3" = tier === "T1" && (bundle.identityAudit || bundle.fxFeasibilityAudit || bundle.modalityPromptAudit) ? "T3" : tier === "T1" ? "T2" : tier;
+  const pcDry =
+    tier === "T2" || tier === "T3" || bundle.identityAudit || bundle.fxFeasibilityAudit || bundle.modalityPromptAudit
+      ? runProductionClosureDryRunForTier(enriched, pcTier)
       : [];
+  const productionClosureChecks = (() => {
+    if (!pcDry.length) return unified.pc;
+    if (!unified.pc.length) return pcDry;
+    const byId = new Map(pcDry.map((c) => [c.id, c]));
+    for (const c of unified.pc) byId.set(c.id, c);
+    return [...byId.values()];
+  })();
   const reverseHints = buildReverseHints(enriched, tier);
+  const blocked = unified.blocked || designClosureBlocked(unified.dc) || productionClosureBlocked(productionClosureChecks);
 
-  if (unified.blocked || designClosureBlocked(unified.dc) || productionClosureBlocked(productionClosureChecks)) {
+  if (blocked) {
     warnings.push("unified_closure_checklist 存在 BLOCK 项");
   }
 
   return {
     tier,
-    blocked: unified.blocked,
+    blocked,
     rulePackVersion: getRulePackVersion(),
-    closureChecks: unified,
+    closureChecks: { ...unified, blocked, pc: productionClosureChecks },
     designClosureChecks: unified.dc,
     productionClosureChecks,
     intelligentClosureChecks: unified.ic,
@@ -89,7 +97,7 @@ export function runScriptBundleClosure(
 }
 
 export function parseScriptBundleRaw(raw: unknown): ScriptBundle {
-  return scriptBundleSchema.parse(stripCommentFields(raw as Record<string, unknown>)) as ScriptBundle;
+  return scriptBundleSchema.parse(prepareBundleWithLog(raw).bundle) as ScriptBundle;
 }
 
 export function runRawBundleClosure(raw: unknown, opts: { tier?: ClosureTier; genError?: string; sfRound?: number } = {}): ScriptClosureResult | null {

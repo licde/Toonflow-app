@@ -10,7 +10,7 @@ supersedes: design_flow.bundle.md v1.1
 
 # Browser Chat 全流程 · 优化版 v2.0.1
 
-> 生成时间：2026-07-12T22:14:28.076Z · rulePack 2.0.1 · tier T3 · 勿手改，改源 skill 后重跑 `yarn bundle:browser-full-flow`
+> 生成时间：2026-07-20T15:44:01.928Z · rulePack 2.0.1 · tier T3 · 勿手改，改源 skill 后重跑 `yarn bundle:browser-full-flow`
 
 ## §0 用法·红线
 
@@ -25,8 +25,8 @@ supersedes: design_flow.bundle.md v1.1
 | 层 | 职责 |
 |----|------|
 | L1 Chat | 按技能生成正确 prompt 与资产包 |
-| L2 外部校验 | export 后 `inspectBundle` 验收（不挡 import） |
-| L3 Import | 原样落库 |
+| L2 外部校验 | export 前 `exportGate` / `inspectBundle` 服务器验收 |
+| L3 Import | 仅接收已过 export gate 的 bundle |
 
 ## §1 默认路径（T3 一气呵成）
 
@@ -47,8 +47,9 @@ supersedes: design_flow.bundle.md v1.1
 |------|------|------|
 | P0–P09 | planData.* | 不得进 W |
 | G | globalAnchors | 不得进 W |
-| W1–W3 | script | 不得 GB |
-| designBrief | B1–B13 | 不得 GB |
+| W1–W2 | storySkeleton / adaptationStrategy | 不得 W3 |
+| W3 | script + narrativeSelfcheck | 不得 designBrief |
+| designBrief | B1–B23 | 不得 GB |
 | GB | scriptPlan | 不得 SB |
 | SB | shots 台词全覆盖 + visualDescription | 不得 CD |
 | CD/AS/BP | 资产锚点 | 不得 EN |
@@ -80,9 +81,31 @@ T2+：`characterDesign`, `assetPipeline`, `visualLockTable`
 T3：每镜 `generation` 或 `flowData.storyboard[]`  
 可选：`modalityPromptAudit`, `debutIntroPack`（**禁止**假 pass 审计字段）
 
+### planData.narrativeBrief（累积 handoff）
+
+各阶段写入并传递，W3 步骤 0 强制读取：
+
+- `adaptationConstraints[]` — P03 matrix choice + reason
+- `deepAdaptation` — D01–D04 子对象
+- `storyKernel` / `mustResolveIssues[]` — P06
+- `reconstructionTrace[]` — P06→W3 可追溯链
+- `empathyPlan` / `densityBudget` — P0/G/W2
+- `retentionBeats` / `infoDeliveryPlan[]` / `dialogueRules`
+- `implementationPlan[]` — W3→SB→EN→MD 正推锚点
+- `seriesContinuity` — W1 ep2+ carryInfo
+
+### planData.sceneMeta[]
+
+W3 每场 sidecar：`avCausality`, `fxIntent`, `densityScore`, `opening5sHook`
+
+### 闸门
+
+W3 未过 `W3_narrative_selfcheck` → **禁止** designBrief / export。
+
 ## §8 导入说明
 
-export JSON → 可选 `inspectBundle` 验收 → `POST importScript` **落库不验证** → 制作页生成。
+export JSON → **必须** `POST /api/ruleEngine/exportGate` 验收 → `POST importScript` 落库。  
+T3 默认 `blockOnQualityGate=true`；若 `exportGate.exportAllowed !== true`，不得 import。
 
 ## §9 正推/反推
 
@@ -197,11 +220,21 @@ T1 → CD → AS → BP → corridor_EN → [MD×4] → 生成
 
 Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`multi_end_closure_matrix.json`
 
+## Chat 多轮会话协议（narrativeBrief 持久）
+
+1. **每轮 export 片段**须含当前完整 `planData.narrativeBrief`（累积，禁止只输出增量丢失字段）
+2. **@引用**：用户 `@narrativeBrief` / `@sceneMeta` 时须展开对应 JSON 摘要后再写剧本
+3. **阶段边界**：改编路径 P0→P03 须保留 `recommendedMatrixDraft[]`；P03 确认后 `userConfirmed: true`
+4. **自检回流**：export 前对照 `modality_closure_checklist` + `closureReport` 模板（missing/optimize）自修
+5. **契约对齐**：`adaptationMatrixStructured` 与 API `confirmMatrixChoices` Zod 同构
+
 ## §7 ScriptBundle 字段对照
 
 | 字段 | 产出 Skill |
 |------|------------|
 | script | W3_script |
+| planData.narrativeBrief | P0/P03/P06/G/W1/W2/W3 累积 |
+| planData.sceneMeta | W3_script sidecar |
 | planData | P*/G/W* |
 | designBrief | design_brief |
 | preDesignPack | corridor_GB + corridor_SB |
@@ -222,6 +255,19 @@ Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`mu
 
 - `data/fixtures/linkage_chains.json`
 - `data/fixtures/fx_feasibility_matrix.json`
+## 导入与修复操作指南
+
+| 文档 | 用途 |
+|------|------|
+| `preview_vs_import_guide.md` | 预览更新 vs 落库、Chat 修复后再验证、DC-16 配角入册 |
+| `closure_field_change_guide.md` | 字段闭环变更范围说明 |
+| `design_compliance_gate.md` | T3 设计合规闸（exportGate 强制调用） |
+| `T3_quality_gate.md` | T3 出口硬闸 + DC-16/RH-DC-16 |
+| `stages/W3_narrative_selfcheck.md` | W3 叙事自检（NAR-14/15 服务器重验） |
+| `production/CD_character_design.md` | CD L0–L6；DC-16 最小骨架 code+name+L0.identity |
+| `docs/image-quality-chain.md` | A→B→C 三层闭环（设计/定妆/生成） |
+| `docs/quality-loop/README.md` | exportGate / stub≠PASS / soft_patch 边界 |
+
 - `data/fixtures/debut_intro_templates.json`
 - `data/fixtures/rule_flow_unified.json`
 - `data/skills/_generated/rule_cards.json`
@@ -315,14 +361,6 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
 
 ## §2 改编路径 P
 
----
-name: P0_precheck
-description: P0 源材料六维度预检（Browser Chat 改编路径入口）
-stageId: P0
-outputTag: preCheck
-rulePackVersion: "2.0.1"
----
-
 # P0 源材料预检
 
 Browser Chat 改编路径**第一步**。本 Skill 包装 `adaptation_execution_precheck`，对小说/梗概做六维度评分，输出问题清单与改造方向。BLOCK 未过不得进入 P03。
@@ -340,6 +378,7 @@ Browser Chat 改编路径**第一步**。本 Skill 包装 `adaptation_execution_
 3. 汇总 P7 综合等级：优≥8 / 良≥6 / 中≥4 / 差<4
 4. 输出问题清单 P-001 递增（类型/描述/改造建议）
 5. 给出 **3 个**改编方向，每个对应 ≥2 个诊断问题
+6. 预填 `adaptationProfile` 推荐；产出 `recommendedMatrixDraft[]`（读 `adaptation_recommendation_map.json`）；初始化 `planData.narrativeBrief.mustResolveIssues` + `empathyPlan` 草稿
 
 ## 六维度评分表
 
@@ -384,14 +423,6 @@ Browser Chat 改编路径**第一步**。本 Skill 包装 `adaptation_execution_
 
 未通过 → 停留在 P0，不得调用 P03_matrix。
 
----
-name: P03_matrix
-description: P0.3 改编矩阵 12 维决策与诊断映射
-stageId: P03
-outputTag: adaptationMatrix
-rulePackVersion: "2.0.1"
----
-
 # P0.3 改编矩阵
 
 基于 P0 预检与用户选定方向，填写 **12 维改编矩阵** 与诊断-方案映射。为 G 层锚点与 W 阶段预留字段。
@@ -399,7 +430,8 @@ rulePackVersion: "2.0.1"
 ## 入口条件
 
 - `planData.preCheck` ruleAudit.pass = true
-- 用户确认改编方向（默认推荐方向 1）
+- 读取 `data/fixtures/adaptation_matrix_catalog.json` + 项目 `adaptationProfile.lockedChoices`
+- **须** `userConfirmed: true`（API `confirmMatrixChoices`）后才可进 P06
 - rulePackVersion `2.0.1`
 
 ## 12 维矩阵
@@ -421,11 +453,29 @@ rulePackVersion: "2.0.1"
 
 ## 执行步骤
 
-1. 读取 `preCheck.issues` 与 `preCheck.directions`
-2. 为每个主要诊断问题映射 ≥1 个矩阵维度
-3. 每维选定 choice（A/B/C/D）并写 reason
-4. 汇总 `recommendedConfig` 供 P06 引用
-5. 自检：不得与后续 G1–G5 锚点冲突
+1. 读取 `preCheck.issues` 与 catalog + `adaptation_profiles.json`
+2. 12 维 + D/V/R/C/DLG/O 系列全部 choice；深度维 choice≠keep 时填 `deepAdaptation.*`
+
+### 出口形状族（Shape contract）
+
+- **可选 string**：无内容必须**省略 key**；禁止输出 JSON `null`
+- **`nameMap` / `relationMap` / `substitutions`**：仅允许 `[{ "from": "原", "to": "新" }]`；禁止 `"原→新"` 作 object key，禁止无冒号伪对象
+- **`designBrief.B16`**：由 nameMap 编译的 `{ "原": "新" }` record 镜像
+
+正例：
+
+```json
+"deepAdaptation": {
+  "nameMap": [{ "from": "温如瓷", "to": "沈清瓷" }],
+  "relationMap": [{ "from": "温家", "to": "沈家" }],
+  "substitutions": [{ "from": "系统", "to": "天命书" }],
+  "settingProfile": { "era": "架空大邺" }
+}
+```
+
+3. 产出 **并列** `planData.adaptationMatrixStructured` + 累积 `planData.narrativeBrief.adaptationConstraints[]`
+4. 从 P0 `recommendedMatrixDraft` 生成 `recommendedConfig`（摘要 + 机器可读 matrix 引用）
+5. 等待用户确认 / `confirmMatrixChoices` 后 `userConfirmed: true`
 
 ## 输出
 
@@ -449,17 +499,191 @@ rulePackVersion: "2.0.1"
 
 stage `P03`；未通过不得进 P06_story_core。
 
+# P0.6 故事核心
+
+基于源材料 + 改编矩阵，构建**新叙事内核**与事件序列。W1 骨架须引用本产出。
+
+## 入口条件
+
+- `planData.adaptationMatrixStructured.userConfirmed` = true（P03 + confirmMatrixChoices）
+- 源材料摘要可用
+
+## 产出字段
+
+| 字段 | 说明 | ruleId 关联 |
+|------|------|-------------|
+| narrativeKernel | 一句话故事核心 | W1 故事核 |
+| characterAnchors | 角色/矛盾/初态/终态 | G1 预留 |
+| relationships | 关系表或简述 | G5 预留 |
+| eventSequence | 阶段/集数/事件/旧问题解决 | P0 问题闭环 |
+| changeLog | 改动项/旧/新/原因 | P09 可追溯 |
+
+## 执行步骤
+
+1. 从 `adaptationMatrixStructured` + `adaptationProfile` 提取改编约束（含 deepAdaptation）
+2. 写 narrativeKernel（≤50 字，含心理级爽点类型）
+3. 立 characterAnchors，人物 ≤4（大三角原则）
+4. 排 eventSequence ≥3 行，标注解决的 P-00x
+5. 逐条记录 changeLog（必填 `matrixDim` + `densityImpact`）；写入 `narrativeBrief.reconstructionTrace[]` + `storyKernel` / `mustResolveIssues[]`
+
+## 边界条件
+
+- 新故事须解决 P0 中 ≥80% 识别问题
+- 人物 ≤4，为 W1 人物小传奠基
+- 金手指须有约束，非同质化（市面 >10 次须升级）
+
+## 输出
+
+```xml
+<storyCore rulePackVersion="2.0.1">
+  <narrativeKernel>...</narrativeKernel>
+  <characterAnchors>...</characterAnchors>
+  <relationships>...</relationships>
+  <eventSequence>
+    <event phase="铺垫" episode="1-3" desc="..." resolves="P-001" />
+  </eventSequence>
+  <changeLog>...</changeLog>
+</storyCore>
+```
+
+## BLOCK 闸门
+
+- narrativeKernel 非空
+- eventSequence ≥3 行
+- changeLog ≥1 条
+- 问题解决率 ≥80%
+
+## ruleAudit
+
+stage `P06`；未通过不得进 P08_postcheck。
+
+---
+name: P08_postcheck
+description: P0.8 改编后剧本后检与六维度再评分
+stageId: P08
+outputTag: postCheck
+rulePackVersion: "2.0.1"
+---
+
+# P0.8 改编后检
+
+对 P0.6 故事框架做**改编前后对比**与六维度再评分，决定进入加固或 W 阶段。
+
+## 入口条件
+
+- `planData.storyCore` 已完成
+- `planData.preCheck` 作为旧评分基准
+
+## 执行区块
+
+| 区块 | 内容 |
+|------|------|
+| comparison | 旧问题 / 是否解决 / 说明 |
+| dimensions | 维度 / 新分 / 旧分 / 变化 |
+| residualIssues | 问题 / 描述 / 加固方向 |
+| conclusion | 通过 / 需加固 / 需重新改编 |
+
+## 再评分标准
+
+沿用 P1–P6 六维度，对比 preCheck 基线：
+
+- **通过**：六维度均 ≥5，且无未解决严重问题
+- **需加固**：任一维度 <5 或残留问题可局部修复
+- **需重新改编**：≥3 维度 <4 或核心矛盾未解决
+
+## 执行步骤
+
+1. 逐条对照 preCheck.issues 与 storyCore.eventSequence
+2. 六维度再评分，记录 delta（新分 - 旧分）
+3. 残留问题标注加固方向（指向 P09 或 W 阶段 ruleId）
+4. 输出 conclusion
+
+## 输出
+
+```xml
+<postCheck rulePackVersion="2.0.1">
+  <comparison>...</comparison>
+  <dimensions>
+    <dim id="P1" old="6" new="7" delta="+1" />
+  </dimensions>
+  <residualIssues>...</residualIssues>
+  <conclusion>通过|需加固|需重新改编</conclusion>
+</postCheck>
+```
+
+## BLOCK 闸门
+
+- 六维度均有新旧分
+- conclusion 非空
+- conclusion=通过 → 六维度均 ≥5
+- conclusion=需加固 → 残留问题均有加固方向
+
+## 路由
+
+| conclusion | 下一 stage |
+|------------|------------|
+| 通过 | G_anchors |
+| 需加固 | P09_reinforce |
+| 需重新改编 | P03_matrix |
+
+<!-- missing: browser_chat/stages/P09_reinforcement.md -->
+
+
+{
+  "version": "2.0.1",
+  "baseDimensions": [
+    { "dimId": "gender_structure", "name": "性别结构", "choices": ["keep", "adjust", "swap", "ensemble"], "group": "base" },
+    { "dimId": "scene_structure", "name": "场景结构", "choices": ["linear", "flashback", "dual_line", "condense"], "group": "base" },
+    { "dimId": "character_anchor", "name": "人物锚点", "choices": ["keep_core", "reshape", "merge", "split"], "group": "base" },
+    { "dimId": "relation_network", "name": "关系网络", "choices": ["triangle", "multi", "opposition", "mentor"], "group": "base" },
+    { "dimId": "emotion_logic", "name": "情感逻辑", "choices": ["angst", "sweet", "power", "blend"], "group": "base" },
+    { "dimId": "conflict_design", "name": "冲突设计", "choices": ["pvp", "pvs", "pve", "layered"], "group": "base" },
+    { "dimId": "visual_style", "name": "视觉风格", "choices": ["ancient_real", "modern_clean", "cinematic", "stylized"], "group": "base" },
+    { "dimId": "narrative_structure", "name": "叙事结构", "choices": ["three_act", "four_beat", "episodic"], "group": "base" },
+    { "dimId": "core_prop", "name": "核心道具", "choices": ["keep", "amplify", "replace"], "group": "base" },
+    { "dimId": "dialogue_strategy", "name": "台词策略", "choices": ["faithful", "colloquial", "compress"], "group": "base" },
+    { "dimId": "music_mood", "name": "音乐氛围", "choices": ["warm", "tense", "epic", "minimal"], "group": "base" },
+    { "dimId": "rhythm_plan", "name": "节奏规划", "choices": ["fast", "medium", "slow_with_breath"], "group": "base" }
+  ],
+  "deepDimensions": [
+    { "dimId": "D01_nameMap", "name": "姓名改编", "choices": ["keep", "modernize", "localize", "full_rename"], "structuredField": "deepAdaptation.nameMap", "group": "deep" },
+    { "dimId": "D02_relationMap", "name": "关系改编", "choices": ["keep", "simplify", "invert", "expand"], "structuredField": "deepAdaptation.relationMap", "group": "deep" },
+    { "dimId": "D03_substitutions", "name": "元素平替", "choices": ["keep", "partial", "full"], "structuredField": "deepAdaptation.substitutions", "group": "deep" },
+    { "dimId": "D04_settingProfile", "name": "背景迁移", "choices": ["keep", "era_shift", "world_shift"], "structuredField": "deepAdaptation.settingProfile", "group": "deep" }
+  ],
+  "viralDimensions": [
+    { "dimId": "V01_openingCard", "name": "开篇一卡", "choices": ["strict_3ep", "micro_compress", "standard"], "group": "viral" },
+    { "dimId": "V02_clipDensity", "name": "30秒投流爆点", "choices": ["high", "medium", "profile"], "group": "viral" },
+    { "dimId": "V03_paypointLayout", "name": "付费卡点", "choices": ["standard_5", "front_load", "custom"], "group": "viral" },
+    { "dimId": "V04_episodeRhythm", "name": "单集节奏", "choices": ["strict_31545", "relaxed"], "group": "viral" },
+    { "dimId": "V05_genreFramework", "name": "类型节奏", "choices": ["甜宠", "虐恋", "战神", "重生", "萌宝"], "group": "viral" },
+    { "dimId": "V06_conflictLadder", "name": "矛盾阶梯", "choices": ["level_3", "level_4", "escalate_fast"], "group": "viral" }
+  ],
+  "retentionDimensions": [
+    { "dimId": "R01_ep1_opening5s", "name": "第一集前5秒钩子", "choices": ["crisis", "identity_contrast", "emotion_hit", "combo"], "group": "retention" },
+    { "dimId": "R02_ep1_first30s", "name": "第一集前30秒", "choices": ["audience_knows", "character_knows", "partial_both", "strict_31545"], "group": "retention" },
+    { "dimId": "R03_ep1_endHook", "name": "第一集集末钩", "choices": ["prop", "emotion_rebound", "camera_mismatch"], "group": "retention" },
+    { "dimId": "R04_epN_retention", "name": "后续集留人", "choices": ["spring_tension", "one_reversal_per_ep", "genre_frame"], "group": "retention" }
+  ],
+  "causalityDimensions": [
+    { "dimId": "C01_eventCausality", "name": "事件因果密度", "choices": ["strict", "standard", "relaxed"], "group": "causality" },
+    { "dimId": "C02_infoGapStrategy", "name": "信息差策略", "choices": ["audience_knows", "character_knows", "alternate", "none"], "group": "causality" },
+    { "dimId": "C03_dialogueDensity", "name": "台词密度", "choices": ["short_drama_high", "standard", "action_heavy"], "group": "causality" },
+    { "dimId": "C04_showDontTell", "name": "展示不要告诉", "choices": ["strict", "standard"], "group": "causality" }
+  ],
+  "dialogueDimensions": [
+    { "dimId": "DLG01_subtextStyle", "name": "潜台词风格", "choices": ["efficient", "standard"], "group": "dialogue" },
+    { "dimId": "DLG02_lineFunction", "name": "台词功能要求", "choices": ["all_tagged", "key_only"], "group": "dialogue" },
+    { "dimId": "DLG03_avDialogueOrder", "name": "声画因果", "choices": ["action_first", "sync"], "group": "dialogue" }
+  ],
+  "openingDimensions": [
+    { "dimId": "O01_openingProfile", "name": "开场3-10s方案", "choices": ["O1_crisis_first", "O2_contrast_reveal", "O3_conflict_tableau", "O4_emotion_av_peak", "O5_debut_intro_merged"], "group": "opening" }
+  ]
+}
+
 ---
 
 ## §3 G 层锚点
-
----
-name: G_anchors
-description: G 层项目锚点 G1-G5 模板
-stageId: G
-outputTag: globalAnchors
-rulePackVersion: "2.0.1"
----
 
 # G 层全局锚点（G1–G5）
 
@@ -488,6 +712,7 @@ rulePackVersion: "2.0.1"
 3. G3 锁定情绪基调占比（如甜60%+虐30%+惊喜10%）
 4. G4 列核心道具，标注 significance（情感/权力/线索）
 5. G5 画关系图，标注张力变化集数
+6. 初始化 `planData.narrativeBrief.empathyPlan` 草稿（rootFor/rootAgainst 来自 G1 主角与对立面）
 
 ## 输出
 
@@ -517,15 +742,104 @@ stage `G`；未通过不得进 W1_skeleton。
 
 ---
 
-## §4 W 阶段
+## §3.5 编剧爆款思维
 
 ---
-name: W1_skeleton
-description: W1 故事骨架 storySkeleton XML 产出
-stageId: W1
-outputTag: storySkeleton
+name: viral_screenwriter_craft
+description: Browser Chat 编剧爆款思维（从 script_execution 抽取的可执行教学法）
+stageId: craft
 rulePackVersion: "2.0.1"
 ---
+
+# 编剧爆款思维 · Browser Chat 可执行版
+
+> **必读**：进入 W 阶段前通读本节。W3 写剧本时对照 `planData.narrativeBrief` 逐条兑现，禁止只填 JSON 字段不落地正文。
+
+## 1. 有用信息 vs 猜谜式悬念
+
+**禁止**（对照 `narrative_drive_spec.json` forbiddenSuspense）：
+
+- `opaque_mystery`：大家都不知道、观众也看不懂在猜什么
+- `exposition_dump`：开会/旁白一口气交代背景
+- `self_reveal_dialogue`：角色自己念设定说明书
+
+**必须**：每条信息写进 `informationLedger`，标注 `emotionTarget`（替谁捏汗/替观众爽）与 `payoffBy`（何时兑现）。
+
+| 废稿 | 报款 |
+|------|------|
+| △ 豪华别墅内，阳光洒落。女主打量四周。 | △ 巴掌脆响！女主脸侧红肿，箱子砸地。 |
+| 旁白：她是被抱错的真千金…… | 假千金（冷笑）：这房子，从来就不是你的。 |
+
+## 2. 信息差三配置
+
+| 类型 | 观众 | 角色 | 情绪效果 |
+|------|------|------|----------|
+| audience_knows_character_not | 知 | 不知 | 替主角捏汗 |
+| character_knows_audience_not | 不知 | 知 | 期待打脸 |
+| partial_both | 部分 | 部分 | 心疼又着急 |
+
+ep1 前 30s **最多 1 条**核心 info 释放；禁止连续猜谜。
+
+## 3. 动作是因，对话是果
+
+- 每句对白前必须有 △ 动作
+- `dialoguePlan` 每行须 `causedByActionId`（A1/A2…）+ ≥1 `function`
+- ep1 前 30s：至少 1 句 `emotion_hit` + 1 句 `conflict_escalate`
+- 单句 >20 字须标 `splitHint: reaction_shot` + 听者反应 △
+
+## 4. 节奏 3-15-45 与可拍 △
+
+| 秒级 | 剧本要求 | retention 字段 |
+|------|----------|----------------|
+| 0–3s | 强视觉冲突（非写景/开会） | opening5sHook |
+| 3–15s | 第一次剧情变化 | opening3to10s |
+| 15–45s | 强期待 + 主角抉择空间 | rhythm31545 |
+| 集末 | 反转钩子 | endHook |
+
+**废稿**：缓推全景写景 + 旁白介绍世界观  
+**报款**：特写巴掌 + 骤停 BGM + 一句宣战对白
+
+## 5. 三大密度（每场自评）
+
+写入 `narrativeBrief.densityBudget` 与每场 `sceneMeta.densityScore`：
+
+- **情绪**：ep1 前 3s 峰值；禁止三场连续 low
+- **信息**：ep1 前 30s ≤1 核心 info；每集 ≤3 新 info
+- **情节**：15s 内第一次变化；每集 ≥1 反转
+
+## 6. 共情三拍（ep1 前 30s 至少完成前两拍）
+
+1. **困境**：主角被压到谷底（被羞辱/被误解）
+2. **无门**：看似无解（权力/信息/关系封锁）
+3. **微反击**：一个小动作暗示反击可能（攥拳/眼神/藏证据）
+
+`empathyPlan.rootFor` / `rootAgainst` 须在 ledger 的 `emotionTarget` 中体现。
+
+## 7. 改编 ≠ 缩写
+
+- P06 `changeLog` 每条链 `matrixDim` + `densityImpact`
+- `reconstructionTrace` 中 ≥80% P-issue 须在 ep1 剧本可指出对应 △/对白
+- 删留须写「替代爆点」，禁止只删不补
+
+## 8. AI 可实现边界（衔接 MD×4）
+
+- ep1 Opening `fxIntent.level` ≤ F2；F3+ 须 `degradeHint`
+- 禁「大楼坍塌」类 F5 → 改「人群惊逃+烟尘」
+- 有台词场须写 `voiceIntent`（音色/语速/情绪）供 AUD 编译
+
+## 9. 自检口诀（export 前）
+
+1. 首场首 △ 是冲突不是写景？
+2. 每条 ledger 有 emotionTarget 且已兑现？
+3. changeLog / reconstructionTrace 80% 可追踪？
+4. 长台词有 splitHint + 反应 △？
+5. ep1 首场 `sceneMeta.avCausality` 非空？
+
+未过 → 跑 `W3_narrative_selfcheck.md`，不得进 designBrief。
+
+---
+
+## §4 W 阶段
 
 # W1 故事骨架
 
@@ -553,8 +867,8 @@ rulePackVersion: "2.0.1"
 1. 读取 globalAnchors + storyCore（如有）
 2. 阐述思路 200–300 字（核心吸引力、三幕、分集策略）
 3. 按 XML 模板一次性完整输出 `<storySkeleton>...</storySkeleton>`
-4. 内部自查：表格行数 = 总集数 N；每集有集末钩子
-5. 写入 `planData.storySkeleton`
+4. 分集表增 `carryInfoIds[]` / `newInfoIds[]` / `empathyShift`；人物小传增 `voiceProfile.speakingStyle`
+5. 写入 `planData.storySkeleton` + `narrativeBrief.retentionBeats` / `seriesContinuity` 草稿
 
 ## 关键约束
 
@@ -582,14 +896,6 @@ rulePackVersion: "2.0.1"
 
 通过 → W2_strategy；可选触发 supervision_review（骨架审核）。
 
----
-name: W2_strategy
-description: W2 改编策略 adaptationStrategy XML
-stageId: W2
-outputTag: adaptationStrategy
-rulePackVersion: "2.0.1"
----
-
 # W2 改编策略
 
 基于 W1 骨架制定改编策略，输出 `<adaptationStrategy>` XML。原创项目可简化为「载体适配策略」。
@@ -597,6 +903,7 @@ rulePackVersion: "2.0.1"
 ## 入口条件
 
 - `planData.storySkeleton` 已通过 W1 BLOCK
+- `planData.adaptationMatrixStructured.userConfirmed` = true
 - globalAnchors G1–G5 可用
 
 ## 策略必含区块
@@ -617,8 +924,9 @@ rulePackVersion: "2.0.1"
 ## 执行步骤
 
 1. 读取 storySkeleton 删减记录与反转登记表
-2. 写 3–5 条核心原则，每条服务故事核
-3. 列删除决策，以三大密度为标尺
+2. 读取 `adaptationMatrixStructured` + `adaptationProfile`（含 deepAdaptation / V/R/C 维）
+3. 写 3–5 条核心原则，每条服务故事核
+3. 列删除决策表格（列：**三密度影响** + **替代爆点**）；写入 `narrativeBrief.densityBudget`
 4. 写世界观渐进披露方案（对话/OS/VO，禁大段旁白）
 5. 核对 ≈3 个反转与骨架登记表一致
 
@@ -646,14 +954,6 @@ rulePackVersion: "2.0.1"
 
 通过 → W3_script；可选 supervision_review（策略审核）。
 
----
-name: W3_script
-description: W3 文学剧本编写与 BLOCK 自检 R2/W12/W13
-stageId: W3
-outputTag: script
-rulePackVersion: "2.0.1"
----
-
 # W3 文学剧本
 
 基于骨架与策略编写单集文学剧本，包裹在 `<scriptItem>` 中。**严禁**输出分镜、景别、compiled prompt。
@@ -678,6 +978,13 @@ rulePackVersion: "2.0.1"
 - 黄金单集公式：承接+升级+价值转变+下集勾连
 - 节奏 3-15-45：3 秒情绪冲击 / 15 秒变化 / 45 秒强期待
 
+### ep1 专章（RET + NAR）
+
+- 并列产出 `informationLedger` / `dialoguePlan` / `viralAdaptation.retentionPlan`
+- 第一场 `sceneMeta`：opening5sHook、rhythm31545、infoGapType、clip30sCandidate
+- 第一场禁止 >2 句解释性台词；禁止纯环境描写开场
+- ep2+ 每场标 `retentionRole`（carry/escalate/hook）；集末 `endCardPack.preview`
+
 ### W13 画面可拍
 
 - △ 描写「人怎么干」：动作、表情、环境、光线
@@ -686,6 +993,10 @@ rulePackVersion: "2.0.1"
 - 竖屏适配：人物居中，无横向全景
 
 ## 执行步骤
+
+**步骤 0（强制）**：读取并打印 `planData.narrativeBrief` 摘要；写每场前标注本场兑现的 `retentionBeat` / `infoId` / `reconstructionTrace` 条目。  
+T3：同步写 `narrativeBrief.implementationPlan[]`（每场 `sceneRef` + `fxIntent` 含 **F0** + `avCausality`）；长句 >20 字必须 `dialoguePlan.lines[].splitHint`。  
+**场镜基数 MUST**：`implementationPlan`/`sceneMeta` 条数 = 剧本「场N」数；「接场/同地点续拍」要么换独立场景名（下游 SB `sceneName` 必须不同），要么合并为一场并删除多余 sceneRef。禁止留下无镜可映射的 F1 plan 项。
 
 1. 从骨架提取**当前集**信息（忽略其他集）
 2. 阐述思路 200–300 字
@@ -719,6 +1030,51 @@ A：台词
 ## 下游
 
 全集完成 → design_brief → corridor_GB。
+
+# W3 叙事质性 BLOCK 自检
+
+W3 文学剧本完成后、**进入 designBrief 前**必须逐项自检。任一 BLOCK 项失败须回改 W3/P06，不得 export。
+
+## 入口
+
+- 已产出 `<scriptItem>` + sidecar JSON（ledger/dialoguePlan/retentionPlan/sceneMeta）
+- 已读取完整 `planData.narrativeBrief`
+
+## BLOCK 清单
+
+| ID | 检查 | 失败则 |
+|----|------|--------|
+| NAR-empathy | 每条 informationLedger 有 emotionTarget + payoffBy 且 ep1 可指出兑现 | 补写/改剧本 |
+| NAR-01 | ep1 第一场首 △ 强视觉冲突（非写景/开会） | 重写首场 |
+| NAR-02 | ep1 前 30s 解释性台词 >2 且无 infoDelivery | 拆镜/改动作 |
+| NAR-03 | 每条 dialoguePlan line 有 causedByActionId + ≥1 function | 补标注 |
+| NAR-04 | retentionPlan.opening5s 在剧本首场可指出 | 对齐重写 |
+| NAR-05 | changeLog 中 ≥80% P-issue 在剧本可追踪 | 回改 P06/W3 |
+| NAR-06 | reconstructionTrace ≥80% 在 ep1 可指出 △/对白 | 回改 W3 |
+| NAR-07 | ep1 无 forbiddenSuspense 模式 | 改信息交付 |
+| NAR-14 | 长台词 >20 字有 **splitHint**（如 `reaction_shot`）+ 反应 △ | 拆句/补 `dialoguePlan.lines[].splitHint` |
+| NAR-15 | emotion_hit 台词有 **reactionAction** | 补 `dialoguePlan.lines[].reactionAction` |
+| RET-01 | ep1 首场 sceneMeta.avCausality 非空 | 补声画峰值 |
+| RET-02 | opening3to10s / rhythm31545 与正文时间轴一致；SB 镜可标 rhythm31545 | 对齐 retentionPlan |
+
+**禁止假绿：** 不得在缺 splitHint/reactionAction 时写 `narrativeSelfcheck.passed=true`。
+
+## 输出
+
+```json
+{
+  "narrativeSelfcheck": {
+    "passed": true,
+    "failedIds": [],
+    "checkedAt": "ISO8601"
+  }
+}
+```
+
+## 闸门
+
+`narrativeSelfcheck.passed !== true` → **禁止** designBrief / export。  
+此外，export 前服务器 `exportGate` 会复核 `NAR-14` / `NAR-15`；若 bundle 自报 passed 但服务器失败，将判定为 `SELF_REPORT_MISMATCH` 并阻断出口。
 
 # 走廊 · W3 剧本
 
@@ -757,14 +1113,6 @@ BLOCK → fixPlan → 修订 script，不得进 designBrief。
 ---
 
 ## §5.0 质量走廊
-
----
-name: corridor_GB
-description: GB 导演规划走廊 — scriptPlan 分场情绪，禁光影切镜
-stageId: GB
-outputTag: scriptPlan
-rulePackVersion: "2.0.1"
----
 
 # 走廊 GB · 导演规划
 
@@ -805,6 +1153,16 @@ rulePackVersion: "2.0.1"
 3. 写场间过渡（切/淡入/叠化），不写具体光影
 4. 同步构造 episodeBeat.emotionCurve + rhythmZones（对齐 B12）
 5. 对照 designBrief.B4 情绪弧线一致性；B12 每场至少一区
+6. 从 `planData.narrativeBrief` 抄入 **sceneCausalBeats**（每场 infoIds + avPeak）与 **infoIds[]**（对齐 informationLedger）
+
+## narrativeBrief → GB 抄入规则
+
+| narrativeBrief 字段 | GB 字段 |
+|---------------------|---------|
+| infoDeliveryPlan[].infoId | 逐场注意事项 + sceneCausalBeats |
+| retentionBeats.opening5s | Sc1 情绪峰值说明 |
+| reconstructionTrace[].newBeat | 对应场 beat 备注 |
+| empathyPlan.squeezeMoments | 场级情绪挤压窗口 |
 
 ## BLOCK 闸门（rollbackLayer GB）
 
@@ -821,14 +1179,6 @@ shotSize、cameraMovement、lightingSetup、compiledPrompt。
 ## 下游
 
 通过 → corridor_SB；情绪不符 → rePush designBrief 或 W3。
-
----
-name: corridor_SB
-description: SB 分镜表走廊 — shots dialogue.lines，禁 prompt
-stageId: SB
-outputTag: storyboardTable
-rulePackVersion: "2.0.1"
----
 
 # 走廊 SB · 分镜表
 
@@ -852,8 +1202,16 @@ rulePackVersion: "2.0.1"
 | narrative.duration | 预估秒数 | — |
 | narrative.transitionType | 切/淡入/叠化 | PR-CAM-01 |
 | narrative.rhythmZone | 起/承/转/合（引用 B12） | DC-05 |
-| narrative.markers | 伏笔/揭晓/钩子标记 | PR-09, DC-06 |
+| narrative.markers | 伏笔/揭晓/钩子标记；可含 infoId/causeId/effectId | PR-09, DC-06 |
 | narrative.spatialRelation | 轴线/站位（引用 B13） | PR-06, PR-14 |
+| retentionTier | ep1: 0-2s / 2-5s / 5-30s / body / endHook | RET |
+| shotDesign | T2+ 构图/表演/锚点（高情绪≥4 必填 performance） | GEN |
+| lines[].lineId/functions/causedByActionId | 台词功能链，对齐 dialoguePlan | NAR |
+| clip30sCandidate / rhythm31545 | 投流与 3-15-45 标注 | VIR |
+| audioCue | W3 sceneMeta.avCausality.audioBeat（**string**；禁止 `{beat,type}` object） |
+| visualEffect / fxLevel | W3 fxIntent（**visualEffect 为 string** `"F1: 描述"`；fxLevel 可选 `"F1"`） |
+
+无 AV 意图时**省略**上述可选字段；禁止写 `null`。
 
 ## 台词映射铁律（R2）
 
@@ -894,14 +1252,6 @@ compiled prompt、API 参数、vendor 字段、Touch 配置。
 
 通过 → CD（T2）→ EN → MD；台词问题 → rePush W3 或 SB 补镜。
 
----
-name: corridor_EN
-description: EN 分镜面板走廊 — Y 映射 compile，锚点保护
-stageId: EN
-outputTag: storyboard
-rulePackVersion: "2.0.1"
----
-
 # 走廊 EN · Y 映射编译
 
 质量走廊第三阶段（T2）：shots[] → storyboard[] EN 面板，执行 **Y 映射 compile**。保护 G/BP 锚点不漂移。
@@ -931,8 +1281,8 @@ rulePackVersion: "2.0.1"
 
 ## 执行步骤
 
-1. 逐 shot 读取 narrative + visualLockTable
-2. 按 Y 映射生成 generation 字段
+1. 逐 shot 读取 narrative + visualLockTable + `narrativeBrief.implementationPlan`（若有）
+2. 按 Y 映射生成 generation 字段；**优先**用 `buildPromptIR(shotDesign + promptAnchors)` 草稿，MD 技能润色
 3. 校验 refs 全部 resolve 到 BP CODE
 4. 计算 compiledHash per shot
 5. 写入 **ScriptBundle** `preDesignPack.shots[].generation` 与/或 `flowData.storyboard[]`
@@ -957,14 +1307,6 @@ rulePackVersion: "2.0.1"
 ---
 
 ## §5.1 台词链
-
----
-name: linkage_continuity
-description: 六链闭环 linkageAudit 与 continuity 写回
-stageId: LINK
-outputTag: linkageAudit
-rulePackVersion: "2.0.1"
----
 
 # 十链联动与连贯性（linkageAudit）
 
@@ -999,8 +1341,7 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
         "nodes": [
           { "stage": "W3", "field": "script", "ruleId": "R2" },
           { "stage": "SB", "field": "shots[].dialogue.lines", "ruleId": "H3" }
-        ],
-        "breakPoint": null
+        ]
       }
     ],
     "blockExport": false
@@ -1035,7 +1376,7 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 - 十链均有 status 判定
 - 台词链 externalHashCheck.match = true
 - 视听链偏差 ≤2（B4 vs emotionCurve）
-- 故事链 B5 每条有 payoffEp 或本集收
+- 故事链 B5：`payoffEp` 仅未来集号（number）；本集收用 `payoffLabel: "本集收"`
 - blockExport = false 方可 T1 出口
 
 ## 与 linkageRepairPlan
@@ -1045,14 +1386,6 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 ---
 
 ## §5.5 设计联动 designBrief
-
----
-name: design_brief
-description: B 层 designBrief 11 联动字段
-stageId: B
-outputTag: designBrief
-rulePackVersion: "2.0.1"
----
 
 # designBrief（B 层 11 字段）
 
@@ -1097,7 +1430,11 @@ rulePackVersion: "2.0.1"
 {
   "designBrief": {
     "B1": "ep-01", "B2": "第1集：...", "B3": { "genre": "甜宠", "ratio": {...} },
-    "B4": [3, 7, 5], "B5": [{ "type": "伏笔", "desc": "...", "payoffEp": 5 }],
+    "B4": [3, 7, 5],
+    "B5": [
+      { "type": "伏笔", "desc": "...", "payoffEp": 5 },
+      { "type": "钩子", "desc": "...", "payoffLabel": "本集收" }
+    ],
     "B6": { "characters": ["..."], "scenes": ["..."], "props": ["..."] },
     "B7": "...", "B8": "...", "B9": "轻快钢琴", "B10": "竖屏9:16",
     "B11": ["台词","资产","连贯","视听","故事","场景","运镜","改编","模态编译","修复"],
@@ -1113,11 +1450,85 @@ rulePackVersion: "2.0.1"
 - 11 字段全非空（B12/B13 有场则必填）
 - 无镜级/prompt 内容
 - B6 与 script 角色场景一致
-- B5 每条有 payoffEp 或标记「本集收」
+- B5 每条：`payoffEp` 仅未来集号（number）；本集收/当集兑现用 `payoffLabel: "本集收"`，**禁止**把语义串写进 `payoffEp`
 
 ## 下游
 
 通过 → corridor_GB（scriptPlan 分场）。
+
+## B14–B23 扩展（W3 sidecar → GB/SB 映射）
+
+| # | 字段 | W3 来源 | GB/SB 目标 |
+|---|------|---------|------------|
+| B14 | paypointMarkers | W1 付费卡点 | GB 场表 paypoint 标注 |
+| B15 | clipHooks | viralAdaptation.clipPoints30s | SB clip30sCandidate |
+| B16 | adaptationDeepRef | deepAdaptation.nameMap → `{from:to}` record | designBrief.B16 镜像（勿另造 B16_adaptationDeepRef；maps 仅 [{from,to}]） |
+| B17 | retentionScenes | retentionPlan.ep1 | GB 场级 retention 窗口 |
+| B18 | opening5sAV | sceneMeta.avCausality | SB retentionTier 0-2s |
+| B19 | first30sAV | rhythm31545 + infoGap | SB markers infoId |
+| B20 | infoLedgerRefs | informationLedger.infoId | SB markers |
+| B21 | dialoguePlanRef | dialoguePlan | SB lines functions |
+| B22 | causalityGraphRef | narrativeCausalityGraph | SB cause/effect markers |
+| B23 | retentionInfoDelivery | infoDeliveryPlan | GB 每场 info 交付清单 |
+
+### B20 / B23 权威形状（禁止对象数组直接当 B20）
+
+```json
+"B20": ["INF-01", "INF-02", "INF-03"],
+"B23": {
+  "retentionInfoDelivery": ["INF-01", "INF-02", "INF-03"],
+  "items": [
+    { "infoId": "INF-01", "scene": "场1", "delivery": "沈母翻账册动作 + 台词" }
+  ]
+}
+```
+
+- **B20**：只能是 infoId `string[]`，不要写成 `[{ "infoId", "delivery" }]`。
+- **B23**：必须是 **record**；最少含 `retentionInfoDelivery: string[]`；明细可放 `items` 数组。
+- 导入侧会对错误形态做 SH-B20 / SH-B23  salvage，但导出 JSON 应直接写权威形。
+
+每场 GB 须从 `narrativeBrief.infoDeliveryPlan` 抄 infoIds；B18/B19 须与 W3 `sceneMeta.avCausality` 一致。
+
+# design_compliance_gate（对齐 qualityGate）
+
+出口前必须调用 **同一内核**：
+
+1. `POST /api/ruleEngine/exportGate`（或本地 `runExportGate`）→ 读取 `exportAllowed` / `closureSnapshot` / `qualityGate` / `chatPromptGaps`
+2. 对照 `data/fixtures/quality_matrix.json` 的 id
+3. **禁止** 自报 `linkageAudit: pass` / `modalityPromptAudit.passRate=100` / `FX=pass` / `ruleAudit.passed=true` 当权威
+
+## 必检（matrix 引用）
+
+- 台词：`DC-01` / `LANG-01`（源语言，禁英译进 VID）
+- 画面：`QP-02`（禁空泛）
+- 运镜/转场：`PR-CAM-01` / `DC-09`（白名单）
+- 特效：`FX-GRADE-01`（无特效须声明 **F0**；有特效才写 `fxPrompt`；F4/F5 硬拦）
+- 假绿：`FX-FALSE-GREEN`（禁止空 FX 仍写 modalityPromptAudit.FX=pass）
+- 叙事辅字段：`NAR-14`（长台词 >20 字须 `splitHint`）/ `NAR-15`（emotion_hit 须 `reactionAction`）
+- 爆款/留存：`VIR-01` / `RET-01` / `VIR-04`（WARN→T3 ep1 可升）
+
+## Track A 作者权（Chat 必须写）
+
+| 字段 | 阶段 | 规则 |
+|------|------|------|
+| `dialoguePlan.splitHint` | W3 | 单句 >20 字 |
+| `dialoguePlan.reactionAction` | W3 | `functions` 含 emotion_hit |
+| `sceneMeta.fxIntent` / F0–F5 | W3 | 无特效写 F0 |
+| `generation.fxPrompt` | MD-FX | 仅 F1+ / visualEffect |
+| `modalityPromptAudit.FX` | MD | 须与真实字段一致，禁止假绿 |
+| `rhythm31545` 镜标 | SB | 对齐 retentionPlan |
+
+## Track B 制作安全网（可声明自愈）
+
+- 空 FX → soft_patch 声明 F0（不发明特效文案）
+- 运镜/转场白名单 clamp
+- LANG 源语言回填
+
+## 失败处理
+
+`repair_hint_catalog`：`RH-LANG-01` / `RH-FX-01` / `RH-NAR-14` / `RH-NAR-15` / `RH-QP-02` / `RH-QP-14` / `RH-QP-03`；或 `POST /api/ruleEngine/precheckLoop`。
+
+若 `exportAllowed !== true`：必须按 `repairHints` 回改 JSON 字段，重跑 `exportGate`，不得直接 import。
 
 ---
 
@@ -1219,29 +1630,133 @@ rulePackVersion: 2.0.1
 ## §7 T1 ScriptBundle schema
 
 {
-  "_comment": "ScriptBundle v2.0.1 T3 正例 — Browser Chat 全链路出口",
+  "_comment": "ScriptBundle v2.0.1 T3 正例 — 改编/留存/叙事/包装/生成落地链",
   "bundleVersion": "browser-chat-optimized",
   "rulePackVersion": "2.0.1",
   "bundleType": "script",
-  "meta": {
-    "episodeKey": "ep-01",
-    "episodeName": "第1集",
-    "episodeIndex": 1,
-    "provenance": { "source": "external-chat" }
-  },
-  "script": "场1 寝殿 日 内\n\n婢女：\"殿下醒了。\"\n\n裴青梧：\"我知道。\"",
+  "meta": { "episodeKey": "ep-01", "episodeName": "第1集", "episodeIndex": 1, "provenance": { "source": "external-chat" } },
+  "continuity": { "recapHint": "本集开篇：裴青梧苏醒" },
+  "script": "裴青梧传 EP01：苏醒\n\n场1 寝殿 日 内\n人物：裴青梧 婢女\n△烛火摇曳。婢女俯身，轻声唤醒。\n婢女：殿下醒了。\n△裴青梧睁眼，烛火映面，眼神由迷茫转认命。\n裴青梧：我知道。\n△她攥紧被角，指节发白。",
   "planData": {
-    "globalAnchors": {
-      "G1": "裴青梧：认命 vs 觉醒",
-      "G3": "古言虐恋 70% / 爽 30%"
+    "narrativeBrief": {
+      "storyKernel": "示例故事核",
+      "implementationPlan": [{ "sceneRef": 1, "promptAnchors": { "img": ["示例"] } }]
+    },
+    "sceneMeta": [{ "sceneRef": 1, "avCausality": { "visualPeak": "示例", "audioBeat": "骤停" } }],
+    "globalAnchors": { "G1": "裴青梧：认命 vs 觉醒", "G3": "古言虐恋 70% / 爽 30%" },
+    "adaptationProfile": { "genrePreset": "古言虐恋", "lockedChoices": { "D01_nameMap": "keep" } },
+    "adaptationMatrixStructured": {
+      "userConfirmed": true,
+      "matrix": [
+        { "dimId": "gender_structure", "choice": "keep" },
+        { "dimId": "scene_structure", "choice": "linear" },
+        { "dimId": "character_anchor", "choice": "keep_core" },
+        { "dimId": "relation_network", "choice": "triangle" },
+        { "dimId": "emotion_logic", "choice": "angst" },
+        { "dimId": "conflict_design", "choice": "layered" },
+        { "dimId": "visual_style", "choice": "ancient_real" },
+        { "dimId": "narrative_structure", "choice": "three_act" },
+        { "dimId": "core_prop", "choice": "keep" },
+        { "dimId": "dialogue_strategy", "choice": "compress" },
+        { "dimId": "music_mood", "choice": "tense" },
+        { "dimId": "rhythm_plan", "choice": "fast" },
+        { "dimId": "D01_nameMap", "choice": "keep" },
+        { "dimId": "V05_genreFramework", "choice": "虐恋" },
+        { "dimId": "R01_ep1_opening5s", "choice": "identity_contrast" },
+        { "dimId": "O01_openingProfile", "choice": "O3_conflict_tableau" }
+      ],
+      "deepAdaptation": { "nameMap": [], "relationMap": [], "substitutions": [], "settingProfile": { "era": "架空唐宋" } }
+    },
+    "adaptationStrategy": "保持姓名；强化寝殿空间压迫感；nameMap 已对齐 adaptationMatrix",
+    "viralAdaptation": {
+      "genreFramework": "虐恋",
+      "openingCardPlan": { "ep1": ["困境", "反差", "目标", "动机"] },
+      "clipPoints30s": [{ "ep": 1, "scene": "1-1", "hook": "苏醒", "clipable": true }],
+      "paypointSchedule": [{ "ep": 2, "ratio": 0.1, "type": "身份差", "clip30s": "认亲" }],
+      "retentionPlan": {
+        "ep1": {
+          "opening5s": { "hookType": "identity_contrast", "visualBeat": "烛火映面", "audioBeat": "骤停" },
+          "opening3to10s": { "profileId": "O3_conflict_tableau", "emotionAV": { "visualPeak": "苏醒特写", "fxLevel": "F0" } },
+          "first30s": {
+            "infoGap": "audience_knows",
+            "rhythm31545": { "impact3s": "婢女唤醒", "change15s": "裴青梧应答", "expect45s": "认命眼神" },
+            "clip30sCandidate": true
+          },
+          "episodeEndHook": { "type": "emotion_rebound", "desc": "眼神由认命转警觉" }
+        },
+        "epN": { "retentionPattern": "spring_tension", "minReversalPerEp": 1 }
+      }
+    },
+    "informationLedger": [
+      {
+        "infoId": "INF-ep01-sc1-01",
+        "fact": "殿下已苏醒但尚未表态",
+        "audienceKnows": true,
+        "characterKnows": { "裴青梧": true, "婢女": true },
+        "emotionTarget": "替观众捏汗",
+        "payoffBy": "sc1-end"
+      }
+    ],
+    "dialoguePlan": {
+      "lines": [
+        {
+          "lineId": "L-01",
+          "speaker": "婢女",
+          "text": "殿下醒了。",
+          "functions": ["deliver_info", "emotion_hit"],
+          "causedByActionId": "A1",
+          "subtext": "试探"
+        },
+        {
+          "lineId": "L-02",
+          "speaker": "裴青梧",
+          "text": "我知道。",
+          "functions": ["character_voice", "conflict_escalate"],
+          "causedByActionId": "A2",
+          "subtext": "早已清醒"
+        }
+      ]
+    },
+    "endCardPack": {
+      "preview": { "enabled": true, "overlayText": "下集：身份暗涌", "clipHookIds": ["CLIP-ep02-sc1"], "previewShots": ["shot-2"] }
     }
   },
   "designBrief": {
     "B1": "ep-01",
     "B4": [4, 5, 6],
     "B5": ["钩子：苏醒", "承接：认命"],
-    "emotionCurveOutline": [4, 5, 6],
-    "infoLinkageChain": ["钩子：苏醒", "承接：认命"]
+    "B14": [{ "position": "ep2-10%", "type": "身份差" }],
+    "B15": [{ "clipHookId": "CLIP-ep01-sc1", "hook": "苏醒" }],
+    "B20": ["INF-ep01-sc1-01"],
+    "B21": { "ref": "dialoguePlan" },
+    "B22": { "ref": "narrativeCausalityGraph" },
+    "B18": { "opening5sAV": { "shotSize": "MS", "audioBeat": "骤停" } },
+    "B19": { "first30sAV": { "rhythm31545": true } },
+    "B23": { "retentionInfoDelivery": ["INF-ep01-sc1-01"] },
+    "paypointMarkers": [{ "position": "ep2-10%", "type": "身份差" }]
+  },
+  "narrativeCausalityGraph": {
+    "nodes": [
+      { "id": "E1", "type": "event", "label": "婢女唤醒" },
+      { "id": "E2", "type": "event", "label": "裴青梧应答" },
+      { "id": "A1", "type": "visual", "label": "俯身" },
+      { "id": "L1", "type": "dialogue", "label": "殿下醒了" }
+    ],
+    "edges": [{ "from": "A1", "to": "L1", "relation": "cause" }, { "from": "E1", "to": "E2", "relation": "cause" }],
+    "broken": [],
+    "reverseHints": []
+  },
+  "debutIntroPack": {
+    "items": [
+      {
+        "entityType": "character",
+        "code": "CHAR-PEIQINGWU",
+        "copyHint": "裴青梧睁眼，烛火映面",
+        "establishingPattern": "特写→中景",
+        "subOptional": { "enabled": true, "text": "裴青梧 · 真千金" },
+        "fxLevel": "F0"
+      }
+    ]
   },
   "preDesignPack": {
     "scriptPlan": "# 导演规划\n\n## 场1：寝殿\n- 情绪：5\n",
@@ -1252,16 +1767,25 @@ rulePackVersion: 2.0.1
         "sceneName": "寝殿",
         "duration": 2,
         "shotSize": "MS",
+        "retentionTier": "0-2s",
+        "clip30sCandidate": true,
         "visualDescription": "婢女俯身唤醒殿下",
         "charCodes": ["CHAR-MAID"],
+        "shotDesign": {
+          "composition": { "foreground": "婢女俯身", "background": "寝殿烛火" },
+          "performance": { "microExpression": { "eyes": "soft", "mouthDetail": "neutral_closed" } },
+          "cameraAnchor": { "shotSize": "MS", "bgBlur": false },
+          "lipSyncPolicy": "subtle_natural"
+        },
         "narrative": {
-          "dialogue": { "lines": [{ "speaker": "婢女", "text": "殿下醒了。" }] },
-          "markers": [{ "type": "钩子", "desc": "苏醒" }]
+          "dialogue": { "lines": [{ "speaker": "婢女", "text": "殿下醒了。", "lineId": "L-01", "functions": ["deliver_info"], "causedByActionId": "A1" }] },
+          "markers": [{ "type": "钩子", "desc": "苏醒", "infoId": "INF-ep01-sc1-01" }],
+          "emotionIntensity": 5
         },
         "generation": {
-          "imagePrompt": "婢女, 寝殿烛火暖光, 中景半身, 侧光4500K, 古言写实, no text watermark, --cref CHAR-MAID --ar 16:9",
-          "videoPrompt": "中景 static, slow push, duration 2s, motion-from-frame",
-          "audioPrompt": "婢女, 轻柔女声, 正常语速, 关切"
+          "imagePrompt": "婢女俯身, 寝殿烛火暖光, 中景半身, 侧光4500K, 古言写实, --cref CHAR-MAID --ar 16:9",
+          "videoPrompt": "中景 static, duration 2s, subtle lip sync, natural mouth movement, motion-from-frame",
+          "audioPrompt": "婢女, 轻柔女声, 关切"
         }
       },
       {
@@ -1270,61 +1794,268 @@ rulePackVersion: 2.0.1
         "sceneName": "寝殿",
         "duration": 2,
         "shotSize": "CU",
+        "retentionTier": "5-30s",
+        "clip30sCandidate": true,
+        "rhythm31545": { "change15s": "应答", "expect45s": "眼神" },
         "visualDescription": "裴青梧苏醒，烛火映面",
         "charCodes": ["CHAR-PEIQINGWU"],
+        "shotDesign": {
+          "composition": { "foreground": "裴青梧睁眼", "background": "烛火暖光" },
+          "performance": { "microExpression": { "eyes": "alert", "mouthDetail": "neutral_closed" } },
+          "lipSyncPolicy": "subtle_natural"
+        },
         "narrative": {
-          "dialogue": { "lines": [{ "speaker": "裴青梧", "text": "我知道。" }] },
-          "markers": [{ "type": "承接", "desc": "认命" }]
+          "dialogue": { "lines": [{ "speaker": "裴青梧", "text": "我知道。", "lineId": "L-02", "functions": ["character_voice"], "causedByActionId": "A2" }] },
+          "markers": [{ "type": "承接", "desc": "认命" }],
+          "emotionIntensity": 6
         },
         "generation": {
-          "imagePrompt": "裴青梧, 寝殿内景, 特写面部, 烛火暖光, 古言写实, --cref CHAR-PEIQINGWU --ar 16:9",
-          "videoPrompt": "特写 static, subtle drift, duration 2s, lipSync on, motion-from-frame",
-          "audioPrompt": "裴青梧, 清冷女声, 短句, 认命"
+          "imagePrompt": "裴青梧, 寝殿内景, 特写面部 alert eyes mouth neutral_closed, 烛火暖光, --cref CHAR-PEIQINGWU --ar 16:9",
+          "videoPrompt": "特写 static, duration 2s, subtle lip sync, natural mouth movement, motion-from-frame",
+          "audioPrompt": "裴青梧, 清冷女声, 认命"
         }
       }
     ]
   },
   "characterDesign": {
     "assets": [
-      {
-        "code": "CHAR-MAID",
-        "name": "婢女",
-        "L0": { "identity": "侍女", "gender": "女" },
-        "L3": { "costume": "浅色素衣" }
-      },
-      {
-        "code": "CHAR-PEIQINGWU",
-        "name": "裴青梧",
-        "L0": { "identity": "真千金", "gender": "女" },
-        "L3": { "costume": "白色寝衣" },
-        "L5": { "timbre": "清冷" }
-      }
+      { "code": "CHAR-MAID", "name": "婢女", "L0": { "identity": "侍女", "gender": "女" }, "L3": { "costume": "浅色素衣" } },
+      { "code": "CHAR-PEIQINGWU", "name": "裴青梧", "L0": { "identity": "真千金", "gender": "女" }, "L3": { "costume": "白色寝衣" }, "voiceProfile": { "speakingStyle": "清冷简短" } }
     ]
   },
   "visualLockTable": {
-    "characterAssets": {
-      "CHAR-MAID": { "L0": { "gender": "女" } },
-      "CHAR-PEIQINGWU": { "L0": { "gender": "女" }, "L5": { "timbre": "清冷" } }
+    "characterAssets": { "CHAR-MAID": "婢女", "CHAR-PEIQINGWU": "裴青梧" },
+    "sceneColorLock": { "寝殿": "4500K暖光" }
+  }
+}
+
+### §7.1 编剧正例（必读）
+
+{
+  "_comment": "Golden ep1 编剧+叙事+模态正例 — 对照 §7.1a/7.1b",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "ep-01", "episodeName": "第1集", "episodeIndex": 1, "provenance": { "source": "external-chat" } },
+  "script": "裴青梧传 EP01：苏醒\n\n场1 寝殿 日 内\n人物：裴青梧 婢女\n△烛火摇曳。婢女俯身，轻声唤醒。\n婢女：殿下醒了。\n△裴青梧睁眼，烛火映面，眼神由迷茫转认命。\n裴青梧：我知道。\n△她攥紧被角，指节发白。",
+  "planData": {
+    "narrativeBrief": {
+      "adaptationConstraints": [{ "dimId": "emotion_logic", "choice": "angst", "reason": "古言虐恋基调" }],
+      "storyKernel": "真千金苏醒认命 vs 即将觉醒",
+      "mustResolveIssues": ["P-001"],
+      "reconstructionTrace": [{ "issueId": "P-001", "matrixDim": "emotion_logic", "choice": "angst", "newBeat": "苏醒认命眼神", "densityDecision": "emotion:high" }],
+      "empathyPlan": { "rootFor": "CHAR-PEIQINGWU", "ep1EmotionArc": "迷茫→认命", "squeezeMoments": [{ "window": "0-30s", "emotion": "替主角捏汗", "infoId": "INF-ep01-sc1-01" }] },
+      "densityBudget": { "emotion": { "ep1_opening": "high" }, "information": { "ep1_first30s_max": 1 }, "plot": { "minReversalPerEp": 1 } },
+      "retentionBeats": { "opening5s": "苏醒特写", "opening3to10s": "婢女唤醒", "first30s": "认命眼神" },
+      "infoDeliveryPlan": [{ "infoId": "INF-ep01-sc1-01", "delivery": "对白+动作", "forbidden": "opaque_mystery" }],
+      "dialogueRules": { "maxExpositionLinesEp1First30s": 2, "requireCausedByAction": true },
+      "implementationPlan": [{
+        "sceneRef": 1,
+        "avCausality": { "visualPeak": "苏醒特写", "audioBeat": "骤停" },
+        "fxIntent": { "level": "F0" },
+        "voiceIntent": { "speaker": "婢女", "tone": "轻柔" },
+        "targetChains": ["av", "generation_apply", "modality_compile"],
+        "promptAnchors": { "img": ["烛火", "苏醒"], "vid": ["static", "motion-from-frame"], "aud": ["轻柔女声"] }
+      }]
     },
-    "sceneColorLock": {
-      "SCENE-BEDROOM": { "name": "寝殿", "colorTemp": "暖", "dominantHue": "米黄" }
+    "sceneMeta": [{
+      "sceneRef": 1,
+      "opening5sHook": "identity_contrast",
+      "avCausality": { "visualPeak": "苏醒特写", "audioBeat": "骤停", "emotionAV": "声画对位" },
+      "fxIntent": { "level": "F0" },
+      "densityScore": { "emotion": "high", "info": "medium", "plot": "medium" }
+    }],
+    "globalAnchors": { "G1": "裴青梧：认命 vs 觉醒", "G3": "古言虐恋 70% / 爽 30%" },
+    "adaptationProfile": { "genrePreset": "古言虐恋", "lockedChoices": { "D01_nameMap": "keep" } },
+    "adaptationMatrixStructured": {
+      "userConfirmed": true,
+      "matrix": [
+        { "dimId": "gender_structure", "choice": "keep" },
+        { "dimId": "scene_structure", "choice": "linear" },
+        { "dimId": "character_anchor", "choice": "keep_core" },
+        { "dimId": "relation_network", "choice": "triangle" },
+        { "dimId": "emotion_logic", "choice": "angst" },
+        { "dimId": "conflict_design", "choice": "layered" },
+        { "dimId": "visual_style", "choice": "ancient_real" },
+        { "dimId": "narrative_structure", "choice": "three_act" },
+        { "dimId": "core_prop", "choice": "keep" },
+        { "dimId": "dialogue_strategy", "choice": "compress" },
+        { "dimId": "music_mood", "choice": "tense" },
+        { "dimId": "rhythm_plan", "choice": "fast" },
+        { "dimId": "D01_nameMap", "choice": "keep" },
+        { "dimId": "V05_genreFramework", "choice": "虐恋" },
+        { "dimId": "R01_ep1_opening5s", "choice": "identity_contrast" },
+        { "dimId": "O01_openingProfile", "choice": "O3_conflict_tableau" }
+      ],
+      "deepAdaptation": { "nameMap": [], "relationMap": [], "substitutions": [], "settingProfile": { "era": "架空唐宋" } }
+    },
+    "adaptationStrategy": "保持姓名；强化寝殿空间压迫感；nameMap 已对齐 adaptationMatrix",
+    "viralAdaptation": {
+      "genreFramework": "虐恋",
+      "openingCardPlan": { "ep1": ["困境", "反差", "目标", "动机"] },
+      "clipPoints30s": [{ "ep": 1, "scene": "1-1", "hook": "苏醒", "clipable": true }],
+      "paypointSchedule": [{ "ep": 2, "ratio": 0.1, "type": "身份差", "clip30s": "认亲" }],
+      "retentionPlan": {
+        "ep1": {
+          "opening5s": { "hookType": "identity_contrast", "visualBeat": "烛火映面", "audioBeat": "骤停" },
+          "opening3to10s": { "profileId": "O3_conflict_tableau", "emotionAV": { "visualPeak": "苏醒特写", "fxLevel": "F0" } },
+          "first30s": {
+            "infoGap": "audience_knows",
+            "rhythm31545": { "impact3s": "婢女唤醒", "change15s": "裴青梧应答", "expect45s": "认命眼神" },
+            "clip30sCandidate": true
+          },
+          "episodeEndHook": { "type": "emotion_rebound", "desc": "眼神由认命转警觉" }
+        },
+        "epN": { "retentionPattern": "spring_tension", "minReversalPerEp": 1 }
+      }
+    },
+    "informationLedger": [
+      {
+        "infoId": "INF-ep01-sc1-01",
+        "fact": "殿下已苏醒但尚未表态",
+        "audienceKnows": true,
+        "characterKnows": { "裴青梧": true, "婢女": true },
+        "emotionTarget": "替观众捏汗",
+        "payoffBy": "sc1-end"
+      }
+    ],
+    "dialoguePlan": {
+      "lines": [
+        {
+          "lineId": "L-01",
+          "speaker": "婢女",
+          "text": "殿下醒了。",
+          "functions": ["deliver_info", "emotion_hit"],
+          "causedByActionId": "A1",
+          "subtext": "试探"
+        },
+        {
+          "lineId": "L-02",
+          "speaker": "裴青梧",
+          "text": "我知道。",
+          "functions": ["character_voice", "conflict_escalate"],
+          "causedByActionId": "A2",
+          "subtext": "早已清醒"
+        }
+      ]
+    },
+    "endCardPack": {
+      "preview": { "enabled": true, "overlayText": "下集：身份暗涌", "clipHookIds": ["CLIP-ep02-sc1"], "previewShots": ["shot-2"] }
     }
   },
-  "continuity": { "characterState": { "裴青梧": "认命期" } },
-  "anchors": { "visual": ["寝殿烛火"], "emotionCarry": "苏醒→认命" }
+  "designBrief": {
+    "B1": "ep-01",
+    "B4": [4, 5, 6],
+    "B5": ["钩子：苏醒", "承接：认命"],
+    "B14": [{ "position": "ep2-10%", "type": "身份差" }],
+    "B15": [{ "clipHookId": "CLIP-ep01-sc1", "hook": "苏醒" }],
+    "B20": ["INF-ep01-sc1-01"],
+    "B21": { "ref": "dialoguePlan" },
+    "B22": { "ref": "narrativeCausalityGraph" },
+    "B18": { "opening5sAV": { "shotSize": "MS", "audioBeat": "骤停" } },
+    "B19": { "first30sAV": { "rhythm31545": true } },
+    "B23": { "retentionInfoDelivery": ["INF-ep01-sc1-01"] },
+    "paypointMarkers": [{ "position": "ep2-10%", "type": "身份差" }]
+  },
+  "narrativeCausalityGraph": {
+    "nodes": [
+      { "id": "E1", "type": "event", "label": "婢女唤醒" },
+      { "id": "E2", "type": "event", "label": "裴青梧应答" },
+      { "id": "A1", "type": "visual", "label": "俯身" },
+      { "id": "L1", "type": "dialogue", "label": "殿下醒了" }
+    ],
+    "edges": [{ "from": "A1", "to": "L1", "relation": "cause" }, { "from": "E1", "to": "E2", "relation": "cause" }],
+    "broken": [],
+    "reverseHints": []
+  },
+  "debutIntroPack": {
+    "items": [
+      {
+        "entityType": "character",
+        "code": "CHAR-PEIQINGWU",
+        "copyHint": "裴青梧睁眼，烛火映面",
+        "establishingPattern": "特写→中景",
+        "subOptional": { "enabled": true, "text": "裴青梧 · 真千金" },
+        "fxLevel": "F0"
+      }
+    ]
+  },
+  "preDesignPack": {
+    "scriptPlan": "# 导演规划\n\n## 场1：寝殿\n- 情绪：5\n",
+    "shots": [
+      {
+        "shotIndex": 1,
+        "type": "CHAR-SCENE",
+        "sceneName": "寝殿",
+        "duration": 2,
+        "shotSize": "MS",
+        "retentionTier": "0-2s",
+        "clip30sCandidate": true,
+        "visualDescription": "婢女俯身唤醒殿下",
+        "charCodes": ["CHAR-MAID"],
+        "shotDesign": {
+          "composition": { "foreground": "婢女俯身", "background": "寝殿烛火" },
+          "performance": { "microExpression": { "eyes": "soft", "mouthDetail": "neutral_closed" } },
+          "cameraAnchor": { "shotSize": "MS", "bgBlur": false },
+          "lipSyncPolicy": "subtle_natural"
+        },
+        "narrative": {
+          "dialogue": { "lines": [{ "speaker": "婢女", "text": "殿下醒了。", "lineId": "L-01", "functions": ["deliver_info"], "causedByActionId": "A1" }] },
+          "markers": [{ "type": "钩子", "desc": "苏醒", "infoId": "INF-ep01-sc1-01" }],
+          "emotionIntensity": 5
+        },
+        "generation": {
+          "imagePrompt": "婢女俯身, 寝殿烛火暖光, 中景半身, 侧光4500K, 古言写实, --cref CHAR-MAID --ar 16:9",
+          "videoPrompt": "中景 static, duration 2s, subtle lip sync, natural mouth movement, motion-from-frame",
+          "audioPrompt": "婢女, 轻柔女声, 关切"
+        }
+      },
+      {
+        "shotIndex": 2,
+        "type": "CHAR-SCENE",
+        "sceneName": "寝殿",
+        "duration": 2,
+        "shotSize": "CU",
+        "retentionTier": "5-30s",
+        "clip30sCandidate": true,
+        "rhythm31545": { "change15s": "应答", "expect45s": "眼神" },
+        "visualDescription": "裴青梧苏醒，烛火映面",
+        "charCodes": ["CHAR-PEIQINGWU"],
+        "shotDesign": {
+          "composition": { "foreground": "裴青梧睁眼", "background": "烛火暖光" },
+          "performance": { "microExpression": { "eyes": "alert", "mouthDetail": "neutral_closed" } },
+          "lipSyncPolicy": "subtle_natural"
+        },
+        "narrative": {
+          "dialogue": { "lines": [{ "speaker": "裴青梧", "text": "我知道。", "lineId": "L-02", "functions": ["character_voice"], "causedByActionId": "A2" }] },
+          "markers": [{ "type": "承接", "desc": "认命" }],
+          "emotionIntensity": 6
+        },
+        "generation": {
+          "imagePrompt": "裴青梧, 寝殿内景, 特写面部 alert eyes mouth neutral_closed, 烛火暖光, --cref CHAR-PEIQINGWU --ar 16:9",
+          "videoPrompt": "特写 static, duration 2s, subtle lip sync, natural mouth movement, motion-from-frame",
+          "audioPrompt": "裴青梧, 清冷女声, 认命"
+        }
+      }
+    ]
+  },
+  "characterDesign": {
+    "assets": [
+      { "code": "CHAR-MAID", "name": "婢女", "L0": { "identity": "侍女", "gender": "女" }, "L3": { "costume": "浅色素衣" } },
+      { "code": "CHAR-PEIQINGWU", "name": "裴青梧", "L0": { "identity": "真千金", "gender": "女" }, "L3": { "costume": "白色寝衣" }, "voiceProfile": { "speakingStyle": "清冷简短" } }
+    ]
+  },
+  "visualLockTable": {
+    "characterAssets": { "CHAR-MAID": "婢女", "CHAR-PEIQINGWU": "裴青梧" },
+    "sceneColorLock": { "寝殿": "4500K暖光" }
+  },
+  "modalityPromptAudit": { "IMG": "pass", "VID": "pass", "AUD": "pass", "FX": "pass" },
+  "fxFeasibilityAudit": { "items": [{ "shotIndex": 1, "level": "F0", "feasible": true }] }
 }
 
 ---
 
 ## §8 多集 continuity
-
----
-name: linkage_continuity
-description: 六链闭环 linkageAudit 与 continuity 写回
-stageId: LINK
-outputTag: linkageAudit
-rulePackVersion: "2.0.1"
----
 
 # 十链联动与连贯性（linkageAudit）
 
@@ -1359,8 +2090,7 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
         "nodes": [
           { "stage": "W3", "field": "script", "ruleId": "R2" },
           { "stage": "SB", "field": "shots[].dialogue.lines", "ruleId": "H3" }
-        ],
-        "breakPoint": null
+        ]
       }
     ],
     "blockExport": false
@@ -1395,7 +2125,7 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 - 十链均有 status 判定
 - 台词链 externalHashCheck.match = true
 - 视听链偏差 ≤2（B4 vs emotionCurve）
-- 故事链 B5 每条有 payoffEp 或本集收
+- 故事链 B5：`payoffEp` 仅未来集号（number）；本集收用 `payoffLabel: "本集收"`
 - blockExport = false 方可 T1 出口
 
 ## 与 linkageRepairPlan
@@ -1417,8 +2147,8 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 | 层 | 职责 |
 |----|------|
 | L1 Chat | 按技能生成正确 prompt 与资产包 |
-| L2 外部校验 | export 后 `inspectBundle` 验收（不挡 import） |
-| L3 Import | 原样落库 |
+| L2 外部校验 | export 前 `exportGate` / `inspectBundle` 服务器验收 |
+| L3 Import | 仅接收已过 export gate 的 bundle |
 
 ## §1 默认路径（T3 一气呵成）
 
@@ -1439,8 +2169,9 @@ T1 修订后的**十链**全闭环。每阶段挂载 LINK 审计，Pipeline 结�
 |------|------|------|
 | P0–P09 | planData.* | 不得进 W |
 | G | globalAnchors | 不得进 W |
-| W1–W3 | script | 不得 GB |
-| designBrief | B1–B13 | 不得 GB |
+| W1–W2 | storySkeleton / adaptationStrategy | 不得 W3 |
+| W3 | script + narrativeSelfcheck | 不得 designBrief |
+| designBrief | B1–B23 | 不得 GB |
 | GB | scriptPlan | 不得 SB |
 | SB | shots 台词全覆盖 + visualDescription | 不得 CD |
 | CD/AS/BP | 资产锚点 | 不得 EN |
@@ -1472,9 +2203,31 @@ T2+：`characterDesign`, `assetPipeline`, `visualLockTable`
 T3：每镜 `generation` 或 `flowData.storyboard[]`  
 可选：`modalityPromptAudit`, `debutIntroPack`（**禁止**假 pass 审计字段）
 
+### planData.narrativeBrief（累积 handoff）
+
+各阶段写入并传递，W3 步骤 0 强制读取：
+
+- `adaptationConstraints[]` — P03 matrix choice + reason
+- `deepAdaptation` — D01–D04 子对象
+- `storyKernel` / `mustResolveIssues[]` — P06
+- `reconstructionTrace[]` — P06→W3 可追溯链
+- `empathyPlan` / `densityBudget` — P0/G/W2
+- `retentionBeats` / `infoDeliveryPlan[]` / `dialogueRules`
+- `implementationPlan[]` — W3→SB→EN→MD 正推锚点
+- `seriesContinuity` — W1 ep2+ carryInfo
+
+### planData.sceneMeta[]
+
+W3 每场 sidecar：`avCausality`, `fxIntent`, `densityScore`, `opening5sHook`
+
+### 闸门
+
+W3 未过 `W3_narrative_selfcheck` → **禁止** designBrief / export。
+
 ## §8 导入说明
 
-export JSON → 可选 `inspectBundle` 验收 → `POST importScript` **落库不验证** → 制作页生成。
+export JSON → **必须** `POST /api/ruleEngine/exportGate` 验收 → `POST importScript` 落库。  
+T3 默认 `blockOnQualityGate=true`；若 `exportGate.exportAllowed !== true`，不得 import。
 
 ## §9 正推/反推
 
@@ -1640,14 +2393,6 @@ C/D 级 → 触发 smart_fix 或 corridor_repush，不得进入下一阶段。
 
 ## §11 正推反推
 
----
-name: corridor_repush
-description: 反推重推 rePushPlan schema 与路由表
-stageId: RP
-outputTag: rePushPlan
-rulePackVersion: "2.0.1"
----
-
 # 走廊反推 · rePushPlan
 
 检测 fail 或 supervision C/D 时，产出 `rePushPlan[]`，从上游 stage **正向重跑**（非单字段 patch）。maxRounds = 3。
@@ -1675,7 +2420,6 @@ rulePackVersion: "2.0.1"
       "reverseTarget": "designBrief",
       "affectedStages": ["B", "GB", "SB"],
       "forwardRerun": ["design_brief", "corridor_GB", "corridor_SB"],
-      "presentationFork": null,
       "preserveFields": ["script", "globalAnchors"],
       "reason": "SB 情绪强度与 B4 弧线偏差>3",
       "status": "pending|in_progress|completed|exhausted"
@@ -1711,6 +2455,12 @@ rulePackVersion: "2.0.1"
 3. 列出 affectedStages + forwardRerun 顺序
 4. 标注 preserveFields（锚点/剧本通常保留）
 5. round++ ，超限设 status=exhausted
+
+## 产品契约（质量优先）
+
+- **rePush / 回推按钮 = 仅跳转设计台，不改 JSON 数据**。
+- 真正修复：复制 `chatRepairText`（exportGate / import 400 / burn 失败）→ Chat 改字段 → 再 dryRun/exportGate → 再导入/烧片。
+- 路由表须含 `cam_whitelist`、`img_cref_missing`、`narrative_split_hint`、`pr_lip_duration`、`modality_fx_missing`；禁止落到 INFRA 死路由。
 
 ## BLOCK
 
@@ -2211,14 +2961,6 @@ rulePackVersion: "2.0.1"
 | 视频主体 | EN subject 重 compile |
 | 音色 | BP voiceLock → AUD |
 
----
-name: production_fx_feasibility
-description: fxFeasibilityAudit F0-F5 特效 AI 可实现性
-stageId: PF
-outputTag: fxFeasibilityAudit
-rulePackVersion: "2.0.1"
----
-
 # 特效可实现性审计（F0–F5）
 
 特效设计 → prompt → AI 生成链路的前置闸门。对照 `fx_feasibility_matrix.json`。
@@ -2246,8 +2988,7 @@ rulePackVersion: "2.0.1"
         "fxDesc": "手掌发出金色光芒",
         "level": "F2",
         "modelCapable": true,
-        "promptHint": "soft golden glow, hand close-up",
-        "degradeFixPlan": null
+        "promptHint": "soft golden glow, hand close-up"
       }
     ],
     "blockCount": 0,
@@ -2430,6 +3171,53 @@ rulePackVersion: "2.0.1"
 | 没张力 | QP-08 | PR-05 |
 | 场太少 | QP-02 | PR-12 |
 | 运镜不行 | QP-14 | PR-CAM-01 |
+
+---
+name: modality_closure_checklist
+description: 模态可实现性闭环清单（W3→SB→MD×4 正推 + missing/optimize）
+stageId: modality_closure
+rulePackVersion: "2.0.1"
+---
+
+# 模态闭环清单（§14.5）
+
+T3 export 前，逐镜 walk **implementationPlan → SB → generation 四槽**。
+
+## 步骤
+
+1. 读取 `planData.narrativeBrief.implementationPlan[]`
+2. 对照 `preDesignPack.shots[]` 与 `generation.{image,video,audio,fx}Prompt`
+3. 对照 `fxFeasibilityAudit` / `modalityPromptAudit`
+4. 输出表格并自修
+
+## 表格模板
+
+| shotIndex | chain | status | gapId | repairHint |
+|-----------|-------|--------|-------|------------|
+| 1 | av | OK/MISSING/OPTIMIZE | MOD-03 | RH-MOD-AUD |
+
+## MISSING vs OPTIMIZE
+
+| 类型 | 定义 | 示例 |
+|------|------|------|
+| MISSING | 上游有意图，下游字段空 | W3 audioBeat 有、无 audioPrompt |
+| OPTIMIZE | 链存在但质量弱 | GEN-05 VD 与 imagePrompt 不一致 |
+
+## MOD 检查（MOD-01~07）
+
+- MOD-01: fxIntent 有但 SB 无 visualEffect
+- MOD-02: visualEffect 有但无 fxPrompt
+- MOD-03: audioBeat 有但台词镜无 audioPrompt
+- MOD-04: voiceProfile 与 audioPrompt 冲突
+- MOD-05: retentionTier 0-2s 镜 VID 无 static/motion-from-frame
+- MOD-06: debutIntroPack.fxLevel > F2 且无 degrade
+- MOD-07: modalityPromptAudit 某 slot 空
+
+## export 前三步
+
+1. narrative selfcheck（§5）
+2. 本清单 → 列出 missing / optimize
+3. 自修后对照 `closureReport` 模板再 export
 
 ---
 
@@ -2688,6 +3476,10 @@ PC-09：首帧/时长/运镜 BLOCK。
 
 **Bundle 路径**：`preDesignPack.shots[].generation.videoPrompt` 或 `flowData.storyboard[].videoDesc`。标准见 `docs/PROMPT_STANDARD.md` §3。
 
+## 质量链（实现）
+
+编译/烧片走五层：`buildPromptIR` → `sanitizeVideoPrompt` → `applyModeDialect` → `applyVendorPromptPack` → burn gate（BLOCK 带 RH+rePushPlan）。详见 `docs/video-quality-chain.md`。对白源语言进 `[Audio]`；stub videoPrompt 强制 IR 重编译；`motion-from-frame` 全文至多一次。
+
 # MD 音频模态（AUD）
 
 ## slots
@@ -2780,11 +3572,20 @@ type, intensity, feasibilityLevel, degradeHint
 W3 描写 → SB visualEffect → EN FX 段 → MD-FX fxPrompt
 ```
 
+**F0 / F1+ 政策（双轨 MUST）：**
+- 无特效镜：写 `fxFeasibility: F0` **且** `fxFeasibilityAudit.items` 含该镜 `level:F0`；**不要**写 `fxPrompt`；**不要**顶层 `modalityPromptAudit.FX=pass` 却留空镜
+- 有特效（F1+ / visualEffect）：**必须**写可执行散文到 `generation.fxPrompt`；禁止字母占位 `F1`/`F2`
+- F4/F5：必须降级或拆镜；禁止「需拆镜/不可行」占位文案当可执行 FX
+- 空 FX + 未声明 = **BLOCK**（export）；import heal 可 soft_patch 声明 F0，不可发明 FX 散文
+- MD 出口：F0 xor 散文，二选一；`fxFeasibilityAudit` 须覆盖全部镜头
+- **场镜对齐**：`implementationPlan` 条数 = 唯一 `sceneName` 数；无映射镜的 sceneRef **禁止** F1+（孤儿场须降 F0 / 删 plan / 独立命名）
+
 ## 反推
 
 | 触发 | 目标 |
 |------|------|
 | fx_infeasible / F5 | W3 / SB |
+| modality_fx_missing / MOD-02 | W3 → SB → MD-FX |
 | pr_vendor_fx | EN → SB |
 | 与 VID 过载 | 拆镜 rePush |
 
@@ -2802,7 +3603,7 @@ PC-12：无未处理 F5；F4 有 postProductionOnly。
 
 ## 输出
 
-FX 段 + `fxFeasibilityAudit.items` + `modalityPromptAudit.FX`
+FX 段 + `shots[].generation.fxPrompt`（F1+）+ `fxFeasibilityAudit.items` + `modalityPromptAudit.FX`
 
 # SD 四模态子检（smart_detection_modality）
 
@@ -2861,19 +3662,17 @@ FAIL → smart_fix（SF）→ rePushPlan → corridor_repush。
 
 ## §16 设计七维闭环
 
----
-name: design_dialogue
-description: 台词设计维 · R2/H3/OS/VO 正推反推
-stageId: DLG
-outputTag: dialogueDesign
-rulePackVersion: "2.0.1"
----
-
 # 台词设计（dialogue 链）
 
 ## 正推
 
-W3.script → SB.narrative.dialogue.lines → EN.AUD → VID.lipSync → MD-AUD.lines
+W3.script → dialoguePlan → SB.narrative.dialogue.lines（lineId/functions/causedByActionId）→ EN.AUD → VID.lipSync
+
+## 台词功能链
+
+- 每句须标 `functions` + `causedByActionId`（动作是因、对话是果）
+- `dialoguePlan` 与 SB lines **lineId 对齐**（NAR-09）
+- 禁止解释性自爆台词 >2 句（ep1 前 30s）
 
 ## 反推
 
@@ -2896,44 +3695,39 @@ SD-DLG-01 lines 覆盖率；SD-DLG-02 linesHash
 
 ## dryRun DC-01/DC-02
 
----
-name: design_scene
-description: 场景设计维 · B6→SCENE→IMG
-stageId: SCN
-rulePackVersion: "2.0.1"
----
-
 # 场景设计（scene + asset 链）
 
 ## 正推
 
 B6.scenes → GB 场表 → SB.sceneName → BP.sceneColorLock → EN.cref → IMG.scene
 
+**MUST**：唯一 `SB.sceneName` 数 = `implementationPlan`/`sceneMeta` 条数。接场同地点须用不同 sceneName（如「卧房·后」），或合并 plan 删除多余 sceneRef。禁止孤儿场（plan 有 F1、无映射镜）。
+
 ## 反推
 
 | 触发 | 目标 |
 |------|------|
 | 场景名不一致 | GB/SB |
+| 场镜基数 / 孤儿场 | W3 plan 或 SB sceneName |
 | cref 缺失 | EN/BP |
 
 ## SD-SCN
 
-SD-SCN-01 B6↔SB.sceneName；SD-SCN-02 sceneColorLock
+SD-SCN-01 B6↔SB.sceneName；SD-SCN-02 sceneColorLock；SD-SCN-03 plan↔唯一 sceneName 基数
 
-## dryRun DC-06/DC-08
-
----
-name: design_story_push
-description: 故事推进 · B5/markers/graph/FX
-stageId: STP
-rulePackVersion: "2.0.1"
----
+## dryRun DC-06/DC-08 / DG-SCENE-CARDINALITY
 
 # 故事推进（story 链）
 
 ## 正推
 
-W1 → B5 infoLinkage → SB.markers → narrativeCausalityGraph → FX.feasibility
+W1 → informationLedger → B20 → GB.infoIds → SB.markers.infoId
+W3 dialoguePlan → B21 → SB.lines.functions
+narrativeCausalityGraph（六类 event/visual/dialogue）→ B22 → SB causeId/effectId
+
+## 六类因果
+
+event / motivation / information / emotion / visual / dialogue — 边须可追踪，broken[] 出口为空
 
 ## 反推
 
@@ -2976,18 +3770,30 @@ GB 禁切镜指令；SB 写抽象字段；T3 MD 写运镜白名单。
 
 ## dryRun DC-09
 
----
-name: design_av
-description: 视听设计 · B4/B9→AUD/VID
-stageId: DAV
-rulePackVersion: "2.0.1"
----
-
 # 视听设计（av 链）
 
 ## 正推
 
-B4 emotionArc → GB.emotionCurve → SB.emotionIntensity → EN.Y9 → MD-AUD.emotion + MD-VID.expr
+B4 emotionArc → GB.emotionCurve → SB.emotionIntensity → EN.Y9
+retentionPlan → B18/B19 → SB.retentionTier + rhythm31545
+动作镜 visualAction → 台词镜 causedByActionId（视听因果）
+W3 `sceneMeta.avCausality` → designBrief B18/B19 → SB `audioCue` + retentionTier
+
+## W3→SB 承接
+
+| W3 sceneMeta | SB 字段 |
+|--------------|---------|
+| avCausality.audioBeat | audioCue（可选：无则省略 key，禁止 null） |
+| avCausality.visualPeak | visualDescription 峰值词 |
+| fxIntent.level | `visualEffect` **string** + 可选 `fxLevel` string（如 `"F1: 描述"` / `"F1"`；禁止 object） |
+
+## 留存视听专章（ep1）
+
+| 窗口 | SB 字段 |
+|------|---------|
+| 0–2s | retentionTier=0-2s，强视觉冲突镜 |
+| 2–10s | opening3to10s 情绪峰值 |
+| 5–30s | rhythm31545 + infoId markers |
 
 ## 反推
 
@@ -3064,12 +3870,25 @@ rulePackVersion: "2.0.1"
     "scene": { "rePushTarget": "SB" },
     "camera": { "rePushTarget": "EN" },
     "story": { "rePushTarget": "W3" },
+    "continuity": { "rePushTarget": "W3" },
     "av": { "rePushTarget": "GB" },
     "adaptation": { "rePushTarget": "W2" },
+    "adaptation_deep": { "rePushTarget": "P03" },
+    "retention": { "rePushTarget": "W3" },
+    "narrative_drive": { "rePushTarget": "W3" },
+    "packaging": { "rePushTarget": "SB" },
+    "generation_apply": { "rePushTarget": "SB" },
+    "viral_clip": { "rePushTarget": "W1" },
     "modality_compile": { "rePushTarget": "EN" },
+    "modality_feasibility": { "rePushTarget": "W3" },
     "generation": { "rePushTarget": "MD" },
     "repair": { "rePushTarget": "SF" }
-  }
+  },
+  "smartBoundaries": {
+    "CAN": ["fixPlan from *Gaps", "linkageRepairPlan single chain", "rePushPlan multi chain round<=3", "smartProposalApplier with userConfirmed"],
+    "CANNOT": ["change W3 dialogue text R2", "fake linkageAudit/ruleAudit pass", "import overwrite Chat prompts", "T1 require full MD×4"]
+  },
+  "gapDomains": ["adaptationGaps", "retentionGaps", "narrativeDriveGaps", "packagingGaps", "generationApplyGaps", "designSpecGaps", "scriptViralGaps", "modalityGaps", "chatPromptGaps"]
 }
 
 {
@@ -3084,13 +3903,14 @@ rulePackVersion: "2.0.1"
     { "id": "DC-06", "field": "scene", "rule": "B6.scenes ↔ SB.sceneName", "severity": "BLOCK" },
     { "id": "DC-07", "field": "story_fx", "rule": "markers payoff 或 FX 等级", "severity": "WARN" },
     { "id": "DC-08", "field": "asset", "rule": "charCodes ↔ script 角色", "severity": "BLOCK" },
-    { "id": "DC-09", "field": "camera", "rule": "transition/rhythm 合法", "severity": "WARN" },
+    { "id": "DC-09", "field": "camera", "rule": "transition/rhythm 白名单", "severity": "BLOCK" },
     { "id": "DC-10", "field": "av_modality", "rule": "B9 或 T3 AUD 标注", "severity": "WARN" },
     { "id": "DC-11", "field": "debut", "rule": "debutIntroPack", "severity": "WARN" },
     { "id": "DC-12", "field": "compile", "rule": "T3 前 EN 草案", "severity": "INFO" },
     { "id": "DC-13", "field": "linkage", "rule": "十链无 broken", "severity": "BLOCK" },
     { "id": "DC-14", "field": "forwardTrace", "rule": "≥5 trace dialogue+av+scene", "severity": "WARN" },
-    { "id": "DC-15", "field": "adaptation", "rule": "W2 策略与 P03 矩阵一致", "severity": "WARN" }
+    { "id": "DC-15", "field": "adaptation", "rule": "W2 策略与 P03 矩阵一致", "severity": "WARN" },
+    { "id": "DC-16", "field": "cast", "rule": "说话人∪上镜码 ⊆ CD+VLT（非 stub，须 L0.identity）", "severity": "BLOCK" }
   ]
 }
 
@@ -3124,14 +3944,6 @@ rulePackVersion: "2.0.1"
 
 ## 附录 A T2
 
----
-name: CD_character_design
-description: CD 角色智能设计 L0-L6 与 art_skills
-stageId: CD
-outputTag: characterDesign
-rulePackVersion: "2.0.1"
----
-
 # CD 角色智能设计（L0–L6）
 
 T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对齐 art_skills 前缀。
@@ -3153,6 +3965,8 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 | L4 | posture, gesture | 姿态习惯 |
 | L5 | voice.speed, timbre, accent | 音色（AUD 用） |
 | L6 | arcVisual, stateVariants | 弧光视觉变化 |
+
+**键名规范（权威短键）**：输出 `L0`…`L6`，不要用 `L0_identity` / `L6_arcVisual` 长键。`stateVariants` 用数组 `[{ "name", "visual" }]` 或 record（导入会归一）。
 
 ## 执行步骤
 
@@ -3189,14 +4003,18 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 
 ## BLOCK 闸门
 
-- 剧本出场主角/反派均有 CHAR-CODE
-- L0–L3 必填，L5 主角必填
+- 剧本出场主角/反派均有 CHAR-CODE（canonical `CHAR-NNN`，见 `docs/ASSET_CODE_CONTRACT.md`）
+- **凡 `preDesignPack.shots[].charCodes` 或 imagePrompt `--cref` 出现的码，必须写入 `characterDesign.assets` 与 `visualLockTable.characterAssets`**（禁止只引用不收录，如 CHAR-005）
+- **DC-16 / DG-CD-COVERAGE**：对白 `speaker` ∪ B6.characters ∪ 上镜码必须入 CD；禁止仅 `L0.stub` 过闸；最小骨架为 `code` + `name` + `L0.identity`（一句身份关系）。L1–L3 视觉可后置由资产 AI 补全，但导出前不得缺人设壳
+- 修复话术：按 exportGate `chatRepairText` 中 RH-DC-16 补真实 CD → **再点预览/exportGate** 直至 `exportAllowed`
+- 码别名（`CHAR005` / `CHAR 005`）导出前归一为 `CHAR-005`
+- L0–L3 必填（设计完整态）；L5 主角必填；键名用短键 `L0`…`L6`（勿只输出 `L0_identity` 长键）
 - 与 G1 说话风格/记忆点一致
 - 禁止自由文本替代 L 层结构
 
 ## 下游
 
-→ AS_asset_pipeline → BP_blueprint。
+→ AS_asset_pipeline → BP_blueprint。资产层可对弱视觉做 AI 补全出精图；**不得**用 import stub 代替本阶段入册。
 
 ---
 name: AS_asset_pipeline
@@ -3341,14 +4159,6 @@ T2 核心产出：汇总 CD + AS 为 `visualLockTable`，落库 `o_projectBluepr
 
 ## 附录 B T3 MD
 
----
-name: MD_modality_overview
-description: MD 四模态编排总览 IMG/VID/AUD/FX
-stageId: MD
-outputTag: modalityAudit
-rulePackVersion: "2.0.1"
----
-
 # MD 四模态总览（T3）
 
 T3 档位：在 EN compile 基础上，为每 shot 生成 IMG/VID/AUD/FX 四模态 prompt 槽位。
@@ -3366,7 +4176,7 @@ T3 档位：在 EN compile 基础上，为每 shot 生成 IMG/VID/AUD/FX 四模�
 | IMG | imagePrompt | Y.subject + refs | L0 Gate |
 | VID | videoPrompt | Y.spatial + performance | L0 Gate |
 | AUD | audioPrompt | dialogue + voiceLock | L0 Gate |
-| FX | fxPrompt | fxFeasibility F 等级 | L1 可选 |
+| FX | fxPrompt | fxFeasibility F 等级 + visualEffect | **双轨 MUST**：F0 声明 **或** 散文 fxPrompt |
 
 ## modalityAudit 结构
 
@@ -3407,28 +4217,24 @@ T3 档位：在 EN compile 基础上，为每 shot 生成 IMG/VID/AUD/FX 四模�
 
 - 每镜 IMG + VID 至少 ready
 - 有台词镜 AUD 必须 ready
+- **FX 双轨**：每镜要么 `fxFeasibility/fxLevel: F0`（无特效），要么非空散文 `generation.fxPrompt`（禁字母 `F1`–`F5`）
 - F4+ FX 须有 degrade 或 skip 说明
 - blockGenerate=false 方可触达生成
 
 ## 严禁
 
 跳过 Touch L0 Gate 直接声称已生成。
+假写 `modalityPromptAudit.FX=pass` 而槽空或仅字母等级。
 
 ## 下游
 
 → MD_prompt_compliance → 生成 → GenerationFeedback。
 
----
-name: MD_prompt_compliance
-description: modalityPromptAudit prompt 合规审计
-stageId: MD-C
-outputTag: modalityPromptAudit
-rulePackVersion: "2.0.1"
----
-
 # MD Prompt 合规审计（modalityPromptAudit）
 
 T3 出口闸门：检查四模态 prompt 完整性、合规性与锚点一致性。对应用户话术「prompt 不齐/不合规」（QP-modality）。
+
+**Slot SSOT**：必填槽位定义以 `data/fixtures/modality_prompt_slots.json` 为准；本技能与 `corridor_EN` / `promptIR` 须与其一致。
 
 ## 审计维度
 
@@ -9070,7 +9876,7 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "action": "revise",
       "hint": "CHAR-CODE '[代码]'在characterAssets中未定义。建议检查拼写或在characterAssets中补充该角色定义"
     },
-    "rePushTarget": "EN",
+    "rePushTarget": "AS",
     "description": "CHAR-CODE '[代码]'在characterAssets中未定义。建议检查拼写或在characterAssets中补充该角色定义"
   },
   {
@@ -9310,7 +10116,7 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
       "field": "auto",
       "action": "revise"
     },
-    "rePushTarget": "EN",
+    "rePushTarget": "CD",
     "description": "Runtime trigger template for identity_mismatch"
   },
   {
@@ -9402,6 +10208,61 @@ ScriptBundle 出口可附摘要；import 写入 episode meta 日志。
     },
     "rePushTarget": "EN",
     "description": "Runtime trigger template for PR-CAM-01"
+  },
+  {
+    "ruleId": "NAR-14",
+    "confidence": 0.9,
+    "patchTemplate": {
+      "field": "dialoguePlan",
+      "action": "add_splitHint",
+      "hint": "长台词标注 splitHint: reaction_shot"
+    },
+    "rePushTarget": "W3",
+    "description": "长台词无 splitHint"
+  },
+  {
+    "ruleId": "NAR-15",
+    "confidence": 0.9,
+    "patchTemplate": {
+      "field": "script",
+      "action": "add_reaction",
+      "hint": "高情绪对白后补反应 △"
+    },
+    "rePushTarget": "W3",
+    "description": "高情绪对白无反应镜"
+  },
+  {
+    "ruleId": "RET-01",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "sceneMeta.avCausality",
+      "action": "fill",
+      "hint": "补 ep1 首场声画峰值"
+    },
+    "rePushTarget": "W3",
+    "description": "retention 首场 avCausality 空"
+  },
+  {
+    "ruleId": "MOD-01",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "visualEffect",
+      "action": "mirror_fxIntent",
+      "hint": "W3 fxIntent → SB visualEffect"
+    },
+    "rePushTarget": "SB",
+    "description": "fxIntent 未进 SB"
+  },
+  {
+    "ruleId": "MOD-03",
+    "confidence": 0.85,
+    "patchTemplate": {
+      "field": "generation.audioPrompt",
+      "action": "compile",
+      "hint": "audioBeat → AUD slot"
+    },
+    "rePushTarget": "MD",
+    "description": "台词镜缺 audioPrompt"
   }
 ]
 
@@ -9492,7 +10353,13 @@ import → o_projectBlueprint（合流 P1）。
     { "id": "camera", "nodes": ["designBrief.B12", "SB.shotSize", "SB.transitionType", "EN.motion", "MD-VID.camera"], "rollback": ["brief", "SB", "EN", "MD"] },
     { "id": "adaptation", "nodes": ["P03.matrix", "W2.adaptationStrategy", "W3.script", "designBrief"], "rollback": ["P03", "W2", "W3"] },
     { "id": "modality_compile", "nodes": ["EN.compile", "MD-IMG", "MD-VID", "MD-AUD", "MD-FX", "modalityPromptAudit"], "rollback": ["EN", "MD"] },
-    { "id": "generation", "nodes": ["MD.prompts", "VendorPack", "generate", "MediaProbe", "generationFeedback"], "rollback": ["MD", "EN", "SB"] },
+    { "id": "generation_apply", "nodes": ["SB.shotDesign", "SB.visualDescription", "EN.Y", "MD.prompts", "modalityPromptAudit"], "rollback": ["SB", "EN", "MD"] },
+    { "id": "retention", "nodes": ["P03.R/O", "retentionPlan", "W3.sceneMeta", "designBrief.B18", "SB.retentionTier"], "rollback": ["W3", "B", "GB", "SB"] },
+    { "id": "narrative_drive", "nodes": ["informationLedger", "dialoguePlan", "designBrief.B20", "SB.lines", "narrativeCausalityGraph"], "rollback": ["W3", "B", "SB"] },
+    { "id": "packaging", "nodes": ["opening3to10s", "debutIntroPack", "SB.establishing", "endCardPack"], "rollback": ["W3", "SB"] },
+    { "id": "adaptation_deep", "nodes": ["P03.D/V", "adaptationMatrixStructured", "W2", "W3", "designBrief.B16"], "rollback": ["P03", "W2", "W3", "B"] },
+    { "id": "viral_clip", "nodes": ["viralAdaptation", "W1.paypoint", "GB.paypointScenes", "SB.clip30sCandidate"], "rollback": ["W1", "W2", "W3", "GB", "SB"] },
+    { "id": "modality_feasibility", "nodes": ["W3.sceneMeta", "narrativeBrief.implementationPlan", "SB.visualEffect", "fxFeasibilityAudit", "MD-FX", "MD-AUD"], "rollback": ["W3", "SB", "EN", "MD"] },
     { "id": "repair", "nodes": ["SD", "fixPlan", "linkageRepairPlan", "rePushPlan"], "rollback": "reverse_route_table" }
   ]
 }
@@ -9583,17 +10450,9 @@ T1 为 T3 路径中的 **分镜检查点**，不是最终出口。最终出口�
 
 有完整 shots → `POST importScript` 落库；**缺 T3 prompt 由外部 inspect 报告**，不在 Chat 填假通过。
 
----
-name: T3_quality_gate
-description: T3 全链路出口质量闸门 — 四模态 prompt + 资产包
-stageId: T3
-outputTag: exportReady
-rulePackVersion: "2.0.1"
----
-
 # T3 质量闸门（全链路出口）
 
-T3 为 **默认出口**。export 前对照 `docs/PROMPT_STANDARD.md` 自检。
+T3 为 **默认出口**。export 前对照 `docs/PROMPT_STANDARD.md` 自检，且**必须调用** `POST /api/ruleEngine/exportGate`。
 
 ## T3 必填产物
 
@@ -9612,26 +10471,51 @@ T3 为 **默认出口**。export 前对照 `docs/PROMPT_STANDARD.md` 自检。
 {
   "shotIndex": 1,
   "visualDescription": "婢女俯身唤醒",
+  "visualEffect": "烛火摇曳，微光闪烁",
+  "fxLevel": "F1",
   "charCodes": ["CHAR-MAID"],
   "generation": {
     "imagePrompt": "婢女, 寝殿烛火, 中景, 暖光, 古言写实, no text, --cref CHAR-MAID --ar 16:9",
-    "videoPrompt": "中景 static, slow push, duration 2s, motion-from-frame",
+    "videoPrompt": "中景 static, slow push, duration 2s, motion-from-frame, subtle mouth speaking",
     "audioPrompt": "婢女, 轻柔女声, 正常语速, 关切",
-    "fxPrompt": ""
+    "fxPrompt": "candlelight flicker, subtle warm glow, no CGI particles"
   }
 }
 ```
 
+无特效镜示例（F0 轨）：`"fxLevel": "F0"`，**省略** `fxPrompt` 或留空且 audit 声明 F0——禁止假 `modalityPromptAudit.FX=pass`。
+
 或写入 `flowData.storyboard[]`：`prompt` / `videoDesc` / `duration`。
+
+Slot 定义 SSOT：`data/fixtures/modality_prompt_slots.json`（skills / compiler / audit 均引用此文件）。
 
 ## 出口前自检（对照 PROMPT_STANDARD §8）
 
+0. 跑 `W3_narrative_selfcheck` + `modality_closure_checklist` → 列出 missing/optimize
+0b. T3：`planData.narrativeBrief.implementationPlan[]` 非空，每场含 `fxIntent`（含 F0）
+0c. **场镜基数**：唯一 `preDesignPack.shots[].sceneName` 数 = `implementationPlan` 条数 = `sceneMeta` 条数；接场不得共用 sceneName 却多留 sceneRef F1（孤儿场 → 导入永卡）
+0d. 禁假绿：不得 `modalityPromptAudit.FX=pass` / `narrativeSelfcheck.passed=true` 而字段仍缺
 1. 台词覆盖率 100%（可合并，不可丢）
 2. 每镜 visualDescription 非空
 3. characterDesign 覆盖主角/反派
 4. visualLockTable 解析全部 charCodes
-5. 每镜 imagePrompt + videoPrompt 非空
+5. 每镜 imagePrompt + videoPrompt 非空；**禁止**仅 `中景 static, duration Ns` 无峰值/口型的 stub 作为最终出口（须 peak 或 lip 关键词，或注明 F0 空镜）
 6. 台词镜 audioPrompt 非空
+7. **FX 双轨**：F0 声明 **或** 非空散文 `fxPrompt`（禁字母等级当散文）；`fxFeasibilityAudit.items` 覆盖全部镜号
+8. **无映射镜的 sceneRef 禁止 F1+**（孤儿场：删 plan 或降 F0 或独立 sceneName）
+8. 禁假 `ruleAudit` / `linkageAudit` / `modalityPromptAudit` pass
+
+## 出口形状族（EXPORT_SHAPE_RULES / PDSR Prevent）
+
+- 可选 string：无内容**省略 key**，禁止 JSON `null`
+- `deepAdaptation.nameMap|relationMap|substitutions` 仅 `[{ "from", "to" }]`；禁止 arrow-key 伪对象
+- `designBrief.B5` / `infoLinkageChain`：`payoffEp` 仅 number（未来集号）；本集收 → `payoffLabel: "本集收"`
+- 勿发明 `B16_adaptationDeepRef` 替代 `designBrief.B16` record
+- **SB 镜级 string 字段**（T3 Browser 出口；object 仅服务器 salvage，Chat 勿写）：
+  - `visualEffect`: `"F1: 烛火摇曳，微光闪烁"`（可选同镜 `fxLevel: "F1"`）
+  - `audioCue`: `"茶盏碎裂声骤停"`（来自 W3 avCausality.audioBeat）
+  - 禁止 `"visualEffect": { "level", "desc" }`（V62 制作路径 legacy，非 T3 export）
+- **导出前自检（阻断）**：扫描全部 `preDesignPack.shots[].visualEffect` / `audioCue`；若为 object → **不得导出**，按 RH-MOD-01 改成 string 后再跑 `exportGate`。服务器 import salvage 仅兜底，Chat 输出仍以 string 为规范。
 
 ## 禁止写入 bundle
 
@@ -9641,7 +10525,97 @@ T3 为 **默认出口**。export 前对照 `docs/PROMPT_STANDARD.md` 自检。
 
 ## 下游
 
-export JSON → 外部 `inspectBundle` 验收 → `POST importScript` 落库（不挡 import）。
+export JSON → `POST /api/ruleEngine/exportGate` → `exportAllowed=true` 且附 `closureSnapshot` → `POST importScript` 落库。  
+禁止仅靠 `ruleAudit` / `linkageAudit` / `modalityPromptAudit` 自报通过。
+
+**配角入册（DC-16）**：`chatRepairText` 含 RH-DC-16 时，补真实 `characterDesign`（code/name/`L0.identity`，禁仅 stub）后须**再预览**直至 `exportAllowed`。详见 `preview_vs_import_guide.md` 与 `docs/image-quality-chain.md`。
+
+{
+  "version": "2.0.1",
+  "profiles": {
+    "古言虐恋": {
+      "genrePreset": "古言虐恋",
+      "lockedChoices": {
+        "emotion_logic": "angst",
+        "V05_genreFramework": "虐恋",
+        "R01_ep1_opening5s": "identity_contrast",
+        "R02_ep1_first30s": "audience_knows",
+        "C02_infoGapStrategy": "audience_knows",
+        "O01_openingProfile": "O3_conflict_tableau"
+      },
+      "deepDefaults": {
+        "D04_settingProfile": { "era": "架空唐宋", "socialLayer": "豪门/宫廷" }
+      }
+    },
+    "都市甜宠": {
+      "genrePreset": "都市甜宠",
+      "lockedChoices": {
+        "emotion_logic": "sweet",
+        "V05_genreFramework": "甜宠",
+        "R01_ep1_opening5s": "emotion_hit",
+        "V04_episodeRhythm": "strict_31545",
+        "C03_dialogueDensity": "short_drama_high",
+        "O01_openingProfile": "O2_contrast_reveal"
+      },
+      "deepDefaults": {
+        "D01_nameMap": "modernize",
+        "D04_settingProfile": { "era": "当代都市" }
+      }
+    }
+  }
+}
+
+{
+  "version": "2.0.1",
+  "description": "P0 preCheck issue → adaptation matrix dim 推荐映射（Browser Chat 可读）",
+  "mappings": [
+    { "issueTypes": ["情绪", "P1"], "dims": [{ "dimId": "emotion_logic", "suggestedChoice": "mixed", "confidence": 0.8 }] },
+    { "issueTypes": ["反转", "P2"], "dims": [{ "dimId": "narrative_structure", "suggestedChoice": "compressed", "confidence": 0.75 }] },
+    { "issueTypes": ["信息", "P3"], "dims": [{ "dimId": "C02_infoGapStrategy", "suggestedChoice": "front_load", "confidence": 0.85 }] },
+    { "issueTypes": ["冲突", "P4"], "dims": [{ "dimId": "conflict_design", "suggestedChoice": "person_vs_person", "confidence": 0.8 }] },
+    { "issueTypes": ["人物", "P5"], "dims": [{ "dimId": "character_anchor", "suggestedChoice": "core_triad", "confidence": 0.7 }] },
+    { "issueTypes": ["台词", "P6"], "dims": [{ "dimId": "dialogue_strategy", "suggestedChoice": "oral_compress", "confidence": 0.75 }] },
+    { "issueTypes": ["节奏", "P3", "P2"], "dims": [{ "dimId": "R01_retentionTier", "suggestedChoice": "ep1_opening_crisis", "confidence": 0.9 }] },
+    { "issueTypes": ["开场", "P1"], "dims": [{ "dimId": "O01_openingPattern", "suggestedChoice": "crisis_first", "confidence": 0.9 }] }
+  ],
+  "genrePresetRules": [
+    { "when": { "minScore": { "P1": 7 }, "tags": ["古言", "虐"] }, "preset": "古言虐恋" },
+    { "when": { "minScore": { "P1": 6 }, "tags": ["都市", "甜"] }, "preset": "都市甜宠" }
+  ],
+  "proposeMatrixSchema": {
+    "recommendedMatrixDraft": [
+      { "dimId": "string", "suggestedChoice": "string", "confidence": 0.0, "issueIds": ["P-001"], "reason": "string" }
+    ]
+  }
+}
+
+{
+  "version": "2.0.1",
+  "infoGapTypes": ["audience_knows_character_not", "character_knows_audience_not", "partial_both", "none"],
+  "forbiddenSuspense": ["opaque_mystery", "exposition_dump", "self_reveal_dialogue"],
+  "dialogueFunctions": ["advance_plot", "character_voice", "conflict_escalate", "deliver_info", "emotion_hit", "subtext"],
+  "causalityTypes": ["event", "motivation", "information", "emotion", "visual", "dialogue"],
+  "avBeatRule": "visualAction_is_cause_dialogue_is_effect",
+  "densityBudget": {
+    "emotion": { "ep1_opening": "high", "body": "spring" },
+    "information": { "ep1_first30s_max": 1 },
+    "plot": { "minReversalPerEp": 1 }
+  },
+  "tierRules": {
+    "T1": { "requireLedger": false, "requireShotDesign": false },
+    "T2": { "requireLedger": true, "requireShotDesign": false },
+    "T3": { "requireLedger": true, "requireShotDesign": true, "requireFunctionTags": true }
+  }
+}
+
+{
+  "version": "2.0.1",
+  "openingCard": { "ep1_3": ["性格", "困境", "目标", "动机"], "ep10Hook": "主线强钩子" },
+  "clipPoints30s": { "openingEpCount": 10, "minClips": 1, "perPaypointMin": 1 },
+  "paypoints": { "ratios": [0.1, 0.3, 0.5, 0.7, 0.9], "types": ["身份差", "感情错位", "命运巨变", "环境剧变"] },
+  "episodeRhythm": { "impact3s": true, "change15s": true, "expect45s": true },
+  "genreFrameworks": ["甜宠", "虐恋", "战神", "重生", "萌宝"]
+}
 
 ---
 
@@ -9676,38 +10650,941 @@ rulePackVersion: 2.0.1
 {
   "version": "2.0.1",
   "routes": [
-    { "trigger": "dialogue_hash_mismatch", "ruleIds": ["R2", "H3"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "presentationFork": ["P1改剧本", "P2改分镜"] },
-    { "trigger": "emotion_composition", "ruleIds": ["B2", "QP-06"], "reverseTarget": "GB", "forwardStages": ["GB", "SB", "EN"] },
-    { "trigger": "shot_camera_invalid", "ruleIds": ["PR-CAM-01", "QP-14"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"], "repairPriority": "P0" },
-    { "trigger": "PR-CAM-01", "ruleIds": ["PR-CAM-01"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "story_link_broken", "ruleIds": ["W41", "QP-10"], "reverseTarget": "W3", "forwardStages": ["W3", "designBrief", "GB", "SB"] },
-    { "trigger": "identity_mismatch", "ruleIds": ["Y8", "QP-18"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "fx_infeasible", "ruleIds": ["V77", "QP-17"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "presentationFork": ["P1改剧本描写", "P2改分镜局部特效"] },
-    { "trigger": "generation_feedback", "ruleIds": ["H5"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "H2", "ruleIds": ["H2"], "reverseTarget": "GB", "forwardStages": ["GB", "SB", "EN"] },
-    { "trigger": "H3", "ruleIds": ["H3"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "H4", "ruleIds": ["H4"], "reverseTarget": "EN", "forwardStages": ["EN"] },
-    { "trigger": "H5", "ruleIds": ["H5"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "V1", "ruleIds": ["V1"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "V10", "ruleIds": ["V10"], "reverseTarget": "SB", "forwardStages": ["SB"] },
-    { "trigger": "MODE-AGNES", "ruleIds": ["MODE-AGNES"], "reverseTarget": "MD", "forwardStages": ["MD"] },
-    { "trigger": "narrative_graph_broken", "ruleIds": ["W41"], "reverseTarget": "W3", "forwardStages": ["W1", "W3", "SB"] },
-    { "trigger": "debut_missing", "ruleIds": ["QP-19", "PR-16"], "reverseTarget": "SB", "forwardStages": ["SB", "W3"] },
-    { "trigger": "pr_lip_duration", "ruleIds": ["PR-09"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_os_voice", "ruleIds": ["PR-10"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_prop_state", "ruleIds": ["PR-11"], "reverseTarget": "BP", "forwardStages": ["BP", "SB"] },
-    { "trigger": "pr_spatial", "ruleIds": ["PR-12"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_expr_feasibility", "ruleIds": ["PR-14", "QF-EXPR"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_vendor_fx", "ruleIds": ["PR-15"], "reverseTarget": "EN", "forwardStages": ["EN", "SB", "W3"] },
-    { "trigger": "video_first_frame_missing", "ruleIds": ["AG-GATE-01", "MODE-AGNES"], "reverseTarget": "MD", "forwardStages": ["MD", "EN"], "repairPriority": "P0" },
-    { "trigger": "motion_overflow", "ruleIds": ["AG-GATE-02", "QF-EXPR-06"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"], "repairPriority": "P0" },
-    { "trigger": "duration_clamp", "ruleIds": ["AG-GATE-03", "V9"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "repairPriority": "P0" },
-    { "trigger": "native_audio_mismatch", "ruleIds": ["PR-09", "PC-10"], "reverseTarget": "EN", "forwardStages": ["EN", "MD-AUD"], "repairPriority": "P1" },
-    { "trigger": "img_cref_missing", "ruleIds": ["V4", "SD-IMG-01"], "reverseTarget": "EN", "forwardStages": ["EN", "MD-IMG"], "repairPriority": "P0" },
-    { "trigger": "img_pure_negative", "ruleIds": ["V2", "SD-IMG-02"], "reverseTarget": "EN", "forwardStages": ["EN"], "repairPriority": "P0" },
-    { "trigger": "aud_voice_mismatch", "ruleIds": ["Y8", "SD-AUD-02"], "reverseTarget": "BP", "forwardStages": ["BP", "EN", "MD-AUD"], "repairPriority": "P1" },
-    { "trigger": "fx_f5_unhandled", "ruleIds": ["V77", "SD-FX-02"], "reverseTarget": "W3", "forwardStages": ["W3", "SB", "MD-FX"], "repairPriority": "P1" },
-    { "trigger": "modality_slot_missing", "ruleIds": ["M1", "PC-13"], "reverseTarget": "MD", "forwardStages": ["MD"], "repairPriority": "P0" }
+    {
+      "trigger": "dialogue_hash_mismatch",
+      "ruleIds": [
+        "R2",
+        "H3"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "presentationFork": [
+        "P1改剧本",
+        "P2改分镜"
+      ]
+    },
+    {
+      "trigger": "emotion_composition",
+      "ruleIds": [
+        "B2",
+        "QP-06"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "GB",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "shot_camera_invalid",
+      "ruleIds": [
+        "PR-CAM-01",
+        "QP-14"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cam_whitelist",
+      "ruleIds": [
+        "PR-CAM-01",
+        "DC-09",
+        "QP-14"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD",
+        "SB"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "PR-CAM-01",
+      "ruleIds": [
+        "PR-CAM-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "story_link_broken",
+      "ruleIds": [
+        "W41",
+        "QP-10"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "designBrief",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "identity_mismatch",
+      "ruleIds": [
+        "Y8",
+        "QP-18",
+        "PC-14"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "BP",
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "fx_infeasible",
+      "ruleIds": [
+        "V77",
+        "QP-17",
+        "FX-GRADE-01"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ],
+      "presentationFork": [
+        "P1改剧本描写",
+        "P2改分镜局部特效"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "generation_feedback",
+      "ruleIds": [
+        "H5"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "H2",
+      "ruleIds": [
+        "H2"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "GB",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H3",
+      "ruleIds": [
+        "H3"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H4",
+      "ruleIds": [
+        "H4"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H5",
+      "ruleIds": [
+        "H5"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "V1",
+      "ruleIds": [
+        "V1"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "V10",
+      "ruleIds": [
+        "V10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB"
+      ]
+    },
+    {
+      "trigger": "MODE-AGNES",
+      "ruleIds": [
+        "MODE-AGNES"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ]
+    },
+    {
+      "trigger": "narrative_graph_broken",
+      "ruleIds": [
+        "W41"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W1",
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "debut_missing",
+      "ruleIds": [
+        "QP-19",
+        "PR-16"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_lip_duration",
+      "ruleIds": [
+        "PR-09"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_os_voice",
+      "ruleIds": [
+        "PR-10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_prop_state",
+      "ruleIds": [
+        "PR-11"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "pr_spatial",
+      "ruleIds": [
+        "PR-12"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_expr_feasibility",
+      "ruleIds": [
+        "PR-14",
+        "QF-EXPR"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_vendor_fx",
+      "ruleIds": [
+        "PR-15"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "SB",
+        "W3"
+      ]
+    },
+    {
+      "trigger": "video_first_frame_missing",
+      "ruleIds": [
+        "AG-GATE-01",
+        "MODE-AGNES"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "motion_overflow",
+      "ruleIds": [
+        "AG-GATE-02",
+        "QF-EXPR-06"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "duration_clamp",
+      "ruleIds": [
+        "AG-GATE-03",
+        "V9"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "native_audio_mismatch",
+      "ruleIds": [
+        "PR-09",
+        "PC-10"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "img_cref_missing",
+      "ruleIds": [
+        "V4",
+        "SD-IMG-01",
+        "IMG-CREF"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-IMG"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "missing_scene",
+      "ruleIds": [
+        "V4",
+        "SB-SCENE-01"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "BP",
+        "SB",
+        "EN",
+        "AS"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "img_pure_negative",
+      "ruleIds": [
+        "V2",
+        "SD-IMG-02"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "aud_voice_mismatch",
+      "ruleIds": [
+        "Y8",
+        "SD-AUD-02"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "fx_f5_unhandled",
+      "ruleIds": [
+        "V77",
+        "SD-FX-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "modality_slot_missing",
+      "ruleIds": [
+        "M1",
+        "PC-13"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "retention_opening_missing",
+      "ruleIds": [
+        "RET-01",
+        "RET-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "B",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "narrative_info_gap",
+      "ruleIds": [
+        "NAR-01",
+        "NAR-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "B",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "narrative_dialogue_function",
+      "ruleIds": [
+        "NAR-04",
+        "NAR-05"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "packaging_debut_missing",
+      "ruleIds": [
+        "PKG-03",
+        "PKG-04"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "packaging_end_preview",
+      "ruleIds": [
+        "PKG-06"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "generation_design_drift",
+      "ruleIds": [
+        "GEN-05",
+        "GEN-06"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "adaptation_deep_empty",
+      "ruleIds": [
+        "ADP-D01",
+        "ADP-D02"
+      ],
+      "reverseTarget": "P03",
+      "forwardStages": [
+        "P03",
+        "W2",
+        "W3"
+      ]
+    },
+    {
+      "trigger": "design_spec_upstream",
+      "ruleIds": [
+        "DSG-B14"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "B",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "viral_clip_shortfall",
+      "ruleIds": [
+        "VIR-01",
+        "VIR-03"
+      ],
+      "reverseTarget": "W1",
+      "forwardStages": [
+        "W1",
+        "W3",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "modality_fx_missing",
+      "ruleIds": [
+        "MOD-01",
+        "MOD-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ]
+    },
+    {
+      "trigger": "modality_aud_missing",
+      "ruleIds": [
+        "MOD-03",
+        "MOD-04"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-AUD"
+      ]
+    },
+    {
+      "trigger": "narrative_split_hint",
+      "ruleIds": [
+        "NAR-14",
+        "NAR-15"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "mode_rules_mismatch",
+      "ruleIds": [
+        "MODE-RULES-01"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "prompt_gen_media_missing",
+      "ruleIds": [
+        "PROMPT-GEN-MEDIA",
+        "QP-11"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "SB",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "derive_parent_ref_missing",
+      "ruleIds": [
+        "DRV-PARENT-REF"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "derive_prompt_empty",
+      "ruleIds": [
+        "DRV-PROMPT"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "CD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "image_mode_ref_mismatch",
+      "ruleIds": [
+        "IMG-MODE-REF"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vendor_passthrough",
+      "ruleIds": [
+        "VENDOR-QUEUE"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "tls_socket",
+      "ruleIds": [
+        "TLS-SOCKET",
+        "tls_socket",
+        "ECONNRESET"
+      ],
+      "patterns": [
+        "Client network socket disconnected before secure TLS connection was established",
+        "socket disconnected before secure TLS",
+        "ECONNRESET",
+        "ETIMEDOUT",
+        "network socket disconnected",
+        "TLS connection"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "missing_reference_upload",
+      "ruleIds": [
+        "GEN-REF-UPLOAD",
+        "GEN-OSSURL"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "wrong_character_ref",
+      "ruleIds": [
+        "PC-14",
+        "Y8"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "BP",
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cref_unbound",
+      "ruleIds": [
+        "V4",
+        "AS-CREF"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "PR-10",
+      "ruleIds": [
+        "PR-10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "PR-11",
+      "ruleIds": [
+        "PR-11"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "PR-12",
+      "ruleIds": [
+        "PR-12"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "content_policy",
+      "ruleIds": [
+        "POLICY-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "content_policy_rewrite",
+      "ruleIds": [
+        "POLICY-01",
+        "POLICY-REWRITE"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "lang_aud_mismatch",
+      "ruleIds": [
+        "LANG-AUD-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "lang_vid_mismatch",
+      "ruleIds": [
+        "LANG-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-VID"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vp_conflict",
+      "ruleIds": [
+        "VP-CONFLICT"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "fx_empty",
+      "ruleIds": [
+        "FX-GRADE-01"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "MD-FX"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "cam_speak",
+      "ruleIds": [
+        "CAM-SPEAK"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "SB"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cam_variety",
+      "ruleIds": [
+        "CAM-VARIETY"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "oss_ref_missing",
+      "ruleIds": [
+        "GEN-OSSURL",
+        "GEN-REF-UPLOAD"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "audio_force_mismatch",
+      "ruleIds": [
+        "AG-GATE-AUD"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "scene_break",
+      "ruleIds": [
+        "V6",
+        "DC-SCENE"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "orphan_stub_no_image",
+      "ruleIds": [
+        "orphan_stub_no_image",
+        "ASSET_STUB_QUALITY"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "CD",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cd_cast_gap",
+      "ruleIds": [
+        "DC-16",
+        "DG-CD-COVERAGE",
+        "INT-CHAR-ORPHAN",
+        "complete_failed",
+        "cd_cast_gap"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "SB",
+        "EN",
+        "AS"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "polish_failed",
+      "ruleIds": [
+        "polish_failed"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "media_probe_mute",
+      "ruleIds": [
+        "media_probe_mute",
+        "GC-07"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    }
   ],
   "maxRounds": 3
 }
@@ -10012,38 +11889,941 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
 {
   "version": "2.0.1",
   "routes": [
-    { "trigger": "dialogue_hash_mismatch", "ruleIds": ["R2", "H3"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "presentationFork": ["P1改剧本", "P2改分镜"] },
-    { "trigger": "emotion_composition", "ruleIds": ["B2", "QP-06"], "reverseTarget": "GB", "forwardStages": ["GB", "SB", "EN"] },
-    { "trigger": "shot_camera_invalid", "ruleIds": ["PR-CAM-01", "QP-14"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"], "repairPriority": "P0" },
-    { "trigger": "PR-CAM-01", "ruleIds": ["PR-CAM-01"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "story_link_broken", "ruleIds": ["W41", "QP-10"], "reverseTarget": "W3", "forwardStages": ["W3", "designBrief", "GB", "SB"] },
-    { "trigger": "identity_mismatch", "ruleIds": ["Y8", "QP-18"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "fx_infeasible", "ruleIds": ["V77", "QP-17"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "presentationFork": ["P1改剧本描写", "P2改分镜局部特效"] },
-    { "trigger": "generation_feedback", "ruleIds": ["H5"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "H2", "ruleIds": ["H2"], "reverseTarget": "GB", "forwardStages": ["GB", "SB", "EN"] },
-    { "trigger": "H3", "ruleIds": ["H3"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "H4", "ruleIds": ["H4"], "reverseTarget": "EN", "forwardStages": ["EN"] },
-    { "trigger": "H5", "ruleIds": ["H5"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "V1", "ruleIds": ["V1"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "V10", "ruleIds": ["V10"], "reverseTarget": "SB", "forwardStages": ["SB"] },
-    { "trigger": "MODE-AGNES", "ruleIds": ["MODE-AGNES"], "reverseTarget": "MD", "forwardStages": ["MD"] },
-    { "trigger": "narrative_graph_broken", "ruleIds": ["W41"], "reverseTarget": "W3", "forwardStages": ["W1", "W3", "SB"] },
-    { "trigger": "debut_missing", "ruleIds": ["QP-19", "PR-16"], "reverseTarget": "SB", "forwardStages": ["SB", "W3"] },
-    { "trigger": "pr_lip_duration", "ruleIds": ["PR-09"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_os_voice", "ruleIds": ["PR-10"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_prop_state", "ruleIds": ["PR-11"], "reverseTarget": "BP", "forwardStages": ["BP", "SB"] },
-    { "trigger": "pr_spatial", "ruleIds": ["PR-12"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_expr_feasibility", "ruleIds": ["PR-14", "QF-EXPR"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_vendor_fx", "ruleIds": ["PR-15"], "reverseTarget": "EN", "forwardStages": ["EN", "SB", "W3"] },
-    { "trigger": "video_first_frame_missing", "ruleIds": ["AG-GATE-01", "MODE-AGNES"], "reverseTarget": "MD", "forwardStages": ["MD", "EN"], "repairPriority": "P0" },
-    { "trigger": "motion_overflow", "ruleIds": ["AG-GATE-02", "QF-EXPR-06"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"], "repairPriority": "P0" },
-    { "trigger": "duration_clamp", "ruleIds": ["AG-GATE-03", "V9"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "repairPriority": "P0" },
-    { "trigger": "native_audio_mismatch", "ruleIds": ["PR-09", "PC-10"], "reverseTarget": "EN", "forwardStages": ["EN", "MD-AUD"], "repairPriority": "P1" },
-    { "trigger": "img_cref_missing", "ruleIds": ["V4", "SD-IMG-01"], "reverseTarget": "EN", "forwardStages": ["EN", "MD-IMG"], "repairPriority": "P0" },
-    { "trigger": "img_pure_negative", "ruleIds": ["V2", "SD-IMG-02"], "reverseTarget": "EN", "forwardStages": ["EN"], "repairPriority": "P0" },
-    { "trigger": "aud_voice_mismatch", "ruleIds": ["Y8", "SD-AUD-02"], "reverseTarget": "BP", "forwardStages": ["BP", "EN", "MD-AUD"], "repairPriority": "P1" },
-    { "trigger": "fx_f5_unhandled", "ruleIds": ["V77", "SD-FX-02"], "reverseTarget": "W3", "forwardStages": ["W3", "SB", "MD-FX"], "repairPriority": "P1" },
-    { "trigger": "modality_slot_missing", "ruleIds": ["M1", "PC-13"], "reverseTarget": "MD", "forwardStages": ["MD"], "repairPriority": "P0" }
+    {
+      "trigger": "dialogue_hash_mismatch",
+      "ruleIds": [
+        "R2",
+        "H3"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "presentationFork": [
+        "P1改剧本",
+        "P2改分镜"
+      ]
+    },
+    {
+      "trigger": "emotion_composition",
+      "ruleIds": [
+        "B2",
+        "QP-06"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "GB",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "shot_camera_invalid",
+      "ruleIds": [
+        "PR-CAM-01",
+        "QP-14"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cam_whitelist",
+      "ruleIds": [
+        "PR-CAM-01",
+        "DC-09",
+        "QP-14"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD",
+        "SB"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "PR-CAM-01",
+      "ruleIds": [
+        "PR-CAM-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "story_link_broken",
+      "ruleIds": [
+        "W41",
+        "QP-10"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "designBrief",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "identity_mismatch",
+      "ruleIds": [
+        "Y8",
+        "QP-18",
+        "PC-14"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "BP",
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "fx_infeasible",
+      "ruleIds": [
+        "V77",
+        "QP-17",
+        "FX-GRADE-01"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ],
+      "presentationFork": [
+        "P1改剧本描写",
+        "P2改分镜局部特效"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "generation_feedback",
+      "ruleIds": [
+        "H5"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "H2",
+      "ruleIds": [
+        "H2"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "GB",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H3",
+      "ruleIds": [
+        "H3"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H4",
+      "ruleIds": [
+        "H4"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H5",
+      "ruleIds": [
+        "H5"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "V1",
+      "ruleIds": [
+        "V1"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "V10",
+      "ruleIds": [
+        "V10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB"
+      ]
+    },
+    {
+      "trigger": "MODE-AGNES",
+      "ruleIds": [
+        "MODE-AGNES"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ]
+    },
+    {
+      "trigger": "narrative_graph_broken",
+      "ruleIds": [
+        "W41"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W1",
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "debut_missing",
+      "ruleIds": [
+        "QP-19",
+        "PR-16"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_lip_duration",
+      "ruleIds": [
+        "PR-09"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_os_voice",
+      "ruleIds": [
+        "PR-10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_prop_state",
+      "ruleIds": [
+        "PR-11"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "pr_spatial",
+      "ruleIds": [
+        "PR-12"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_expr_feasibility",
+      "ruleIds": [
+        "PR-14",
+        "QF-EXPR"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_vendor_fx",
+      "ruleIds": [
+        "PR-15"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "SB",
+        "W3"
+      ]
+    },
+    {
+      "trigger": "video_first_frame_missing",
+      "ruleIds": [
+        "AG-GATE-01",
+        "MODE-AGNES"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "motion_overflow",
+      "ruleIds": [
+        "AG-GATE-02",
+        "QF-EXPR-06"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "duration_clamp",
+      "ruleIds": [
+        "AG-GATE-03",
+        "V9"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "native_audio_mismatch",
+      "ruleIds": [
+        "PR-09",
+        "PC-10"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "img_cref_missing",
+      "ruleIds": [
+        "V4",
+        "SD-IMG-01",
+        "IMG-CREF"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-IMG"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "missing_scene",
+      "ruleIds": [
+        "V4",
+        "SB-SCENE-01"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "BP",
+        "SB",
+        "EN",
+        "AS"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "img_pure_negative",
+      "ruleIds": [
+        "V2",
+        "SD-IMG-02"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "aud_voice_mismatch",
+      "ruleIds": [
+        "Y8",
+        "SD-AUD-02"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "fx_f5_unhandled",
+      "ruleIds": [
+        "V77",
+        "SD-FX-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "modality_slot_missing",
+      "ruleIds": [
+        "M1",
+        "PC-13"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "retention_opening_missing",
+      "ruleIds": [
+        "RET-01",
+        "RET-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "B",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "narrative_info_gap",
+      "ruleIds": [
+        "NAR-01",
+        "NAR-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "B",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "narrative_dialogue_function",
+      "ruleIds": [
+        "NAR-04",
+        "NAR-05"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "packaging_debut_missing",
+      "ruleIds": [
+        "PKG-03",
+        "PKG-04"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "packaging_end_preview",
+      "ruleIds": [
+        "PKG-06"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "generation_design_drift",
+      "ruleIds": [
+        "GEN-05",
+        "GEN-06"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "adaptation_deep_empty",
+      "ruleIds": [
+        "ADP-D01",
+        "ADP-D02"
+      ],
+      "reverseTarget": "P03",
+      "forwardStages": [
+        "P03",
+        "W2",
+        "W3"
+      ]
+    },
+    {
+      "trigger": "design_spec_upstream",
+      "ruleIds": [
+        "DSG-B14"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "B",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "viral_clip_shortfall",
+      "ruleIds": [
+        "VIR-01",
+        "VIR-03"
+      ],
+      "reverseTarget": "W1",
+      "forwardStages": [
+        "W1",
+        "W3",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "modality_fx_missing",
+      "ruleIds": [
+        "MOD-01",
+        "MOD-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ]
+    },
+    {
+      "trigger": "modality_aud_missing",
+      "ruleIds": [
+        "MOD-03",
+        "MOD-04"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-AUD"
+      ]
+    },
+    {
+      "trigger": "narrative_split_hint",
+      "ruleIds": [
+        "NAR-14",
+        "NAR-15"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "mode_rules_mismatch",
+      "ruleIds": [
+        "MODE-RULES-01"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "prompt_gen_media_missing",
+      "ruleIds": [
+        "PROMPT-GEN-MEDIA",
+        "QP-11"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "SB",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "derive_parent_ref_missing",
+      "ruleIds": [
+        "DRV-PARENT-REF"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "derive_prompt_empty",
+      "ruleIds": [
+        "DRV-PROMPT"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "CD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "image_mode_ref_mismatch",
+      "ruleIds": [
+        "IMG-MODE-REF"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vendor_passthrough",
+      "ruleIds": [
+        "VENDOR-QUEUE"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "tls_socket",
+      "ruleIds": [
+        "TLS-SOCKET",
+        "tls_socket",
+        "ECONNRESET"
+      ],
+      "patterns": [
+        "Client network socket disconnected before secure TLS connection was established",
+        "socket disconnected before secure TLS",
+        "ECONNRESET",
+        "ETIMEDOUT",
+        "network socket disconnected",
+        "TLS connection"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "missing_reference_upload",
+      "ruleIds": [
+        "GEN-REF-UPLOAD",
+        "GEN-OSSURL"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "wrong_character_ref",
+      "ruleIds": [
+        "PC-14",
+        "Y8"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "BP",
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cref_unbound",
+      "ruleIds": [
+        "V4",
+        "AS-CREF"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "PR-10",
+      "ruleIds": [
+        "PR-10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "PR-11",
+      "ruleIds": [
+        "PR-11"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "PR-12",
+      "ruleIds": [
+        "PR-12"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "content_policy",
+      "ruleIds": [
+        "POLICY-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "content_policy_rewrite",
+      "ruleIds": [
+        "POLICY-01",
+        "POLICY-REWRITE"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "lang_aud_mismatch",
+      "ruleIds": [
+        "LANG-AUD-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "lang_vid_mismatch",
+      "ruleIds": [
+        "LANG-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-VID"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vp_conflict",
+      "ruleIds": [
+        "VP-CONFLICT"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "fx_empty",
+      "ruleIds": [
+        "FX-GRADE-01"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "MD-FX"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "cam_speak",
+      "ruleIds": [
+        "CAM-SPEAK"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "SB"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cam_variety",
+      "ruleIds": [
+        "CAM-VARIETY"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "oss_ref_missing",
+      "ruleIds": [
+        "GEN-OSSURL",
+        "GEN-REF-UPLOAD"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "audio_force_mismatch",
+      "ruleIds": [
+        "AG-GATE-AUD"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "scene_break",
+      "ruleIds": [
+        "V6",
+        "DC-SCENE"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "orphan_stub_no_image",
+      "ruleIds": [
+        "orphan_stub_no_image",
+        "ASSET_STUB_QUALITY"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "CD",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cd_cast_gap",
+      "ruleIds": [
+        "DC-16",
+        "DG-CD-COVERAGE",
+        "INT-CHAR-ORPHAN",
+        "complete_failed",
+        "cd_cast_gap"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "SB",
+        "EN",
+        "AS"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "polish_failed",
+      "ruleIds": [
+        "polish_failed"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "media_probe_mute",
+      "ruleIds": [
+        "media_probe_mute",
+        "GC-07"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    }
   ],
   "maxRounds": 3
 }
@@ -10064,7 +12844,13 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     { "id": "camera", "nodes": ["designBrief.B12", "SB.shotSize", "SB.transitionType", "EN.motion", "MD-VID.camera"], "rollback": ["brief", "SB", "EN", "MD"] },
     { "id": "adaptation", "nodes": ["P03.matrix", "W2.adaptationStrategy", "W3.script", "designBrief"], "rollback": ["P03", "W2", "W3"] },
     { "id": "modality_compile", "nodes": ["EN.compile", "MD-IMG", "MD-VID", "MD-AUD", "MD-FX", "modalityPromptAudit"], "rollback": ["EN", "MD"] },
-    { "id": "generation", "nodes": ["MD.prompts", "VendorPack", "generate", "MediaProbe", "generationFeedback"], "rollback": ["MD", "EN", "SB"] },
+    { "id": "generation_apply", "nodes": ["SB.shotDesign", "SB.visualDescription", "EN.Y", "MD.prompts", "modalityPromptAudit"], "rollback": ["SB", "EN", "MD"] },
+    { "id": "retention", "nodes": ["P03.R/O", "retentionPlan", "W3.sceneMeta", "designBrief.B18", "SB.retentionTier"], "rollback": ["W3", "B", "GB", "SB"] },
+    { "id": "narrative_drive", "nodes": ["informationLedger", "dialoguePlan", "designBrief.B20", "SB.lines", "narrativeCausalityGraph"], "rollback": ["W3", "B", "SB"] },
+    { "id": "packaging", "nodes": ["opening3to10s", "debutIntroPack", "SB.establishing", "endCardPack"], "rollback": ["W3", "SB"] },
+    { "id": "adaptation_deep", "nodes": ["P03.D/V", "adaptationMatrixStructured", "W2", "W3", "designBrief.B16"], "rollback": ["P03", "W2", "W3", "B"] },
+    { "id": "viral_clip", "nodes": ["viralAdaptation", "W1.paypoint", "GB.paypointScenes", "SB.clip30sCandidate"], "rollback": ["W1", "W2", "W3", "GB", "SB"] },
+    { "id": "modality_feasibility", "nodes": ["W3.sceneMeta", "narrativeBrief.implementationPlan", "SB.visualEffect", "fxFeasibilityAudit", "MD-FX", "MD-AUD"], "rollback": ["W3", "SB", "EN", "MD"] },
     { "id": "repair", "nodes": ["SD", "fixPlan", "linkageRepairPlan", "rePushPlan"], "rollback": "reverse_route_table" }
   ]
 }
@@ -10151,12 +12937,25 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     "scene": { "rePushTarget": "SB" },
     "camera": { "rePushTarget": "EN" },
     "story": { "rePushTarget": "W3" },
+    "continuity": { "rePushTarget": "W3" },
     "av": { "rePushTarget": "GB" },
     "adaptation": { "rePushTarget": "W2" },
+    "adaptation_deep": { "rePushTarget": "P03" },
+    "retention": { "rePushTarget": "W3" },
+    "narrative_drive": { "rePushTarget": "W3" },
+    "packaging": { "rePushTarget": "SB" },
+    "generation_apply": { "rePushTarget": "SB" },
+    "viral_clip": { "rePushTarget": "W1" },
     "modality_compile": { "rePushTarget": "EN" },
+    "modality_feasibility": { "rePushTarget": "W3" },
     "generation": { "rePushTarget": "MD" },
     "repair": { "rePushTarget": "SF" }
-  }
+  },
+  "smartBoundaries": {
+    "CAN": ["fixPlan from *Gaps", "linkageRepairPlan single chain", "rePushPlan multi chain round<=3", "smartProposalApplier with userConfirmed"],
+    "CANNOT": ["change W3 dialogue text R2", "fake linkageAudit/ruleAudit pass", "import overwrite Chat prompts", "T1 require full MD×4"]
+  },
+  "gapDomains": ["adaptationGaps", "retentionGaps", "narrativeDriveGaps", "packagingGaps", "generationApplyGaps", "designSpecGaps", "scriptViralGaps", "modalityGaps", "chatPromptGaps"]
 }
 
 {
@@ -10192,19 +12991,22 @@ IC dryRun：intelligent_closure_checklist.json
   "hints": [
     { "id": "RH-QP-01", "qpId": "QP-01", "symptom": "场数过少", "action": "在 W3 补场", "chatTemplate": "请增加场次，确保每集场数满足最低要求。" },
     { "id": "RH-QP-02", "qpId": "QP-02", "symptom": "画面描述空泛", "action": "重写 SB 画面描述", "chatTemplate": "请将分镜画面描述改为具体可拍的可视细节，避免抽象词。" },
-    { "id": "RH-QP-03", "qpId": "QP-03", "ruleId": "R2", "symptom": "台词与源不一致", "action": "逐句对齐 W3 剧本到 SB.lines", "chatTemplate": "请对照剧本原文，修正分镜台词，禁止删改字词。" },
+    { "id": "RH-QP-03", "qpId": "QP-03", "ruleId": "R2", "checkIds": ["DC-01", "H3", "R2"], "symptom": "台词与源不一致", "action": "逐句对齐 W3 剧本到 SB.lines", "chatTemplate": "请对照剧本原文，修正分镜台词，禁止删改字词。" },
+    { "id": "RH-LANG-01", "ruleId": "LANG-01", "checkIds": ["LANG-01", "LANG-AUD-01"], "symptom": "中文台词被英译进 VID/AUD", "action": "用 SB 源语言台词回填 videoPrompt [Audio] 段", "chatTemplate": "请将 videoPrompt/audioPrompt 中的英译对白改回剧本源语言原句，运镜壳可保留英文，台词禁止翻译。" },
+    { "id": "RH-FX-01", "ruleId": "FX-GRADE-01", "checkIds": ["FX-GRADE-01", "DG-FALSE-GREEN-FX", "DG-MODALITY-MISMATCH", "INT-FX-EMPTY"], "symptom": "FX 空未声明或高难不可行", "action": "无特效镜声明 F0；有特效补 fxPrompt；F4/F5 降级或拆镜", "chatTemplate": "无特效镜头请在 fxFeasibilityAudit/镜级声明 level:F0，不要写 modalityPromptAudit.FX=pass 却留空 fxPrompt。有特效才写 fxPrompt；F4/F5 请降级或拆镜，禁止占位特效文案。" },
     { "id": "RH-QP-04", "qpId": "QP-04", "symptom": "对白密度异常", "action": "调整 SB 台词密度", "chatTemplate": "请调整对白密度：台词镜保持一句一镜，旁白镜减少对白。" },
     { "id": "RH-QP-05", "qpId": "QP-05", "symptom": "角色称谓混乱", "action": "统一 W3 角色称谓", "chatTemplate": "请统一剧本中的角色称谓，与 globalAnchors 一致。" },
     { "id": "RH-QP-06", "qpId": "QP-06", "symptom": "情绪单调", "action": "补 GB 情绪曲线", "chatTemplate": "请在全局 Brief 中补充情绪起伏与峰值场。" },
     { "id": "RH-QP-07", "qpId": "QP-07", "symptom": "钩子不足", "action": "强化 W1 开场钩子", "chatTemplate": "请加强开场 30 秒内的视觉或情感钩子。" },
     { "id": "RH-QP-08", "qpId": "QP-08", "symptom": "张力不足", "action": "升级 W2 冲突", "chatTemplate": "请在对峙场增加 stakes 升级与阻碍。" },
     { "id": "RH-QP-09", "qpId": "QP-09", "symptom": "吸引力弱", "action": "重写 W3 低吸引力场", "chatTemplate": "请重写吸引力不足的场次，增加悬念或情感峰值。" },
-    { "id": "RH-QP-10", "qpId": "QP-10", "symptom": "信息链断裂", "action": "补 designBrief 信息链", "chatTemplate": "请在 designBrief 中补全因果链与伏笔承接。" },
+    { "id": "RH-QP-10", "qpId": "QP-10", "checkIds": ["DC-13"], "symptom": "信息链断裂", "action": "补 designBrief 信息链", "chatTemplate": "请在 designBrief 中补全因果链与伏笔承接；若为台词链断裂请对照剧本补全 SB 台词。" },
     { "id": "RH-QP-11", "qpId": "QP-11", "symptom": "资产引用缺失", "action": "补 AS 资产绑定", "chatTemplate": "请为角色/场景补全资产引用与 cref 绑定。" },
     { "id": "RH-QP-12", "qpId": "QP-12", "symptom": "cref 未绑定", "action": "绑定 EN cref", "chatTemplate": "请在 EN-IMG 中绑定角色 cref 与场景资产。" },
     { "id": "RH-QP-13", "qpId": "QP-13", "symptom": "跨镜色温跳变", "action": "统一 SB 色温", "chatTemplate": "请统一相邻镜头的色温与光线描述。" },
     { "id": "RH-QP-14", "qpId": "QP-14", "ruleId": "PR-CAM-01", "symptom": "运镜不可执行", "action": "改用运镜白名单重编译 EN-VID", "chatTemplate": "请将运镜改为 slow pan / gentle push 等白名单词。" },
     { "id": "RH-QP-15", "qpId": "QP-15", "symptom": "时长与台词不匹配", "action": "对齐 SB 时长与台词", "chatTemplate": "请调整镜时长或拆分台词，使口型时长可执行。" },
+    { "id": "RH-PR-09", "ruleId": "LIP-01", "checkIds": ["LIP-01", "PR-09"], "symptom": "镜时长短于台词朗读", "action": "raise_duration 或拆镜", "chatTemplate": "请将该镜 duration 调至 required（口型+情绪留白），或拆分台词到多镜；导入一键完善可无感抬时。" },
     { "id": "RH-QP-16", "qpId": "QP-16", "symptom": "模态 slot 缺失", "action": "补 EN 模态 slot", "chatTemplate": "请补全 EN 四模态 slot（IMG/VID/AUD/FX）。" },
     { "id": "RH-QP-17", "qpId": "QP-17", "symptom": "FX 词不可实现", "action": "降级 SB FX 描述", "chatTemplate": "请将 FX 改为 F2 可执行描述或拆镜后期处理。" },
     { "id": "RH-QP-18", "qpId": "QP-18", "symptom": "identity 冲突", "action": "重编译 EN 身份词", "chatTemplate": "请统一 IMG/VID/AUD 性别与身份词，与 BP L0 一致。" },
@@ -10212,7 +13014,42 @@ IC dryRun：intelligent_closure_checklist.json
     { "id": "RH-QP-20", "qpId": "QP-20", "symptom": "跨集衔接弱", "action": "补 W3 集间衔接", "chatTemplate": "请在上集结尾与本集开场补 continuity 承接。" },
     { "id": "RH-W93", "ruleId": "W93", "symptom": "爆点不够", "action": "增情绪峰值场", "chatTemplate": "建议在 W3 或 SB 增加对峙升级场。" },
     { "id": "RH-AG-GATE-01", "ruleId": "AG-GATE-01", "symptom": "缺首位帧", "action": "生成首帧分镜图", "chatTemplate": "请先生成分镜参考图再写 MD-VID singleImage。" },
-    { "id": "RH-identity", "ruleId": "identity_mismatch", "symptom": "跨模态性别冲突", "action": "重编译 EN 全模态", "chatTemplate": "请统一 IMG/VID/AUD 性别词与 BP L0。" }
+    { "id": "RH-identity", "ruleId": "identity_mismatch", "symptom": "跨模态性别冲突", "action": "重编译 EN 全模态", "chatTemplate": "请统一 IMG/VID/AUD 性别词与 BP L0。" },
+    { "id": "RH-RET-01", "ruleId": "RET-01", "symptom": "ep1 缺开场钩子", "action": "补 W3 ep1 opening5s/opening3to10s", "chatTemplate": "请在 ep1 第一场结构化 opening5s 钩子（困境/反差/情感暴击三选一）。" },
+    { "id": "RH-NAR-05", "ruleId": "NAR-05", "symptom": "台词无动作因果", "action": "补 causedByActionId", "chatTemplate": "请为台词标注 causedByActionId，遵循动作是因、对话是果。" },
+    { "id": "RH-PKG-03", "ruleId": "PKG-03", "symptom": "debut 缺 copyHint", "action": "补 debutIntroPack", "chatTemplate": "请为首登场角色补 copyHint 与 establishingPattern。" },
+    { "id": "RH-GEN-05", "ruleId": "GEN-05", "symptom": "设计未进 prompt", "action": "对齐 shotDesign 与 imagePrompt", "chatTemplate": "请将 shotDesign/visualDescription 编译进 imagePrompt。" },
+    { "id": "RH-ADP-D01", "ruleId": "ADP-D01", "symptom": "深度改编未落地", "action": "补 nameMap", "chatTemplate": "请在 adaptationMatrixStructured.deepAdaptation 补全 nameMap，格式仅允许 [{ \"from\": \"原名\", \"to\": \"新名\" }]，禁止 null、禁止用「原→新」作 object key。" },
+    { "id": "RH-DSG-B14", "ruleId": "DSG-B14", "symptom": "付费点未进设计", "action": "补 designBrief B14", "chatTemplate": "请将 paypointSchedule 镜像到 designBrief B14 paypointMarkers。" },
+    { "id": "RH-VIR-01", "ruleId": "VIR-01", "symptom": "投流点不足", "action": "补 clipPoints30s", "chatTemplate": "请在前10集标注至少10个 clip30sCandidate 投流爆点。" },
+    { "id": "RH-NAR-14", "ruleId": "NAR-14", "checkIds": ["NAR-14", "nar14_long_line"], "symptom": "长台词无 splitHint", "action": "双路径补 splitHint", "chatTemplate": "【NAR-14】>20 字台词须同时写：(1) planData.dialoguePlan.lines[i].splitHint=\"reaction_shot\"；(2) preDesignPack.shots[j].narrative.dialogue.lines[k].splitHint（同 lineId 对齐）。导入后须出现在 episode package 镜台词；禁止只改 narrativeSelfcheck.passed。烧片读 package，丢字段会再挡 nar14_long_line。" },
+    { "id": "RH-NAR-15", "ruleId": "NAR-15", "checkIds": ["NAR-15"], "symptom": "高情绪对白无反应镜", "action": "补 reactionAction", "chatTemplate": "【NAR-15】emotion_hit 台词须写 reactionAction（听者反应），同时写在 dialoguePlan 与 shots[].narrative.dialogue.lines；导入后须进 package。禁止只改 audit 自报。" },
+    { "id": "RH-MOD-01", "ruleId": "MOD-01", "symptom": "fxIntent 未进 SB", "action": "补 visualEffect", "chatTemplate": "请将 W3 sceneMeta.fxIntent 镜像到 SB：visualEffect 为 string（如 \"F1: 烛火摇曳\"），可选 fxLevel: \"F1\"；禁止 object {level,desc}。" },
+    { "id": "RH-MOD-02", "ruleId": "MOD-02", "checkIds": ["MOD-02", "DG-SCENE-ORPHAN-FX"], "symptom": "缺 fxPrompt 或孤儿场", "action": "判型后补散文或降F0", "chatTemplate": "【先判型】若清单含「孤儿场」：不要补其他场的 fxPrompt。请改 planData.narrativeBrief.implementationPlan[sceneRef=N]：删除该项，或 fxIntent.level→F0，或给接场独立 sceneName 并挂镜+散文。若有映射镜缺散文：写 preDesignPack.shots[shotIndex=K].generation.fxPrompt 可执行散文（可从 visualEffect 去 F1: 前缀），禁止字母 F1；无特效则该场/该镜改为 F0。" },
+    { "id": "RH-MOD-02-ORPHAN", "ruleId": "MOD-02", "checkIds": ["MOD-02", "DG-SCENE-ORPHAN-FX", "DG-SCENE-CARDINALITY"], "symptom": "孤儿场无映射镜", "action": "删plan或降F0或独立sceneName", "chatTemplate": "【孤儿场】implementationPlan 的 sceneRef 无对应唯一 sceneName 映射镜。禁止只给其他场补 fxPrompt。二选一：(1) 删除该 plan/sceneMeta 项或 fxIntent.level→\"F0\"；(2) 接场改用独立 sceneName（如「卧房·后」）并挂镜，有特效再写 generation.fxPrompt。" },
+    { "id": "RH-SCENE-CARD", "ruleId": "DG-SCENE-CARDINALITY", "checkIds": ["DG-SCENE-CARDINALITY"], "symptom": "场镜基数不对齐", "action": "对齐 plan 与 sceneName", "chatTemplate": "【场镜基数】唯一 sceneName 数必须等于 implementationPlan/sceneMeta 条数。接场同地点：要么独立 sceneName，要么合并为一场并删除多余 sceneRef。禁止 script 写场N、SB 共用名、plan 仍留多余 F1。" },
+    { "id": "RH-FX-F0", "ruleId": "FX-GRADE-01", "checkIds": ["FX-GRADE-01", "DG-FX-DUAL-TRACK"], "symptom": "空FX未声明F0", "action": "声明F0", "chatTemplate": "镜K 无特效：写 fxFeasibility/fxLevel=\"F0\"，并在 fxFeasibilityAudit.items 增加 {shotIndex:K,level:\"F0\",feasible:true,desc:\"无特效\"}；不要写 fxPrompt，不要只改 modalityPromptAudit.FX=pass。" },
+    { "id": "RH-IMG-CREF", "ruleId": "IMG-CREF", "checkIds": ["IMG-CREF", "img_cref_missing"], "symptom": "定妆/cref 静照缺失", "action": "先 batch_still 再烧视频", "chatTemplate": "身份参考图/cref 缺失：请先在资产或分镜跑静照（batch_still），绑定 CHAR-*/SCENE-* 后再烧视频；禁止脏首帧硬烧 singleImage。" },
+    { "id": "RH-MOD-03", "ruleId": "MOD-03", "symptom": "缺 audioPrompt", "action": "补 MD-AUD", "chatTemplate": "请将 W3 audioBeat 编译进台词镜 audioPrompt。" },
+    { "id": "RH-MOD-04", "ruleId": "MOD-04", "symptom": "voiceProfile 冲突", "action": "对齐 AUD 音色词", "chatTemplate": "请统一 voiceProfile 与 audioPrompt 音色描述。" },
+    { "id": "RH-MOD-05", "ruleId": "MOD-05", "symptom": "留存镜运镜不符", "action": "改 videoPrompt", "chatTemplate": "retentionTier 0-2s 镜请用 static + motion-from-frame。" },
+    { "id": "RH-MOD-06", "ruleId": "MOD-06", "symptom": "开场 FX 过高", "action": "补 degradeFixPlan", "chatTemplate": "debutIntroPack fxLevel > F2 须写 degradeFixPlan 可拍替代。" },
+    { "id": "RH-MOD-07", "ruleId": "MOD-07", "checkIds": ["MOD-07", "DG-MODALITY-MISMATCH"], "symptom": "模态 slot 空", "action": "补 modalityPromptAudit", "chatTemplate": "请补全 T3 四模态 slot（IMG/VID/AUD/FX）。" },
+    { "id": "RH-DC-16", "ruleId": "DC-16", "checkIds": ["DC-16", "DG-CD-COVERAGE", "INT-CHAR-ORPHAN"], "symptom": "配角未入册或仅 stub", "action": "Chat 补真实 characterDesign", "chatTemplate": "以下说话人/上镜码未入 characterDesign（或缺 L0.identity / 仅为 L0.stub）：请为每人补 assets[]：code、name、L0.identity（一句身份关系）；并写入 designBrief.B6.characters 与 visualLockTable.characterAssets。禁止仅用 stub 壳过闸。修复后请重新点「预览更新」/exportGate 直至 exportAllowed。" },
+    { "id": "RH-DG-SCENE", "ruleId": "DG-SCENE-KEY", "checkIds": ["DG-SCENE-KEY", "DC-06"], "symptom": "场景 key/映射", "action": "SCENE-* + SB.sceneName", "chatTemplate": "请将 visualLockTable.sceneColorLock 的中文 key 改为 SCENE-* code，并确保 designBrief.B6.scenes 与分镜 sceneName 对齐。" },
+    { "id": "RH-DG-LINK", "ruleId": "DG-LINKAGE-FALSE-GREEN", "checkIds": ["DG-LINKAGE-FALSE-GREEN"], "symptom": "资产链假绿", "action": "先补 CD 再改 audit", "chatTemplate": "禁止自写 linkageAudit.资产=pass。请先按 RH-DC-16 补齐 characterDesign，再重新导出。" },
+    { "id": "RH-DC-AV", "ruleId": "DC-04", "checkIds": ["DC-04", "DC-10"], "symptom": "视听情绪/AUD 标注", "action": "对齐 B4 与 audioCue", "chatTemplate": "请对齐 designBrief.B4 与分镜 emotion；高情绪镜建议补 audioCue / B9 或 T3 AUD 标注。" },
+    { "id": "RH-DC-CAM", "ruleId": "DC-09", "checkIds": ["DC-09", "PR-CAM-01"], "symptom": "运镜/转场越白名单", "action": "改用白名单 transition", "chatTemplate": "请将 transitionType/rhythmZone 改为运镜白名单内取值（如 soft cut / slow pan）。" },
+    { "id": "RH-ADP-D02", "ruleId": "ADP-D02", "symptom": "relationMap 空", "action": "补 deepAdaptation.relationMap", "chatTemplate": "请在 deepAdaptation 补全 relationMap，格式 [{ \"from\", \"to\" }]，禁止 null / arrow-key 伪对象。" },
+    { "id": "RH-ADP-D03", "ruleId": "ADP-D03", "symptom": "substitutions 空", "action": "补 deepAdaptation.substitutions", "chatTemplate": "请在 deepAdaptation 补全 substitutions，格式 [{ \"from\", \"to\" }]，禁止 null / arrow-key 伪对象。" },
+    { "id": "RH-ADP-D04", "ruleId": "ADP-D04", "symptom": "settingProfile 空", "action": "补 deepAdaptation.settingProfile", "chatTemplate": "请在 deepAdaptation 补全 settingProfile（object）；可选 string 字段无内容时省略 key，禁止写 null。" },
+    { "id": "RH-MODE-RULES", "ruleId": "mode_rules_mismatch", "symptom": "mode 与模板不一致", "action": "按 mode 重载 modelPrompt", "chatTemplate": "请按当前文生/单图/首尾帧/多参模式选择正确模板后重生成提示词。" },
+    { "id": "RH-PROMPT-GEN-MEDIA", "ruleId": "prompt_gen_media_missing", "symptom": "缺分镜或资产", "action": "补绑 AS/SB 后重跑", "chatTemplate": "请先关联分镜与资产信息列表，再生成视频提示词。" },
+    { "id": "RH-DERIVE-PARENT", "ruleId": "derive_parent_ref_missing", "symptom": "衍生缺父图", "action": "先生成父资产图", "chatTemplate": "请先完成父级资产成图，再生成衍生态。" },
+    { "id": "RH-IMG-MODE-REF", "ruleId": "image_mode_ref_mismatch", "symptom": "参考图数与模式不符", "action": "调整 ref 数", "chatTemplate": "文生图 0 张、单图 1 张、多参考 ≥2 张，请对齐后重试。" },
+    { "id": "RH-VENDOR-PASS", "ruleId": "vendor_passthrough", "symptom": "上游队列/限流", "action": "稍后重试勿改词", "chatTemplate": "供应商繁忙（queue/rate limit），请稍后重试，不要改写提示词。" },
+    { "id": "RH-QF-EXPR-01", "ruleId": "QF-EXPR-01", "checkIds": ["QF-EXPR-01"], "symptom": "提示词含改脸", "action": "剥离改脸词，微表情落静照", "chatTemplate": "【QF-EXPR】请删除改脸/换脸描述；角色脸以定妆为准，微表情写在分镜静照构图，不要在 VID 里重塑五官。" },
+    { "id": "RH-IMG-STILL-QA", "ruleId": "IMG-STILL-QA", "checkIds": ["IMG-STILL-QA"], "symptom": "分镜静照弱图", "action": "hq_update 再生分镜首帧", "chatTemplate": "【IMG-STILL-QA】请用高质量模式更新分镜图（权力位/正脸/9:16 安全区），再烧视频。不要只改 VID 提示词。" }
   ]
 }
 

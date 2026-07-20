@@ -1,0 +1,248 @@
+{
+  "version": "1.0.0",
+  "description": "Unified quality matrix — stage mounts for qualityGate",
+  "entries": [
+    {
+      "id": "LANG-01",
+      "domain": "lang",
+      "stages": ["export", "preflight", "promptGen", "burn"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "promptGen": "BLOCK", "burn": "BLOCK" },
+      "handler": "langVid",
+      "repairHintId": "RH-LANG-01",
+      "softPatch": true
+    },
+    {
+      "id": "LANG-AUD-01",
+      "domain": "lang",
+      "stages": ["export", "preflight", "promptGen", "burn"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "promptGen": "BLOCK", "burn": "BLOCK" },
+      "handler": "langAud",
+      "repairHintId": "RH-LANG-01",
+      "softPatch": true
+    },
+    {
+      "id": "PR-CAM-01",
+      "domain": "camera",
+      "stages": ["export", "preflight", "burn"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "burn": "BLOCK" },
+      "handler": "prCam",
+      "repairHintId": "RH-QP-14",
+      "softPatch": true
+    },
+    {
+      "id": "DC-09",
+      "domain": "transition",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "design": "WARN" },
+      "handler": "dc09",
+      "repairHintId": "RH-QP-14",
+      "softPatch": true
+    },
+    {
+      "id": "DC-01",
+      "domain": "dialogue",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK" },
+      "handler": "precheckLoop",
+      "repairHintId": "RH-QP-03",
+      "softPatch": true
+    },
+    {
+      "id": "DC-13",
+      "domain": "continuity",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK" },
+      "handler": "precheckLoop",
+      "repairHintId": "RH-QP-10",
+      "softPatch": false
+    },
+    {
+      "id": "QP-02",
+      "domain": "visual",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "BLOCK", "preflight": "WARN" },
+      "handler": "qp02",
+      "repairHintId": "RH-QP-02",
+      "softPatch": false
+    },
+    {
+      "id": "CAM-SPEAK",
+      "domain": "motion",
+      "stages": ["export", "preflight", "burn"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "burn": "BLOCK" },
+      "handler": "camSpeak",
+      "repairHintId": "RH-QP-14",
+      "softPatch": true
+    },
+    {
+      "id": "CAM-VARIETY",
+      "domain": "motion",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "camVariety",
+      "repairHintId": "RH-QP-14",
+      "softPatch": false
+    },
+    {
+      "id": "CUT-01",
+      "domain": "continuity",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "cut01",
+      "repairHintId": "RH-QP-13",
+      "softPatch": false
+    },
+    {
+      "id": "CAM-XSHOT",
+      "domain": "motion",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "camXshot",
+      "repairHintId": "RH-QP-14",
+      "softPatch": false
+    },
+    {
+      "id": "LIP-01",
+      "domain": "dialogue",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK" },
+      "handler": "lip01",
+      "repairHintId": "RH-PR-09",
+      "softPatch": true
+    },
+    {
+      "id": "FX-GRADE-01",
+      "domain": "fx",
+      "stages": ["export", "preflight", "burn"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "burn": "BLOCK" },
+      "handler": "fxGrade",
+      "repairHintId": "RH-FX-01",
+      "softPatch": true,
+      "note": "F1+ missing prose / letter stub BLOCK; empty undeclared BLOCK at export (declare F0); soft_patch may declare F0 only, never invent prose"
+    },
+    {
+      "id": "VIR-01",
+      "domain": "viral",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "viral",
+      "repairHintId": "RH-VIR-01",
+      "softPatch": false,
+      "t3Ep1Elevate": "BLOCK"
+    },
+    {
+      "id": "RET-01",
+      "domain": "retention",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "retention",
+      "repairHintId": "RH-RET-01",
+      "softPatch": false,
+      "t3Ep1Elevate": "BLOCK"
+    },
+    {
+      "id": "NAR-01",
+      "domain": "narrative",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "narrative",
+      "repairHintId": "RH-NAR-01",
+      "softPatch": false,
+      "t3Ep1Elevate": "BLOCK"
+    },
+    {
+      "id": "NAR-14",
+      "domain": "narrative",
+      "stages": ["export", "preflight", "burn"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "burn": "BLOCK" },
+      "handler": "narrative",
+      "repairHintId": "RH-NAR-14",
+      "softPatch": false
+    },
+    {
+      "id": "NAR-15",
+      "domain": "narrative",
+      "stages": ["export", "preflight", "burn"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "burn": "BLOCK" },
+      "handler": "narrative",
+      "repairHintId": "RH-NAR-15",
+      "softPatch": false
+    },
+    {
+      "id": "NAR-DENSITY",
+      "domain": "narrative",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "densityAvBeat",
+      "repairHintId": "RH-NAR-01",
+      "softPatch": false,
+      "t3Ep1Elevate": "BLOCK"
+    },
+    {
+      "id": "VIR-04",
+      "domain": "viral",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "viral",
+      "repairHintId": "RH-VIR-01",
+      "softPatch": false
+    },
+    {
+      "id": "FX-FALSE-GREEN",
+      "domain": "fx",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK" },
+      "handler": "fxFalseGreen",
+      "repairHintId": "RH-FX-01",
+      "softPatch": false,
+      "note": "FX=pass with any undeclared-empty shot → BLOCK (mixed dual-track false green)"
+    },
+    {
+      "id": "QF-EXPR-01",
+      "domain": "expression",
+      "stages": ["export", "preflight", "promptGen", "burn"],
+      "severityByStage": { "export": "WARN", "preflight": "BLOCK", "promptGen": "BLOCK", "burn": "BLOCK" },
+      "handler": "qfExpr",
+      "repairHintId": "RH-QF-EXPR-01",
+      "softPatch": true,
+      "repairKind": "prompt_rewrite",
+      "adapterId": "qfExprGate",
+      "nextStep": "soft_patch",
+      "userMessageKey": "gate.soft_patch",
+      "note": "Strip face-rewrite phrases; micro-expression stays on still"
+    },
+    {
+      "id": "IMG-STILL-QA",
+      "domain": "image",
+      "stages": ["preflight", "burn"],
+      "severityByStage": { "preflight": "BLOCK", "burn": "BLOCK" },
+      "handler": "stillQuality",
+      "repairHintId": "RH-IMG-STILL-QA",
+      "softPatch": false,
+      "repairKind": "regenerate",
+      "nextStep": "regen_storyboard_hq",
+      "userMessageKey": "gate.regen_storyboard_hq"
+    },
+    {
+      "id": "VIR-02",
+      "domain": "viral",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "viral",
+      "repairHintId": "RH-VIR-01",
+      "softPatch": false,
+      "t3Ep1Elevate": "BLOCK",
+      "note": "D17: true id preserved (not folded to VIR-01)"
+    },
+    {
+      "id": "RET-02",
+      "domain": "retention",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "WARN", "preflight": "WARN" },
+      "handler": "retention",
+      "repairHintId": "RH-RET-01",
+      "softPatch": false,
+      "t3Ep1Elevate": "BLOCK"
+    }
+  ]
+}

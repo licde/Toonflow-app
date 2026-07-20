@@ -157,6 +157,33 @@ export async function runAutoDesign(input: AutoDesignInput, useLlm = false): Pro
 
 const jobs = new Map<string, AutoDesignJob>();
 
+async function persistJob(db: Knex, job: AutoDesignJob): Promise<void> {
+  const key = `autoDesignJob:${job.id}`;
+  const row = await db("o_agentWorkData").where({ projectId: job.projectId, key }).first();
+  const payload = JSON.stringify(job);
+  if (row) {
+    await db("o_agentWorkData").where({ id: row.id }).update({ data: payload, updateTime: Date.now() });
+  } else {
+    await db("o_agentWorkData").insert({
+      projectId: job.projectId,
+      episodesId: job.scriptId,
+      key,
+      data: payload,
+      createTime: Date.now(),
+    });
+  }
+}
+
+async function loadJobFromDb(db: Knex, jobId: string): Promise<AutoDesignJob | null> {
+  const row = await db("o_agentWorkData").where("key", `autoDesignJob:${jobId}`).first();
+  if (!row?.data) return null;
+  try {
+    return JSON.parse(row.data as string) as AutoDesignJob;
+  } catch {
+    return null;
+  }
+}
+
 export function createAutoDesignJob(projectId: number, scriptId: number): AutoDesignJob {
   const id = `ad-${projectId}-${scriptId}-${Date.now()}`;
   const job: AutoDesignJob = {
@@ -173,8 +200,20 @@ export function createAutoDesignJob(projectId: number, scriptId: number): AutoDe
   return job;
 }
 
+export async function createAndPersistAutoDesignJob(db: Knex, projectId: number, scriptId: number): Promise<AutoDesignJob> {
+  const job = createAutoDesignJob(projectId, scriptId);
+  await persistJob(db, job);
+  return job;
+}
+
 export function getAutoDesignJob(jobId: string): AutoDesignJob | null {
   return jobs.get(jobId) ?? null;
+}
+
+export async function loadAutoDesignJob(db: Knex, jobId: string): Promise<AutoDesignJob | null> {
+  const mem = jobs.get(jobId);
+  if (mem) return mem;
+  return loadJobFromDb(db, jobId);
 }
 
 export async function executeAutoDesignJob(
@@ -199,6 +238,7 @@ export async function executeAutoDesignJob(
       job.stage = stage;
       job.progress = Math.round(((i + 1) / stages.length) * 100);
       job.updatedAt = Date.now();
+      await persistJob(db, job);
 
       if (stage === "GB" || !output) {
         output = await runAutoDesign(input, useLlm);
@@ -219,12 +259,14 @@ export async function executeAutoDesignJob(
       storyboardCount: output?.storyboard.length,
     };
     job.updatedAt = Date.now();
+    await persistJob(db, job);
     return job;
   } catch (e) {
     job.status = "partial";
     job.stage = "failed";
     job.error = u.error(e).message;
     job.updatedAt = Date.now();
+    await persistJob(db, job);
     return job;
   }
 }

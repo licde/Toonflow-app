@@ -24,7 +24,7 @@ export default router.post(
         projectId,
         targetScriptId,
         importMode: importMode ?? "upsert",
-        mergeStrategy: mergeStrategy ?? "replaceAll",
+        mergeStrategy,
         validateOnly: validateOnly === true,
       });
       return res.status(200).send(success(result));

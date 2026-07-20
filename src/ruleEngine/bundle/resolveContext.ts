@@ -113,12 +113,30 @@ export async function resolveContext(
 }
 
 export async function resolveContextFromScriptBundle(db: Knex, projectId: number, scriptId: number, bundle: ScriptBundle): Promise<ResolvedContext> {
+  const seriesCont = (bundle as ScriptBundle & { seriesContinuity?: Record<string, unknown> }).seriesContinuity;
+  const mergedContinuity: ScriptBundleContinuity = {
+    ...(typeof bundle.continuity === "object" && bundle.continuity ? bundle.continuity : {}),
+  };
+  if (seriesCont) {
+    if (typeof seriesCont.prevEpisodeSummary === "string") mergedContinuity.prevEpisodeSummary = seriesCont.prevEpisodeSummary;
+    if (typeof seriesCont.recapHint === "string") mergedContinuity.recapHint = seriesCont.recapHint;
+    if (seriesCont.characterState && typeof seriesCont.characterState === "object") {
+      const cs: Record<string, string> = {};
+      for (const [k, v] of Object.entries(seriesCont.characterState as Record<string, unknown>)) {
+        if (v != null) cs[k] = String(v);
+      }
+      mergedContinuity.characterState = cs;
+    }
+    if (Array.isArray(seriesCont.unresolvedHooks)) {
+      mergedContinuity.unresolvedHooks = seriesCont.unresolvedHooks.map(String);
+    }
+  }
   const ctx = await resolveContext(db, projectId, scriptId, bundle.script, {
     episodeKey: bundle.meta.episodeKey,
     episodeIndex: bundle.meta.episodeIndex,
     prevEpisodeKey: bundle.meta.prevEpisodeKey,
-    continuity: bundle.continuity,
+    continuity: mergedContinuity,
     anchors: bundle.anchors,
   });
-  return { ...ctx, designBrief: bundle.designBrief };
+  return { ...ctx, designBrief: bundle.designBrief, seriesContinuity: seriesCont };
 }

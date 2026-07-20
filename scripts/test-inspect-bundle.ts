@@ -43,13 +43,50 @@ async function main() {
   console.log(`${bidirectionalCoverageOk(enriched) ? "✓" : "✗"} bidirectional coverage via inspectBundle`);
   if (!bidirectionalCoverageOk(enriched)) failed++;
 
+  const gapFields = [
+    "adaptationGaps",
+    "retentionGaps",
+    "narrativeDriveGaps",
+    "packagingGaps",
+    "generationApplyGaps",
+    "designSpecGaps",
+    "scriptViralGaps",
+    "modalityGaps",
+  ] as const;
+  for (const field of gapFields) {
+    const gaps = result[field as keyof typeof result];
+    const ok = Array.isArray(gaps);
+    console.log(`${ok ? "✓" : "✗"} ${field} present (${ok ? (gaps as unknown[]).length : 0} items)`);
+    if (!ok) failed++;
+  }
+  console.log(`${result.smartDetection ? "✓" : "✗"} smartDetection present`);
+  if (!result.smartDetection) failed++;
+
+  const cr = result.closureReport;
+  console.log(`${cr && Array.isArray(cr.missing) && Array.isArray(cr.optimize) ? "✓" : "✗"} closureReport missing/optimize`);
+  if (!cr || !Array.isArray(cr.missing) || !Array.isArray(cr.optimize)) failed++;
+
   const goldens: [string, boolean][] = [
     ["dialogue-break-block.json", true],
     ["w93-unconfirmed-block.json", true],
+    ["missing-emotion-target.json", false],
+    ["missing-audio-prompt.json", false],
   ];
   for (const [file, expectBlock] of goldens) {
     const bad = loadGolden(file);
-    const inspected = inspectBundle(bad, { tier: "T1" });
+    const inspected = inspectBundle(bad, { tier: file.includes("missing-") ? "T3" : "T1" });
+    if (file === "missing-emotion-target.json") {
+      const hasNar = (inspected.narrativeDriveGaps?.length ?? 0) > 0;
+      console.log(`${hasNar ? "✓" : "✗"} golden ${file} narrativeDriveGaps`);
+      if (!hasNar) failed++;
+      continue;
+    }
+    if (file === "missing-audio-prompt.json") {
+      const hasMod = (inspected.modalityGaps?.length ?? 0) > 0 || (inspected.closureReport?.missing?.some((g) => g.id === "MOD-03") ?? false);
+      console.log(`${hasMod ? "✓" : "✗"} golden ${file} MOD/audio gap`);
+      if (!hasMod) failed++;
+      continue;
+    }
     console.log(`${inspected.blocked === expectBlock ? "✓" : "✗"} golden ${file}`);
     if (inspected.blocked !== expectBlock) failed++;
   }

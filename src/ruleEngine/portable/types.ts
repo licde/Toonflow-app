@@ -1,5 +1,6 @@
 import type { ProductionClosureCheck } from "../bundle/types";
 import type { ChatPromptGap } from "../bundle/chatPromptAudit";
+import type { BundleGap } from "../bundle/auditTypes";
 
 export type ClosureTier = "T1" | "T2" | "T3";
 
@@ -38,6 +39,19 @@ export interface InspectBundleResult {
   warnings: string[];
   /** Chat 产出缺口（对照 PROMPT_STANDARD） */
   chatPromptGaps?: ChatPromptGap[];
+  adaptationGaps?: BundleGap[];
+  retentionGaps?: BundleGap[];
+  narrativeDriveGaps?: BundleGap[];
+  packagingGaps?: BundleGap[];
+  generationApplyGaps?: BundleGap[];
+  designSpecGaps?: BundleGap[];
+  scriptViralGaps?: BundleGap[];
+  modalityGaps?: BundleGap[];
+  linkageRepairPlan?: unknown[];
+  smartDetection?: Record<string, unknown>;
+  closureReport?: import("../bundle/closureReport").ClosureReport;
+  /** Unified qualityGate at stage=export */
+  qualityGate?: import("../qualityGate").QualityGateResult;
 }
 
 export interface UnifiedClosureResponse extends InspectBundleResult {

@@ -1,0 +1,66 @@
+{
+  "version": "1.0.0",
+  "seed": "城墙上，沈辞回首望去；苏锦拾级而上，衣袂翻飞。情绪7，景别中景，推进，duration 5s。台词：风很大。音效：风声。",
+  "charCodes": ["CHAR-001"],
+  "sceneCode": "SCENE-001",
+  "designFields": {
+    "emotion": 7,
+    "duration": 5,
+    "shotSize": "中景",
+    "camera": "推进",
+    "dialogue": "风很大。",
+    "sfx": "风声",
+    "exprGuard": true,
+    "fxPrompt": "F1"
+  },
+  "modes": {
+    "text": {
+      "must": [
+        "identity\\[",
+        "\\[Visual\\]",
+        "\\[Motion\\]",
+        "\\[Camera\\]",
+        "\\[Audio\\]",
+        "\\[Narrative\\]|text-to-video",
+        "duration\\s*5\\s*s|duration 5s",
+        "lip-sync|No dialogue|风很大",
+        "keep face|no exaggerated|QF-EXPR"
+      ],
+      "mustNot": ["@图\\d", "START_FRAME:"]
+    },
+    "singleImage": {
+      "must": [
+        "identity\\[",
+        "motion-from-frame",
+        "\\[Visual\\]",
+        "\\[Motion\\]",
+        "\\[Camera\\]",
+        "\\[Audio\\]",
+        "singleImage|subtle camera",
+        "keep face|no exaggerated|QF-EXPR"
+      ],
+      "mustNot": ["@图\\d"]
+    },
+    "startEndRequired": {
+      "must": [
+        "identity\\[|CHAR-",
+        "START_FRAME\\s*:",
+        "END_FRAME\\s*:",
+        "\\[Visual\\]",
+        "\\[Motion\\]",
+        "\\[Camera\\]",
+        "\\[Audio\\]"
+      ],
+      "mustNot": ["@图\\d"]
+    },
+    "multiParameter": {
+      "must": [
+        "\\[References\\]",
+        "@图\\d",
+        "\\[Instruction\\]|Based on the storyboard",
+        "identity\\[|CHAR-"
+      ],
+      "mustNot": []
+    }
+  }
+}

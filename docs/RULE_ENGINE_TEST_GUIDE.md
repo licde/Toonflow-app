@@ -1,5 +1,7 @@
 # 规则引擎前端测试指南
 
+> 闭环文档包（导入假绿测试 / SelfHeal 自集成）→ [`docs/closure-selfheal/`](./closure-selfheal/)
+
 本文说明如何在 Toonflow 中进入修订后的规则引擎流程，以及如何导入测试 JSON 快速验证校验与编译链路。
 
 ## 1. 启动方式

@@ -17,15 +17,20 @@ export default router.post(
     scriptPlan: z.string().optional(),
     storyboardTable: z.string().optional(),
     storyboard: z.array(z.any()).optional(),
+    /** When set, shot-level gates (V10, MODE-AGNES) only check these storyboards. */
+    storyboardIds: z.array(z.number()).optional(),
+    mode: z.string().optional(),
   }),
   async (req, res) => {
-    const { projectId, scriptId, script, scriptPlan, storyboardTable, storyboard } = req.body;
+    const { projectId, scriptId, script, scriptPlan, storyboardTable, storyboard, storyboardIds } = req.body;
     try {
       let pkg = await loadEpisodePackage(u.db, projectId, scriptId);
       if (!pkg) {
         pkg = await syncFromFlowData(u.db, { projectId, scriptId, script, scriptPlan, storyboardTable, storyboard });
       }
-      const result = await preflightTouch(u.db, pkg, script ?? "");
+      const result = await preflightTouch(u.db, pkg, script ?? "", {
+        storyboardIds: Array.isArray(storyboardIds) ? storyboardIds : undefined,
+      });
       return res.status(200).send(success(result));
     } catch (e) {
       return res.status(500).send(error(u.error(e).message));

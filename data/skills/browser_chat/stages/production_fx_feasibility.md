@@ -33,8 +33,7 @@ rulePackVersion: "2.0.1"
         "fxDesc": "手掌发出金色光芒",
         "level": "F2",
         "modelCapable": true,
-        "promptHint": "soft golden glow, hand close-up",
-        "degradeFixPlan": null
+        "promptHint": "soft golden glow, hand close-up"
       }
     ],
     "blockCount": 0,

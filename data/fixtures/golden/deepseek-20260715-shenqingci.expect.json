@@ -1,0 +1,15 @@
+{
+  "shotCount": 12,
+  "knownGaps": [
+    "IMG_SREF_MISSING",
+    "SCENE_CODE_MISSING",
+    "VID_IDENTITY_SPARSE",
+    "B7_EMPTY",
+    "DEBUT_PACK_PRESENT"
+  ],
+  "hasCref": true,
+  "hasSref": false,
+  "hasSceneCode": false,
+  "vidIdentitySparse": true,
+  "note": "Gaps are expected until FieldForwarder + sceneCode materialize; do not treat as false green."
+}

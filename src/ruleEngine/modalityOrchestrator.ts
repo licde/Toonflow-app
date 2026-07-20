@@ -32,18 +32,38 @@ export function buildModalityPromptAudit(
     const row: Record<string, string> = { IMG: "PASS", VID: "PASS", AUD: "PASS", FX: "PASS" };
     const compiled = shot.generation?.compiled;
 
-    if (!compiled?.image?.trim()) {
+    if (!compiled?.image?.trim() && !(shot.generation as { imagePrompt?: string } | undefined)?.imagePrompt?.trim()) {
       row.IMG = "BLOCK";
       items.push({ shotIndex: idx, modality: "IMG", ruleId: "M1", severity: "BLOCK", issue: "imagePrompt 空" });
     }
-    if (!compiled?.video?.trim()) {
+    if (!compiled?.video?.trim() && !(shot.generation as { videoPrompt?: string } | undefined)?.videoPrompt?.trim()) {
       row.VID = "BLOCK";
       items.push({ shotIndex: idx, modality: "VID", ruleId: "M1", severity: "BLOCK", issue: "videoPrompt 空" });
     }
     const hasLines = (shot.narrative?.dialogue?.lines?.length ?? 0) > 0;
-    if (hasLines && !compiled?.audio?.trim()) {
+    const audio =
+      compiled?.audio?.trim() ||
+      (shot.generation as { audioPrompt?: string } | undefined)?.audioPrompt?.trim() ||
+      "";
+    if (hasLines && !audio) {
       row.AUD = "BLOCK";
       items.push({ shotIndex: idx, modality: "AUD", ruleId: "M1", severity: "BLOCK", issue: "audioPrompt 空" });
+    }
+    const fx =
+      compiled?.fx?.trim() ||
+      (shot as { visualEffect?: string }).visualEffect?.trim() ||
+      (shot.generation as { fxPrompt?: string } | undefined)?.fxPrompt?.trim() ||
+      "";
+    // Empty FX: WARN (not auto-PASS). Explicit none/F0-empty still WARN for audit truth.
+    if (!fx) {
+      row.FX = "WARN";
+      items.push({
+        shotIndex: idx,
+        modality: "FX",
+        ruleId: "M-FX",
+        severity: "WARN",
+        issue: "fxPrompt 空",
+      });
     }
     perShot.push(row);
   }

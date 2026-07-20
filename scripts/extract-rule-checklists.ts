@@ -271,6 +271,17 @@ function buildFixTemplates(): FixTemplateOut[] {
     if (!byId.has(e.ruleId)) byId.set(e.ruleId, e);
   }
 
+  const bridgeExtras: FixTemplateOut[] = [
+    { ruleId: "NAR-14", confidence: 0.9, patchTemplate: { field: "dialoguePlan", action: "add_splitHint", hint: "长台词标注 splitHint: reaction_shot" }, rePushTarget: "W3", description: "长台词无 splitHint" },
+    { ruleId: "NAR-15", confidence: 0.9, patchTemplate: { field: "script", action: "add_reaction", hint: "高情绪对白后补反应 △" }, rePushTarget: "W3", description: "高情绪对白无反应镜" },
+    { ruleId: "RET-01", confidence: 0.85, patchTemplate: { field: "sceneMeta.avCausality", action: "fill", hint: "补 ep1 首场声画峰值" }, rePushTarget: "W3", description: "retention 首场 avCausality 空" },
+    { ruleId: "MOD-01", confidence: 0.85, patchTemplate: { field: "visualEffect", action: "mirror_fxIntent", hint: "W3 fxIntent → SB visualEffect" }, rePushTarget: "SB", description: "fxIntent 未进 SB" },
+    { ruleId: "MOD-03", confidence: 0.85, patchTemplate: { field: "generation.audioPrompt", action: "compile", hint: "audioBeat → AUD slot" }, rePushTarget: "MD", description: "台词镜缺 audioPrompt" },
+  ];
+  for (const e of bridgeExtras) {
+    if (!byId.has(e.ruleId)) byId.set(e.ruleId, e);
+  }
+
   return [...byId.values()];
 }
 

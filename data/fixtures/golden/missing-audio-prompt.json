@@ -1,0 +1,22 @@
+{
+  "_comment": "负例：台词镜缺 audioPrompt",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "ep-01", "episodeIndex": 1 },
+  "script": "场1 内\nA：台词。\n",
+  "planData": {
+    "sceneMeta": [{ "sceneRef": 1, "avCausality": { "audioBeat": "骤停" } }]
+  },
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [{
+      "shotIndex": 1,
+      "visualDescription": "test",
+      "generation": { "imagePrompt": "test", "videoPrompt": "static 2s" },
+      "narrative": { "dialogue": { "lines": [{ "speaker": "A", "text": "台词" }] } }
+    }]
+  },
+  "characterDesign": { "assets": [{ "code": "CHAR-A", "name": "A" }] },
+  "visualLockTable": { "characterAssets": { "CHAR-A": "A" } }
+}

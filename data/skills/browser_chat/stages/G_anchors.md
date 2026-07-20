@@ -33,6 +33,7 @@ rulePackVersion: "2.0.1"
 3. G3 锁定情绪基调占比（如甜60%+虐30%+惊喜10%）
 4. G4 列核心道具，标注 significance（情感/权力/线索）
 5. G5 画关系图，标注张力变化集数
+6. 初始化 `planData.narrativeBrief.empathyPlan` 草稿（rootFor/rootAgainst 来自 G1 主角与对立面）
 
 ## 输出
 

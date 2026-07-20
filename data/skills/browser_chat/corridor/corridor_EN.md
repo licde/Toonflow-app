@@ -35,8 +35,8 @@ rulePackVersion: "2.0.1"
 
 ## 执行步骤
 
-1. 逐 shot 读取 narrative + visualLockTable
-2. 按 Y 映射生成 generation 字段
+1. 逐 shot 读取 narrative + visualLockTable + `narrativeBrief.implementationPlan`（若有）
+2. 按 Y 映射生成 generation 字段；**优先**用 `buildPromptIR(shotDesign + promptAnchors)` 草稿，MD 技能润色
 3. 校验 refs 全部 resolve 到 BP CODE
 4. 计算 compiledHash per shot
 5. 写入 **ScriptBundle** `preDesignPack.shots[].generation` 与/或 `flowData.storyboard[]`

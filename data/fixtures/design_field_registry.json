@@ -1,0 +1,157 @@
+{
+  "version": "1.0.0",
+  "fields": [
+    {
+      "id": "emotion",
+      "sources": ["narrative.emotionIntensity", "emotion"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "emotion|micro-expression|emotional",
+      "reverseTrigger": "emotion_composition"
+    },
+    {
+      "id": "colorTemp",
+      "sources": ["colorTemp", "colorTone", "sceneColorLock"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "colorTemp|warm|cool|neutral white",
+      "reverseTrigger": "generation_design_drift"
+    },
+    {
+      "id": "spatial",
+      "sources": ["spatialRelation", "narrative.spatialRelation"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "spatialRelation",
+      "reverseTrigger": "pr_spatial"
+    },
+    {
+      "id": "duration",
+      "sources": ["duration", "narrative.duration"],
+      "modalities": ["video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "duration\\s*\\d+\\s*s",
+      "reverseTrigger": "duration_clamp"
+    },
+    {
+      "id": "shotSize",
+      "sources": ["shotSize", "cameraAnchor.shotSize"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "medium shot|close-up|wide|MS|CU|WS|extreme",
+      "reverseTrigger": "mode_rules_mismatch"
+    },
+    {
+      "id": "camera",
+      "sources": ["camera", "track", "motion"],
+      "modalities": ["video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "static|push|dolly|tracking|pan|camera",
+      "reverseTrigger": "motion_overflow"
+    },
+    {
+      "id": "fx",
+      "sources": ["fxPrompt", "generation.fxPrompt", "fxIntent.level"],
+      "modalities": ["video", "image"],
+      "requiredWhen": "hasValue",
+      "goldMust": "FX:|F[0-5]",
+      "reverseTrigger": "fx_empty"
+    },
+    {
+      "id": "dialogue",
+      "sources": ["narrative.dialogue.lines", "dialogue", "audioPrompt"],
+      "modalities": ["video"],
+      "requiredWhen": "hasDialogue",
+      "goldMust": "dialogue|lip-sync|\"|「",
+      "reverseTrigger": "dialogue_hash_mismatch"
+    },
+    {
+      "id": "lipSync",
+      "sources": ["lipSync", "narrative.dialogue"],
+      "modalities": ["video"],
+      "requiredWhen": "hasDialogue",
+      "goldMust": "lip-sync active|silent lips|voiceover|OS",
+      "reverseTrigger": "pr_lip_duration"
+    },
+    {
+      "id": "voice",
+      "sources": ["voice", "voiceProfile", "timbre"],
+      "modalities": ["video"],
+      "requiredWhen": "hasDialogue",
+      "goldMust": "voice:",
+      "reverseTrigger": "aud_voice_mismatch"
+    },
+    {
+      "id": "sfx",
+      "sources": ["sfx", "sound.sfx", "audioPrompt"],
+      "modalities": ["video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "sfx:|<>",
+      "reverseTrigger": "modality_aud_missing"
+    },
+    {
+      "id": "exprGuard",
+      "sources": ["exprGuard"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "charOrSingleImage",
+      "goldMust": "keep face|no exaggerated|不夸张|QF-EXPR",
+      "reverseTrigger": "pr_expr_feasibility"
+    },
+    {
+      "id": "debutBeat",
+      "sources": ["debutBeat", "debutIntroPack"],
+      "modalities": ["video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "debutBeat:",
+      "reverseTrigger": "packaging_debut_missing"
+    },
+    {
+      "id": "endHook",
+      "sources": ["endHook"],
+      "modalities": ["video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "endHook:",
+      "reverseTrigger": "packaging_end_preview"
+    },
+    {
+      "id": "negativeAV",
+      "sources": ["negativeAV"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "alwaysOptional",
+      "goldMust": "no subtitle|no watermark|无字幕|无水印",
+      "reverseTrigger": "content_policy"
+    },
+    {
+      "id": "action",
+      "sources": ["action", "narrative.action", "bodyAction", "performance.action"],
+      "modalities": ["video", "image"],
+      "requiredWhen": "hasValue",
+      "goldMust": "action|gesture|reach|turn|kneel|walk",
+      "reverseTrigger": "emotion_composition"
+    },
+    {
+      "id": "background",
+      "sources": ["composition.background", "narrative.composition.background", "background"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "background|bg:",
+      "reverseTrigger": "pr_spatial"
+    },
+    {
+      "id": "foreground",
+      "sources": ["composition.foreground", "narrative.composition.foreground", "foreground"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "foreground|fg:",
+      "reverseTrigger": "pr_spatial"
+    },
+    {
+      "id": "props",
+      "sources": ["propCodes", "narrative.propCodes", "propState", "narrative.propState"],
+      "modalities": ["image", "video"],
+      "requiredWhen": "hasValue",
+      "goldMust": "PROP-|propState|holding",
+      "reverseTrigger": "pr_prop_state"
+    }
+  ]
+}

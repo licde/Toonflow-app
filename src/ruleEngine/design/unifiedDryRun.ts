@@ -26,7 +26,10 @@ export function runUnifiedClosure(
     : tier === "T2"
       ? runProductionClosureDryRunForTier(enriched, "T2")
       : [];
-  const gc = opts.genError ? runGenerationClosureDryRun({ error: opts.genError, sfRound: opts.sfRound }) : [];
+  const gc = runGenerationClosureDryRun({
+    error: opts.genError ?? "",
+    sfRound: opts.sfRound,
+  });
   const ic = runIntelligentClosureDryRun(enriched);
   const blocked = [...dc, ...pc, ...gc, ...ic].some((c) => !c.passed && c.severity === "BLOCK");
   return { dc, pc, gc, ic, blocked };

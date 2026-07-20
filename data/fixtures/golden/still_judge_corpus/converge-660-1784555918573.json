@@ -1,0 +1,79 @@
+{
+  "id": "converge-660-1784555918573",
+  "createdAt": "2026-07-20T13:58:38.574Z",
+  "description": "沈母端坐高位太师椅摩挲扳指，沈清瓷跪低位蒲团抄书，权力反差构图，烛火摇曳。场面硬约束：沈母周氏必须端坐太师椅；沈母周氏必须摩挲扳指；沈清瓷跪跪于蒲团；沈清瓷跪抄书。禁止用双人站立香案/持香/供桌仪式代替上述座次与动作；姿态与家具以描写为准，场景参考不得替换太师椅或蒲团。站位绑定：沈母周氏=高位/图1（端坐或主位），沈清瓷跪=低位/图2（跪或侧位）；禁止互与站位。景别：中景。必须出现：沈清瓷、沈母周氏、沈母、太师椅、扳指、烛火。权力位：沈母周氏（高位）靠近视觉重心，正脸清晰。身份锁定：脸型来自角色定妆参考；姿态与家具以描写为准，场景参考只补背景木作/匾额，不得替换太师椅或蒲团。沈清瓷与沈母周氏与沈母周氏不同脸，年龄与身份可辨，禁止共用同一张脸。构图：高位端坐 / 低位跪姿，权力反差，主体清晰不抢戏. subtle on the locked character face (do not al",
+  "items": [
+    {
+      "id": "role:沈母周氏:端坐:太师椅",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "prop:太师椅",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "role:沈母周氏:摩挲:扳指",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "prop:扳指",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "role:沈清瓷跪:跪:蒲团",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "prop:蒲团",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "role:沈清瓷跪:抄书:书",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "composition:权力反差",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "composition:高位",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "composition:低位",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "atmosphere:烛火",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "forbidden:香案站立",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "identity:dual_cref",
+      "pass": false,
+      "evidence": "vlm_error"
+    },
+    {
+      "id": "marker:场面硬约束",
+      "pass": false,
+      "evidence": "vlm_error"
+    }
+  ],
+  "source": "converge",
+  "modality": "still"
+}

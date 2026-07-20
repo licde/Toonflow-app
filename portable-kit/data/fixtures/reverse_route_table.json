@@ -32,7 +32,19 @@
     { "trigger": "img_pure_negative", "ruleIds": ["V2", "SD-IMG-02"], "reverseTarget": "EN", "forwardStages": ["EN"], "repairPriority": "P0" },
     { "trigger": "aud_voice_mismatch", "ruleIds": ["Y8", "SD-AUD-02"], "reverseTarget": "BP", "forwardStages": ["BP", "EN", "MD-AUD"], "repairPriority": "P1" },
     { "trigger": "fx_f5_unhandled", "ruleIds": ["V77", "SD-FX-02"], "reverseTarget": "W3", "forwardStages": ["W3", "SB", "MD-FX"], "repairPriority": "P1" },
-    { "trigger": "modality_slot_missing", "ruleIds": ["M1", "PC-13"], "reverseTarget": "MD", "forwardStages": ["MD"], "repairPriority": "P0" }
+    { "trigger": "modality_slot_missing", "ruleIds": ["M1", "PC-13"], "reverseTarget": "MD", "forwardStages": ["MD"], "repairPriority": "P0" },
+    { "trigger": "retention_opening_missing", "ruleIds": ["RET-01", "RET-02"], "reverseTarget": "W3", "forwardStages": ["W3", "B", "GB", "SB"] },
+    { "trigger": "narrative_info_gap", "ruleIds": ["NAR-01", "NAR-02"], "reverseTarget": "W3", "forwardStages": ["W3", "B", "SB"] },
+    { "trigger": "narrative_dialogue_function", "ruleIds": ["NAR-04", "NAR-05"], "reverseTarget": "W3", "forwardStages": ["W3", "SB"] },
+    { "trigger": "packaging_debut_missing", "ruleIds": ["PKG-03", "PKG-04"], "reverseTarget": "SB", "forwardStages": ["SB", "W3"] },
+    { "trigger": "packaging_end_preview", "ruleIds": ["PKG-06"], "reverseTarget": "W3", "forwardStages": ["W3", "SB"] },
+    { "trigger": "generation_design_drift", "ruleIds": ["GEN-05", "GEN-06"], "reverseTarget": "SB", "forwardStages": ["SB", "EN", "MD"] },
+    { "trigger": "adaptation_deep_empty", "ruleIds": ["ADP-D01", "ADP-D02"], "reverseTarget": "P03", "forwardStages": ["P03", "W2", "W3"] },
+    { "trigger": "design_spec_upstream", "ruleIds": ["DSG-B14"], "reverseTarget": "GB", "forwardStages": ["B", "GB", "SB"] },
+    { "trigger": "viral_clip_shortfall", "ruleIds": ["VIR-01", "VIR-03"], "reverseTarget": "W1", "forwardStages": ["W1", "W3", "GB", "SB"] },
+    { "trigger": "modality_fx_missing", "ruleIds": ["MOD-01", "MOD-02"], "reverseTarget": "SB", "forwardStages": ["W3", "SB", "MD-FX"] },
+    { "trigger": "modality_aud_missing", "ruleIds": ["MOD-03", "MOD-04"], "reverseTarget": "MD", "forwardStages": ["W3", "SB", "MD-AUD"] },
+    { "trigger": "narrative_split_hint", "ruleIds": ["NAR-14", "NAR-15"], "reverseTarget": "W3", "forwardStages": ["W3", "SB"] }
   ],
   "maxRounds": 3
 }

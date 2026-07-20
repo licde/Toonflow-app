@@ -1,0 +1,13 @@
+{
+  "fixture": "deepseek-20260715-19fce1.json",
+  "shotCount": 13,
+  "cdCodes": ["CHAR-001", "CHAR-002", "CHAR-003", "CHAR-004"],
+  "orphanCharCodesBeforeClosure": ["CHAR-005"],
+  "expectAfterImport": {
+    "char005InCodeToId": true,
+    "shotCount": 13,
+    "audioPromptNonEmptyCount": 13,
+    "integrityIdsMustInclude": ["INT-FX-EMPTY", "INT-INFO-ORPHAN", "INT-IMPL-GAP", "INT-FALSE-GREEN"],
+    "commaCrefParse": ["CHAR-001", "CHAR-005"]
+  }
+}

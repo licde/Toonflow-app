@@ -1,27 +1,130 @@
 {
-  "_comment": "ScriptBundle v2.0.1 T3 正例 — Browser Chat 全链路出口",
+  "_comment": "ScriptBundle v2.0.1 T3 正例 — 改编/留存/叙事/包装/生成落地链",
   "bundleVersion": "browser-chat-optimized",
   "rulePackVersion": "2.0.1",
   "bundleType": "script",
-  "meta": {
-    "episodeKey": "ep-01",
-    "episodeName": "第1集",
-    "episodeIndex": 1,
-    "provenance": { "source": "external-chat" }
-  },
-  "script": "场1 寝殿 日 内\n\n婢女：\"殿下醒了。\"\n\n裴青梧：\"我知道。\"",
+  "meta": { "episodeKey": "ep-01", "episodeName": "第1集", "episodeIndex": 1, "provenance": { "source": "external-chat" } },
+  "script": "裴青梧传 EP01：苏醒\n\n场1 寝殿 日 内\n人物：裴青梧 婢女\n△烛火摇曳。婢女俯身，轻声唤醒。\n婢女：殿下醒了。\n△裴青梧睁眼，烛火映面，眼神由迷茫转认命。\n裴青梧：我知道。\n△她攥紧被角，指节发白。",
   "planData": {
-    "globalAnchors": {
-      "G1": "裴青梧：认命 vs 觉醒",
-      "G3": "古言虐恋 70% / 爽 30%"
+    "narrativeBrief": {
+      "storyKernel": "示例故事核",
+      "implementationPlan": [{ "sceneRef": 1, "promptAnchors": { "img": ["示例"] } }]
+    },
+    "sceneMeta": [{ "sceneRef": 1, "avCausality": { "visualPeak": "示例", "audioBeat": "骤停" } }],
+    "globalAnchors": { "G1": "裴青梧：认命 vs 觉醒", "G3": "古言虐恋 70% / 爽 30%" },
+    "adaptationProfile": { "genrePreset": "古言虐恋", "lockedChoices": { "D01_nameMap": "keep" } },
+    "adaptationMatrixStructured": {
+      "userConfirmed": true,
+      "matrix": [
+        { "dimId": "gender_structure", "choice": "keep" },
+        { "dimId": "scene_structure", "choice": "linear" },
+        { "dimId": "character_anchor", "choice": "keep_core" },
+        { "dimId": "relation_network", "choice": "triangle" },
+        { "dimId": "emotion_logic", "choice": "angst" },
+        { "dimId": "conflict_design", "choice": "layered" },
+        { "dimId": "visual_style", "choice": "ancient_real" },
+        { "dimId": "narrative_structure", "choice": "three_act" },
+        { "dimId": "core_prop", "choice": "keep" },
+        { "dimId": "dialogue_strategy", "choice": "compress" },
+        { "dimId": "music_mood", "choice": "tense" },
+        { "dimId": "rhythm_plan", "choice": "fast" },
+        { "dimId": "D01_nameMap", "choice": "keep" },
+        { "dimId": "V05_genreFramework", "choice": "虐恋" },
+        { "dimId": "R01_ep1_opening5s", "choice": "identity_contrast" },
+        { "dimId": "O01_openingProfile", "choice": "O3_conflict_tableau" }
+      ],
+      "deepAdaptation": { "nameMap": [], "relationMap": [], "substitutions": [], "settingProfile": { "era": "架空唐宋" } }
+    },
+    "adaptationStrategy": "保持姓名；强化寝殿空间压迫感；nameMap 已对齐 adaptationMatrix",
+    "viralAdaptation": {
+      "genreFramework": "虐恋",
+      "openingCardPlan": { "ep1": ["困境", "反差", "目标", "动机"] },
+      "clipPoints30s": [{ "ep": 1, "scene": "1-1", "hook": "苏醒", "clipable": true }],
+      "paypointSchedule": [{ "ep": 2, "ratio": 0.1, "type": "身份差", "clip30s": "认亲" }],
+      "retentionPlan": {
+        "ep1": {
+          "opening5s": { "hookType": "identity_contrast", "visualBeat": "烛火映面", "audioBeat": "骤停" },
+          "opening3to10s": { "profileId": "O3_conflict_tableau", "emotionAV": { "visualPeak": "苏醒特写", "fxLevel": "F0" } },
+          "first30s": {
+            "infoGap": "audience_knows",
+            "rhythm31545": { "impact3s": "婢女唤醒", "change15s": "裴青梧应答", "expect45s": "认命眼神" },
+            "clip30sCandidate": true
+          },
+          "episodeEndHook": { "type": "emotion_rebound", "desc": "眼神由认命转警觉" }
+        },
+        "epN": { "retentionPattern": "spring_tension", "minReversalPerEp": 1 }
+      }
+    },
+    "informationLedger": [
+      {
+        "infoId": "INF-ep01-sc1-01",
+        "fact": "殿下已苏醒但尚未表态",
+        "audienceKnows": true,
+        "characterKnows": { "裴青梧": true, "婢女": true },
+        "emotionTarget": "替观众捏汗",
+        "payoffBy": "sc1-end"
+      }
+    ],
+    "dialoguePlan": {
+      "lines": [
+        {
+          "lineId": "L-01",
+          "speaker": "婢女",
+          "text": "殿下醒了。",
+          "functions": ["deliver_info", "emotion_hit"],
+          "causedByActionId": "A1",
+          "subtext": "试探"
+        },
+        {
+          "lineId": "L-02",
+          "speaker": "裴青梧",
+          "text": "我知道。",
+          "functions": ["character_voice", "conflict_escalate"],
+          "causedByActionId": "A2",
+          "subtext": "早已清醒"
+        }
+      ]
+    },
+    "endCardPack": {
+      "preview": { "enabled": true, "overlayText": "下集：身份暗涌", "clipHookIds": ["CLIP-ep02-sc1"], "previewShots": ["shot-2"] }
     }
   },
   "designBrief": {
     "B1": "ep-01",
     "B4": [4, 5, 6],
     "B5": ["钩子：苏醒", "承接：认命"],
-    "emotionCurveOutline": [4, 5, 6],
-    "infoLinkageChain": ["钩子：苏醒", "承接：认命"]
+    "B14": [{ "position": "ep2-10%", "type": "身份差" }],
+    "B15": [{ "clipHookId": "CLIP-ep01-sc1", "hook": "苏醒" }],
+    "B20": ["INF-ep01-sc1-01"],
+    "B21": { "ref": "dialoguePlan" },
+    "B22": { "ref": "narrativeCausalityGraph" },
+    "B18": { "opening5sAV": { "shotSize": "MS", "audioBeat": "骤停" } },
+    "B19": { "first30sAV": { "rhythm31545": true } },
+    "B23": { "retentionInfoDelivery": ["INF-ep01-sc1-01"] },
+    "paypointMarkers": [{ "position": "ep2-10%", "type": "身份差" }]
+  },
+  "narrativeCausalityGraph": {
+    "nodes": [
+      { "id": "E1", "type": "event", "label": "婢女唤醒" },
+      { "id": "E2", "type": "event", "label": "裴青梧应答" },
+      { "id": "A1", "type": "visual", "label": "俯身" },
+      { "id": "L1", "type": "dialogue", "label": "殿下醒了" }
+    ],
+    "edges": [{ "from": "A1", "to": "L1", "relation": "cause" }, { "from": "E1", "to": "E2", "relation": "cause" }],
+    "broken": [],
+    "reverseHints": []
+  },
+  "debutIntroPack": {
+    "items": [
+      {
+        "entityType": "character",
+        "code": "CHAR-PEIQINGWU",
+        "copyHint": "裴青梧睁眼，烛火映面",
+        "establishingPattern": "特写→中景",
+        "subOptional": { "enabled": true, "text": "裴青梧 · 真千金" },
+        "fxLevel": "F0"
+      }
+    ]
   },
   "preDesignPack": {
     "scriptPlan": "# 导演规划\n\n## 场1：寝殿\n- 情绪：5\n",
@@ -32,16 +135,25 @@
         "sceneName": "寝殿",
         "duration": 2,
         "shotSize": "MS",
+        "retentionTier": "0-2s",
+        "clip30sCandidate": true,
         "visualDescription": "婢女俯身唤醒殿下",
         "charCodes": ["CHAR-MAID"],
+        "shotDesign": {
+          "composition": { "foreground": "婢女俯身", "background": "寝殿烛火" },
+          "performance": { "microExpression": { "eyes": "soft", "mouthDetail": "neutral_closed" } },
+          "cameraAnchor": { "shotSize": "MS", "bgBlur": false },
+          "lipSyncPolicy": "subtle_natural"
+        },
         "narrative": {
-          "dialogue": { "lines": [{ "speaker": "婢女", "text": "殿下醒了。" }] },
-          "markers": [{ "type": "钩子", "desc": "苏醒" }]
+          "dialogue": { "lines": [{ "speaker": "婢女", "text": "殿下醒了。", "lineId": "L-01", "functions": ["deliver_info"], "causedByActionId": "A1" }] },
+          "markers": [{ "type": "钩子", "desc": "苏醒", "infoId": "INF-ep01-sc1-01" }],
+          "emotionIntensity": 5
         },
         "generation": {
-          "imagePrompt": "婢女, 寝殿烛火暖光, 中景半身, 侧光4500K, 古言写实, no text watermark, --cref CHAR-MAID --ar 16:9",
-          "videoPrompt": "中景 static, slow push, duration 2s, motion-from-frame",
-          "audioPrompt": "婢女, 轻柔女声, 正常语速, 关切"
+          "imagePrompt": "婢女俯身, 寝殿烛火暖光, 中景半身, 侧光4500K, 古言写实, --cref CHAR-MAID --ar 16:9",
+          "videoPrompt": "中景 static, duration 2s, subtle lip sync, natural mouth movement, motion-from-frame",
+          "audioPrompt": "婢女, 轻柔女声, 关切"
         }
       },
       {
@@ -50,46 +162,37 @@
         "sceneName": "寝殿",
         "duration": 2,
         "shotSize": "CU",
+        "retentionTier": "5-30s",
+        "clip30sCandidate": true,
+        "rhythm31545": { "change15s": "应答", "expect45s": "眼神" },
         "visualDescription": "裴青梧苏醒，烛火映面",
         "charCodes": ["CHAR-PEIQINGWU"],
+        "shotDesign": {
+          "composition": { "foreground": "裴青梧睁眼", "background": "烛火暖光" },
+          "performance": { "microExpression": { "eyes": "alert", "mouthDetail": "neutral_closed" } },
+          "lipSyncPolicy": "subtle_natural"
+        },
         "narrative": {
-          "dialogue": { "lines": [{ "speaker": "裴青梧", "text": "我知道。" }] },
-          "markers": [{ "type": "承接", "desc": "认命" }]
+          "dialogue": { "lines": [{ "speaker": "裴青梧", "text": "我知道。", "lineId": "L-02", "functions": ["character_voice"], "causedByActionId": "A2" }] },
+          "markers": [{ "type": "承接", "desc": "认命" }],
+          "emotionIntensity": 6
         },
         "generation": {
-          "imagePrompt": "裴青梧, 寝殿内景, 特写面部, 烛火暖光, 古言写实, --cref CHAR-PEIQINGWU --ar 16:9",
-          "videoPrompt": "特写 static, subtle drift, duration 2s, lipSync on, motion-from-frame",
-          "audioPrompt": "裴青梧, 清冷女声, 短句, 认命"
+          "imagePrompt": "裴青梧, 寝殿内景, 特写面部 alert eyes mouth neutral_closed, 烛火暖光, --cref CHAR-PEIQINGWU --ar 16:9",
+          "videoPrompt": "特写 static, duration 2s, subtle lip sync, natural mouth movement, motion-from-frame",
+          "audioPrompt": "裴青梧, 清冷女声, 认命"
         }
       }
     ]
   },
   "characterDesign": {
     "assets": [
-      {
-        "code": "CHAR-MAID",
-        "name": "婢女",
-        "L0": { "identity": "侍女", "gender": "女" },
-        "L3": { "costume": "浅色素衣" }
-      },
-      {
-        "code": "CHAR-PEIQINGWU",
-        "name": "裴青梧",
-        "L0": { "identity": "真千金", "gender": "女" },
-        "L3": { "costume": "白色寝衣" },
-        "L5": { "timbre": "清冷" }
-      }
+      { "code": "CHAR-MAID", "name": "婢女", "L0": { "identity": "侍女", "gender": "女" }, "L3": { "costume": "浅色素衣" } },
+      { "code": "CHAR-PEIQINGWU", "name": "裴青梧", "L0": { "identity": "真千金", "gender": "女" }, "L3": { "costume": "白色寝衣" }, "voiceProfile": { "speakingStyle": "清冷简短" } }
     ]
   },
   "visualLockTable": {
-    "characterAssets": {
-      "CHAR-MAID": { "L0": { "gender": "女" } },
-      "CHAR-PEIQINGWU": { "L0": { "gender": "女" }, "L5": { "timbre": "清冷" } }
-    },
-    "sceneColorLock": {
-      "SCENE-BEDROOM": { "name": "寝殿", "colorTemp": "暖", "dominantHue": "米黄" }
-    }
-  },
-  "continuity": { "characterState": { "裴青梧": "认命期" } },
-  "anchors": { "visual": ["寝殿烛火"], "emotionCarry": "苏醒→认命" }
+    "characterAssets": { "CHAR-MAID": "婢女", "CHAR-PEIQINGWU": "裴青梧" },
+    "sceneColorLock": { "寝殿": "4500K暖光" }
+  }
 }

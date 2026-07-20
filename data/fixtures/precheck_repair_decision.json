@@ -1,0 +1,71 @@
+{
+  "version": "1.0.0",
+  "description": "PrecheckLoop repair decision policy SSOT — soft_patch vs human",
+  "defaultMaxRounds": 2,
+  "defaultMinConfidence": 0.8,
+  "checks": {
+    "DC-01": {
+      "soft_patch_when": ["unique_missing_line", "empty_target_shot"],
+      "human_when": ["plan_script_conflict", "lineId_mode_mismatch", "ambiguous_target", "filtered_scope"],
+      "minConfidence": 0.8,
+      "maxRounds": 2,
+      "repairHintId": "RH-QP-03"
+    },
+    "DC-13": {
+      "soft_patch_when": ["unique_missing_line"],
+      "human_when": ["filtered_scope", "ambiguous_target"],
+      "minConfidence": 0.8,
+      "maxRounds": 2,
+      "repairHintId": "RH-QP-10"
+    },
+    "LANG-01": {
+      "soft_patch_when": ["unique_missing_line"],
+      "human_when": ["ambiguous_target"],
+      "minConfidence": 0.8,
+      "maxRounds": 2,
+      "repairHintId": "RH-LANG-01"
+    },
+    "PR-CAM-01": {
+      "soft_patch_when": ["whitelist_clamp"],
+      "human_when": ["ambiguous_target"],
+      "minConfidence": 0.85,
+      "maxRounds": 2,
+      "repairHintId": "RH-QP-14"
+    },
+    "DC-09": {
+      "soft_patch_when": ["whitelist_clamp"],
+      "human_when": ["ambiguous_target"],
+      "minConfidence": 0.9,
+      "maxRounds": 2,
+      "repairHintId": "RH-QP-14"
+    },
+    "FX-GRADE-01": {
+      "soft_patch_when": ["declare_f0_empty"],
+      "human_when": ["fx_infeasible", "ambiguous_target"],
+      "minConfidence": 0.85,
+      "maxRounds": 2,
+      "repairHintId": "RH-FX-01"
+    },
+    "LIP-01": {
+      "soft_patch_when": ["raise_duration"],
+      "human_when": ["over_vendor_max", "needs_split", "ambiguous_target"],
+      "minConfidence": 0.85,
+      "maxRounds": 2,
+      "repairHintId": "RH-PR-09"
+    },
+    "CAM-SPEAK": {
+      "soft_patch_when": ["clamp_static"],
+      "human_when": ["ambiguous_target"],
+      "minConfidence": 0.85,
+      "maxRounds": 2,
+      "repairHintId": "RH-CAM-SPEAK"
+    },
+    "VP-CONFLICT": {
+      "soft_patch_when": ["finalize_five_section"],
+      "human_when": ["ambiguous_target"],
+      "minConfidence": 0.8,
+      "maxRounds": 2,
+      "repairHintId": "RH-VP-CONFLICT"
+    }
+  }
+}

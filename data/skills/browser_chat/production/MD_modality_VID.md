@@ -74,3 +74,7 @@ PC-09：首帧/时长/运镜 BLOCK。
 `generation.videoPrompt` + `modalityPromptAudit.VID` + `videoAudioPolicy`
 
 **Bundle 路径**：`preDesignPack.shots[].generation.videoPrompt` 或 `flowData.storyboard[].videoDesc`。标准见 `docs/PROMPT_STANDARD.md` §3。
+
+## 质量链（实现）
+
+编译/烧片走五层：`buildPromptIR` → `sanitizeVideoPrompt` → `applyModeDialect` → `applyVendorPromptPack` → burn gate（BLOCK 带 RH+rePushPlan）。详见 `docs/video-quality-chain.md`。对白源语言进 `[Audio]`；stub videoPrompt 强制 IR 重编译；`motion-from-frame` 全文至多一次。

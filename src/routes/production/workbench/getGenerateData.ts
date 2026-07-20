@@ -63,7 +63,7 @@ export default router.post(
           src: i.filePath,
           fileType: "image",
           sources: "storyboard",
-          ...(i.prompt != null ? { prompt: i.videoDesc } : {}),
+          ...(i.videoDesc != null ? { videoDesc: i.videoDesc } : {}),
           ...(i.id != null ? { id: i.id } : {}),
           index: i.index,
         });
@@ -73,7 +73,7 @@ export default router.post(
             src: i.filePath,
             fileType: "image",
             sources: "storyboard",
-            ...(i.prompt != null ? { prompt: i.videoDesc } : {}),
+            ...(i.videoDesc != null ? { videoDesc: i.videoDesc } : {}),
             ...(i.id != null ? { id: i.id } : {}),
             index: i.index,
           },
@@ -161,10 +161,12 @@ export default router.post(
     const trackIdMap = [...new Set<number>(trackData.map((t) => t.id!))];
     for (const trackId of trackIdMap) {
       const item = trackData.find((t) => t.id === trackId);
+      const trackStoryboards = storyboardList.filter((s) => s.trackId === trackId);
+      const seedVideoPrompt = trackStoryboards.find((s) => s.videoDesc?.trim())?.videoDesc?.trim() ?? "";
       trackList.push({
         id: trackId,
         duration: item?.duration ?? 0,
-        prompt: item?.prompt || "",
+        prompt: item?.prompt || seedVideoPrompt || "",
         state: (item?.state as "未生成" | "生成中" | "已完成" | "生成失败") ?? "未生成",
         reason: item?.reason ?? "",
         selectVideoId: Number(item?.videoId)!,

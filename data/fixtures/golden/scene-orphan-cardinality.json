@@ -1,0 +1,57 @@
+{
+  "_comment": "P1 孤儿场：plan 2 条（sceneRef=2 F1）但唯一 sceneName 仅 1 个；镜2 空 FX 未声明 F0",
+  "bundleVersion": "browser-chat-optimized",
+  "rulePackVersion": "2.0.1",
+  "bundleType": "script",
+  "meta": { "episodeKey": "ep-orphan", "episodeIndex": 1 },
+  "script": "场1 内·卧房\nA：在吗。\n场2 接场1 同地点\n（无独立 sceneName）\n",
+  "planData": {
+    "narrativeBrief": {
+      "implementationPlan": [
+        {
+          "sceneRef": 1,
+          "fxIntent": { "level": "F0" },
+          "promptAnchors": { "img": ["room"], "vid": ["static"] }
+        },
+        {
+          "sceneRef": 2,
+          "fxIntent": { "level": "F1" },
+          "promptAnchors": { "img": ["room"], "vid": ["static"] }
+        }
+      ]
+    },
+    "sceneMeta": [
+      { "sceneRef": 1, "fxIntent": { "level": "F0" } },
+      { "sceneRef": 2, "fxIntent": { "level": "F1" } }
+    ]
+  },
+  "preDesignPack": {
+    "scriptPlan": "# plan",
+    "shots": [
+      {
+        "shotIndex": 1,
+        "sceneName": "沈清瓷卧房",
+        "fxFeasibility": "F0",
+        "visualDescription": "卧房中景",
+        "generation": {
+          "imagePrompt": "bedroom mid shot",
+          "videoPrompt": "中景 static, duration 3s"
+        }
+      },
+      {
+        "shotIndex": 2,
+        "sceneName": "沈清瓷卧房",
+        "visualDescription": "近景无特效",
+        "generation": {
+          "imagePrompt": "closeup",
+          "videoPrompt": "近景 static, duration 2s"
+        }
+      }
+    ]
+  },
+  "fxFeasibilityAudit": {
+    "items": [{ "shotIndex": 1, "level": "F0", "feasible": true, "desc": "无特效" }]
+  },
+  "characterDesign": { "assets": [{ "code": "CHAR-A", "name": "A" }] },
+  "visualLockTable": { "characterAssets": { "CHAR-A": "A" } }
+}

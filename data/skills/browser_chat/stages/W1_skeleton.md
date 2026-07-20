@@ -32,8 +32,8 @@ rulePackVersion: "2.0.1"
 1. 读取 globalAnchors + storyCore（如有）
 2. 阐述思路 200–300 字（核心吸引力、三幕、分集策略）
 3. 按 XML 模板一次性完整输出 `<storySkeleton>...</storySkeleton>`
-4. 内部自查：表格行数 = 总集数 N；每集有集末钩子
-5. 写入 `planData.storySkeleton`
+4. 分集表增 `carryInfoIds[]` / `newInfoIds[]` / `empathyShift`；人物小传增 `voiceProfile.speakingStyle`
+5. 写入 `planData.storySkeleton` + `narrativeBrief.retentionBeats` / `seriesContinuity` 草稿
 
 ## 关键约束
 

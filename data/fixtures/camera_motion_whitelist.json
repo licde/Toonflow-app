@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "description": "Camera/transition/motion whitelist SSOT — DC-09 / PR-CAM-01 / AG-GATE / soft_patch 只读此表",
+  "transitions": ["切", "淡入", "淡出", "叠化", "快切", "慢放", "cut", "fade", "fade in", "fade out", "dissolve"],
+  "motions": ["static", "slow pan", "slow zoom", "gentle push", "subtle drift", "slow push", "tracking", "subtle push"],
+  "defaultTransition": "切",
+  "defaultMotion": "slow pan",
+  "forbiddenMotions": ["rapid zoom", "face morph", "expression change", "camera roll", "whip pan", "crash zoom"]
+}

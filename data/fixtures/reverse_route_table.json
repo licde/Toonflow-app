@@ -1,38 +1,941 @@
 {
   "version": "2.0.1",
   "routes": [
-    { "trigger": "dialogue_hash_mismatch", "ruleIds": ["R2", "H3"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "presentationFork": ["P1改剧本", "P2改分镜"] },
-    { "trigger": "emotion_composition", "ruleIds": ["B2", "QP-06"], "reverseTarget": "GB", "forwardStages": ["GB", "SB", "EN"] },
-    { "trigger": "shot_camera_invalid", "ruleIds": ["PR-CAM-01", "QP-14"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"], "repairPriority": "P0" },
-    { "trigger": "PR-CAM-01", "ruleIds": ["PR-CAM-01"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "story_link_broken", "ruleIds": ["W41", "QP-10"], "reverseTarget": "W3", "forwardStages": ["W3", "designBrief", "GB", "SB"] },
-    { "trigger": "identity_mismatch", "ruleIds": ["Y8", "QP-18"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "fx_infeasible", "ruleIds": ["V77", "QP-17"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "presentationFork": ["P1改剧本描写", "P2改分镜局部特效"] },
-    { "trigger": "generation_feedback", "ruleIds": ["H5"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "H2", "ruleIds": ["H2"], "reverseTarget": "GB", "forwardStages": ["GB", "SB", "EN"] },
-    { "trigger": "H3", "ruleIds": ["H3"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "H4", "ruleIds": ["H4"], "reverseTarget": "EN", "forwardStages": ["EN"] },
-    { "trigger": "H5", "ruleIds": ["H5"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"] },
-    { "trigger": "V1", "ruleIds": ["V1"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "V10", "ruleIds": ["V10"], "reverseTarget": "SB", "forwardStages": ["SB"] },
-    { "trigger": "MODE-AGNES", "ruleIds": ["MODE-AGNES"], "reverseTarget": "MD", "forwardStages": ["MD"] },
-    { "trigger": "narrative_graph_broken", "ruleIds": ["W41"], "reverseTarget": "W3", "forwardStages": ["W1", "W3", "SB"] },
-    { "trigger": "debut_missing", "ruleIds": ["QP-19", "PR-16"], "reverseTarget": "SB", "forwardStages": ["SB", "W3"] },
-    { "trigger": "pr_lip_duration", "ruleIds": ["PR-09"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_os_voice", "ruleIds": ["PR-10"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_prop_state", "ruleIds": ["PR-11"], "reverseTarget": "BP", "forwardStages": ["BP", "SB"] },
-    { "trigger": "pr_spatial", "ruleIds": ["PR-12"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_expr_feasibility", "ruleIds": ["PR-14", "QF-EXPR"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"] },
-    { "trigger": "pr_vendor_fx", "ruleIds": ["PR-15"], "reverseTarget": "EN", "forwardStages": ["EN", "SB", "W3"] },
-    { "trigger": "video_first_frame_missing", "ruleIds": ["AG-GATE-01", "MODE-AGNES"], "reverseTarget": "MD", "forwardStages": ["MD", "EN"], "repairPriority": "P0" },
-    { "trigger": "motion_overflow", "ruleIds": ["AG-GATE-02", "QF-EXPR-06"], "reverseTarget": "EN", "forwardStages": ["EN", "MD"], "repairPriority": "P0" },
-    { "trigger": "duration_clamp", "ruleIds": ["AG-GATE-03", "V9"], "reverseTarget": "SB", "forwardStages": ["SB", "EN"], "repairPriority": "P0" },
-    { "trigger": "native_audio_mismatch", "ruleIds": ["PR-09", "PC-10"], "reverseTarget": "EN", "forwardStages": ["EN", "MD-AUD"], "repairPriority": "P1" },
-    { "trigger": "img_cref_missing", "ruleIds": ["V4", "SD-IMG-01"], "reverseTarget": "EN", "forwardStages": ["EN", "MD-IMG"], "repairPriority": "P0" },
-    { "trigger": "img_pure_negative", "ruleIds": ["V2", "SD-IMG-02"], "reverseTarget": "EN", "forwardStages": ["EN"], "repairPriority": "P0" },
-    { "trigger": "aud_voice_mismatch", "ruleIds": ["Y8", "SD-AUD-02"], "reverseTarget": "BP", "forwardStages": ["BP", "EN", "MD-AUD"], "repairPriority": "P1" },
-    { "trigger": "fx_f5_unhandled", "ruleIds": ["V77", "SD-FX-02"], "reverseTarget": "W3", "forwardStages": ["W3", "SB", "MD-FX"], "repairPriority": "P1" },
-    { "trigger": "modality_slot_missing", "ruleIds": ["M1", "PC-13"], "reverseTarget": "MD", "forwardStages": ["MD"], "repairPriority": "P0" }
+    {
+      "trigger": "dialogue_hash_mismatch",
+      "ruleIds": [
+        "R2",
+        "H3"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "presentationFork": [
+        "P1改剧本",
+        "P2改分镜"
+      ]
+    },
+    {
+      "trigger": "emotion_composition",
+      "ruleIds": [
+        "B2",
+        "QP-06"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "GB",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "shot_camera_invalid",
+      "ruleIds": [
+        "PR-CAM-01",
+        "QP-14"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cam_whitelist",
+      "ruleIds": [
+        "PR-CAM-01",
+        "DC-09",
+        "QP-14"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD",
+        "SB"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "PR-CAM-01",
+      "ruleIds": [
+        "PR-CAM-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "story_link_broken",
+      "ruleIds": [
+        "W41",
+        "QP-10"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "designBrief",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "identity_mismatch",
+      "ruleIds": [
+        "Y8",
+        "QP-18",
+        "PC-14"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "BP",
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "fx_infeasible",
+      "ruleIds": [
+        "V77",
+        "QP-17",
+        "FX-GRADE-01"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ],
+      "presentationFork": [
+        "P1改剧本描写",
+        "P2改分镜局部特效"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "generation_feedback",
+      "ruleIds": [
+        "H5"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "H2",
+      "ruleIds": [
+        "H2"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "GB",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H3",
+      "ruleIds": [
+        "H3"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H4",
+      "ruleIds": [
+        "H4"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN"
+      ]
+    },
+    {
+      "trigger": "H5",
+      "ruleIds": [
+        "H5"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "V1",
+      "ruleIds": [
+        "V1"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "V10",
+      "ruleIds": [
+        "V10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB"
+      ]
+    },
+    {
+      "trigger": "MODE-AGNES",
+      "ruleIds": [
+        "MODE-AGNES"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ]
+    },
+    {
+      "trigger": "narrative_graph_broken",
+      "ruleIds": [
+        "W41"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W1",
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "debut_missing",
+      "ruleIds": [
+        "QP-19",
+        "PR-16"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_lip_duration",
+      "ruleIds": [
+        "PR-09"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_os_voice",
+      "ruleIds": [
+        "PR-10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_prop_state",
+      "ruleIds": [
+        "PR-11"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "pr_spatial",
+      "ruleIds": [
+        "PR-12"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_expr_feasibility",
+      "ruleIds": [
+        "PR-14",
+        "QF-EXPR"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "pr_vendor_fx",
+      "ruleIds": [
+        "PR-15"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "SB",
+        "W3"
+      ]
+    },
+    {
+      "trigger": "video_first_frame_missing",
+      "ruleIds": [
+        "AG-GATE-01",
+        "MODE-AGNES"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "motion_overflow",
+      "ruleIds": [
+        "AG-GATE-02",
+        "QF-EXPR-06"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "duration_clamp",
+      "ruleIds": [
+        "AG-GATE-03",
+        "V9"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "native_audio_mismatch",
+      "ruleIds": [
+        "PR-09",
+        "PC-10"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "img_cref_missing",
+      "ruleIds": [
+        "V4",
+        "SD-IMG-01",
+        "IMG-CREF"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-IMG"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "missing_scene",
+      "ruleIds": [
+        "V4",
+        "SB-SCENE-01"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "BP",
+        "SB",
+        "EN",
+        "AS"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "img_pure_negative",
+      "ruleIds": [
+        "V2",
+        "SD-IMG-02"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "aud_voice_mismatch",
+      "ruleIds": [
+        "Y8",
+        "SD-AUD-02"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "fx_f5_unhandled",
+      "ruleIds": [
+        "V77",
+        "SD-FX-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "modality_slot_missing",
+      "ruleIds": [
+        "M1",
+        "PC-13"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "retention_opening_missing",
+      "ruleIds": [
+        "RET-01",
+        "RET-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "B",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "narrative_info_gap",
+      "ruleIds": [
+        "NAR-01",
+        "NAR-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "B",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "narrative_dialogue_function",
+      "ruleIds": [
+        "NAR-04",
+        "NAR-05"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "packaging_debut_missing",
+      "ruleIds": [
+        "PKG-03",
+        "PKG-04"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "packaging_end_preview",
+      "ruleIds": [
+        "PKG-06"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "generation_design_drift",
+      "ruleIds": [
+        "GEN-05",
+        "GEN-06"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN",
+        "MD"
+      ]
+    },
+    {
+      "trigger": "adaptation_deep_empty",
+      "ruleIds": [
+        "ADP-D01",
+        "ADP-D02"
+      ],
+      "reverseTarget": "P03",
+      "forwardStages": [
+        "P03",
+        "W2",
+        "W3"
+      ]
+    },
+    {
+      "trigger": "design_spec_upstream",
+      "ruleIds": [
+        "DSG-B14"
+      ],
+      "reverseTarget": "GB",
+      "forwardStages": [
+        "B",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "viral_clip_shortfall",
+      "ruleIds": [
+        "VIR-01",
+        "VIR-03"
+      ],
+      "reverseTarget": "W1",
+      "forwardStages": [
+        "W1",
+        "W3",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "modality_fx_missing",
+      "ruleIds": [
+        "MOD-01",
+        "MOD-02"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-FX"
+      ]
+    },
+    {
+      "trigger": "modality_aud_missing",
+      "ruleIds": [
+        "MOD-03",
+        "MOD-04"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "W3",
+        "SB",
+        "MD-AUD"
+      ]
+    },
+    {
+      "trigger": "narrative_split_hint",
+      "ruleIds": [
+        "NAR-14",
+        "NAR-15"
+      ],
+      "reverseTarget": "W3",
+      "forwardStages": [
+        "W3",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "mode_rules_mismatch",
+      "ruleIds": [
+        "MODE-RULES-01"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "prompt_gen_media_missing",
+      "ruleIds": [
+        "PROMPT-GEN-MEDIA",
+        "QP-11"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "SB",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "derive_parent_ref_missing",
+      "ruleIds": [
+        "DRV-PARENT-REF"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "derive_prompt_empty",
+      "ruleIds": [
+        "DRV-PROMPT"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "CD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "image_mode_ref_mismatch",
+      "ruleIds": [
+        "IMG-MODE-REF"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vendor_passthrough",
+      "ruleIds": [
+        "VENDOR-QUEUE"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "tls_socket",
+      "ruleIds": [
+        "TLS-SOCKET",
+        "tls_socket",
+        "ECONNRESET"
+      ],
+      "patterns": [
+        "Client network socket disconnected before secure TLS connection was established",
+        "socket disconnected before secure TLS",
+        "ECONNRESET",
+        "ETIMEDOUT",
+        "network socket disconnected",
+        "TLS connection"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "missing_reference_upload",
+      "ruleIds": [
+        "GEN-REF-UPLOAD",
+        "GEN-OSSURL"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "wrong_character_ref",
+      "ruleIds": [
+        "PC-14",
+        "Y8"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "BP",
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cref_unbound",
+      "ruleIds": [
+        "V4",
+        "AS-CREF"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "PR-10",
+      "ruleIds": [
+        "PR-10"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "PR-11",
+      "ruleIds": [
+        "PR-11"
+      ],
+      "reverseTarget": "BP",
+      "forwardStages": [
+        "BP",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "PR-12",
+      "ruleIds": [
+        "PR-12"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ]
+    },
+    {
+      "trigger": "content_policy",
+      "ruleIds": [
+        "POLICY-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "content_policy_rewrite",
+      "ruleIds": [
+        "POLICY-01",
+        "POLICY-REWRITE"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "lang_aud_mismatch",
+      "ruleIds": [
+        "LANG-AUD-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-AUD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "lang_vid_mismatch",
+      "ruleIds": [
+        "LANG-01"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD-VID"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vp_conflict",
+      "ruleIds": [
+        "VP-CONFLICT"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "fx_empty",
+      "ruleIds": [
+        "FX-GRADE-01"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "MD-FX"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "cam_speak",
+      "ruleIds": [
+        "CAM-SPEAK"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "SB"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cam_variety",
+      "ruleIds": [
+        "CAM-VARIETY"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "oss_ref_missing",
+      "ruleIds": [
+        "GEN-OSSURL",
+        "GEN-REF-UPLOAD"
+      ],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "audio_force_mismatch",
+      "ruleIds": [
+        "AG-GATE-AUD"
+      ],
+      "reverseTarget": "MD",
+      "forwardStages": [
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "scene_break",
+      "ruleIds": [
+        "V6",
+        "DC-SCENE"
+      ],
+      "reverseTarget": "SB",
+      "forwardStages": [
+        "SB",
+        "EN"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "orphan_stub_no_image",
+      "ruleIds": [
+        "orphan_stub_no_image",
+        "ASSET_STUB_QUALITY"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS",
+        "CD",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "cd_cast_gap",
+      "ruleIds": [
+        "DC-16",
+        "DG-CD-COVERAGE",
+        "INT-CHAR-ORPHAN",
+        "complete_failed",
+        "cd_cast_gap"
+      ],
+      "reverseTarget": "CD",
+      "forwardStages": [
+        "CD",
+        "SB",
+        "EN",
+        "AS"
+      ],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "polish_failed",
+      "ruleIds": [
+        "polish_failed"
+      ],
+      "reverseTarget": "AS",
+      "forwardStages": [
+        "AS"
+      ],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "media_probe_mute",
+      "ruleIds": [
+        "media_probe_mute",
+        "GC-07"
+      ],
+      "reverseTarget": "EN",
+      "forwardStages": [
+        "EN",
+        "MD"
+      ],
+      "repairPriority": "P0"
+    }
   ],
   "maxRounds": 3
 }

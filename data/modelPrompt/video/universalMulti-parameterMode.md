@@ -112,7 +112,7 @@ Based on the storyboard @图{分镜图编号} :
 set in the {场景描述（英文）} of @图{场景资产编号} ,
 {镜头/运镜描述（英文）},
 {情感基调（英文）},
-{台词描述（英文，含 dialogue/OS/VO 标注）/ No dialogue},
+{台词描述（必须源语言原句，含 dialogue/OS/VO 标注，禁止英译）/ No dialogue},
 {音效描述（英文）}.
 ```
 
@@ -120,10 +120,10 @@ set in the {场景描述（英文）} of @图{场景资产编号} ,
 
 ## 生成规则
 
-1. **Instruction 必须用英文**
+1. **Instruction 中 Visual/Camera/SFX 可用英文；台词必须源语言（禁止英译）**
 2. **严格遵循 videoDesc**：提示词内容严格基于 videoDesc 的画面描述、时长、景别、运镜、角色动作、情绪、光影氛围、台词、音效字段，不编造额外信息
 3. **角色动作**从 videoDesc 的「角色动作」字段提取，翻译为简洁英文动作描述
-4. **台词不可缺失**：videoDesc 中有台词的分镜，必须在 Instruction 中体现台词内容（保持原始语言，不翻译）
+4. **台词不可缺失**：videoDesc 中有台词的分镜，必须在 Instruction 中体现台词内容（**保持原始语言，不翻译**）
 5. **台词类型标注**：
    - 普通对白 → `(dialogue)`
    - 内心独白 → `(inner monologue, OS)`

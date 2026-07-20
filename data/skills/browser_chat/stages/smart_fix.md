@@ -88,3 +88,14 @@ SD 检出或 validate 预检失败后，产出结构化 `fixPlan`，对齐 `fix_
 | 模态 | PC-09~14 | EN/MD | SB |
 
 见 `reverse_route_table.json` + `repair_hint_catalog.json`（附录 V）。
+
+## *Gaps → fixPlan 映射（NAR / RET / MOD）
+
+| gapId | templateRef | rePushTarget |
+|-------|-------------|--------------|
+| NAR-14 | fix_templates#NAR-14 | W3 |
+| NAR-15 | fix_templates#NAR-15 | W3 |
+| RET-01 | fix_templates#RET-01 | W3 |
+| MOD-01 | fix_templates#MOD-01 | SB |
+| MOD-03 | fix_templates#MOD-03 | MD |
+| GEN-05/06 | fix_templates#generation_design_drift | SB/EN |

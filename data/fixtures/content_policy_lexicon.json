@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "entries": [
+    { "term": "渗血", "replacement": "衣料暗红破损", "category": "blood", "severity": "WARN" },
+    { "term": "鲜血", "replacement": "暗红色液体", "category": "blood", "severity": "WARN" },
+    { "term": "流血", "replacement": "受伤痕迹", "category": "blood", "severity": "WARN" },
+    { "term": "血迹", "replacement": "暗色污痕", "category": "blood", "severity": "WARN" },
+    { "term": "血腥", "replacement": "紧张氛围", "category": "blood", "severity": "WARN" },
+    { "term": "残肢", "replacement": "破碎物件", "category": "gore", "severity": "WARN" },
+    { "term": "尸体", "replacement": "倒地身影", "category": "gore", "severity": "WARN" },
+    { "term": "裸露", "replacement": "得体着装", "category": "nsfw", "severity": "WARN" },
+    { "term": "裸体", "replacement": "得体着装", "category": "nsfw", "severity": "WARN" }
+  ]
+}

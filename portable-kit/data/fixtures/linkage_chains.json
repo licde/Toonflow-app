@@ -10,7 +10,13 @@
     { "id": "camera", "nodes": ["designBrief.B12", "SB.shotSize", "SB.transitionType", "EN.motion", "MD-VID.camera"], "rollback": ["brief", "SB", "EN", "MD"] },
     { "id": "adaptation", "nodes": ["P03.matrix", "W2.adaptationStrategy", "W3.script", "designBrief"], "rollback": ["P03", "W2", "W3"] },
     { "id": "modality_compile", "nodes": ["EN.compile", "MD-IMG", "MD-VID", "MD-AUD", "MD-FX", "modalityPromptAudit"], "rollback": ["EN", "MD"] },
-    { "id": "generation", "nodes": ["MD.prompts", "VendorPack", "generate", "MediaProbe", "generationFeedback"], "rollback": ["MD", "EN", "SB"] },
+    { "id": "generation_apply", "nodes": ["SB.shotDesign", "SB.visualDescription", "EN.Y", "MD.prompts", "modalityPromptAudit"], "rollback": ["SB", "EN", "MD"] },
+    { "id": "retention", "nodes": ["P03.R/O", "retentionPlan", "W3.sceneMeta", "designBrief.B18", "SB.retentionTier"], "rollback": ["W3", "B", "GB", "SB"] },
+    { "id": "narrative_drive", "nodes": ["informationLedger", "dialoguePlan", "designBrief.B20", "SB.lines", "narrativeCausalityGraph"], "rollback": ["W3", "B", "SB"] },
+    { "id": "packaging", "nodes": ["opening3to10s", "debutIntroPack", "SB.establishing", "endCardPack"], "rollback": ["W3", "SB"] },
+    { "id": "adaptation_deep", "nodes": ["P03.D/V", "adaptationMatrixStructured", "W2", "W3", "designBrief.B16"], "rollback": ["P03", "W2", "W3", "B"] },
+    { "id": "viral_clip", "nodes": ["viralAdaptation", "W1.paypoint", "GB.paypointScenes", "SB.clip30sCandidate"], "rollback": ["W1", "W2", "W3", "GB", "SB"] },
+    { "id": "modality_feasibility", "nodes": ["W3.sceneMeta", "narrativeBrief.implementationPlan", "SB.visualEffect", "fxFeasibilityAudit", "MD-FX", "MD-AUD"], "rollback": ["W3", "SB", "EN", "MD"] },
     { "id": "repair", "nodes": ["SD", "fixPlan", "linkageRepairPlan", "rePushPlan"], "rollback": "reverse_route_table" }
   ]
 }

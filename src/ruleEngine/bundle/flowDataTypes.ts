@@ -6,6 +6,8 @@ export const storyboardPanelSchema = z.object({
   duration: z.number().optional(),
   prompt: z.string().optional(),
   videoDesc: z.string().optional(),
+  audioPrompt: z.string().optional(),
+  fxPrompt: z.string().optional(),
   shouldGenerateImage: z.number().optional(),
   associateAssetsIds: z.array(z.number()).optional(),
   src: z.string().nullable().optional(),

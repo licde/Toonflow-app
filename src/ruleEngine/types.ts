@@ -30,6 +30,7 @@ export interface CompiledPrompts {
   image: string;
   video: string;
   audio: string;
+  fx?: string;
   hash: string;
 }
 
@@ -37,26 +38,52 @@ export interface EpisodeShot {
   id: string;
   storyboardId?: number;
   index: number;
+  /** Screenplay / blocking description (from preDesign visualDescription) */
+  visualDescription?: string;
   narrative: {
     type?: ShotType;
     sceneName?: string;
     sceneCode?: string;
     assetCodes?: string[];
     lines?: string;
-    dialogue?: { type?: string; lines?: string };
+    dialogue?: {
+      type?: string;
+      lines?:
+        | string
+        | {
+            speaker?: string;
+            text?: string;
+            lineId?: string;
+            functions?: string[];
+            causedByActionId?: string;
+            /** Suggested split (reaction_shot / insert / …); machine suggests, Chat/SB applies */
+            splitHint?: string;
+            reactionAction?: string;
+          }[];
+    };
     performance?: Record<string, unknown>;
     transitionType?: string;
     duration?: number;
     emotionIntensity?: number;
     colorTone?: string;
     shotSize?: string;
+    spatialRelation?: string;
     visualFocus?: string;
     sound?: { env?: string; sfx?: string; bgm?: string; dialogue?: boolean };
+    debutBeat?: string;
+    endHook?: string;
+    /** Composition / camera design preserved from preDesign shotDesign */
+    composition?: { foreground?: string; background?: string };
+    cameraAnchor?: { shotSize?: string; bgBlur?: boolean };
+    lipSyncPolicy?: string;
+    exprCue?: string;
+    continuityFrom?: string;
   };
   generation: {
     imagePrompt?: string;
     videoPrompt?: string;
     audioPrompt?: string;
+    fxPrompt?: string;
     videoDesc?: string;
     manualOverride?: { image?: boolean; video?: boolean };
     compiled?: CompiledPrompts;

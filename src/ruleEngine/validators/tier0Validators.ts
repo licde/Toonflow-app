@@ -1,5 +1,5 @@
 import type { EpisodeShot, ResolvedConfig, ShotType, ValidationIssue } from "../types";
-import { dialogueCharCount } from "../utils/hash";
+import { evaluateLineBudgets } from "../dialogueMetrics";
 
 const SHOT_TYPES: ShotType[] = ["CHAR-SCENE", "PURE-SCENE", "PURE-PROP", "CHAR-PROP"];
 
@@ -50,18 +50,18 @@ export function validateTier0Shots(shots: EpisodeShot[], config: ResolvedConfig)
     }
     const lines = shot.narrative.dialogue?.lines ?? shot.narrative.lines ?? "";
     if (lines) {
-      const count = dialogueCharCount(lines);
-      const isMono = shot.narrative.dialogue?.type === "monologue" || /独白|画外/.test(lines);
-      const limit = isMono ? 12 : 15;
-      if (count > limit) {
+      const isMono = shot.narrative.dialogue?.type === "monologue";
+      // V10 = per-分句 ≤15/12 BLOCK; PR-09 = shot duration from full text
+      for (const hit of evaluateLineBudgets(lines, { isMonologue: isMono })) {
         issues.push({
           ruleId: "V10",
           tier: 0,
           severity: "BLOCK",
           shotId: shot.id,
           fieldPath: "narrative.dialogue.lines",
-          message: `台词 ${count} 字超过上限 ${limit}`,
+          message: hit.message,
           rollbackLayer: "SB",
+          autoFix: { patch: { splitShot: true }, confidence: 0.7 },
         });
       }
     }

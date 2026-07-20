@@ -9,6 +9,7 @@ const router = express.Router();
 const STEPS = [
   { id: "preCheck", label: "P0 预检", field: "preCheck" },
   { id: "adaptationMatrix", label: "P0.3 矩阵", field: "adaptationMatrix" },
+  { id: "matrixConfirm", label: "矩阵确认", field: "_userMatrixChoices" },
   { id: "storyCore", label: "P0.6 核心", field: "storyCore" },
   { id: "postCheck", label: "P0.8 后检", field: "postCheck" },
   { id: "reinforcement", label: "P0.9 加固", field: "reinforcement" },
@@ -44,11 +45,22 @@ export default router.post(
     }
     const novelCount = await u.db("o_novel").where({ projectId }).count("id as c");
     const steps = STEPS.map((s, idx) => {
-      const done = Boolean((plan[s.field] ?? "").trim().length > 20) || stepStatus[s.id]?.status === "done";
+      let structuredConfirmed = false;
+      try {
+        const raw = plan._userMatrixChoices ?? plan._adaptationMatrixStructured;
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+        structuredConfirmed = Boolean((parsed as { userConfirmed?: boolean })?.userConfirmed);
+      } catch {
+        structuredConfirmed = false;
+      }
+      const done =
+        Boolean((plan[s.field] ?? "").trim().length > 20)
+        || stepStatus[s.id]?.status === "done"
+        || (s.id === "matrixConfirm" && structuredConfirmed);
       let locked = false;
       let lockReason = "";
       if (isNovel && idx > 0 && !done && STEPS.slice(0, idx).some((p) => !(plan[p.field] ?? "").trim() && stepStatus[p.id]?.status !== "done")) {
-        locked = idx <= 4;
+        locked = idx <= 5;
         if (locked) lockReason = "请先完成上一步";
       }
       if (isNovel && s.id === "script" && !postCheckPassed) {

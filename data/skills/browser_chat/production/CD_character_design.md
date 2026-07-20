@@ -28,6 +28,8 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 | L5 | voice.speed, timbre, accent | 音色（AUD 用） |
 | L6 | arcVisual, stateVariants | 弧光视觉变化 |
 
+**键名规范（权威短键）**：输出 `L0`…`L6`，不要用 `L0_identity` / `L6_arcVisual` 长键。`stateVariants` 用数组 `[{ "name", "visual" }]` 或 record（导入会归一）。
+
 ## 执行步骤
 
 1. 从 designBrief.B6 + script 提取角色列表
@@ -63,11 +65,15 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 
 ## BLOCK 闸门
 
-- 剧本出场主角/反派均有 CHAR-CODE
-- L0–L3 必填，L5 主角必填
+- 剧本出场主角/反派均有 CHAR-CODE（canonical `CHAR-NNN`，见 `docs/ASSET_CODE_CONTRACT.md`）
+- **凡 `preDesignPack.shots[].charCodes` 或 imagePrompt `--cref` 出现的码，必须写入 `characterDesign.assets` 与 `visualLockTable.characterAssets`**（禁止只引用不收录，如 CHAR-005）
+- **DC-16 / DG-CD-COVERAGE**：对白 `speaker` ∪ B6.characters ∪ 上镜码必须入 CD；禁止仅 `L0.stub` 过闸；最小骨架为 `code` + `name` + `L0.identity`（一句身份关系）。L1–L3 视觉可后置由资产 AI 补全，但导出前不得缺人设壳
+- 修复话术：按 exportGate `chatRepairText` 中 RH-DC-16 补真实 CD → **再点预览/exportGate** 直至 `exportAllowed`
+- 码别名（`CHAR005` / `CHAR 005`）导出前归一为 `CHAR-005`
+- L0–L3 必填（设计完整态）；L5 主角必填；键名用短键 `L0`…`L6`（勿只输出 `L0_identity` 长键）
 - 与 G1 说话风格/记忆点一致
 - 禁止自由文本替代 L 层结构
 
 ## 下游
 
-→ AS_asset_pipeline → BP_blueprint。
+→ AS_asset_pipeline → BP_blueprint。资产层可对弱视觉做 AI 补全出精图；**不得**用 import stub 代替本阶段入册。

@@ -17,12 +17,27 @@ export default router.post(
       .leftJoin("o_image", "o_assets.imageId", "o_image.id")
       .whereIn("o_assets.id", ids)
       .whereNot("o_image.state", "生成中")
-      .select("o_image.state", "o_assets.id", "o_image.filePath");
+      .select("o_image.state", "o_assets.id", "o_image.filePath", "o_image.errorReason", "o_assets.name");
     const result = await Promise.all(
-      data.map(async (item: any) => ({
-        ...item,
-        filePath: item.filePath ? await u.oss.getSmallImageUrl(item.filePath) : null,
-      })),
+      data.map(async (item: any) => {
+        let nextStep: string | undefined;
+        let errorMessage: string | undefined;
+        if (item.errorReason) {
+          try {
+            const parsed = JSON.parse(String(item.errorReason));
+            nextStep = parsed?.nextStep;
+            errorMessage = parsed?.message ?? String(item.errorReason);
+          } catch {
+            errorMessage = String(item.errorReason);
+          }
+        }
+        return {
+          ...item,
+          filePath: item.filePath ? await u.oss.getSmallImageUrl(item.filePath) : null,
+          errorMessage,
+          nextStep,
+        };
+      }),
     );
     res.status(200).send(success(result));
   },

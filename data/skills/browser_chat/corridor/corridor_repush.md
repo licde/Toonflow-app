@@ -33,7 +33,6 @@ rulePackVersion: "2.0.1"
       "reverseTarget": "designBrief",
       "affectedStages": ["B", "GB", "SB"],
       "forwardRerun": ["design_brief", "corridor_GB", "corridor_SB"],
-      "presentationFork": null,
       "preserveFields": ["script", "globalAnchors"],
       "reason": "SB 情绪强度与 B4 弧线偏差>3",
       "status": "pending|in_progress|completed|exhausted"
@@ -69,6 +68,12 @@ rulePackVersion: "2.0.1"
 3. 列出 affectedStages + forwardRerun 顺序
 4. 标注 preserveFields（锚点/剧本通常保留）
 5. round++ ，超限设 status=exhausted
+
+## 产品契约（质量优先）
+
+- **rePush / 回推按钮 = 仅跳转设计台，不改 JSON 数据**。
+- 真正修复：复制 `chatRepairText`（exportGate / import 400 / burn 失败）→ Chat 改字段 → 再 dryRun/exportGate → 再导入/烧片。
+- 路由表须含 `cam_whitelist`、`img_cref_missing`、`narrative_split_hint`、`pr_lip_duration`、`modality_fx_missing`；禁止落到 INFRA 死路由。
 
 ## BLOCK
 

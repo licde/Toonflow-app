@@ -13,7 +13,8 @@ rulePackVersion: "2.0.1"
 ## 入口条件
 
 - `planData.preCheck` ruleAudit.pass = true
-- 用户确认改编方向（默认推荐方向 1）
+- 读取 `data/fixtures/adaptation_matrix_catalog.json` + 项目 `adaptationProfile.lockedChoices`
+- **须** `userConfirmed: true`（API `confirmMatrixChoices`）后才可进 P06
 - rulePackVersion `2.0.1`
 
 ## 12 维矩阵
@@ -35,11 +36,29 @@ rulePackVersion: "2.0.1"
 
 ## 执行步骤
 
-1. 读取 `preCheck.issues` 与 `preCheck.directions`
-2. 为每个主要诊断问题映射 ≥1 个矩阵维度
-3. 每维选定 choice（A/B/C/D）并写 reason
-4. 汇总 `recommendedConfig` 供 P06 引用
-5. 自检：不得与后续 G1–G5 锚点冲突
+1. 读取 `preCheck.issues` 与 catalog + `adaptation_profiles.json`
+2. 12 维 + D/V/R/C/DLG/O 系列全部 choice；深度维 choice≠keep 时填 `deepAdaptation.*`
+
+### 出口形状族（Shape contract）
+
+- **可选 string**：无内容必须**省略 key**；禁止输出 JSON `null`
+- **`nameMap` / `relationMap` / `substitutions`**：仅允许 `[{ "from": "原", "to": "新" }]`；禁止 `"原→新"` 作 object key，禁止无冒号伪对象
+- **`designBrief.B16`**：由 nameMap 编译的 `{ "原": "新" }` record 镜像
+
+正例：
+
+```json
+"deepAdaptation": {
+  "nameMap": [{ "from": "温如瓷", "to": "沈清瓷" }],
+  "relationMap": [{ "from": "温家", "to": "沈家" }],
+  "substitutions": [{ "from": "系统", "to": "天命书" }],
+  "settingProfile": { "era": "架空大邺" }
+}
+```
+
+3. 产出 **并列** `planData.adaptationMatrixStructured` + 累积 `planData.narrativeBrief.adaptationConstraints[]`
+4. 从 P0 `recommendedMatrixDraft` 生成 `recommendedConfig`（摘要 + 机器可读 matrix 引用）
+5. 等待用户确认 / `confirmMatrixChoices` 后 `userConfirmed: true`
 
 ## 输出
 

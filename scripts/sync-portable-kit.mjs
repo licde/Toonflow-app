@@ -48,6 +48,10 @@ const FIXTURES_ALL = [
   "bidirectional_trace.schema.json",
   "golden/dialogue-break-block.json",
   "golden/w93-unconfirmed-block.json",
+  "adaptation_matrix_catalog.json",
+  "adaptation_profiles.json",
+  "narrative_drive_spec.json",
+  "viral_video_spec.json",
 ];
 
 const FIXTURES_T3_EXTRA = [

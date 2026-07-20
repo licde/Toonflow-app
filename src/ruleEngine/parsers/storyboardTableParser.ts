@@ -1,4 +1,6 @@
 import type { EpisodeShot, ShotType } from "../types";
+import { parseCrefsSrefsFromPrompt } from "../compilers/compileOrGenerateVideoPrompt";
+import { normalizeAssetCode } from "../codes/assetCodeContract";
 
 const SHOT_TYPES: ShotType[] = ["CHAR-SCENE", "PURE-SCENE", "PURE-PROP", "CHAR-PROP"];
 
@@ -93,26 +95,84 @@ function inferDialogueType(line: string): string {
   return "dialogue";
 }
 
-/** 从 flowData.storyboard 扁平数组补全 EpisodeShot */
+/** 从 flowData.storyboard 扁平数组补全 EpisodeShot（含 --cref/--sref → narrative） */
 export function shotsFromFlowStoryboard(
-  storyboard: { id?: number; duration?: number; prompt?: string; videoDesc?: string; shouldGenerateImage?: number }[],
+  storyboard: {
+    id?: number;
+    duration?: number;
+    prompt?: string;
+    videoDesc?: string;
+    audioPrompt?: string;
+    fxPrompt?: string;
+    shouldGenerateImage?: number;
+  }[],
 ): EpisodeShot[] {
-  return storyboard.map((sb, index) => ({
-    id: `shot-${sb.id ?? index + 1}`,
-    storyboardId: sb.id,
-    index,
-    narrative: {
-      type: "CHAR-SCENE",
-      duration: typeof sb.duration === "number" ? sb.duration : parseFloat(String(sb.duration ?? 3)) || 3,
-      transitionType: "切",
-      emotionIntensity: 4,
-    },
-    generation: {
-      imagePrompt: sb.prompt,
-      videoDesc: sb.videoDesc,
-      manualOverride: sb.prompt ? { image: false } : undefined,
-    },
-  }));
+  return storyboard.map((sb, index) => {
+    const promptBlob = String(sb.prompt ?? sb.videoDesc ?? "");
+    const { crefs, srefs } = parseCrefsSrefsFromPrompt(promptBlob);
+    const sceneCode = srefs[0] ? normalizeAssetCode(srefs[0]) ?? srefs[0] : undefined;
+    const assetCodes = [...new Set([...crefs, ...srefs].map((c) => normalizeAssetCode(c) ?? c))];
+    return {
+      id: `shot-${sb.id ?? index + 1}`,
+      storyboardId: sb.id,
+      index,
+      narrative: {
+        type: "CHAR-SCENE",
+        duration: typeof sb.duration === "number" ? sb.duration : parseFloat(String(sb.duration ?? 3)) || 3,
+        transitionType: "切",
+        emotionIntensity: 4,
+        ...(sceneCode ? { sceneCode } : {}),
+        ...(assetCodes.length ? { assetCodes } : {}),
+      },
+      generation: {
+        imagePrompt: sb.prompt,
+        videoDesc: sb.videoDesc,
+        videoPrompt: sb.videoDesc,
+        audioPrompt: sb.audioPrompt,
+        fxPrompt: sb.fxPrompt,
+        manualOverride: sb.prompt ? { image: false } : undefined,
+      },
+    };
+  });
+}
+
+function preserveIdentityNarrative(
+  preferred: EpisodeShot["narrative"],
+  fallback: EpisodeShot["narrative"],
+): EpisodeShot["narrative"] {
+  const sceneCode = preferred.sceneCode || fallback.sceneCode;
+  const assetCodes = [
+    ...new Set([...(preferred.assetCodes ?? []), ...(fallback.assetCodes ?? [])].filter(Boolean)),
+  ] as string[];
+  const preferredHasDialogue = Boolean(
+    preferred.dialogue?.lines &&
+      (typeof preferred.dialogue.lines === "string"
+        ? preferred.dialogue.lines.trim()
+        : preferred.dialogue.lines.length),
+  );
+  const dialogue = preferredHasDialogue ? preferred.dialogue : fallback.dialogue ?? preferred.dialogue;
+  const lines = preferred.lines || fallback.lines;
+  return {
+    ...fallback,
+    ...preferred,
+    sceneCode: sceneCode || preferred.sceneCode || fallback.sceneCode,
+    sceneName: preferred.sceneName || fallback.sceneName,
+    assetCodes: assetCodes.length ? assetCodes : preferred.assetCodes ?? fallback.assetCodes,
+    dialogue,
+    lines,
+    shotSize: preferred.shotSize || fallback.shotSize,
+    emotionIntensity: preferred.emotionIntensity ?? fallback.emotionIntensity,
+    colorTone: preferred.colorTone || fallback.colorTone,
+    spatialRelation: preferred.spatialRelation || fallback.spatialRelation,
+    composition: preferred.composition ?? fallback.composition,
+    cameraAnchor: preferred.cameraAnchor ?? fallback.cameraAnchor,
+    lipSyncPolicy: preferred.lipSyncPolicy || fallback.lipSyncPolicy,
+    exprCue: preferred.exprCue || fallback.exprCue,
+    continuityFrom: preferred.continuityFrom || fallback.continuityFrom,
+    performance: preferred.performance ?? fallback.performance,
+    debutBeat: preferred.debutBeat || fallback.debutBeat,
+    endHook: preferred.endHook || fallback.endHook,
+  };
 }
 
 export function mergeShots(structured: EpisodeShot[], flat: EpisodeShot[]): EpisodeShot[] {
@@ -124,7 +184,34 @@ export function mergeShots(structured: EpisodeShot[], flat: EpisodeShot[]): Epis
     return {
       ...s,
       storyboardId: s.storyboardId ?? fb.storyboardId,
+      narrative: preserveIdentityNarrative(s.narrative, fb.narrative),
       generation: { ...fb.generation, ...s.generation, compiled: s.generation.compiled ?? fb.generation.compiled },
+    };
+  });
+}
+
+/** Merge identity fields from previous package so sync does not clobber sceneCode/assetCodes. */
+export function mergeShotIdentityFromExisting(next: EpisodeShot[], existing?: EpisodeShot[]): EpisodeShot[] {
+  if (!existing?.length) return next;
+  return next.map((s, i) => {
+    const prev =
+      (s.storyboardId != null ? existing.find((e) => e.storyboardId === s.storyboardId) : undefined) ??
+      existing[i];
+    if (!prev) return s;
+    return {
+      ...s,
+      visualDescription: s.visualDescription || prev.visualDescription,
+      narrative: preserveIdentityNarrative(s.narrative, prev.narrative),
+      generation: {
+        ...prev.generation,
+        ...s.generation,
+        imagePrompt: s.generation.imagePrompt || prev.generation.imagePrompt,
+        videoPrompt: s.generation.videoPrompt || prev.generation.videoPrompt,
+        videoDesc: s.generation.videoDesc || prev.generation.videoDesc,
+        audioPrompt: s.generation.audioPrompt || prev.generation.audioPrompt,
+        fxPrompt: s.generation.fxPrompt || prev.generation.fxPrompt,
+        compiled: s.generation.compiled ?? prev.generation.compiled,
+      },
     };
   });
 }

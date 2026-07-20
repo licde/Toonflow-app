@@ -1,0 +1,7 @@
+{
+  "fixture": "deepseek-20260716-43ce74.json",
+  "tier": "T3",
+  "exportAllowed": true,
+  "mustNotBlockIds": ["DG-NAR-SELFCHECK", "DG-LINKAGE-FALSE-GREEN", "DG-MODALITY-MISMATCH", "DG-FALSE-GREEN-FX"],
+  "narrativeSelfcheckPassed": false
+}

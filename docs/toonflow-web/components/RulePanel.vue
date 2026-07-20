@@ -12,16 +12,38 @@ import { CLOSURE_DIMENSION_LABELS } from "../types/closure";
 const props = defineProps<{
   result: InspectBundleResult | null;
   loading?: boolean;
+  /** When false, treat as blocked even if inspect soft-passes */
+  exportAllowed?: boolean | null;
+  /** Full one-copy repair brief from exportGate */
+  chatRepairText?: string;
 }>();
 
 const emit = defineEmits<{
   copyChat: [text: string];
   rePush: [item: RePushPlanItem];
+  /** CTA: POST /api/production/storyboard/applyDc01SoftPatch */
+  applyDc01SoftPatch: [];
 }>();
 
 const activeTab = ref<ClosureDimension>("dc");
+const copyFlash = ref(false);
 
 const dimensions: ClosureDimension[] = ["dc", "pc", "gc", "ic"];
+
+const showDc01SoftPatchCta = computed(() => {
+  const plan = props.result?.rePushPlan ?? [];
+  return plan.some(
+    (p) =>
+      p.trigger === "dialogue_hash_mismatch" ||
+      /dialogue_hash_mismatch/i.test(String(p.trigger || p.reason || "")),
+  );
+});
+
+const isBlocked = computed(() => {
+  if (props.exportAllowed === false) return true;
+  if (props.exportAllowed === true) return false;
+  return Boolean(props.result?.blocked);
+});
 
 const checksForTab = computed(() => {
   if (!props.result) return [];
@@ -33,13 +55,10 @@ const checksForTab = computed(() => {
   });
 });
 
-const failedBlockCount = computed(() => {
+const optimizeCount = computed(() => {
   if (!props.result) return 0;
-  let n = 0;
-  for (const d of dimensions) {
-    n += props.result.closureChecks[d].filter((c) => !c.passed && c.severity === "BLOCK").length;
-  }
-  return n;
+  const cr = props.result.closureReport;
+  return (cr?.optimize?.length ?? 0) + (cr?.missing?.length ?? 0) + (props.result.warnings?.length ?? 0);
 });
 
 function checkClass(c: ClosureCheck): string {
@@ -54,8 +73,40 @@ function forkLabel(fork: RePushPlanItem["presentationFork"]): string {
   return "";
 }
 
+/** Never show bare dialogue_hash_mismatch→SB as the only UI copy. */
+function rePushLabel(p: RePushPlanItem): string {
+  const trigger = String(p.trigger || p.reason || "");
+  if (trigger === "dialogue_hash_mismatch" || /dialogue_hash_mismatch/i.test(trigger)) {
+    return "分镜台词与剧本对不上 → 补台词后再生成";
+  }
+  const target = p.reverseTarget ? ` → ${p.reverseTarget}` : "";
+  return `${trigger || "回推"}${target}`;
+}
+
+const resolvedChatRepairText = computed(() => {
+  const direct = props.chatRepairText?.trim() || props.result?.chatRepairText?.trim();
+  if (direct) return direct;
+  const hints = props.result?.repairHints ?? [];
+  if (!hints.length) return "";
+  const lines = ["【闭环修复清单】", "请按下列 RH 在 Chat 修正 JSON 后重新 dryRun："];
+  for (const h of hints.slice(0, 20)) {
+    lines.push(`- ${h.id}${h.ruleId ? ` (${h.ruleId})` : ""}: ${h.chatTemplate ?? ""}`);
+  }
+  return lines.join("\n");
+});
+
 function onCopy(h: RepairHint) {
   if (h.chatTemplate) emit("copyChat", h.chatTemplate);
+}
+
+function onCopyFullBrief() {
+  const text = resolvedChatRepairText.value.trim();
+  if (!text) return;
+  emit("copyChat", text);
+  copyFlash.value = true;
+  setTimeout(() => {
+    copyFlash.value = false;
+  }, 1600);
 }
 </script>
 
@@ -63,12 +114,48 @@ function onCopy(h: RepairHint) {
   <div v-if="loading" class="rule-panel rule-panel--loading">闭环检测中…</div>
   <div v-else-if="!result" class="rule-panel rule-panel--empty">暂无闭环数据</div>
   <div v-else class="rule-panel">
-    <div v-if="result.blocked" class="rule-panel__banner">
-      阻断：{{ failedBlockCount }} 项 BLOCK 未通过 · rulePack {{ result.rulePackVersion }} · {{ result.tier }}
+    <div v-if="isBlocked" class="rule-panel__banner">
+      <div>阻断 — 请先完善 · rulePack {{ result.rulePackVersion }} · {{ result.tier }}</div>
+      <button
+        v-if="resolvedChatRepairText"
+        type="button"
+        class="rule-panel__copy-primary"
+        @click="onCopyFullBrief"
+      >
+        {{ copyFlash ? "已复制" : "复制闭环修复清单" }}
+      </button>
     </div>
     <div v-else class="rule-panel__banner rule-panel__banner--ok">
-      闭环通过 · rulePack {{ result.rulePackVersion }} · {{ result.tier }}
+      {{ optimizeCount ? `${optimizeCount} 项待优化（不阻断导入）` : "闭环通过" }} · rulePack {{ result.rulePackVersion }} · {{ result.tier }}
     </div>
+
+    <section v-if="result.closureReport?.missing?.length" class="rule-panel__section">
+      <h4>缺失项</h4>
+      <ul><li v-for="(m, i) in result.closureReport.missing" :key="i">{{ m }}</li></ul>
+    </section>
+
+    <section v-if="result.chatPromptGaps?.length" class="rule-panel__section">
+      <h4>Chat 提示词</h4>
+      <ul>
+        <li v-for="g in result.chatPromptGaps" :key="g.id + (g.shotIndex ?? '')">
+          [{{ g.severity }}] {{ g.shotIndex ? `镜${g.shotIndex} ` : "" }}{{ g.message }}
+        </li>
+      </ul>
+    </section>
+
+    <section v-if="result.modalityGaps?.length" class="rule-panel__section">
+      <h4>模态链</h4>
+      <ul>
+        <li v-for="(g, i) in result.modalityGaps" :key="i">
+          {{ (g as { id?: string; message?: string }).id }}: {{ (g as { message?: string }).message }}
+        </li>
+      </ul>
+    </section>
+
+    <section v-if="result.warnings?.length" class="rule-panel__section">
+      <h4>提示</h4>
+      <ul><li v-for="(w, i) in result.warnings.slice(0, 20)" :key="i">{{ w }}</li></ul>
+    </section>
 
     <div class="rule-panel__tabs">
       <button
@@ -91,6 +178,14 @@ function onCopy(h: RepairHint) {
       </li>
     </ul>
 
+    <section v-if="showDc01SoftPatchCta" class="rule-panel__section">
+      <h4>台词覆盖</h4>
+      <p class="rule-panel__dc01-msg">分镜台词与剧本对不上，可一键把缺失台词补进空镜后再生成。</p>
+      <button type="button" class="rule-panel__copy-primary" @click="emit('applyDc01SoftPatch')">
+        一键补台词
+      </button>
+    </section>
+
     <section v-if="result.repairHints?.length" class="rule-panel__section">
       <h4>修复话术</h4>
       <div v-for="h in result.repairHints" :key="h.id" class="rule-panel__hint-card">
@@ -103,9 +198,9 @@ function onCopy(h: RepairHint) {
     <section v-if="result.rePushPlan?.length" class="rule-panel__section">
       <h4>回推计划</h4>
       <div v-for="(p, i) in result.rePushPlan" :key="i" class="rule-panel__repush">
-        <span>{{ p.trigger }} → {{ p.reverseTarget }}</span>
+        <span>{{ rePushLabel(p) }}</span>
         <span v-if="p.presentationFork" class="rule-panel__fork">{{ forkLabel(p.presentationFork) }}</span>
-        <button type="button" @click="emit('rePush', p)">回推 {{ p.reverseTarget }}</button>
+        <button type="button" @click="emit('rePush', p)">回推 {{ p.reverseTarget }}（仅跳转）</button>
       </div>
     </section>
   </div>
@@ -113,8 +208,28 @@ function onCopy(h: RepairHint) {
 
 <style scoped>
 .rule-panel { font-size: 13px; }
-.rule-panel__banner { padding: 10px 12px; background: #fff1f0; border: 1px solid #ffa39e; border-radius: 6px; margin-bottom: 12px; }
+.rule-panel__banner {
+  padding: 10px 12px;
+  background: #fff1f0;
+  border: 1px solid #ffa39e;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
 .rule-panel__banner--ok { background: #f6ffed; border-color: #b7eb8f; }
+.rule-panel__copy-primary {
+  border: 1px solid #cf1322;
+  background: #fff;
+  color: #cf1322;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
 .rule-panel__tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .rule-panel__tab { padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; background: #fff; cursor: pointer; }
 .rule-panel__tab--active { border-color: #1677ff; color: #1677ff; }

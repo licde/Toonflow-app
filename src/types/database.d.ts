@@ -1,4 +1,4 @@
-// @db-hash 34f8d65936f70b706268edcad3258ae4
+// @db-hash d17da86459f91f579abff1befa0df823
 //该文件由脚本自动生成，请勿手动修改
 
 export interface memories {
@@ -184,10 +184,13 @@ export interface o_skillList {
   'updateTime': number;
 }
 export interface o_storyboard {
+  'audioPrompt'?: string | null;
   'createTime'?: number | null;
   'duration'?: string | null;
+  'emotion'?: string | null;
   'filePath'?: string | null;
   'flowId'?: number | null;
+  'fxPrompt'?: string | null;
   'id'?: number;
   'index'?: number | null;
   'projectId'?: number | null;

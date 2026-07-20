@@ -9,7 +9,13 @@ rulePackVersion: "2.0.1"
 
 ## 正推
 
-W1 → B5 infoLinkage → SB.markers → narrativeCausalityGraph → FX.feasibility
+W1 → informationLedger → B20 → GB.infoIds → SB.markers.infoId
+W3 dialoguePlan → B21 → SB.lines.functions
+narrativeCausalityGraph（六类 event/visual/dialogue）→ B22 → SB causeId/effectId
+
+## 六类因果
+
+event / motivation / information / emotion / visual / dialogue — 边须可追踪，broken[] 出口为空
 
 ## 反推
 

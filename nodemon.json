@@ -1,14 +1,14 @@
 {
+  "watch": ["src"],
+  "ext": "ts,json",
   "ignore": [
-    "node_modules",
-    "data/*",
-    "build/*",
-    "dist/*",
-    "router.ts",
-    "database.d.ts"
+    "src/router.ts",
+    "src/types/database.d.ts",
+    "**/node_modules/**",
+    "data/**",
+    "build/**",
+    "dist/**",
+    "scripts/**"
   ],
-  "events": {
-    "restart": ""
-  },
-  "delay": 0
+  "delay": 800
 }

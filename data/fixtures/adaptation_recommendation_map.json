@@ -1,0 +1,23 @@
+{
+  "version": "2.0.1",
+  "description": "P0 preCheck issue → adaptation matrix dim 推荐映射（Browser Chat 可读）",
+  "mappings": [
+    { "issueTypes": ["情绪", "P1"], "dims": [{ "dimId": "emotion_logic", "suggestedChoice": "mixed", "confidence": 0.8 }] },
+    { "issueTypes": ["反转", "P2"], "dims": [{ "dimId": "narrative_structure", "suggestedChoice": "compressed", "confidence": 0.75 }] },
+    { "issueTypes": ["信息", "P3"], "dims": [{ "dimId": "C02_infoGapStrategy", "suggestedChoice": "front_load", "confidence": 0.85 }] },
+    { "issueTypes": ["冲突", "P4"], "dims": [{ "dimId": "conflict_design", "suggestedChoice": "person_vs_person", "confidence": 0.8 }] },
+    { "issueTypes": ["人物", "P5"], "dims": [{ "dimId": "character_anchor", "suggestedChoice": "core_triad", "confidence": 0.7 }] },
+    { "issueTypes": ["台词", "P6"], "dims": [{ "dimId": "dialogue_strategy", "suggestedChoice": "oral_compress", "confidence": 0.75 }] },
+    { "issueTypes": ["节奏", "P3", "P2"], "dims": [{ "dimId": "R01_retentionTier", "suggestedChoice": "ep1_opening_crisis", "confidence": 0.9 }] },
+    { "issueTypes": ["开场", "P1"], "dims": [{ "dimId": "O01_openingPattern", "suggestedChoice": "crisis_first", "confidence": 0.9 }] }
+  ],
+  "genrePresetRules": [
+    { "when": { "minScore": { "P1": 7 }, "tags": ["古言", "虐"] }, "preset": "古言虐恋" },
+    { "when": { "minScore": { "P1": 6 }, "tags": ["都市", "甜"] }, "preset": "都市甜宠" }
+  ],
+  "proposeMatrixSchema": {
+    "recommendedMatrixDraft": [
+      { "dimId": "string", "suggestedChoice": "string", "confidence": 0.0, "issueIds": ["P-001"], "reason": "string" }
+    ]
+  }
+}

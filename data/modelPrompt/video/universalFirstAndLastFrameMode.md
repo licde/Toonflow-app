@@ -51,6 +51,8 @@
 
 ### 4. 约束
 
+- **身份槽硬验收（必过）**：输出必须含 `identity[CHAR:… | SCENE:… | PROP:…]` 或 `--cref CHAR-…` / `--sref SCENE-…`（有资产码则必现）；禁止「清空参考图=清空身份」
+- **首尾帧媒资槽**：同时声明 `START_FRAME` 与 `END_FRAME`（或首帧/尾帧）文字锚点；身份槽与帧槽**并存不替换**
 - **视觉风格**：风格相关描述参考 Assistant 中的「视觉风格约束」部分内容，不在本 Skill 内自行定义风格
 - **仅输出视频提示词**：不附加任何解释、注释、分析过程、推理步骤、分隔线（`---`）或额外说明
 - **严格遵循 videoDesc**：提示词内容严格基于 videoDesc 中的12个字段生成，不编造额外内容
@@ -90,6 +92,7 @@
 ## 核心原则
 
 - **纯文本提示词**：提示词内**不使用任何 `@图N ` 引用**，全部内容用纯文本描述
+- **身份 + 帧双槽**：正文须含身份码块；另用 START_FRAME / END_FRAME 描述首尾画面（与身份码叠加）
 - **五维度结构**：Visual / Motion / Camera / Audio / Narrative
 - **全程单一连贯镜头**：从头到尾一个镜头，不存在切镜
 - **时间轴分段**：每段最低 1 秒，用 `0s-Xs` 标注
@@ -99,10 +102,14 @@
 ## 输出格式
 
 ```
+identity[CHAR:CHAR-xxx | SCENE:SCENE-xxx]
+START_FRAME: {首帧画面要点}.
+END_FRAME: {尾帧画面要点}.
+
 [Visual]
-{主体A名}: {外观简述}, {站位/姿态}, {说话状态 speaking/silent}.
+{主体A名}: {外观简述}, {站位/姿态}, {说话状态 speaking/silent}. --cref CHAR-xxx
 {主体B名}: {外观简述}, {站位/姿态}, {说话状态}.
-{场景描述}, {道具描述}.
+{场景描述} --sref SCENE-xxx, {道具描述}.
 {视觉风格标签}.
 
 [Motion]
@@ -124,11 +131,11 @@
 
 ## 生成规则
 
-1. **提示词输出全部用英文**
+1. **视觉/运镜壳可用英文**；**台词与 [Audio] 对白必须保持源语言（中文不翻译）**
 2. **不使用任何 `@图N ` 引用**：全部内容用纯文本描述
 3. **主体用文字描述**：在 [Visual] 中简要描述主体外观特征（如服饰、发型等关键辨识特征）
 4. **每个主体必须标注说话状态**：`speaking` / `silent` / `speaking simultaneously`
-5. **台词不可缺失**：videoDesc 中有台词的分镜，必须在 `[Audio]` 中完整输出台词内容（保持原始语言，不翻译）
+5. **台词不可缺失**：videoDesc 中有台词的分镜，必须在 `[Audio]` 中完整输出台词内容（**保持原始语言，禁止译成英文**）
 6. **台词类型标注**：
    - 普通对白 → `dialogue, lip-sync active`
    - 内心独白 → `inner monologue (OS), silent lips`
@@ -136,7 +143,7 @@
 7. **不说话的主体标注 `silent`**：防止误生口型
 8. **Motion 时间轴**：每段最低 1 秒，不超过总时长
 9. **全程单一连贯镜头**：Camera 段落描述从头到尾一个镜头，绝不切镜
-10. **镜头类型**从以下选取：`Wide establishing shot / Over-the-shoulder / Medium shot / Close-up / Wide shot / POV / Dutch angle / Crane up / Dolly right / Whip pan / Handheld / Slow motion`
+10. **镜头类型**从以下选取：`Wide establishing shot / Over-the-shoulder / Medium shot / Close-up / Wide shot / POV / Dutch angle / Crane up / Dolly right / Handheld / Slow motion`（禁 whip pan / crash zoom）
 
 ---
 

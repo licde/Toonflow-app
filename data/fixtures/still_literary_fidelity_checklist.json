@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "description": "Still literary fidelity checklist SSOT — prompt L0 + VLM L1 share items",
+  "whoWindowChars": 24,
+  "compositionPatterns": ["权力反差", "高位", "低位", "相对", "左右", "前后"],
+  "atmospherePatterns": ["烛火", "烛光", "侧光", "雨", "雾", "月光"],
+  "forbiddenWhenSeating": {
+    "id": "forbidden:香案站立",
+    "mustTokens": [],
+    "vlmQuestion": "画面是否出现双人站立香案/持香/供桌祭拜仪式构图？（若是则失败）",
+    "healInject": "禁止用双人站立香案/持香/供桌仪式代替座次与动作",
+    "strengthenKey": "negativeBan",
+    "strengthenValue": "no_altar_standing_ritual",
+    "forbidden": true
+  },
+  "strengthenKeys": {
+    "role_action": "roleLock",
+    "prop": "mustProps",
+    "seating": "roleLock",
+    "composition": "composition",
+    "atmosphere": "atmosphere",
+    "identity": "crefWeight",
+    "forbidden": "negativeBan"
+  }
+}

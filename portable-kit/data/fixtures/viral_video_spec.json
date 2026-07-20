@@ -1,0 +1,8 @@
+{
+  "version": "2.0.1",
+  "openingCard": { "ep1_3": ["性格", "困境", "目标", "动机"], "ep10Hook": "主线强钩子" },
+  "clipPoints30s": { "openingEpCount": 10, "minClips": 1, "perPaypointMin": 1 },
+  "paypoints": { "ratios": [0.1, 0.3, 0.5, 0.7, 0.9], "types": ["身份差", "感情错位", "命运巨变", "环境剧变"] },
+  "episodeRhythm": { "impact3s": true, "change15s": true, "expect45s": true },
+  "genreFrameworks": ["甜宠", "虐恋", "战神", "重生", "萌宝"]
+}

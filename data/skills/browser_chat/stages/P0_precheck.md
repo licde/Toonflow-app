@@ -23,6 +23,7 @@ Browser Chat 改编路径**第一步**。本 Skill 包装 `adaptation_execution_
 3. 汇总 P7 综合等级：优≥8 / 良≥6 / 中≥4 / 差<4
 4. 输出问题清单 P-001 递增（类型/描述/改造建议）
 5. 给出 **3 个**改编方向，每个对应 ≥2 个诊断问题
+6. 预填 `adaptationProfile` 推荐；产出 `recommendedMatrixDraft[]`（读 `adaptation_recommendation_map.json`）；初始化 `planData.narrativeBrief.mustResolveIssues` + `empathyPlan` 草稿
 
 ## 六维度评分表
 

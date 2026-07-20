@@ -13,6 +13,7 @@ rulePackVersion: "2.0.1"
 ## 入口条件
 
 - `planData.storySkeleton` 已通过 W1 BLOCK
+- `planData.adaptationMatrixStructured.userConfirmed` = true
 - globalAnchors G1–G5 可用
 
 ## 策略必含区块
@@ -33,8 +34,9 @@ rulePackVersion: "2.0.1"
 ## 执行步骤
 
 1. 读取 storySkeleton 删减记录与反转登记表
-2. 写 3–5 条核心原则，每条服务故事核
-3. 列删除决策，以三大密度为标尺
+2. 读取 `adaptationMatrixStructured` + `adaptationProfile`（含 deepAdaptation / V/R/C 维）
+3. 写 3–5 条核心原则，每条服务故事核
+3. 列删除决策表格（列：**三密度影响** + **替代爆点**）；写入 `narrativeBrief.densityBudget`
 4. 写世界观渐进披露方案（对话/OS/VO，禁大段旁白）
 5. 核对 ≈3 个反转与骨架登记表一致
 

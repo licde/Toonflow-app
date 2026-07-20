@@ -1,0 +1,12 @@
+{
+  "rawExportAllowed": false,
+  "mustBlockIdsAny": [
+    "FX-GRADE-01",
+    "DG-FX-DUAL-TRACK",
+    "DG-MODALITY-MISMATCH",
+    "FX-FALSE-GREEN"
+  ],
+  "healMinF0Declared": 3,
+  "healUndeclaredEmpty": 0,
+  "note": "b3500a: undeclared no-FX shots must BLOCK; heal declares F0 without inventing fxPrompt; lip-split may shift indexes"
+}

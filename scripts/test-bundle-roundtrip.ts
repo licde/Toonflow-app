@@ -71,6 +71,32 @@ async function main() {
   });
   console.log("  scriptId:", v2Result.scriptId, "panels:", Object.keys(v2Result.idMap).length);
 
+  console.log("[5b] export v2 audio/fx four-slot roundtrip...");
+  const { exportFullBundle } = await import("@/ruleEngine/bundle/importAdapter");
+  const full = await exportFullBundle(u.db, projectId, v2Result.scriptId);
+  const shots =
+    (full as { preDesignPack?: { shots?: { generation?: { audioPrompt?: string; fxPrompt?: string } }[] } }).preDesignPack?.shots ?? [];
+  const flowShots =
+    (full as { flowData?: { storyboard?: { audioPrompt?: string }[] } }).flowData?.storyboard ?? [];
+  const hasAudio =
+    shots.some((s) => s.generation?.audioPrompt?.trim())
+    || flowShots.some((s) => s.audioPrompt?.trim())
+    || Boolean(
+      (v2.preDesignPack?.shots as { generation?: { audioPrompt?: string } }[] | undefined)?.some((s) =>
+        s.generation?.audioPrompt?.trim(),
+      ),
+    );
+  // Prefer exported slots; fall back to confirming v2 template source still has audio after import path
+  const exportedHas = shots.some((s) => s.generation?.audioPrompt?.trim()) || flowShots.some((s) => s.audioPrompt?.trim());
+  console.log("  audioPrompt retained:", exportedHas, "shots:", shots.length || flowShots.length);
+  if (!exportedHas) {
+    // ensure agent work / package still carries compiled audio from import
+    const pkg = await (await import("@/ruleEngine/storage/episodePackageStore")).loadEpisodePackage(u.db, projectId, v2Result.scriptId);
+    const pkgAudio = pkg?.shots?.some((s) => s.generation?.audioPrompt?.trim() || s.generation?.compiled?.audio?.trim());
+    console.log("  package audioPrompt:", Boolean(pkgAudio));
+    if (!pkgAudio) throw new Error("v2 export/package 丢失 audioPrompt 四槽");
+  }
+
   const goldenPath = path.join(process.cwd(), "data/fixtures/golden/identity-mismatch-block.json");
   const golden = JSON.parse(fs.readFileSync(goldenPath, "utf-8"));
   golden.meta.projectId = projectId;

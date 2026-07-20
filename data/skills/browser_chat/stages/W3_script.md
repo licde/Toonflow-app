@@ -30,6 +30,13 @@ rulePackVersion: "2.0.1"
 - 黄金单集公式：承接+升级+价值转变+下集勾连
 - 节奏 3-15-45：3 秒情绪冲击 / 15 秒变化 / 45 秒强期待
 
+### ep1 专章（RET + NAR）
+
+- 并列产出 `informationLedger` / `dialoguePlan` / `viralAdaptation.retentionPlan`
+- 第一场 `sceneMeta`：opening5sHook、rhythm31545、infoGapType、clip30sCandidate
+- 第一场禁止 >2 句解释性台词；禁止纯环境描写开场
+- ep2+ 每场标 `retentionRole`（carry/escalate/hook）；集末 `endCardPack.preview`
+
 ### W13 画面可拍
 
 - △ 描写「人怎么干」：动作、表情、环境、光线
@@ -38,6 +45,10 @@ rulePackVersion: "2.0.1"
 - 竖屏适配：人物居中，无横向全景
 
 ## 执行步骤
+
+**步骤 0（强制）**：读取并打印 `planData.narrativeBrief` 摘要；写每场前标注本场兑现的 `retentionBeat` / `infoId` / `reconstructionTrace` 条目。  
+T3：同步写 `narrativeBrief.implementationPlan[]`（每场 `sceneRef` + `fxIntent` 含 **F0** + `avCausality`）；长句 >20 字必须 `dialoguePlan.lines[].splitHint`。  
+**场镜基数 MUST**：`implementationPlan`/`sceneMeta` 条数 = 剧本「场N」数；「接场/同地点续拍」要么换独立场景名（下游 SB `sceneName` 必须不同），要么合并为一场并删除多余 sceneRef。禁止留下无镜可映射的 F1 plan 项。
 
 1. 从骨架提取**当前集**信息（忽略其他集）
 2. 阐述思路 200–300 字

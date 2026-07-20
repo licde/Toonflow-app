@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "description": "Export-facing shot/brief string fields — schema ↔ registry ↔ skills SSOT",
+  "fields": [
+    {
+      "path": "preDesignPack.shots[].visualEffect",
+      "canonicalType": "string",
+      "salvageRuleId": "SH-VISUAL-EFFECT-OBJ",
+      "skillRef": "design_av.md",
+      "example": "\"F1: 烛火摇曳，微光闪烁\""
+    },
+    {
+      "path": "preDesignPack.shots[].audioCue",
+      "canonicalType": "string",
+      "salvageRuleId": "SH-AUDIO-CUE-OBJ",
+      "skillRef": "corridor_SB.md",
+      "example": "\"茶盏碎裂声骤停\""
+    },
+    {
+      "path": "preDesignPack.shots[].fxLevel",
+      "canonicalType": "string",
+      "salvageRuleId": "SH-VISUAL-EFFECT-OBJ",
+      "skillRef": "design_av.md",
+      "example": "\"F1\""
+    },
+    {
+      "path": "designBrief.B5[].payoffEp",
+      "canonicalType": "number",
+      "salvageRuleId": "SH-B5-PAYOFF",
+      "skillRef": "linkage_continuity.md",
+      "example": "13"
+    },
+    {
+      "path": "designBrief.B5[].payoffLabel",
+      "canonicalType": "string",
+      "salvageRuleId": "SH-B5-PAYOFF",
+      "skillRef": "T3_quality_gate.md",
+      "example": "\"本集收\""
+    }
+  ]
+}

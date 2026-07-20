@@ -3,19 +3,10 @@ import u from "@/utils";
 import { z } from "zod";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
-import axios from "axios";
+import { runGenerateFlowImageCore } from "./generateFlowImageCore";
+
 const router = express.Router();
 
-async function urlToBase64(imageUrl: string): Promise<string> {
-  if (imageUrl.startsWith("/oss/")) {
-    return await u.oss.getImageBase64(u.replaceUrl(imageUrl).replace("/smallImage", ""));
-  }
-  imageUrl = await u.oss.getFileUrl(u.replaceUrl(imageUrl));
-  const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
-  const contentType = response.headers["content-type"] || "image/png";
-  const base64 = Buffer.from(response.data, "binary").toString("base64");
-  return `data:${contentType};base64,${base64}`;
-}
 export default router.post(
   "/",
   validateFields({
@@ -25,37 +16,79 @@ export default router.post(
     ratio: z.string(),
     prompt: z.string(),
     projectId: z.number(),
+    storyboardId: z.number().optional(),
+    mode: z.string().optional(),
+    requireParentRef: z.boolean().optional(),
+    qualityMode: z.enum(["hq_update", "draft"]).optional(),
+    persistToStoryboard: z.boolean().optional(),
+    strengthen: z.record(z.string(), z.string()).optional(),
+    composeMode: z.enum(["full", "refine", "fidelity"]).optional(),
   }),
   async (req, res) => {
-    const { model, references = [], quality, ratio, prompt, projectId } = req.body;
     try {
-      const imageClass = await u.Ai.Image(model).run(
-        {
-          prompt: prompt,
-          referenceList: await (async () => {
-            const list: { type: "image"; base64: string }[] = [];
-            for (const url of references) {
-              list.push({ type: "image" as const, base64: await urlToBase64(url) });
-            }
-            return list;
-          })(),
-          size: quality,
-          aspectRatio: ratio,
-        },
-        {
-          taskClass: "工作流图片生成",
-          describe: "工作流图片生成",
-          relatedObjects: JSON.stringify(req.body),
-          projectId: projectId,
-        },
+      const { withStoryboardLock } = await import("@/ruleEngine/heal/storyboardLock");
+      const run = () =>
+        runGenerateFlowImageCore(u.db, {
+          model: req.body.model,
+          references: req.body.references,
+          quality: req.body.quality,
+          ratio: req.body.ratio,
+          prompt: req.body.prompt,
+          projectId: req.body.projectId,
+          storyboardId: req.body.storyboardId,
+          mode: req.body.mode,
+          requireParentRef: req.body.requireParentRef,
+          qualityMode: req.body.qualityMode,
+          persistToStoryboard: req.body.persistToStoryboard,
+          strengthen: req.body.strengthen,
+          composeMode: req.body.composeMode,
+        });
+      const result = req.body.storyboardId
+        ? await withStoryboardLock(Number(req.body.storyboardId), run)
+        : await run();
+      return res.status(200).send(
+        success({
+          url: result.url,
+          promptUsed: result.promptUsed,
+          contentPolicyWarnings: result.contentPolicyWarnings,
+          feedback: result.feedback,
+          imageMode: result.imageMode,
+          rePushPlan: result.rePushPlan,
+          stillQuality: result.stillQuality,
+          primaryNextStep: result.primaryNextStep,
+          userMessage: result.userMessage,
+          ctaLabel: result.ctaLabel,
+          composeSources: result.composeSources,
+          didSynthesize: result.didSynthesize,
+          resolvedQuality: result.resolvedQuality,
+          warnings: result.warnings,
+          visualPass: result.visualPass,
+          visualPassAt: result.visualPassAt,
+          fidelityItems: result.fidelityItems,
+          fidelityStopReason: result.fidelityStopReason,
+          bestPassCount: result.bestPassCount,
+          fixHintsUsed: result.fixHintsUsed,
+          parallelM: result.parallelM,
+          editStrategy: result.editStrategy,
+          vlmError: result.vlmError,
+        }),
       );
-      const savePath = `${projectId}/workFlow/${u.uuid()}.jpg`;
-      await imageClass.save(savePath);
-
-      const url = await u.oss.getSmallImageUrl(savePath);
-      return res.status(200).send(success({ url }));
-    } catch (e) {
-      res.status(400).send(error(u.error(e).message));
+    } catch (e: any) {
+      const errMsg = u.error(e).message;
+      const feedback = e?.feedback;
+      res.status(400).send(
+        error(errMsg, {
+          feedback,
+          suggestedPrompt: feedback?.suggestedPrompt ?? e?.suggestedPrompt,
+          rePushPlan: e?.rePushPlan ?? [],
+          code: e?.code,
+          primaryNextStep: e?.primaryNextStep,
+          userMessage: e?.userMessage ?? errMsg,
+          ctaLabel: e?.ctaLabel,
+          composeSources: e?.composeSources,
+          stillQuality: e?.stillQuality,
+        }),
+      );
     }
   },
 );

@@ -23,6 +23,25 @@
     { "id": "RH-QP-20", "qpId": "QP-20", "symptom": "跨集衔接弱", "action": "补 W3 集间衔接", "chatTemplate": "请在上集结尾与本集开场补 continuity 承接。" },
     { "id": "RH-W93", "ruleId": "W93", "symptom": "爆点不够", "action": "增情绪峰值场", "chatTemplate": "建议在 W3 或 SB 增加对峙升级场。" },
     { "id": "RH-AG-GATE-01", "ruleId": "AG-GATE-01", "symptom": "缺首位帧", "action": "生成首帧分镜图", "chatTemplate": "请先生成分镜参考图再写 MD-VID singleImage。" },
-    { "id": "RH-identity", "ruleId": "identity_mismatch", "symptom": "跨模态性别冲突", "action": "重编译 EN 全模态", "chatTemplate": "请统一 IMG/VID/AUD 性别词与 BP L0。" }
+    { "id": "RH-identity", "ruleId": "identity_mismatch", "symptom": "跨模态性别冲突", "action": "重编译 EN 全模态", "chatTemplate": "请统一 IMG/VID/AUD 性别词与 BP L0。" },
+    { "id": "RH-RET-01", "ruleId": "RET-01", "symptom": "ep1 缺开场钩子", "action": "补 W3 ep1 opening5s/opening3to10s", "chatTemplate": "请在 ep1 第一场结构化 opening5s 钩子（困境/反差/情感暴击三选一）。" },
+    { "id": "RH-NAR-05", "ruleId": "NAR-05", "symptom": "台词无动作因果", "action": "补 causedByActionId", "chatTemplate": "请为台词标注 causedByActionId，遵循动作是因、对话是果。" },
+    { "id": "RH-PKG-03", "ruleId": "PKG-03", "symptom": "debut 缺 copyHint", "action": "补 debutIntroPack", "chatTemplate": "请为首登场角色补 copyHint 与 establishingPattern。" },
+    { "id": "RH-GEN-05", "ruleId": "GEN-05", "symptom": "设计未进 prompt", "action": "对齐 shotDesign 与 imagePrompt", "chatTemplate": "请将 shotDesign/visualDescription 编译进 imagePrompt。" },
+    { "id": "RH-ADP-D01", "ruleId": "ADP-D01", "symptom": "深度改编未落地", "action": "补 nameMap", "chatTemplate": "请在 adaptationMatrixStructured.deepAdaptation 补全 nameMap。" },
+    { "id": "RH-DSG-B14", "ruleId": "DSG-B14", "symptom": "付费点未进设计", "action": "补 designBrief B14", "chatTemplate": "请将 paypointSchedule 镜像到 designBrief B14 paypointMarkers。" },
+    { "id": "RH-VIR-01", "ruleId": "VIR-01", "symptom": "投流点不足", "action": "补 clipPoints30s", "chatTemplate": "请在前10集标注至少10个 clip30sCandidate 投流爆点。" },
+    { "id": "RH-NAR-14", "ruleId": "NAR-14", "symptom": "长台词无 splitHint", "action": "补 dialoguePlan splitHint", "chatTemplate": "请为 >20 字台词标注 splitHint: reaction_shot 并补反应 △。" },
+    { "id": "RH-NAR-15", "ruleId": "NAR-15", "symptom": "高情绪对白无反应镜", "action": "补反应 △", "chatTemplate": "请在高情绪对白后补 1 行听者反应动作。" },
+    { "id": "RH-MOD-01", "ruleId": "MOD-01", "symptom": "fxIntent 未进 SB", "action": "补 visualEffect", "chatTemplate": "请将 W3 sceneMeta.fxIntent 镜像到 SB visualEffect。" },
+    { "id": "RH-MOD-02", "ruleId": "MOD-02", "symptom": "缺 fxPrompt", "action": "补 MD-FX", "chatTemplate": "请为 visualEffect 镜补 fxPrompt 与 fxFeasibilityAudit item。" },
+    { "id": "RH-MOD-03", "ruleId": "MOD-03", "symptom": "缺 audioPrompt", "action": "补 MD-AUD", "chatTemplate": "请将 W3 audioBeat 编译进台词镜 audioPrompt。" },
+    { "id": "RH-MOD-04", "ruleId": "MOD-04", "symptom": "voiceProfile 冲突", "action": "对齐 AUD 音色词", "chatTemplate": "请统一 voiceProfile 与 audioPrompt 音色描述。" },
+    { "id": "RH-MOD-05", "ruleId": "MOD-05", "symptom": "留存镜运镜不符", "action": "改 videoPrompt", "chatTemplate": "retentionTier 0-2s 镜请用 static + motion-from-frame。" },
+    { "id": "RH-MOD-06", "ruleId": "MOD-06", "symptom": "开场 FX 过高", "action": "补 degradeFixPlan", "chatTemplate": "debutIntroPack fxLevel > F2 须写 degradeFixPlan 可拍替代。" },
+    { "id": "RH-MOD-07", "ruleId": "MOD-07", "symptom": "模态 slot 空", "action": "补 modalityPromptAudit", "chatTemplate": "请补全 T3 四模态 slot（IMG/VID/AUD/FX）。" },
+    { "id": "RH-ADP-D02", "ruleId": "ADP-D02", "symptom": "relationMap 空", "action": "补 deepAdaptation.relationMap", "chatTemplate": "请在 deepAdaptation 补全 relationMap。" },
+    { "id": "RH-ADP-D03", "ruleId": "ADP-D03", "symptom": "substitutions 空", "action": "补 deepAdaptation.substitutions", "chatTemplate": "请在 deepAdaptation 补全 substitutions。" },
+    { "id": "RH-ADP-D04", "ruleId": "ADP-D04", "symptom": "settingProfile 空", "action": "补 deepAdaptation.settingProfile", "chatTemplate": "请在 deepAdaptation 补全 settingProfile。" }
   ]
 }

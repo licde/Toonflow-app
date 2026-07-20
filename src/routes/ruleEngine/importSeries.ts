@@ -21,7 +21,7 @@ export default router.post(
       const results = await importSeriesBundle(u.db, bundle, {
         projectId,
         importMode: importMode ?? "upsert",
-        mergeStrategy: mergeStrategy ?? "replaceAll",
+        mergeStrategy,
       });
       return res.status(200).send(success({ episodes: results }));
     } catch (e) {

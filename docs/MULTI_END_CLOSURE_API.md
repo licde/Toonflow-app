@@ -56,3 +56,35 @@ Display priority:
 4. `rePushPlan` actions
 
 Toonflow-web implementation is out-of-repo; this document is the API contract.
+
+## POST /api/ruleEngine/preflightProduction
+
+Runtime global detection for production (Phase J). Uses `closure_detection_registry.json` SSOT.
+
+**Request**
+
+```json
+{
+  "projectId": 1,
+  "scriptId": 6,
+  "storyboardIds": [12, 13],
+  "modality": "VID",
+  "tier": "T3"
+}
+```
+
+**Response** (extends unified closure + detection table)
+
+| Field | Description |
+|-------|-------------|
+| `blocked` / `blockGenerate` | Any BLOCK detection or PC failure |
+| `detectionResults[]` | Per-check `{ id, level, domain, passed, message, shotIndex }` |
+| `closureChecks` | `{ dc, pc, gc, ic, blocked }` |
+| `closureReport` | `{ missing, optimize, chains }` |
+| `compiledPreview[]` | Per-shot compiled image/video/audio after touch |
+| `gapSummary` | `{ total, blocks, warns }` |
+| `endpoint` | `"prod"` |
+
+**When to call:** before batch generate image/video; on production page load; import success toast follow-up.
+
+**CI:** `yarn generate:detection-registry` → `yarn audit:detection-coverage` (use `--strict` to fail on unimplemented T3 BLOCK).

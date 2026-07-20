@@ -14,6 +14,7 @@ import FormData from "form-data";
 import jsonwebtoken from "jsonwebtoken";
 import u from "@/utils";
 import crypto from "node:crypto";
+import { uploadReferenceAsset, preflightPublicUrl } from "@/ruleEngine/ports/assetPort";
 export default function runCode(code: string, vendor?: Record<string, any>) {
   code = code.replace(/export\s*\{\s*\};?/g, ""); // 去掉 export {} 以免沙盒环境报错
   // 创建一个沙盒
@@ -40,6 +41,9 @@ export default function runCode(code: string, vendor?: Record<string, any>) {
     logger,
     jsonwebtoken,
     crypto,
+    // Agnes 等供应商要求参考图公网化
+    uploadReferenceAsset,
+    preflightPublicUrl,
   };
   if (vendor !== undefined) {
     sandbox.vendor = vendor;
@@ -55,6 +59,20 @@ export default function runCode(code: string, vendor?: Record<string, any>) {
   vm.run(code);
 
   return exports as Record<string, any>;
+}
+
+/** Expose sandbox global names for GenE2E F4 audit (without executing vendor). */
+export function listVendorSandboxGlobals(): string[] {
+  return [
+    "createOpenAI",
+    "createDeepSeek",
+    "zipImage",
+    "urlToBase64",
+    "axios",
+    "logger",
+    "uploadReferenceAsset",
+    "preflightPublicUrl",
+  ];
 }
 export function logger(logstring: any) {
   console.log("【VM】" + JSON.stringify(logstring));

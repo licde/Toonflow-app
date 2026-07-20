@@ -1,0 +1,34 @@
+{
+  "version": "2.0.1",
+  "profiles": {
+    "古言虐恋": {
+      "genrePreset": "古言虐恋",
+      "lockedChoices": {
+        "emotion_logic": "angst",
+        "V05_genreFramework": "虐恋",
+        "R01_ep1_opening5s": "identity_contrast",
+        "R02_ep1_first30s": "audience_knows",
+        "C02_infoGapStrategy": "audience_knows",
+        "O01_openingProfile": "O3_conflict_tableau"
+      },
+      "deepDefaults": {
+        "D04_settingProfile": { "era": "架空唐宋", "socialLayer": "豪门/宫廷" }
+      }
+    },
+    "都市甜宠": {
+      "genrePreset": "都市甜宠",
+      "lockedChoices": {
+        "emotion_logic": "sweet",
+        "V05_genreFramework": "甜宠",
+        "R01_ep1_opening5s": "emotion_hit",
+        "V04_episodeRhythm": "strict_31545",
+        "C03_dialogueDensity": "short_drama_high",
+        "O01_openingProfile": "O2_contrast_reveal"
+      },
+      "deepDefaults": {
+        "D01_nameMap": "modernize",
+        "D04_settingProfile": { "era": "当代都市" }
+      }
+    }
+  }
+}

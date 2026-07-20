@@ -1,0 +1,9 @@
+{
+  "fixture": "deepseek-20260716-43ce74.json",
+  "tier": "T3",
+  "exportAllowed": false,
+  "mustBlockIds": ["DG-NAR-SELFCHECK", "DG-LINKAGE-FALSE-GREEN", "LIP-01", "DG-CD-COVERAGE", "DC-16"],
+  "mustWarnIds": ["NAR-14", "NAR-15"],
+  "missingFieldMinCount": 1,
+  "chatRepairTextMustInclude": ["闭环修复清单", "缺失字段", "RH-DC-16"]
+}

@@ -6,6 +6,7 @@ import { validateFields } from "@/middleware/middleware";
 import { useSkill } from "@/utils/agent/skillsTools";
 import { tool, jsonSchema } from "ai";
 import { o_script } from "@/types/database";
+import { extractJobKey, mergeExtractSummary, setExtractSummary } from "@/lib/extractSummaryStore";
 
 const router = express.Router();
 
@@ -42,11 +43,12 @@ type GroupResult = {
 
 /** 将 scriptIds 数组按 groupSize 分组 */
 function chunkArray(arr: number[], groupSize: number): number[][][] {
+  const batchSize = 5;
   const chunks: number[][] = [];
-  for (let i = 0; i < arr.length; i += 5) {
-    chunks.push(arr.slice(i, i + 5));
+  for (let i = 0; i < arr.length; i += batchSize) {
+    chunks.push(arr.slice(i, i + batchSize));
   }
-  const groupChunks = [];
+  const groupChunks: number[][][] = [];
   for (let i = 0; i < chunks.length; i += groupSize) {
     groupChunks.push(chunks.slice(i, i + groupSize));
   }
@@ -85,32 +87,38 @@ export default router.post(
       const { batchScriptIds, newAssets, existingRefs } = result;
       if (!newAssets.length && !existingRefs.length) return;
 
-      // 查询已有资产
       const existingAssets = await u.db("o_assets").where("projectId", projectId).select("id", "name");
       const existingMap = new Map(existingAssets.map((a) => [a.name!, a.id!]));
 
-      // 插入新资产（不在已有列表中的）
       const toInsert = newAssets.filter((asset) => !existingMap.has(asset.name));
+      const skippedNew = newAssets.filter((asset) => existingMap.has(asset.name));
       if (toInsert.length) {
         await u.db("o_assets").insert(
           toInsert.map((asset) => ({
             name: asset.name,
             type: asset.type,
             describe: asset.desc,
+            prompt: asset.desc?.slice(0, 2000) ?? "",
             projectId: projectId,
             startTime: Date.now(),
           })),
         );
       }
 
-      // 重新查询获取完整的 name -> id 映射
+      for (const asset of skippedNew) {
+        await u.db("o_assets")
+          .where({ projectId, name: asset.name })
+          .where(function () {
+            this.whereNull("prompt").orWhere("prompt", "");
+          })
+          .update({ prompt: asset.desc?.slice(0, 2000) ?? "", describe: asset.desc });
+      }
+
       const allAssets = await u.db("o_assets").where("projectId", projectId).select("id", "name");
       const nameToId = new Map(allAssets.map((a) => [a.name, a.id]));
 
-      // 收集所有资产与剧本的关联关系
       const scriptAssetRows: { scriptId: number; assetId: number }[] = [];
 
-      // 新资产的关联
       for (const asset of newAssets) {
         const assetId = nameToId.get(asset.name);
         if (assetId) {
@@ -120,7 +128,6 @@ export default router.post(
         }
       }
 
-      // 已有资产的关联
       for (const ref of existingRefs) {
         const assetId = nameToId.get(ref.name);
         if (assetId) {
@@ -130,22 +137,31 @@ export default router.post(
         }
       }
 
-      // 去重：相同 scriptId + assetId 只保留一条
       const uniqueRows = [...new Map(scriptAssetRows.map((r) => [`${r.scriptId}_${r.assetId}`, r])).values()];
 
-      // 先删除本批 scriptId 的旧关联，再插入新的
       await u.db("o_scriptAssets").whereIn("scriptId", batchScriptIds).delete();
       if (uniqueRows.length) {
         await u.db("o_scriptAssets").insert(uniqueRows);
       }
 
-      // 本批成功的剧本状态更新为 1（成功）
       await u.db("o_script").whereIn("id", batchScriptIds).where("projectId", projectId).update({
         extractState: 1,
         errorReason: null,
       });
+
+      const jobKey = extractJobKey(projectId, scriptIds as number[]);
+      mergeExtractSummary(jobKey, {
+        projectId,
+        scriptIds: batchScriptIds,
+        new: toInsert.length,
+        linked: uniqueRows.length,
+        existing: existingRefs.length + skippedNew.length,
+        skipped: skippedNew.length,
+      });
     }
-    res.send(success("开始提取资产"));
+    const jobKey = extractJobKey(projectId, scriptIds as number[]);
+    setExtractSummary(jobKey, { projectId, scriptIds: scriptIds as number[], new: 0, linked: 0, existing: 0, skipped: 0, errors: [] });
+    res.send(success({ message: "开始提取资产", jobKey, extractStateEnum: { queued: 2, running: 0, ok: 1, fail: -1 } }));
 
     function processGroup(group: number[][][]) {
       group.map(async (itemIds) => {
@@ -165,7 +181,17 @@ export default router.post(
             }
           }
         }
-        if (!validScripts.length) return;
+        if (!validScripts.length) {
+          const stuckIds = (itemIds as number[][]).flat();
+          if (stuckIds.length) {
+            await u.db("o_script")
+              .where("projectId", projectId)
+              .whereIn("id", stuckIds)
+              .whereIn("extractState", [0, 2])
+              .update({ extractState: -1, errorReason: "提取任务未执行（状态异常，请重试）" });
+          }
+          return;
+        }
         const validScriptIds = validScripts.map((v) => v.id);
         // 修改状态为正在提取中
         await u.db("o_script").where("projectId", projectId).whereIn("id", validScriptIds).update({

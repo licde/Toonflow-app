@@ -1,0 +1,18 @@
+{
+  "version": "2.0.1",
+  "infoGapTypes": ["audience_knows_character_not", "character_knows_audience_not", "partial_both", "none"],
+  "forbiddenSuspense": ["opaque_mystery", "exposition_dump", "self_reveal_dialogue"],
+  "dialogueFunctions": ["advance_plot", "character_voice", "conflict_escalate", "deliver_info", "emotion_hit", "subtext"],
+  "causalityTypes": ["event", "motivation", "information", "emotion", "visual", "dialogue"],
+  "avBeatRule": "visualAction_is_cause_dialogue_is_effect",
+  "densityBudget": {
+    "emotion": { "ep1_opening": "high", "body": "spring" },
+    "information": { "ep1_first30s_max": 1 },
+    "plot": { "minReversalPerEp": 1 }
+  },
+  "tierRules": {
+    "T1": { "requireLedger": false, "requireShotDesign": false },
+    "T2": { "requireLedger": true, "requireShotDesign": false },
+    "T3": { "requireLedger": true, "requireShotDesign": true, "requireFunctionTags": true }
+  }
+}

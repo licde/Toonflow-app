@@ -3,7 +3,8 @@ import u from "@/utils";
 import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
-import { id } from "zod/locales";
+import { invalidateStoryboardsForAsset } from "@/ruleEngine/heal/applyStoryboardLifecycle";
+
 const router = express.Router();
 
 export default router.post(
@@ -21,6 +22,8 @@ export default router.post(
       assetsId: id,
     });
     await u.db("o_assets").where({ id }).update({ flowId, imageId });
-    res.status(200).send(success({ message: "更新提示词成功" }));
+    // Look change → invalidate linked storyboard stills
+    const invalidated = await invalidateStoryboardsForAsset(u.db, id).catch(() => 0);
+    res.status(200).send(success({ message: "更新提示词成功", invalidatedStoryboards: invalidated }));
   },
 );

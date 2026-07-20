@@ -1,5 +1,5 @@
 {
-  "_comment": "G91 golden · 运镜非法 DC-09 WARN + PR-CAM-01",
+  "_comment": "G91 golden · 运镜非法 DC-09 BLOCK + PR-CAM-01（transition 不在 camera_motion_whitelist）",
   "bundleVersion": "browser-chat-optimized",
   "rulePackVersion": "2.0.1",
   "bundleType": "script",

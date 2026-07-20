@@ -1,5 +1,6 @@
 import type { ProductionClosureCheck, ScriptBundle } from "./types";
 import { readFixtureJson } from "../utils/fixturesPath";
+import { loadVideoAudioPolicy, loadFxFeasibilityMatrix, normalizeFxLevel } from "../fixtures/policyFixtures";
 
 
 
@@ -17,8 +18,20 @@ interface ChecklistItem {
 
 
 
-type ShotRow = {
+function resolveBundleAudioPolicy(bundle: ScriptBundle): string {
+  const raw = bundle.videoAudioPolicy;
+  if (typeof raw === "string") return raw;
+  if (raw && typeof raw === "object" && "defaultPolicy" in raw) {
+    return String((raw as { defaultPolicy?: string }).defaultPolicy ?? "native");
+  }
+  return loadVideoAudioPolicy().defaultPolicy ?? "native";
+}
 
+function isFxLevel(item: { level?: string; feasibility?: string }, level: string): boolean {
+  return normalizeFxLevel(item) === level;
+}
+
+type ShotRow = {
   shotIndex?: number;
 
   duration?: number;
@@ -157,16 +170,13 @@ function auditIdentity(bundle: ScriptBundle): ProductionClosureCheck {
 
 
 function auditFx(bundle: ScriptBundle): ProductionClosureCheck {
-
-  const audit = bundle.fxFeasibilityAudit as { items?: { feasibility?: string; postProductionOnly?: boolean }[] } | undefined;
-
+  const audit = bundle.fxFeasibilityAudit as { items?: { feasibility?: string; level?: string; postProductionOnly?: boolean }[] } | undefined;
+  const matrix = loadFxFeasibilityMatrix();
   if (!audit?.items?.length) {
-
-    return { id: "PC-02", passed: true, message: "无 fxFeasibilityAudit", severity: "INFO" };
-
+    return { id: "PC-02", passed: true, message: matrix.version ? "无 fxFeasibilityAudit" : "无 fxFeasibilityAudit", severity: "INFO" };
   }
 
-  const f5 = audit.items.filter((i) => i.feasibility === "F5");
+  const f5 = audit.items.filter((i) => isFxLevel(i, "F5"));
 
   return {
 
@@ -466,7 +476,7 @@ function auditAud(bundle: ScriptBundle): ProductionClosureCheck {
 
   const audit = getModalityAudit(bundle);
 
-  const policy = (bundle as ScriptBundle & { videoAudioPolicy?: string; audioRoute?: string }).videoAudioPolicy;
+  const policy = resolveBundleAudioPolicy(bundle);
 
   if (hasModalityBlock(audit, "AUD")) {
 
@@ -588,7 +598,7 @@ function auditFxModality(bundle: ScriptBundle): ProductionClosureCheck {
 
   }
 
-  const f5 = audit.items.filter((i) => i.feasibility === "F5" && !i.degradeHint);
+  const f5 = audit.items.filter((i) => isFxLevel(i, "F5") && !i.degradeHint);
 
   if (f5.length) {
 
@@ -606,7 +616,7 @@ function auditFxModality(bundle: ScriptBundle): ProductionClosureCheck {
 
   }
 
-  const f4missing = audit.items.filter((i) => i.feasibility === "F4" && !i.postProductionOnly);
+  const f4missing = audit.items.filter((i) => isFxLevel(i, "F4") && !i.postProductionOnly);
 
   if (f4missing.length) {
 

@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-07-14T09:17:17.818Z",
+  "rows": [
+    {
+      "domain": "ADP",
+      "spec": "OK",
+      "schema": "OK",
+      "forward": "OK",
+      "audit": "OK",
+      "reverse": "OK",
+      "repair": "OK",
+      "smart": "OK"
+    },
+    {
+      "domain": "RET",
+      "spec": "OK",
+      "schema": "OK",
+      "forward": "OK",
+      "audit": "OK",
+      "reverse": "OK",
+      "repair": "OK",
+      "smart": "OK"
+    },
+    {
+      "domain": "NAR",
+      "spec": "OK",
+      "schema": "OK",
+      "forward": "OK",
+      "audit": "OK",
+      "reverse": "OK",
+      "repair": "OK",
+      "smart": "OK"
+    },
+    {
+      "domain": "PKG",
+      "spec": "OK",
+      "schema": "OK",
+      "forward": "OK",
+      "audit": "OK",
+      "reverse": "OK",
+      "repair": "OK",
+      "smart": "OK"
+    },
+    {
+      "domain": "GEN",
+      "spec": "OK",
+      "schema": "OK",
+      "forward": "OK",
+      "audit": "OK",
+      "reverse": "OK",
+      "repair": "OK",
+      "smart": "OK"
+    },
+    {
+      "domain": "DSG",
+      "spec": "OK",
+      "schema": "OK",
+      "forward": "OK",
+      "audit": "OK",
+      "reverse": "OK",
+      "repair": "OK",
+      "smart": "OK"
+    },
+    {
+      "domain": "VIR",
+      "spec": "OK",
+      "schema": "OK",
+      "forward": "OK",
+      "audit": "OK",
+      "reverse": "OK",
+      "repair": "OK",
+      "smart": "OK"
+    },
+    {
+      "domain": "MOD",
+      "spec": "OK",
+      "schema": "OK",
+      "forward": "OK",
+      "audit": "OK",
+      "reverse": "OK",
+      "repair": "OK",
+      "smart": "OK"
+    }
+  ],
+  "gapCount": 0,
+  "allClosed": true
+}

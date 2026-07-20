@@ -6,7 +6,7 @@ export interface ClosureCheck {
   id: string;
   passed: boolean;
   message?: string;
-  severity?: "BLOCK" | "WARN" | "INFO";
+  severity?: "BLOCK" | "WARN" | "INFO" | "OPTIMIZE";
 }
 
 export interface ReverseHint {
@@ -26,11 +26,49 @@ export interface RepairHint {
 }
 
 export interface RePushPlanItem {
+  id?: string;
   trigger: string;
   reverseTarget: string;
-  preserveFields: string[];
+  preserveFields?: string[];
   presentationFork?: "fork-A" | "fork-B" | null;
-  status?: "pending" | "applied";
+  reason?: string;
+  status?: "pending" | "applied" | "in_progress" | "completed" | "exhausted";
+}
+
+export interface ClosureReport {
+  missing?: string[];
+  optimize?: string[];
+  chains?: string[];
+}
+
+export interface ChatPromptGap {
+  id: string;
+  shotIndex?: number;
+  severity: "BLOCK" | "WARN";
+  message: string;
+  field?: string;
+}
+
+export interface MergeReport {
+  action: "create" | "update" | "match";
+  scriptId: number;
+  storyboardReplaced: boolean;
+  storyboardCount: number;
+  blueprintMerged: boolean;
+  assetsSeeded?: number;
+  importMode?: string;
+  mergeStrategy?: string;
+}
+
+export interface ExportGateSummary {
+  exportAllowed: boolean;
+  chatRepairText?: string;
+  blocks?: { id: string; message?: string; field?: string; shotIndex?: number }[];
+  warns?: { id: string; message?: string }[];
+  repairHints?: RepairHint[];
+  missingFieldSummary?: string;
+  missingFieldReport?: unknown[];
+  rePushPlan?: RePushPlanItem[];
 }
 
 export interface InspectBundleResult {
@@ -49,13 +87,43 @@ export interface InspectBundleResult {
   repairHints?: RepairHint[];
   rePushPlan?: RePushPlanItem[];
   warnings?: string[];
+  chatPromptGaps?: ChatPromptGap[];
+  closureReport?: ClosureReport;
+  modalityGaps?: unknown[];
+  adaptationGaps?: unknown[];
+  retentionGaps?: unknown[];
+  /** One-copy repair brief when available from inspect/exportGate */
+  chatRepairText?: string;
 }
 
-export interface DryRunImportResponse extends InspectBundleResult {
+export interface DryRunImportResponse {
   preImport?: InspectBundleResult;
   willCreateScript?: boolean;
   willOverwriteLayers?: string[];
   storyboardCount?: number;
+  mergeStrategy?: string;
+  warnings?: string[];
+  closureChecks?: InspectBundleResult["closureChecks"];
+  endpoint?: "ext" | "int";
+  /** SSOT for import preview CTA — wire to RulePanel */
+  exportGate?: ExportGateSummary;
+  chatRepairText?: string;
+  tier?: ClosureTier;
+}
+
+export interface ImportScriptResult {
+  scriptId: number;
+  idMap: Record<string, number>;
+  mergeReport?: MergeReport;
+  preImport?: InspectBundleResult;
+  postImport?: unknown;
+  chatPromptGaps?: ChatPromptGap[];
+  ruleConsistencyGaps?: { id: string; severity: string; message: string; field?: string }[];
+  pathGuard?: { recommended: string; severity: string; message: string };
+  autoDesignJobId?: string;
+  dryRun?: DryRunImportResponse;
+  exportGate?: ExportGateSummary;
+  chatRepairText?: string;
 }
 
 export type ClosureDimension = "dc" | "pc" | "gc" | "ic";
@@ -66,3 +134,47 @@ export const CLOSURE_DIMENSION_LABELS: Record<ClosureDimension, string> = {
   gc: "生成闭环 GC",
   ic: "智能修复 IC",
 };
+
+/** API envelope from backend */
+export interface ApiEnvelope<T> {
+  code: number;
+  data: T;
+  message: string;
+}
+
+export class ApiError extends Error {
+  status: number;
+  details: Record<string, unknown>;
+  chatRepairText?: string;
+
+  constructor(status: number, message: string, details: Record<string, unknown> = {}) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.details = details;
+    this.chatRepairText = typeof details.chatRepairText === "string" ? details.chatRepairText : undefined;
+  }
+}
+
+export async function unwrapApi<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    let details: Record<string, unknown> = {};
+    let message = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body && typeof body === "object") {
+        message = String((body as { message?: string }).message ?? message);
+        details = ((body as { data?: Record<string, unknown> }).data ?? body) as Record<string, unknown>;
+      }
+    } catch {
+      const text = await res.text().catch(() => "");
+      if (text) message = text;
+    }
+    throw new ApiError(res.status, message, details);
+  }
+  const body = await res.json();
+  if (body && typeof body === "object" && "data" in body && "code" in body) {
+    return body.data as T;
+  }
+  return body as T;
+}
