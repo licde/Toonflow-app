@@ -22,7 +22,9 @@ rulePackVersion: "2.0.1"
 - 所有对白以 `{角色名}：{台词}` 格式
 - OS/VO/V.S 单独标注，不混入 △
 - 台词 hash 可计算（无多余空格/标点变异）
-- 单句 ≤20 字，单次 ≤50 字
+- 单句 ≤20 字，单次 ≤50 字；超预算按**决策树**：标点→A 物理拆行；**残句无标点仍超预算→must 重设计或 Confirm B**（非可不手改）；VisBeat→C；`emotion_hit` **必须**同写 `reactionAction`
+- 设计拆分 Confirm：`designSplitOps` / tools `confirm_design_split`；反推修好后 `design_split_forward_reentry`
+- **契约不符＝重设计**：禁止只改 `narrativeSelfcheck.passed`；残句深链 `nar14_residual` → W3
 
 ### W12 冲突驱动
 
@@ -46,38 +48,41 @@ rulePackVersion: "2.0.1"
 
 ## 执行步骤
 
-**步骤 0（强制）**：读取并打印 `planData.narrativeBrief` 摘要；写每场前标注本场兑现的 `retentionBeat` / `infoId` / `reconstructionTrace` 条目。  
-T3：同步写 `narrativeBrief.implementationPlan[]`（每场 `sceneRef` + `fxIntent` 含 **F0** + `avCausality`）；长句 >20 字必须 `dialoguePlan.lines[].splitHint`。  
-**场镜基数 MUST**：`implementationPlan`/`sceneMeta` 条数 = 剧本「场N」数；「接场/同地点续拍」要么换独立场景名（下游 SB `sceneName` 必须不同），要么合并为一场并删除多余 sceneRef。禁止留下无镜可映射的 F1 plan 项。
-
-1. 从骨架提取**当前集**信息（忽略其他集）
-2. 阐述思路 200–300 字
-3. 输出完整 `<scriptItem name="{作品名} EP{NN}：{标题}">` … `</scriptItem>`
-4. 内部跑 R2/W12/W13 清单
-5. 返回简短确认，禁止复述正文
-
-## 格式要点
+**步骤 0（强制）**：调用 `get_viral_writing_context(stageId=W3)`；写每场前标注本场兑现的 `peakId` / `hookId` / `retentionBeat` / `infoId`。  
+**步骤 0b**：按 brief **时长规范**估算对白镜；>20 字 `splitHint`；反应镜 0.8–2s。  
+**步骤 0c（视听配方）**：若 brief 示范含 `weaponId`（如 five_cut_reveal / silence_scream / intimate_ots），sidecar `shotDesignIntent` 须挂 `weaponId`/`sceneRecipeId`/`sfxIntent`；**禁止**写入文学正文括注。  
+T3：同步写 `narrativeBrief.implementationPlan[]`（每场 `sceneRef` + `fxIntent` 含 **F0** + `avCausality`）。  
+**分镜设计意图（sidecar）**：
 
 ```
-1-1 场景名 日/内
-人物：A B
-△环境+动作描写
-A：台词
----
+purpose / emotionGoal / picture / shotSizeIntent / cutIntent / audioIntent / durationSec / peakId|hookId / weaponId / sfxIntent[] / visualBeatTags
 ```
+
+**VisBeat**：`purpose` 映射默认 tags（钩子→reveal）；多拍点须在 SB 拆镜或打齐 tags，禁止「露刃+浅笑」塞进单一脸特写。
+
+**场镜基数 MUST**：`implementationPlan`/`sceneMeta` 条数 = 剧本「场N」数。
+
+1. 从骨架提取**当前集**
+2. 阐述思路（兑现开场钩、付费卡前拍、真爆点）
+3. 输出 `<scriptItem>`
+4. 共生产 tags + 口型 + fx + **shotDesignIntent**（供 designBrief/SB 续读，禁止下游重发明爆点）
+5. 短确认，禁复述正文
 
 ## BLOCK 闸门
 
 | ruleId | 条件 |
 |--------|------|
 | R2 | 台词格式规范，hash 稳定 |
-| W12 | 每场推进冲突，集末有钩子 |
+| W12 | 每场推进冲突，集末有钩子；3-15-45 |
 | W13 | △ 可拍，无技术括注 |
-| L06 | ScriptReadyGate：正文 1000 字内，密度合格 |
+| DEX-SHOT-INTENT | shotDesignIntent 非空且爆点/钩子可回溯 |
+| DEX-TEMPLATE-FILL | mustEmit 填满 |
+| L06 | ScriptReadyGate |
 
 ## 严禁产出
 
-分镜表、景别、运镜、imagePrompt、videoPrompt、audioPrompt。
+分镜表、景别、运镜、imagePrompt、videoPrompt、audioPrompt **写入文学正文**。  
+允许且必须：sidecar `shotDesignIntent`（给 designBrief/SB 执行，SB **不得重发明爆点**）。
 
 ## 下游
 

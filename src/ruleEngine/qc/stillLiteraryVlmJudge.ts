@@ -138,6 +138,10 @@ export async function stillLiteraryVlmJudge(input: {
   items: StillFidelityItem[];
   modelKey?: string;
   judgeFn?: VlmJudgeFn;
+  /** Optional DB for Key preflight + autofallback (gen/vlm vendor decouple) */
+  db?: import("knex").Knex;
+  /** Pre-resolved invoke keys (skip catalog-only path) */
+  invokeKeys?: Array<{ invokeKey: string; display: string }>;
 }): Promise<StillLiteraryVlmJudgeResult> {
   const cfg = readFixtureJson<LoopCfg>("still_visual_fidelity_loop.json", {});
   const vendorPrefix = cfg.vlmVendorPrefix ?? "volcengine";
@@ -180,7 +184,33 @@ export async function stillLiteraryVlmJudge(input: {
     }
   }
 
-  if (!resolved.keys.length) {
+  let keysToTry = input.invokeKeys?.length
+    ? input.invokeKeys
+    : resolved.keys.map((k) => ({ invokeKey: k.invokeKey, display: k.display }));
+
+  if (input.db && !input.invokeKeys?.length) {
+    const { resolveVlmVendorKey, VLM_API_KEY_MISSING } = await import("./vlmKeyResolve");
+    const keyRes = await resolveVlmVendorKey({
+      db: input.db,
+      preferredModelKey: input.modelKey,
+      vendorPrefix,
+    });
+    if (!keyRes.ok || !keyRes.invokeKey) {
+      const vlmError = `${VLM_API_KEY_MISSING}: ${keyRes.errorMessage ?? "缺少API Key"}`.slice(0, 240);
+      emitHealObs("still_fidelity_vlm_error", { reason: vlmError, tried: keyRes.tried });
+      return {
+        ok: false,
+        items: infraUnknownItems(input.items, "vlm_error"),
+        error: vlmError,
+        vlmError,
+        infraFailure: true,
+        triedModels: keyRes.tried,
+      };
+    }
+    keysToTry = [{ invokeKey: keyRes.invokeKey, display: keyRes.display ?? keyRes.invokeKey }];
+  }
+
+  if (!keysToTry.length) {
     const vlmError = `未找到可用 VLM 模型（tried: ${resolved.tried.join(", ") || "none"}）`;
     emitHealObs("still_fidelity_vlm_error", { reason: vlmError, missing: resolved.missing });
     return {
@@ -196,9 +226,10 @@ export async function stillLiteraryVlmJudge(input: {
   const prompt = formatVlmJudgePrompt(input.items, input.description);
   const imageDataUrl = dataUrl(input.imageBase64);
   let lastError = "";
-  let usedModel = resolved.keys[0]!.display;
+  let usedModel = keysToTry[0]!.display;
+  const triedModels = keysToTry.map((k) => k.display);
 
-  for (const entry of resolved.keys) {
+  for (const entry of keysToTry) {
     usedModel = entry.display;
     try {
       const text = await invokeVisionOnce({
@@ -226,18 +257,31 @@ export async function stillLiteraryVlmJudge(input: {
         };
       });
       const ok = items.every((i) => i.pass && !i.unknown);
-      return { ok, items, modelKey: usedModel, triedModels: resolved.tried };
+      return { ok, items, modelKey: usedModel, triedModels };
     } catch (e) {
       lastError = e instanceof Error ? e.message : String(e);
       emitHealObs("still_fidelity_vlm_error", {
         reason: lastError,
         modelKey: entry.display,
-        apiModelName: entry.apiModelName,
       });
+      // Missing key: stop early with stable code
+      if (/缺少API\s*Key|api\s*key/i.test(lastError)) {
+        const { VLM_API_KEY_MISSING } = await import("./vlmKeyResolve");
+        const vlmError = `${VLM_API_KEY_MISSING}: ${lastError}`.slice(0, 240);
+        return {
+          ok: false,
+          items: infraUnknownItems(input.items, "vlm_error"),
+          error: vlmError,
+          vlmError,
+          modelKey: usedModel,
+          infraFailure: true,
+          triedModels,
+        };
+      }
     }
   }
 
-  const triedNote = ` tried=[${resolved.tried.join("|")}]`;
+  const triedNote = ` tried=[${triedModels.join("|")}]`;
   const vlmError = `${(lastError || "vlm_error").slice(0, 180)}${triedNote}`.slice(0, 240);
   return {
     ok: false,
@@ -246,7 +290,7 @@ export async function stillLiteraryVlmJudge(input: {
     vlmError,
     modelKey: usedModel,
     infraFailure: true,
-    triedModels: resolved.tried,
+    triedModels,
   };
 }
 

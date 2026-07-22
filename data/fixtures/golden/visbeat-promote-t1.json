@@ -1,0 +1,15 @@
+{
+  "id": "visbeat-promote-t1",
+  "candidate": {
+    "id": "t1",
+    "tag": "reveal",
+    "pattern": "冷光",
+    "hits": 10,
+    "falsePositives": 0,
+    "status": "candidate"
+  },
+  "expect": {
+    "legislates": false,
+    "mustConfirmBeforeL0": true
+  }
+}

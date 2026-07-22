@@ -47,8 +47,8 @@ const COPY: Record<
     userMessageKey: "gate.raise_duration",
   },
   split_shot: {
-    userMessage: "一句太长，建议拆成两镜",
-    ctaLabel: "查看拆镜方案",
+    userMessage: "一句太长/多拍冲突，请 Confirm 设计拆分（Orchestrator），勿只写 hint",
+    ctaLabel: "打开拆镜确认",
     userMessageKey: "gate.split_shot",
   },
   soft_patch: {
@@ -87,13 +87,14 @@ export function buildPrimaryBlock(
     fieldPath?: string;
     stage?: GateStage;
     userMessageOverride?: string;
+    ctaLabelOverride?: string;
   },
 ): PrimaryBlock {
   const base = COPY[nextStep] ?? COPY.chat_repair;
   return {
     primaryNextStep: nextStep,
     userMessage: opts?.userMessageOverride ?? base.userMessage,
-    ctaLabel: base.ctaLabel,
+    ctaLabel: opts?.ctaLabelOverride ?? base.ctaLabel,
     userMessageKey: base.userMessageKey,
     suggestedValue: opts?.suggestedValue,
     fieldPath: opts?.fieldPath,

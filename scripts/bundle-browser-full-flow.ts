@@ -1,5 +1,5 @@
 /**
- * 生成 browser_full_flow.bundle.md v2.0.1
+ * 生成 browser_full_flow.bundle.md v2.1.0
  * yarn bundle:browser-full-flow [--tier T1|T3]
  */
 import fs from "fs";
@@ -46,17 +46,18 @@ function readFixture(name: string): string {
 
 const header = `---
 name: browser_full_flow_bundle
-description: Browser Chat v2.0.1 全流程单文件 bundle（yarn bundle:browser-full-flow 生成）
-version: "2.0.1"
-rulePackVersion: "2.0.1"
+description: Browser Chat v2.1.0 全流程单文件 bundle（yarn bundle:browser-full-flow 生成）
+version: "2.1.0"
+rulePackVersion: "2.1.0"
 mode: external
 generated: true
 supersedes: design_flow.bundle.md v1.1
 ---
 
-# Browser Chat 全流程 · 优化版 v2.0.1
+# Browser Chat 全流程 · 优化版 v2.1.0
 
 > 生成时间：${new Date().toISOString()} · rulePack ${bundleManifest.rulePackVersion} · tier ${tierArg} · 勿手改，改源 skill 后重跑 \`yarn bundle:browser-full-flow\`
+> 说明：**Chat bundle ≠ 后端 API**。改 skill/fixture 才需本命令；改 \`src/ruleEngine\` TS 需重启服务，不会体现在本文件。
 
 `;
 
@@ -65,7 +66,7 @@ const allSections: [string, string][] = [
   ["§1 输入契约", readChat("00_index.md") + "\n\n" + readChat("appendix/O_production_closure.md")],
   ["§2 改编路径 P", readChat("stages/P0_precheck.md") + "\n\n" + readChat("stages/P03_matrix.md") + "\n\n" + readChat("stages/P06_story_core.md") + "\n\n" + readChat("stages/P08_postcheck.md") + "\n\n" + readChat("stages/P09_reinforcement.md") + "\n\n" + readFixture("adaptation_matrix_catalog.json")],
   ["§3 G 层锚点", readChat("stages/G_anchors.md")],
-  ["§3.5 编剧爆款思维", readChat("viral_screenwriter_craft.md")],
+  ["§3.5 编剧爆款思维", readChat("viral_adaptation_playbook.md") + "\n\n" + readChat("viral_screenwriter_craft.md")],
   ["§4 W 阶段", readChat("stages/W1_skeleton.md") + "\n\n" + readChat("stages/W2_strategy.md") + "\n\n" + readChat("stages/W3_script.md") + "\n\n" + readChat("stages/W3_narrative_selfcheck.md") + "\n\n" + readChat("corridor/corridor_W3.md")],
   ["§5.0 质量走廊", readChat("corridor/corridor_GB.md") + "\n\n" + readChat("corridor/corridor_SB.md") + "\n\n" + readChat("corridor/corridor_EN.md")],
   ["§5.1 台词链", readChat("stages/linkage_continuity.md")],

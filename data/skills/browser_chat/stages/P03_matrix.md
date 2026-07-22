@@ -14,8 +14,11 @@ rulePackVersion: "2.0.1"
 
 - `planData.preCheck` ruleAudit.pass = true
 - 读取 `data/fixtures/adaptation_matrix_catalog.json` + 项目 `adaptationProfile.lockedChoices`
+- 读取当前 `genreTemplate.packId` 与 `viralWritingContext`（P0 已抓 peak/hook）
+- V05 类型框架须与 packId 可仲裁（DEX-PACK-RECONCILE）
 - **须** `userConfirmed: true`（API `confirmMatrixChoices`）后才可进 P06
 - rulePackVersion `2.0.1`
+- 深度维含 D05 故事内核平移、D06 内容平移（extensible 须 `viralDerivation` 补本剧特有爆点钩子）
 
 ## 12 维矩阵
 

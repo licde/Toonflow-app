@@ -17,6 +17,7 @@ import {
   type IdentityImageGateResult,
 } from "./identityAssetGate";
 import { loadProjectBlueprint } from "../storage/episodePackageStore";
+import { assetDisplayName } from "../bundle/assetLabel";
 
 export type BoundAssetRef = {
   assetId: number;
@@ -84,7 +85,7 @@ export async function blueprintToBundle(db: Knex, projectId: number): Promise<Sc
           ? Object.fromEntries(
               Object.entries(rawCa as Record<string, unknown>).map(([k, v]) => [
                 k,
-                typeof v === "string" ? v : (v as { name?: string })?.name ?? k,
+                assetDisplayName(v) || k,
               ]),
             )
           : undefined,

@@ -5,10 +5,12 @@
 import { measureDialogue, splitDialogueUtterances } from "../dialogueMetrics";
 import { VENDOR_DURATION_BUCKETS } from "../vendor-packs/videoVendorPack";
 import type { PreDesignShot } from "../bundle/types";
+import { asDialogueLineObjects } from "../design/dialogueCoverage";
+import { resolveSpeechRateCps } from "./durationNorms";
 
 export type EmotionBand = "low" | "mid" | "high" | "peak";
 
-/** Extra seconds atop lipMin by emotion band (plan §11). */
+/** Extra seconds atop lipMin by emotion band (plan §11). Overridden by norms.emotionHold when V2. */
 export const EMOTION_FLOOR_SEC: Record<EmotionBand, number> = {
   low: 0,
   mid: 0.5,
@@ -72,16 +74,27 @@ export function vendorMaxForId(vendorId?: string | null): number {
 
 export function resolveRequiredDuration(
   shot: PreDesignShot | Record<string, unknown>,
-  opts?: { vendorId?: string | null; episodeCapRemaining?: number },
+  opts?: {
+    vendorId?: string | null;
+    episodeCapRemaining?: number;
+    /** Enable duration_norms cps (meta.pillarsDurationV2) */
+    pillarsDurationV2?: boolean | null;
+  },
 ): RequiredDurationResult {
   const texts = dialogueTexts(shot);
   const joined = texts.join("");
-  const metrics = measureDialogue({ text: joined });
+  const rate = resolveSpeechRateCps({ pillarsDurationV2: opts?.pillarsDurationV2 });
+  const metrics = measureDialogue({ text: joined, speechSpeed: rate.cps });
   const vo = texts.length > 0 && isVoOrOffscreen(texts);
   const lipRequired = metrics.lipRequired && !vo;
   const lipMin = lipRequired ? Math.ceil(metrics.minDurationSec) : 0;
   const band = emotionBandOf(shot);
-  const emotionFloor = lipRequired || texts.length > 0 ? EMOTION_FLOOR_SEC[band] : 0;
+  const bandFloor = lipRequired || texts.length > 0 ? EMOTION_FLOOR_SEC[band] : 0;
+  // V2: use norms emotionHold as floor floor when higher than band mid for lip shots
+  const emotionFloor =
+    rate.fromNorms && lipRequired
+      ? Math.max(bandFloor, rate.emotionHoldSec)
+      : bandFloor;
 
   const s = shot as PreDesignShot;
   const authorDuration = Math.max(
@@ -99,9 +112,18 @@ export function resolveRequiredDuration(
   const canSilentRaise =
     !needsSplit && !overVendorMax && authorDuration > 0 && authorDuration < requiredInt;
 
-  const lines = (s.narrative?.dialogue?.lines ?? []) as { splitHint?: string; reactionAction?: string }[];
-  const splitHint =
-    lines.find((l) => l.splitHint)?.splitHint ?? lines.find((l) => l.reactionAction)?.reactionAction;
+  // Canonical splitHint only — never fall back to reactionAction prose (false-green / UX leak).
+  const lines = asDialogueLineObjects(s.narrative?.dialogue?.lines);
+  const CANON = new Set(["reaction_shot", "speak_react", "reveal_then_reaction", "clause_split"]);
+  let splitHint: string | undefined;
+  for (const l of lines) {
+    const h = String(l.splitHint ?? "").trim();
+    if (!h) continue;
+    if (CANON.has(h) || /^[a-z][a-z0-9_]*$/i.test(h)) {
+      splitHint = h;
+      break;
+    }
+  }
 
   let finalRequired = requiredInt;
   if (opts?.episodeCapRemaining != null && opts.episodeCapRemaining >= 0) {

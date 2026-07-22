@@ -7,6 +7,10 @@ import { resolveRequiredDuration } from "./resolveRequiredDuration";
 import { hasAudioDialogueContradiction, hasFiveSectionPlaceholders } from "./finalizeFiveSectionPrompt";
 import { VENDOR_DURATION_BUCKETS } from "../vendor-packs/videoVendorPack";
 import type { PreDesignShot } from "../bundle/types";
+import { needsNar14Split } from "../nar14ClauseSplit";
+import { evaluateVisBeatConflict } from "../design/visualBeatPolicy";
+import { checkReverseLoop } from "../design/visBeatLifecycle";
+import { detectLipSplitPressure, readCanonicalSplitHint } from "../design/lipSplit";
 
 export type QualityDecisionKind = "auto" | "soft_patch" | "split_shot" | "rePush_design" | "soft_defer";
 
@@ -24,6 +28,8 @@ export interface QualityDecisionInput {
   /** Batch mode → prefer soft_defer over hard fail for L3/L4 */
   batchMode?: boolean;
   gateBlocks?: BurnGateBlock[];
+  /** VisBeat meta (pillarsVisBeatV2); default shadow — only enforce BLOCKS burn */
+  visBeatMeta?: Record<string, unknown> | null;
 }
 
 export interface QualityDecisionResult {
@@ -58,13 +64,13 @@ function vendorMaxBucket(vendorId?: string | null): number {
   return Math.max(...buckets);
 }
 
-/** NAR-14: long line without splitHint. */
+/** NAR-14: clause over V10 budget without splitHint. */
 export function longLineNeedsSplit(shot?: PreDesignShot | null): { need: boolean; splitHint?: string } {
   const lines = shot?.narrative?.dialogue?.lines ?? [];
   for (const l of lines) {
     const text = String(l.text ?? "").trim();
     const hint = (l as { splitHint?: string }).splitHint;
-    if (text.length > 20 && !hint) return { need: true, splitHint: "reaction_shot" };
+    if (needsNar14Split(text, { splitHint: hint })) return { need: true, splitHint: "reaction_shot" };
   }
   return { need: false };
 }
@@ -198,15 +204,95 @@ export function decideVideoQuality(input: QualityDecisionInput): QualityDecision
     }
   }
 
-  // L3: lip over vendor max OR needsSplit OR F3 OR NAR-14
-  const lipOver = Boolean(lip && lip.lipMin > vmax);
-  const multiSplit = Boolean(lip?.needsSplit);
+  // L3.4: forbid burning unsplittable / expanded-away parent (multi-row handoff)
+  if (
+    input.shot &&
+    ((input.shot as { visBeatUnsplittable?: boolean }).visBeatUnsplittable ||
+      (input.shot as { visBeatExpandedAway?: boolean }).visBeatExpandedAway ||
+      (input.shot as { burnParentForbidden?: boolean }).burnParentForbidden)
+  ) {
+    return wrap(
+      "split_shot",
+      false,
+      [
+        ...baseBlocks,
+        {
+          id: "VIS-MULTI-BEAT",
+          message: "禁止只烧未拆父镜；请烧拆后子镜首帧/VID",
+          reverseTrigger: "visual_multi_beat",
+        },
+      ],
+      { reasons: ["vis_parent_burn_forbidden"], nextStep: "split_shot", splitHint: "reveal_then_reaction" },
+      input.batchMode,
+    );
+  }
+
+  // L3.5: VisBeat multi-beat unresolved (enforce only)
+  if (input.shot && !(input.shot as { visBeatOverride?: unknown }).visBeatOverride) {
+    const shot = input.shot as PreDesignShot & {
+      visualBeatTags?: unknown;
+      weaponId?: string;
+      visualDescription?: string;
+      shotSize?: string;
+    };
+    const ev = evaluateVisBeatConflict({
+      visualBeatTags: shot.visualBeatTags,
+      shotSize: shot.shotSize ?? (shot.narrative as { shotSize?: string } | undefined)?.shotSize,
+      picture: shot.visualDescription,
+      weaponId: shot.weaponId,
+      meta: input.visBeatMeta ?? { pillarsVisBeatV2: "shadow" },
+    });
+    if (ev.action === "must_split" && !ev.ok) {
+      const loop = checkReverseLoop("visual_multi_beat", String(shot.shotIndex ?? "x"));
+      if (!loop.allow) {
+        return wrap(
+          "rePush_design",
+          false,
+          [
+            ...baseBlocks,
+            {
+              id: "VIS-MULTI-BEAT",
+              message: `${ev.explain ?? "视觉拍点须拆镜"}（反推循环上限，请人工确认）`,
+              reverseTrigger: "visual_multi_beat",
+            },
+          ],
+          { reasons: ["vis_multi_beat_loop_cap"], nextStep: "chat_repair", splitHint: "reveal_then_reaction" },
+          input.batchMode,
+        );
+      }
+      return wrap(
+        "split_shot",
+        false,
+        [
+          ...baseBlocks,
+          {
+            id: "VIS-MULTI-BEAT",
+            message: ev.explain ?? "揭示与脸特写同镜冲突，须拆镜",
+            reverseTrigger: "visual_multi_beat",
+          },
+        ],
+        { reasons: ["vis_multi_beat"], nextStep: "split_shot", splitHint: ev.template ?? "reveal_then_reaction" },
+        input.batchMode,
+      );
+    }
+  }
+
+  // L3: lip over vendor max OR needsSplit OR F3 OR NAR-14 (predicates via lipSplit SSOT)
+  const pressure = input.shot ? detectLipSplitPressure(input.shot, { vendorId: input.vendorId }) : null;
+  const lipOver = Boolean(pressure?.lipOver || (lip && lip.lipMin > vmax));
+  const multiSplit = Boolean(pressure?.needsSplit ?? lip?.needsSplit);
+  const overVendor = Boolean(pressure?.overVendorMax || lip?.overVendorMax);
   const fxSplit = grade === "F3";
-  if (lipOver || multiSplit || fxSplit || nar.need) {
-    const splitHint = lip?.splitHint ?? nar.splitHint ?? "reaction_shot";
+  if (lipOver || multiSplit || overVendor || fxSplit || nar.need) {
+    const splitHint =
+      readCanonicalSplitHint(input.shot ?? {}) ??
+      pressure?.splitHint ??
+      (nar.need ? nar.splitHint : undefined) ??
+      "reaction_shot";
     const reasons = [
-      ...(lipOver ? [`lipMin_${lip!.lipMin}_gt_vendorMax_${vmax}`] : []),
       ...(multiSplit ? ["multi_line_one_shot"] : []),
+      ...(lipOver ? [`lipMin_${lip?.lipMin ?? pressure?.lipMin}_gt_vendorMax_${vmax}`] : []),
+      ...(!lipOver && overVendor ? ["lip_over_vendor"] : []),
       ...(fxSplit ? ["fx_f3_split"] : []),
       ...(nar.need ? ["nar14_long_line"] : []),
     ];
@@ -214,15 +300,15 @@ export function decideVideoQuality(input: QualityDecisionInput): QualityDecision
     if (nar.need) {
       blocks.push({
         id: "NAR-14",
-        message: `长台词缺 splitHint，建议拆镜: ${splitHint}`,
-        reverseTrigger: "narrative_split_hint",
+        message: `长台词缺 splitHint，须 Confirm 拆镜或改短（勿只写散文 hint）: ${splitHint}`,
+        reverseTrigger: "nar14_split",
       });
     }
-    if (lipOver || multiSplit) {
+    if (lipOver || multiSplit || overVendor) {
       blocks.push({
         id: "LIP-01",
-        message: `需拆镜: ${reasons.join(",")}`,
-        reverseTrigger: "pr_lip_duration",
+        message: `需拆镜: ${reasons.filter((r) => !r.startsWith("fx_") && r !== "nar14_long_line").join(",") || reasons.join(",")}`,
+        reverseTrigger: multiSplit || overVendor || lipOver ? "pr_lip_duration" : "pr_lip_duration",
       });
     }
     if (fxSplit) {
@@ -232,18 +318,17 @@ export function decideVideoQuality(input: QualityDecisionInput): QualityDecision
         reverseTrigger: "fx_infeasible",
       });
     }
-    const shotWithSplitHint = input.shot ? ensureSplitHintOnShot(input.shot, splitHint) : undefined;
+    // Do NOT invent/write splitHint onto shot here — false-green; Confirm/Orchestrator owns physical split.
     return wrap(
       "split_shot",
       false,
       blocks,
       {
-        reasons,
+        reasons: [...reasons, "design_split_handoff:confirmClusterSplit|forwardReentry"],
         splitHint,
-        lipMin: lip?.lipMin,
+        lipMin: lip?.lipMin ?? pressure?.lipMin,
         vendorMax: vmax,
         nextStep: "split_shot",
-        shotWithSplitHint,
       },
       input.batchMode,
     );
@@ -294,7 +379,7 @@ export function ensureSplitHintOnShot(shot: PreDesignShot, hint = "reaction_shot
   let touched = false;
   const nextLines = lines.map((l) => {
     const text = String(l.text ?? "").trim();
-    if (text.length > 20 && !(l as { splitHint?: string }).splitHint) {
+    if (needsNar14Split(text, { splitHint: (l as { splitHint?: string }).splitHint })) {
       touched = true;
       return { ...l, splitHint: hint };
     }
@@ -348,7 +433,7 @@ export function serializeQualityDecision(
 
 /**
  * Write suggested splitHint onto the episode package shot (no physical shot split).
- * Best-effort: returns false if package/shot missing.
+ * Only accepts canonical enum hints; never prose. Prefer Confirm/Orchestrator over this.
  */
 export async function persistSplitHintSuggestion(opts: {
   db: import("knex").Knex;
@@ -357,13 +442,15 @@ export async function persistSplitHintSuggestion(opts: {
   storyboardId?: number | null;
   splitHint: string;
 }): Promise<boolean> {
+  const hint = String(opts.splitHint ?? "").trim();
+  if (!hint || !/^[a-z][a-z0-9_]*$/i.test(hint)) return false;
   if (opts.storyboardId == null) return false;
   const { loadEpisodePackage, saveEpisodePackage } = await import("../storage/episodePackageStore");
   const pkg = await loadEpisodePackage(opts.db, opts.projectId, opts.scriptId);
   if (!pkg?.shots?.length) return false;
   const idx = pkg.shots.findIndex((s) => s.storyboardId === opts.storyboardId);
   if (idx < 0) return false;
-  const patched = ensureSplitHintOnShot(pkg.shots[idx] as unknown as PreDesignShot, opts.splitHint);
+  const patched = ensureSplitHintOnShot(pkg.shots[idx] as unknown as PreDesignShot, hint);
   pkg.shots[idx] = patched as unknown as (typeof pkg.shots)[number];
   await saveEpisodePackage(opts.db, pkg);
   return true;

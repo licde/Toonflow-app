@@ -1,0 +1,21 @@
+{
+  "id": "visbeat-untitled-1-reveal-cu",
+  "description": "Untitled-1 同形：露刃/揭示 + 纯脸特写同镜 → must_split",
+  "shot": {
+    "clientId": "untitled-1-s3",
+    "shotIndex": 3,
+    "visualBeatTags": ["reveal", "prop_insert"],
+    "shotSize": "特写",
+    "visualDescription": "镜头下移露出匕首冷光，她浅笑",
+    "narrative": {
+      "shotSize": "特写",
+      "dialogue": { "lines": [{ "speaker": "沈清漪", "text": "你以为呢" }] }
+    }
+  },
+  "expect": {
+    "mustSplit": true,
+    "template": "reveal_then_reaction",
+    "matrixRowId": "reveal_face_cu",
+    "suggestorTagsAny": ["reveal", "reaction"]
+  }
+}

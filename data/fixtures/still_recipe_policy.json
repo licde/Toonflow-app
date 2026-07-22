@@ -1,0 +1,107 @@
+{
+  "version": "1.0.0",
+  "description": "Still recipe policy SSOT — identity lock / continuity / egress self-heal. Extend by adding JSON rows, not if/else.",
+  "identityLock": {
+    "selectBy": "charCodeCount",
+    "neverUseReferenceUrlCountForMulti": true,
+    "single": "锁定角色定妆参考脸型，禁止重塑五官身份",
+    "multiChar": "严格锁定多参考身份：脸型来自角色定妆参考，环境来自场景参考，禁止把脸融进背景",
+    "seatingIdentity": "身份锁定：脸型来自角色定妆参考；姿态与家具以描写为准，场景参考只补背景木作/匾额，不得替换太师椅或蒲团",
+    "seatingSeatLock": "座次锁：场景参考仅作环境纹理，禁止把香案/供桌/站立礼佛仪式升为主构图；太师椅与蒲团必须按描写出现"
+  },
+  "continuity": {
+    "maxChars": 40,
+    "omitNeighborShotSize": true,
+    "omitSoftRefPhrase": true,
+    "ecuOmitEntirely": true,
+    "ecuShotSizePattern": "ecu|extreme|大特|特写|\\bcu\\b"
+  },
+  "recipeLayerPrefixes": [
+    "背景弱化",
+    "景别：",
+    "必须出现",
+    "锁定角色",
+    "严格锁定",
+    "身份锁定",
+    "座次锁",
+    "权力位",
+    "continuity:",
+    "identity[",
+    "expression detail belongs",
+    "soft ref"
+  ],
+  "egressForbiddenPatterns": [
+    {
+      "id": "multi_lock_single_cref",
+      "when": "charCodeCount<2",
+      "re": "严格锁定多参考身份[^。；;]*[。；;]?",
+      "replaceWith": "single"
+    },
+    {
+      "id": "phantom_dual_face",
+      "when": "charCodeCount<2",
+      "re": "[\\u4e00-\\u9fff（）()A-Za-z\\s]{2,48}(?:与[\\u4e00-\\u9fff（）()A-Za-z\\s]{2,24}){1,4}不同脸[^。；;\\n]*[。；;]?",
+      "replaceWith": ""
+    },
+    {
+      "id": "phantom_dual_face_os",
+      "re": "[\\u4e00-\\u9fff]{2,8}\\s*[（(]\\s*OS\\s*[）)].{0,40}不同脸[^。；;\\n]*[。；;]?",
+      "replaceWith": ""
+    },
+    {
+      "id": "en_face_identity_contract",
+      "re": "face\\s+identity\\s+from\\s+character\\s+refs[^.；;]*|environment\\s+from\\s+scene\\s+refs[^.；;]*|do\\s+not\\s+blend\\s+faces\\s+into\\s+background[^.；;]*",
+      "replaceWith": ""
+    },
+    {
+      "id": "design_filler_instant",
+      "re": "[\\u4e00-\\u9fff（）()A-Za-z]*对白瞬间神态[^。；;\\n]*[。；;]?",
+      "replaceWith": ""
+    },
+    {
+      "id": "generic_mouth",
+      "re": "嘴部自然微张或闭合|目光交汇，嘴部自然微张[^。；;]*[。；;]?",
+      "replaceWith": ""
+    },
+    {
+      "id": "en_micro_locked_face",
+      "re": "subtle\\s+micro[- ]?expression[^.；;]*?(?:face|identity)[^.；;]*[.;]?",
+      "replaceWith": ""
+    },
+    {
+      "id": "en_micro_generic",
+      "re": "\\b(?:micro[- ]?expression|subtle smile|slight smirk)\\b[^.，。；;]*",
+      "replaceWith": ""
+    },
+    {
+      "id": "en_expression_detail_belongs",
+      "re": "expression\\s+detail\\s+belongs\\s+in\\s+storyboard\\s+still[^.；;]*[.;]?",
+      "replaceWith": ""
+    },
+    {
+      "id": "en_soft_ref",
+      "re": "soft\\s+ref\\s*:[^.；;\\n]*",
+      "replaceWith": ""
+    },
+    {
+      "id": "en_neighbor_shotsize",
+      "re": "neighbor\\s+shotSize\\s*[:=]?[^。；;\\n]*",
+      "replaceWith": ""
+    },
+    {
+      "id": "identity_block_image",
+      "re": "identity\\[[^\\]]*\\]",
+      "replaceWith": ""
+    },
+    {
+      "id": "en_power_blocking",
+      "re": "power\\s+blocking[^.；;]*",
+      "replaceWith": ""
+    },
+    {
+      "id": "mangled_forbid_identity",
+      "re": "锁定角色定妆参考脸型，禁止身份[。；;]?",
+      "replaceWith": "single"
+    }
+  ]
+}

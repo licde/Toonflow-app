@@ -61,6 +61,27 @@ jobs:
       - name: Audit — full chain closure
         run: yarn audit:full-chain-closure
 
+      - name: Golden — VisBeat OS (deterministic pattern suggestor)
+        run: yarn test:visual-beat
+        env:
+          PILLARS_VIS_BEAT_V2: shadow
+          VISBEAT_SUGGESTOR: pattern
+
+      - name: Golden — design↔export parity + split orchestrator
+        run: yarn test:design-export-parity
+
+      - name: Golden — NAR-14 residual A+B loop
+        run: yarn test:nar14-residual-loop
+
+      - name: Golden — lip multi-line / still recipe loop
+        run: yarn test:lip-split-loop
+
+      - name: Still identity loop
+        run: yarn test:still-identity-loop
+
+      - name: QP-02 design loop
+        run: yarn test:qp02-design-loop
+
       - name: Sync portable-kit
         run: yarn sync:portable-kit
 

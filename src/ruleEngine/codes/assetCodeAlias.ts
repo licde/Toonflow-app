@@ -3,6 +3,7 @@
  */
 import { normalizeAssetCode } from "./assetCodeContract";
 import type { ScriptBundle } from "../bundle/types";
+import { assetDisplayName } from "../bundle/assetLabel";
 
 export type CodeAliasMap = Record<string, string>;
 
@@ -35,10 +36,11 @@ export function buildNameToSlug(bundle: ScriptBundle): Record<string, string> {
     const c = a.code ? normalizeAssetCode(a.code) ?? a.code : undefined;
     if (c && a.name) map[a.name] = c;
   }
-  const ca = (bundle.visualLockTable as { characterAssets?: Record<string, string> } | undefined)?.characterAssets;
+  const ca = (bundle.visualLockTable as { characterAssets?: Record<string, unknown> } | undefined)?.characterAssets;
   if (ca) {
-    for (const [code, name] of Object.entries(ca)) {
+    for (const [code, raw] of Object.entries(ca)) {
       const c = normalizeAssetCode(code) ?? code;
+      const name = assetDisplayName(raw);
       if (name) map[name] = c;
     }
   }

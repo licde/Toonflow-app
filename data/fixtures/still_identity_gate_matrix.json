@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "description": "IMG-CREF closed loop: OS speaker normalize, role-ref credit, SCENE≠cref warn",
+  "cases": [
+    {
+      "id": "os-speaker-merges-to-imaged",
+      "expect": "pass",
+      "characters": [
+        { "code": "CHAR-SHENQINGYI", "name": "沈清漪", "hasImage": true, "kind": "character" }
+      ],
+      "dialogueSpeakers": ["沈清漪（OS）"],
+      "description": "沈清漪画外独白特写"
+    },
+    {
+      "id": "true-dual-missing-blocks",
+      "expect": "block",
+      "code": "IMG-CREF-CHAR",
+      "characters": [
+        { "code": "CHAR-A", "name": "沈清瓷", "hasImage": false, "kind": "character" },
+        { "code": "CHAR-B", "name": "沈母", "hasImage": false, "kind": "character" }
+      ],
+      "dialogueSpeakers": ["沈清瓷", "沈母"],
+      "description": "双人高坐低跪对峙"
+    },
+    {
+      "id": "dual-missing-role-url-credits",
+      "expect": "pass",
+      "characters": [
+        { "code": "CHAR-A", "name": "沈清瓷", "hasImage": false, "kind": "character" },
+        { "code": "CHAR-B", "name": "沈母", "hasImage": false, "kind": "character" }
+      ],
+      "dialogueSpeakers": ["沈清瓷", "沈母"],
+      "referenceUrls": [
+        "https://cdn.example/role/qingci.png",
+        "https://cdn.example/role/shenmu.png"
+      ],
+      "description": "双人对峙"
+    },
+    {
+      "id": "scene-url-cannot-credit-role",
+      "expect": "block",
+      "code": "IMG-CREF-CHAR",
+      "characters": [
+        { "code": "CHAR-A", "name": "沈清瓷", "hasImage": false, "kind": "character" },
+        { "code": "CHAR-B", "name": "沈母", "hasImage": false, "kind": "character" }
+      ],
+      "dialogueSpeakers": ["沈清瓷", "沈母"],
+      "referenceUrls": ["https://cdn.example/scene/hall.png"],
+      "description": "双人对峙于正厅"
+    },
+    {
+      "id": "cref-code-credits-matching-missing",
+      "expect": "pass",
+      "characters": [
+        { "code": "CHAR-SHENQINGYI", "name": "沈清漪", "hasImage": false, "kind": "character" },
+        { "code": "CHAR-XUAN", "name": "谢玄辞", "hasImage": false, "kind": "character" }
+      ],
+      "dialogueSpeakers": ["沈清漪", "谢玄辞"],
+      "promptCrefCodes": ["CHAR-SHENQINGYI", "CHAR-XUAN"],
+      "description": "双人中景"
+    },
+    {
+      "id": "single-os-shot-no-dual-gate",
+      "expect": "pass",
+      "characters": [
+        { "code": "CHAR-SHENQINGYI", "name": "沈清漪", "hasImage": false, "kind": "character" }
+      ],
+      "dialogueSpeakers": ["沈清漪（OS）"],
+      "description": "单人画外"
+    }
+  ],
+  "warnCases": [
+    {
+      "id": "scene-sref-warn-no-cref-word",
+      "code": "SCENE-001",
+      "source": "sref",
+      "mustInclude": "未绑定场景资产",
+      "mustNotInclude": "cref"
+    },
+    {
+      "id": "char-cref-warn",
+      "code": "CHAR-001",
+      "source": "cref",
+      "mustInclude": "未找到角色 cref",
+      "mustNotInclude": "场景"
+    }
+  ]
+}

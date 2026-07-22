@@ -1,0 +1,30 @@
+{
+  "version": "1.1.0",
+  "capabilities": {
+    "A_clause": {
+      "id": "clause_line_split",
+      "owns": "dialoguePlan.lines + shot.lines text split",
+      "neverInvent": ["splitHint", "reactionAction"]
+    },
+    "B_cluster": {
+      "id": "dialogue_cluster_shots",
+      "owns": "physical multi-shot for speak/reaction",
+      "supersedes": [],
+      "residualPolicy": "auto_when_reaction_sibling_then_bind_splitHint"
+    },
+    "C_visbeat": {
+      "id": "visual_multi_beat",
+      "owns": "reveal/prop_insert vs face_cu",
+      "supersedes": ["B_cluster_on_same_parent_when_weapon"]
+    }
+  },
+  "decisionTree": [
+    { "when": "long_line_has_punct", "action": "A_clause", "priority": 1 },
+    { "when": "residual_no_punct_over_budget", "action": "must_redesign_or_B", "priority": 1 },
+    { "when": "long_line_no_punct", "action": "splitHint_optional_B", "priority": 2 },
+    { "when": "visbeat_conflict", "action": "C_visbeat", "priority": 1 },
+    { "when": "emotion_hit", "action": "require_reactionAction", "priority": 0 }
+  ],
+  "mutex": "C_visbeat_and_weapon_supersede_duplicate_B_on_same_parent",
+  "seeAlso": "nar14_residual_doctrine.json"
+}

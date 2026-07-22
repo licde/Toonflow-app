@@ -1,0 +1,180 @@
+{
+  "packId": "war_god",
+  "label": "战神逆袭",
+  "source": "handbook§题材档案/战神",
+  "emotionSupplyMix": { "爽": 0.55, "惊": 0.2, "虐": 0.15, "甜": 0.1 },
+  "storyFormula": {
+    "openingHookTypes": ["identity_contrast", "crisis", "power_reveal"],
+    "conflictPer15s": true,
+    "paypointHints": ["身份揭穿前", "下跪打脸前"],
+    "empathyBeats": ["压迫谷底", "微反击", "身份兑现"]
+  },
+  "scriptFormula": {
+    "forbidden": ["opaque_mystery", "exposition_dump"],
+    "dialogueClusterIntent": "speak_react",
+    "voiceIntentHints": ["冷硬", "低语压迫", "齐声跪"]
+  },
+  "shotFormula": {
+    "shotSizeBias": ["近景", "特写", "中景"],
+    "allowedMotions": ["static", "gentle push", "slow pan", "tracking"],
+    "speakMotion": "static",
+    "reactMotion": "gentle push",
+    "fxIntentCeiling": "F3",
+    "audioMoodHints": ["bass_drop_intent", "crowd_kneel_intent"],
+    "cutGrammar": ["eye_line", "action_match", "sound_lead"]
+  },
+  "sceneTagVocabulary": ["war_god", "硬光", "仰拍", "声浪冲击", "五刀亮身份"],
+  "weapons": ["five_cut_reveal"],
+  "sceneRecipes": [
+    {
+      "id": "identity_slap",
+      "label": "身份打脸",
+      "weaponId": "five_cut_reveal",
+      "source": "handbook§五刀流"
+    }
+  ],
+  "adaptationPrompts": {
+    "short": "按战神公式：高频打脸、身份揭穿五刀、硬光仰拍；Speak 静、冲击在 React。",
+    "w3": "每场打标 [war_god]；长句 splitHint；揭穿 beat 可挂 five_cut_reveal；fxIntent≤F3；sidecar 填 shotDesignIntent。"
+  },
+  "designThinking": {
+    "dimensions": {
+      "narrative": {
+        "principles": ["开场身份反差或危机钩", "每15s权力变化", "压迫→微反击→身份兑现"],
+        "mustDo": ["peakLedger 兑现打脸/下跪/掉马", "开场3s强刺激", "集末未解钩"],
+        "forbidden": ["别墅写景当爆点", "开会交代当钩子", "opaque_mystery"],
+        "examples": ["赘婿被嘲→令牌五刀→齐跪"],
+        "mustEmit": ["openingHook", "empathyBeats", "peakPlacement"]
+      },
+      "dialogue": {
+        "principles": ["冷硬短句", "打脸对白后必有反应镜"],
+        "mustDo": [">20字 splitHint", "emotion_hit 必 reactionAction", "口型时长估算"],
+        "forbidden": ["长独白无切", "有台词就算有情绪"],
+        "examples": ["跪下。→反应齐跪"],
+        "mustEmit": ["splitHint", "reactionAction"]
+      },
+      "scene": {
+        "principles": ["每场冲突升级", "打标 war_god"],
+        "mustDo": ["场内至少一真爆点或钩子落点"],
+        "forbidden": ["无信息纯氛围超过4s"],
+        "examples": ["宴会嘲讽场→令牌"],
+        "mustEmit": ["sceneAvTags", "avCausality"]
+      },
+      "shotPicture": {
+        "principles": ["近景特写偏置", "硬光仰拍", "拍落点不拍空景"],
+        "mustDo": ["shotDesignIntent.picture 写清拍什么", "Speak=static"],
+        "forbidden": ["正文括注景别运镜秒数"],
+        "examples": ["膝落地仰拍 / 令牌特写"],
+        "mustEmit": ["shotDesignIntent"]
+      },
+      "cutTransition": {
+        "principles": ["声画先导", "动作势能接", "五刀揭穿可扩"],
+        "mustDo": ["cutIntent 标明第几刀或匹配类型"],
+        "forbidden": ["无动机跳切堆砌"],
+        "examples": ["巴掌声先导→脸部反应"],
+        "mustEmit": ["cutIntent", "audioIntent", "durationSec"]
+      }
+    },
+    "peakHookGuidance": {
+      "truePeakForms": ["巴掌落点", "下跪仰拍", "身份掉马五刀", "言语打脸后僵住"],
+      "falsePeakLabels": ["别墅写景", "开会交代", "纯环境描写"],
+      "hookTypes": ["identity_contrast", "crisis", "power_reveal"],
+      "empathyThreeBeat": ["压迫谷底", "微反击", "身份兑现"],
+      "infoGapRules": ["观众先知身份差可先于配角", "ep1前30s核心info≤1", "禁opaque_mystery"]
+    },
+    "durationNormLines": [
+      "对白镜 ≥ 口型估算+情绪留白；超桶预拆簇",
+      "反应镜0.8–2s；插入0.6–1.5s",
+      "开场钩前3s完成第一强刺激",
+      "单场须有冲突升级"
+    ]
+  },
+  "stageOutputTemplates": {
+    "P0": {
+      "mustEmit": ["peakLedger", "hookPlan", "genreTemplate"],
+      "writingSteps": [
+        "智能匹配/选定战神公式",
+        "从源材料抓取 peakLedger（打脸/下跪/掉马）",
+        "写 hookPlan 开场/中段/集末",
+        "询问本剧衍生爆点"
+      ],
+      "forbid": ["把写景标成 peak"]
+    },
+    "W1": {
+      "mustEmit": ["openingHook", "empathyBeats", "peakPlacement", "hookPlan"],
+      "writingSteps": [
+        "按共鸣三拍排骨架",
+        "把 peakLedger 落到分集",
+        "开场钩与付费卡前爆点标注"
+      ]
+    },
+    "W2": {
+      "mustEmit": ["conflictCurve"],
+      "writingSteps": ["冲突曲线峰值场对齐 peak", "场冲突升级点"]
+    },
+    "W3": {
+      "mustEmit": ["scriptItem", "sceneAvTags", "shotDesignIntent", "hookPlan", "peakLedger"],
+      "writingSteps": [
+        "读 viralWritingContext.stageBrief",
+        "文学可拍△兑现爆点钩子",
+        "sidecar 填 shotDesignIntent（含 durationSec+peakId）",
+        "打标/口型/fxIntent 共生产"
+      ],
+      "forbid": ["正文技术括注", "假钩子无 visualBeat"]
+    },
+    "designBrief": {
+      "mustEmit": ["shotDesignIntent"],
+      "writingSteps": ["镜像 W3 shotDesignIntent，不重发明爆点"]
+    },
+    "SB": {
+      "mustEmit": ["shotDesignIntent"],
+      "writingSteps": ["执行同一分镜意图；Speak=static"]
+    },
+    "G": {
+      "mustEmit": ["genreTemplate"],
+      "writingSteps": ["原创路径：G前选定公式并抓取口述爆点钩子"]
+    },
+    "P06": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan", "paypointIntent", "changeLogFakeToTrue"],
+      "writingSteps": [
+        "先打印 1 条原→改示范",
+        "按 peak 重排 eventSequence（开场微循环+集末钩）",
+        "changeLog 写假爆点→真视听钩",
+        "标注付费卡切断前一拍"
+      ],
+      "forbid": ["只改人名不改情绪过山车", "正文技术括注"]
+    }
+  },
+  "reconstructionExamples": [
+    {
+      "id": "wg-five-cut-reveal",
+      "from": "原：酒店大堂很豪华，男主站着听反派骂他是保安，众人议论纷纷，过了很久才有人来救场。",
+      "to": "改：反派揪衣领按墙（压抑）→男主手指微动（信号）→门外强光甩入齐跪「参见少主」（五刀爆发）→反派笑容碎裂跳切→男主轻声「谁让你们来的？」（钩子定格）。",
+      "why": "假氛围→真视听爽点；开场3s内进压迫，15s内完成身份兑现钩",
+      "empathyBeat": "压迫谷底→身份兑现",
+      "peakForms": ["下跪仰拍", "身份掉马五刀", "言语打脸后僵住"],
+      "emotionTask": "从被压制到绝对反杀的爽感巅峰",
+      "paypointHint": "齐跪喊少主、反派尚未完全跪透前硬切",
+      "weaponId": "five_cut_reveal",
+      "sceneRecipeId": "identity_slap"
+    },
+    {
+      "id": "wg-system-smash",
+      "from": "原：主角修炼很久终于突破，系统在心里告诉他获得了医术和财富。",
+      "to": "改：瓶颈汗珠特写→黑屏「叮！」砸出UI面板→眼中金光觉醒→蒙太奇（医术/余额狂跳/黑衣待命）→仰拍冷笑独白「游戏才刚开始」（付费/集末钩）。",
+      "why": "说明性奖励→信息可视化轰炸+声浪；系统流爽点可拍",
+      "empathyBeat": "微反击→身份兑现",
+      "peakForms": ["危机开场冲击", "身份掉马"],
+      "emotionTask": "天降横财式掌控感",
+      "paypointHint": "UI奖励砸出、独白钩前切断",
+      "weaponId": "five_cut_reveal"
+    }
+  ],
+  "emotionParabola": {
+    "s0_3": "建立压抑/中景",
+    "s3_8": "失衡冲突+正反打",
+    "s8_12": "爆发跳切/甩镜/声浪",
+    "s12_15": "钩子定格特写"
+  },
+  "extensions": []
+}

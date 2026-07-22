@@ -6,4 +6,6 @@
 - clipPoints30s / paypointSchedule
 - 单集 rhythm31545
 
-验收：`inspectBundle.scriptViralGaps`（VIR-*）
+**系统性改编（设计期正向闸门）**：见 [`VIRAL_ADAPTATION_METHOD.md`](./VIRAL_ADAPTATION_METHOD.md) 与 `data/skills/browser_chat/viral_adaptation_playbook.md`。
+
+验收：`inspectBundle.scriptViralGaps`（VIR-*）· `yarn test:viral-adaptation-method`

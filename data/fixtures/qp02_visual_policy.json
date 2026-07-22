@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "description": "QP-02 visualDescription SSOT — minChars is empty-stub floor only; shootable = concrete who/where/action-or-prop. Do not raise minChars without a new failure sample.",
+  "minChars": 8,
+  "weakLengthHint": 24,
+  "abstractBanPattern": "很美|美丽|好看|氛围感|高级感|绝美|震撼|精彩|感人|漂亮|wonderful|beautiful|amazing|cinematic masterpiece",
+  "concretePattern": "手|眼|门|窗|灯|桌|椅|剑|杯|衣|发|光|影|雨|雪|石|墙|台|阶|烛|扇|泪|血|烟|雾|袖|指|膝|肩|廊|院|匾|香|烛火|玉|扳指",
+  "designExitId": "DEX-QP-02",
+  "reverseTrigger": "qp02_visual_short",
+  "reverseTarget": "SB",
+  "forbidInventPlaceholder": true,
+  "importSalvageFields": ["shotDesign.picture", "shotDesign.composition.foreground+background"],
+  "freeze": {
+    "minCharsIsFloorNotQuality": true,
+    "noRaiseWithoutSample": true,
+    "noLlmRewriteOnImport": true
+  }
+}

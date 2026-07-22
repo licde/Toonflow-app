@@ -1,0 +1,126 @@
+{
+  "version": "1.0.0",
+  "description": "Design gate mount matrix — ruleId × stage × severity × dualTrack × depth",
+  "rows": [
+    {
+      "ruleId": "NAR-14",
+      "stages": ["W3", "SB", "export"],
+      "severity": { "W3": "WARN", "SB": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "auto",
+      "reverseTarget": "SB",
+      "reverseTrigger": "nar14_split",
+      "depth": { "viral": "BLOCK", "light": "WARN" }
+    },
+    {
+      "ruleId": "NAR-15",
+      "stages": ["W3", "SB", "export"],
+      "severity": { "W3": "BLOCK", "SB": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "nar15_reaction",
+      "depth": { "viral": "BLOCK", "light": "WARN" }
+    },
+    {
+      "ruleId": "DEX-LIP-SPLIT",
+      "stages": ["W3", "SB"],
+      "severity": { "W3": "BLOCK", "SB": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "nar14_split"
+    },
+    {
+      "ruleId": "DC-01",
+      "stages": ["SB", "export"],
+      "severity": { "SB": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "dialogue_hash_mismatch"
+    },
+    {
+      "ruleId": "DC-13",
+      "stages": ["SB", "export"],
+      "severity": { "SB": "WARN", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "dialogue_hash_mismatch"
+    },
+    {
+      "ruleId": "DC-16",
+      "stages": ["SB", "CD", "export"],
+      "severity": { "SB": "WARN", "CD": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "CD",
+      "reverseTrigger": "dc16_cast"
+    },
+    {
+      "ruleId": "DG-CD-COVERAGE",
+      "stages": ["CD", "export"],
+      "severity": { "CD": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "CD",
+      "reverseTrigger": "dc16_cast"
+    },
+    {
+      "ruleId": "DEX-SPEAKER-BARE",
+      "stages": ["W3", "SB", "CD", "export"],
+      "severity": { "W3": "WARN", "SB": "BLOCK", "CD": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "speaker_bare"
+    },
+    {
+      "ruleId": "DEX-DC-ALIGN",
+      "stages": ["W3", "SB"],
+      "severity": { "W3": "WARN", "SB": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "dialogue_hash_mismatch"
+    },
+    {
+      "ruleId": "DG-NAR-SELFCHECK",
+      "stages": ["W3", "export"],
+      "severity": { "W3": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "W3",
+      "reverseTrigger": "self_report_mismatch"
+    },
+    {
+      "ruleId": "SPATIAL-STR",
+      "stages": ["SB", "export"],
+      "severity": { "SB": "WARN", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB"
+    },
+    {
+      "ruleId": "LANG-01",
+      "stages": ["export"],
+      "severity": { "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "EN",
+      "reverseTrigger": "lang_vid_mismatch"
+    },
+    {
+      "ruleId": "FX-GRADE-01",
+      "stages": ["W3", "export"],
+      "severity": { "W3": "WARN", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "W3",
+      "reverseTrigger": "fx_infeasible"
+    },
+    {
+      "ruleId": "CAM-SPEAK",
+      "stages": ["SB", "export"],
+      "severity": { "SB": "WARN", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "cam_speak"
+    },
+    {
+      "ruleId": "DFW-DURATION",
+      "stages": ["export"],
+      "severity": { "export": "WARN" },
+      "dualTrack": "silent",
+      "reverseTarget": "SB"
+    }
+  ]
+}

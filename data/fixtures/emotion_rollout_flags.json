@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "flags": {
+    "emotionNormEnabled": true,
+    "emotionStructureHealOnSwitch": true,
+    "dialogueClusterExpand": true,
+    "motionVlmEnabled": false,
+    "svqScorecardEnabled": true,
+    "legacyBundleBackfillEmotionNorm": true
+  },
+  "costHints": {
+    "motionVlmPerShot": "sampleFrames × VLM call; default off until C2 GA",
+    "structureHeal": "CPU-only soft_patch; no LLM"
+  },
+  "legacyBackfill": {
+    "defaultProfileId": "generic",
+    "note": "Old packages without emotionNorm get generic + current normVersion on migrateEmotionNormIfNeeded"
+  }
+}

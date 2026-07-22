@@ -148,6 +148,10 @@ const preDesignShotSchema = z
     audioCue: nullishStr(),
     fxLevel: nullishStr(),
     charCodes: z.array(z.string()).optional(),
+    /** VisBeat L0 tags — law for conflict_matrix; not inventable by suggestor alone */
+    visualBeatTags: z.array(z.string()).optional(),
+    suggestedVisualBeatTags: z.array(z.string()).optional(),
+    weaponId: nullishStr(),
     generation: generationSchema.optional(),
     shotDesign: shotDesignSchema,
     retentionTier: nullishStr(),
@@ -338,7 +342,7 @@ export function stripCommentFields<T extends Record<string, unknown>>(obj: T): T
   return rest as T;
 }
 
-export { prepareBundleRaw, prepareBundleWithLog, parseBundleJson, tryFixPasteJson } from "./bundleShapePipeline";
+export { prepareBundleRaw, prepareBundleWithLog, parseBundleJson, tryFixPasteJson, stripChatRepairPrefix } from "./bundleShapePipeline";
 export type { PrepareBundleResult, ShapeSalvageEntry } from "./bundleShapePipeline";
 export { getRegisteredShapeIds, SHAPE_REGISTRY } from "./shapeRegistry";
 export { auditShapeResidualGaps } from "./shapeResidualAudit";

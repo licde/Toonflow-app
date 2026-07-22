@@ -2,9 +2,10 @@
  * Shared helpers for design-phase export gates (speakers, scene keys, self-report mismatch).
  */
 import type { ScriptBundle } from "./types";
-import { auditNarrativeDriveGaps } from "./narrativeDriveAudit";
 import { normalizeAssetCode } from "../codes/assetCodeContract";
 import { collectReferencedCodes } from "./assetClosureGate";
+import { assetDisplayName } from "./assetLabel";
+import { collectNar14Nar15Fails, type Nar14LineLike } from "../nar14ClauseSplit";
 
 export function collectDialogueSpeakers(bundle: ScriptBundle): Set<string> {
   const names = new Set<string>();
@@ -28,17 +29,19 @@ export function collectDialogueSpeakers(bundle: ScriptBundle): Set<string> {
 
 export function collectCdCharacterNames(bundle: ScriptBundle): Set<string> {
   const names = new Set<string>();
-  const cd = bundle.characterDesign as { assets?: { code?: string; name?: string }[] } | undefined;
+  const cd = bundle.characterDesign as { assets?: { code?: string; name?: unknown }[] } | undefined;
   for (const a of cd?.assets ?? []) {
-    if (a.name?.trim()) names.add(a.name.trim());
+    const label = assetDisplayName(a.name);
+    if (label) names.add(label);
     const code = a.code ? normalizeAssetCode(a.code) ?? a.code : undefined;
     if (code) names.add(code);
   }
-  const vlt = bundle.visualLockTable as { characterAssets?: Record<string, string> } | undefined;
-  for (const [code, name] of Object.entries(vlt?.characterAssets ?? {})) {
+  const vlt = bundle.visualLockTable as { characterAssets?: Record<string, unknown> } | undefined;
+  for (const [code, raw] of Object.entries(vlt?.characterAssets ?? {})) {
     const n = normalizeAssetCode(code) ?? code;
     if (n) names.add(n);
-    if (name?.trim()) names.add(name.trim());
+    const label = assetDisplayName(raw);
+    if (label) names.add(label);
   }
   return names;
 }
@@ -99,9 +102,12 @@ export function auditCastCoverage(bundle: ScriptBundle): {
   const stubOrIncomplete: string[] = [];
   const genderWarn: string[] = [];
   for (const a of assets) {
-    const label = a.name?.trim() || a.code || "?";
+    const label = assetDisplayName(a.name) || a.code || "?";
     const code = a.code ? normalizeAssetCode(a.code) ?? a.code : undefined;
-    const nameHit = a.name ? speakers.has(a.name) || [...speakers].some((n) => n.includes(a.name!) || a.name!.includes(n)) : false;
+    const nameStr = assetDisplayName(a.name);
+    const nameHit = nameStr
+      ? speakers.has(nameStr) || [...speakers].some((n) => n.includes(nameStr) || nameStr.includes(n))
+      : false;
     const codeHit = code ? referenced.includes(code) : false;
     const isRelevant = nameHit || codeHit || a.L0?.stub === true;
 
@@ -137,40 +143,15 @@ export function sceneColorLockHasChineseKeys(bundle: ScriptBundle): string[] {
 }
 
 export function serverNarrativeSelfcheckFails(bundle: ScriptBundle): { id: string; message: string }[] {
-  const fails: { id: string; message: string }[] = [];
-  for (const g of auditNarrativeDriveGaps(bundle)) {
-    if (g.id === "NAR-14" || g.id === "NAR-15") {
-      fails.push({ id: g.id, message: g.message });
-    }
-  }
-  for (const s of bundle.preDesignPack?.shots ?? []) {
-    const idx = (s as { shotIndex?: number }).shotIndex;
-    for (const line of s.narrative?.dialogue?.lines ?? []) {
-      const text = String((line as { text?: string }).text ?? "").trim();
-      const splitHint = (line as { splitHint?: string }).splitHint;
-      if (text.length > 20 && !splitHint) {
-        fails.push({
-          id: "NAR-14",
-          message: `镜${idx ?? "?"} 长台词缺 splitHint（${text.slice(0, 12)}…）`,
-        });
-      }
-      const functions = (line as { functions?: string[] }).functions ?? [];
-      const reaction = (line as { reactionAction?: string }).reactionAction;
-      if (functions.includes("emotion_hit") && !reaction?.trim()) {
-        fails.push({
-          id: "NAR-15",
-          message: `镜${idx ?? "?"} emotion_hit 台词缺 reactionAction`,
-        });
-      }
-    }
-  }
-  const seen = new Set<string>();
-  return fails.filter((f) => {
-    const k = `${f.id}:${f.message}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  /** Same kernel as diagnoseNar (GateDiagnose SSOT) — keep inline to avoid circular import. */
+  const planLines =
+    ((bundle.planData as { dialoguePlan?: { lines?: Nar14LineLike[] } } | undefined)?.dialoguePlan?.lines ??
+      []) as Nar14LineLike[];
+  const shotLines = (bundle.preDesignPack?.shots ?? []).map((s) => ({
+    shotIndex: (s as { shotIndex?: number }).shotIndex,
+    lines: (s.narrative?.dialogue?.lines ?? []) as Nar14LineLike[],
+  }));
+  return collectNar14Nar15Fails(planLines, shotLines).map((f) => ({ id: f.id, message: f.message }));
 }
 
 export function linkageAssetChainFalseGreen(bundle: ScriptBundle): boolean {
@@ -209,12 +190,22 @@ function shotFxGrade(bundle: ScriptBundle, shot: Record<string, unknown>, shotIn
   const local = String(
     (shot as { fxFeasibility?: string }).fxFeasibility ??
       (shot.generation as { fxFeasibility?: string } | undefined)?.fxFeasibility ??
+      (shot as { fxLevel?: string }).fxLevel ??
       "",
   )
     .toUpperCase()
     .replace(/^FX:/, "")
     .trim();
-  if (local) return local;
+  if (/^F[0-5]$/.test(local) || local === "NONE") return local.startsWith("F") ? local : "NONE";
+
+  // visualEffect "F0" / "F0: …" counts as declared no-VFX (Chat canonical)
+  const ve = String(shot.visualEffect ?? "").trim();
+  const veGrade = ve.match(/^(F[0-5])\b/i)?.[1]?.toUpperCase();
+  if (veGrade === "F0") return "F0";
+  if (veGrade && /^F[1-5]$/.test(veGrade)) {
+    // F1+ in visualEffect alone is a level hint; dual-track still needs prose unless feasibility set
+  }
+
   const fromAudit = String(auditItems.find((it) => it.shotIndex === shotIndex)?.level ?? "")
     .toUpperCase()
     .replace(/^FX:/, "")
@@ -222,10 +213,10 @@ function shotFxGrade(bundle: ScriptBundle, shot: Record<string, unknown>, shotIn
   // Stale audit after shot split: F1+ without materials does not count as declared
   if (/^F[1-5]$/.test(fromAudit)) {
     const fx = shotFxPromptText(shot);
-    const ve = String(shot.visualEffect ?? "").trim();
     if (!fx && !ve) return "";
   }
-  return fromAudit;
+  if (/^F[0-5]$/.test(fromAudit) || fromAudit === "NONE") return fromAudit === "NONE" ? "NONE" : fromAudit;
+  return "";
 }
 
 function shotFxPromptText(shot: Record<string, unknown>): string {

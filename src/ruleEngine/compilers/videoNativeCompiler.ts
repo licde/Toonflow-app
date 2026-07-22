@@ -97,7 +97,17 @@ export function compileVideoNativePrompt(
   const dialogueText = dialogueBlock(lines);
   if (dialogueText) {
     parts.push(`dialogue: ${dialogueText}`);
-    if (input.lipSyncPolicy?.includes("natural") || input.lipSyncPolicy?.includes("subtle")) {
+    const policy = String(input.lipSyncPolicy ?? "").toLowerCase().replace(/-/g, "_");
+    if (
+      policy === "dialogue_native" ||
+      policy === "natural" ||
+      policy === "natural_emphasized" ||
+      policy.includes("natural")
+    ) {
+      parts.push("natural mouth movement for dialogue, lip sync");
+    } else if (policy === "subtle_natural" || policy === "subtle" || policy.includes("subtle")) {
+      parts.push("subtle lip sync, natural mouth movement");
+    } else if (policy && policy !== "none" && policy !== "silent") {
       parts.push("subtle lip sync, natural mouth movement");
     }
   }

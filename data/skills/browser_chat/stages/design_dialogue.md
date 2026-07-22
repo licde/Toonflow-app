@@ -31,7 +31,8 @@ W3.script → dialoguePlan → SB.narrative.dialogue.lines（lineId/functions/ca
 | CAN | CANNOT |
 |-----|--------|
 | W3 写台词原文 | SB 改字词 |
-| OS/VO 分型标注 | T3 在 MD 改 lines |
+| OS/VO 分型标注（`type: os|vo`，speaker=本名） | `speaker: "名（OS）"` 混写 |
+| | T3 在 MD 改 lines |
 
 ## SD-DLG
 

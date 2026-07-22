@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "five_cut_reveal": {
+    "id": "five_cut_reveal",
+    "label": "五刀亮身份",
+    "shotCount": 5,
+    "beats": [
+      { "role": "setup", "shotSize": "中景", "motion": "static", "durationSec": 1.2, "tag": "铺垫" },
+      { "role": "signal", "shotSize": "近景", "motion": "static", "durationSec": 0.8, "tag": "信号" },
+      { "role": "burst", "shotSize": "近景", "motion": "gentle push", "durationSec": 1.0, "tag": "爆发", "hasDialogue": true },
+      { "role": "emphasize", "shotSize": "特写", "motion": "static", "durationSec": 0.8, "tag": "强调" },
+      { "role": "hold", "shotSize": "特写", "motion": "static", "durationSec": 1.0, "tag": "定格" }
+    ],
+    "speakIndex": 2,
+    "source": "handbook§五刀流"
+  },
+  "silence_scream": {
+    "id": "silence_scream",
+    "label": "静音嘶吼",
+    "shotCount": 3,
+    "beats": [
+      { "role": "speak", "shotSize": "特写", "motion": "static", "durationSec": 1.5, "hasDialogue": true, "tag": "嘶吼前" },
+      { "role": "silence", "shotSize": "特写", "motion": "static", "durationSec": 0.4, "tag": "静音" },
+      { "role": "hit", "shotSize": "大特写", "motion": "static", "durationSec": 1.0, "tag": "心跳破寂" }
+    ],
+    "speakIndex": 0,
+    "source": "handbook§虐恋"
+  },
+  "intimate_ots": {
+    "id": "intimate_ots",
+    "label": "贴身过肩",
+    "shotCount": 2,
+    "beats": [
+      { "role": "speak", "shotSize": "近景", "motion": "static", "durationSec": 2.0, "hasDialogue": true, "tag": "过肩说" },
+      { "role": "reaction", "shotSize": "特写", "motion": "gentle push", "durationSec": 1.2, "tag": "反应" }
+    ],
+    "speakIndex": 0,
+    "source": "handbook§甜宠"
+  },
+  "same_angle_jump_x3": {
+    "id": "same_angle_jump_x3",
+    "label": "同机位跳切×3",
+    "shotCount": 3,
+    "beats": [
+      { "role": "jump1", "shotSize": "近景", "motion": "static", "durationSec": 0.6 },
+      { "role": "jump2", "shotSize": "近景", "motion": "static", "durationSec": 0.6 },
+      { "role": "jump3", "shotSize": "近景", "motion": "static", "durationSec": 0.8, "hasDialogue": true }
+    ],
+    "speakIndex": 2,
+    "source": "handbook§切镜"
+  },
+  "follow_handheld": {
+    "id": "follow_handheld",
+    "label": "跟拍手持感",
+    "shotCount": 2,
+    "beats": [
+      { "role": "follow", "shotSize": "中近景", "motion": "subtle drift", "durationSec": 2.0 },
+      { "role": "speak", "shotSize": "近景", "motion": "static", "durationSec": 2.0, "hasDialogue": true }
+    ],
+    "speakIndex": 1,
+    "source": "handbook§悬疑"
+  }
+}

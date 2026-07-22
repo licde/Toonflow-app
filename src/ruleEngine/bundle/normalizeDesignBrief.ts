@@ -56,7 +56,16 @@ function normalizeNumberArray(arr: unknown[], basePath: string, log: ShapeSalvag
   }
 }
 
-/** SH-B12-BEATS: beats string → number on rhythm zone items. */
+/** Default beat count when Chat wrote a narrative summary into beats. */
+function defaultBeatsForZone(zone: unknown): number {
+  if (typeof zone !== "string") return 1;
+  const z = zone.trim();
+  if (z === "承" || z === "转") return 2;
+  if (z === "合") return 3;
+  return 1;
+}
+
+/** SH-B12-BEATS: numeric string → number; narrative string → summary + default beats. */
 function normalizeB12Items(arr: unknown[], basePath: string, log: ShapeSalvageLog): void {
   for (let i = 0; i < arr.length; i++) {
     const item = arr[i];
@@ -68,8 +77,45 @@ function normalizeB12Items(arr: unknown[], basePath: string, log: ShapeSalvageLo
       if (n !== undefined) {
         o.beats = n;
         log.push("SH-B12-BEATS", `${basePath}[${i}].beats`, `string→number(${n})`);
+      } else if (beats.trim()) {
+        const summary = beats.trim();
+        if (typeof o.summary !== "string" || !String(o.summary).trim()) {
+          o.summary = summary;
+        } else if (typeof o.beatSummary !== "string" || !String(o.beatSummary).trim()) {
+          o.beatSummary = summary;
+        }
+        const def = defaultBeatsForZone(o.zone);
+        o.beats = def;
+        log.push(
+          "SH-B12-BEATS",
+          `${basePath}[${i}].beats`,
+          `narrative→summary+beats=${def} ("${summary.slice(0, 24)}${summary.length > 24 ? "…" : ""}")`,
+        );
       }
     }
+  }
+}
+
+/** Compress B13-like {axis,anchors} into a spatialRelation string. */
+export function formatSpatialRelationObject(obj: Record<string, unknown>): string {
+  const parts: string[] = [];
+  if (typeof obj.axis === "string" && obj.axis.trim()) {
+    parts.push(`axis=${obj.axis.trim()}`);
+  }
+  if (Array.isArray(obj.anchors)) {
+    const anchors = obj.anchors
+      .filter((a): a is string => typeof a === "string" && a.trim().length > 0)
+      .map((a) => a.trim());
+    if (anchors.length) parts.push(`anchors=${anchors.join("|")}`);
+  }
+  if (typeof obj.scene === "string" && obj.scene.trim()) {
+    parts.push(`scene=${obj.scene.trim()}`);
+  }
+  if (parts.length) return parts.join("；");
+  try {
+    return JSON.stringify(obj).slice(0, 200);
+  } catch {
+    return "spatial";
   }
 }
 
@@ -154,7 +200,7 @@ function normalizeB23(brief: Record<string, unknown>, log: ShapeSalvageLog): voi
   log.push("SH-B23", "designBrief.B23", `array→record(retentionInfoDelivery=${ids.length},items=${items.length})`);
 }
 
-/** SH-SHOT-SPATIAL: hoist shots[].spatialRelation → narrative.spatialRelation */
+/** SH-SHOT-SPATIAL: object→string then hoist shots[].spatialRelation → narrative.spatialRelation */
 export function normalizeShotSpatialInBundle(bundle: Record<string, unknown>, log: ShapeSalvageLog): void {
   const pack = bundle.preDesignPack;
   if (!pack || typeof pack !== "object" || Array.isArray(pack)) return;
@@ -165,7 +211,22 @@ export function normalizeShotSpatialInBundle(bundle: Record<string, unknown>, lo
     if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
     const s = shot as Record<string, unknown>;
     const top = s.spatialRelation;
-    if (typeof top !== "string" || !top.trim()) continue;
+    if (top == null) continue;
+
+    let spatialStr: string | undefined;
+    if (typeof top === "string" && top.trim()) {
+      spatialStr = top.trim();
+    } else if (top && typeof top === "object" && !Array.isArray(top)) {
+      spatialStr = formatSpatialRelationObject(top as Record<string, unknown>);
+      log.push(
+        "SH-SHOT-SPATIAL",
+        `preDesignPack.shots[${i}].spatialRelation`,
+        `object→string "${spatialStr.slice(0, 48)}${spatialStr.length > 48 ? "…" : ""}"`,
+      );
+    } else {
+      continue;
+    }
+
     let narrative = s.narrative;
     if (!narrative || typeof narrative !== "object" || Array.isArray(narrative)) {
       narrative = {};
@@ -173,7 +234,7 @@ export function normalizeShotSpatialInBundle(bundle: Record<string, unknown>, lo
     }
     const n = narrative as Record<string, unknown>;
     if (typeof n.spatialRelation !== "string" || !n.spatialRelation.trim()) {
-      n.spatialRelation = top;
+      n.spatialRelation = spatialStr;
       log.push("SH-SHOT-SPATIAL", `preDesignPack.shots[${i}].spatialRelation`, "hoist→narrative.spatialRelation");
     }
     delete s.spatialRelation;

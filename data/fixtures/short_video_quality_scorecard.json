@@ -1,0 +1,17 @@
+{
+  "version": "1.1.0",
+  "description": "Short Video Quality scorecard — burn-time umbrella (≠ design adaptScorecard). See docs/PRODUCTION_PILLARS.md",
+  "dimensions": [
+    { "id": "identity_cast", "weight": 0.14, "failBelow": 0.55, "defaultAction": "soft_patch" },
+    { "id": "vis_beat", "weight": 0.1, "failBelow": 0.55, "defaultAction": "soft_patch" },
+    { "id": "emotion_clarity", "weight": 0.14, "failBelow": 0.55, "defaultAction": "soft_patch" },
+    { "id": "dialogue_lip", "weight": 0.14, "failBelow": 0.6, "defaultAction": "soft_patch" },
+    { "id": "cam_variety", "weight": 0.07, "failBelow": 0.5, "defaultAction": "soft_patch" },
+    { "id": "audio_mood", "weight": 0.07, "failBelow": 0.5, "defaultAction": "soft_patch" },
+    { "id": "retention_hook", "weight": 0.11, "failBelow": 0.55, "defaultAction": "retry" },
+    { "id": "packaging", "weight": 0.06, "failBelow": 0.5, "defaultAction": "soft_patch" },
+    { "id": "motion_fidelity", "weight": 0.17, "failBelow": 0.55, "defaultAction": "strengthen" }
+  ],
+  "passScore": 0.65,
+  "note": "identity_cast←假名/假双人; vis_beat←VIS-MULTI/未拆; dialogue_lip←LIP/handoff; emotion_clarity←microExpression"
+}

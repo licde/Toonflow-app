@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "packs": {
+    "sweet": {
+      "shotSizeBias": ["近景", "特写"],
+      "allowedMotions": ["static", "gentle push", "subtle drift", "slow pan"],
+      "transitionBias": ["切"],
+      "dialogueCamPolicy": "prefer_static",
+      "audioMoodHints": ["ukulele", "soft piano", "heartbeat"],
+      "fxIntentCeiling": "F2"
+    },
+    "abuse_romance": {
+      "shotSizeBias": ["特写", "近景"],
+      "allowedMotions": ["static", "gentle push", "slow push"],
+      "transitionBias": ["切", "快切"],
+      "dialogueCamPolicy": "prefer_static",
+      "audioMoodHints": ["rain", "heartbeat", "glass_break_intent"],
+      "fxIntentCeiling": "F2"
+    },
+    "war_god": {
+      "shotSizeBias": ["近景", "中景", "特写"],
+      "allowedMotions": ["static", "gentle push", "slow pan", "tracking"],
+      "transitionBias": ["切", "快切"],
+      "dialogueCamPolicy": "prefer_static",
+      "audioMoodHints": ["bass_drop_intent", "crowd_kneel_intent"],
+      "fxIntentCeiling": "F3"
+    },
+    "suspense": {
+      "shotSizeBias": ["中近景", "特写"],
+      "allowedMotions": ["static", "subtle drift", "slow pan"],
+      "transitionBias": ["切"],
+      "dialogueCamPolicy": "prefer_static",
+      "audioMoodHints": ["low_drone", "clock_tick"],
+      "fxIntentCeiling": "F1"
+    },
+    "generic": {
+      "shotSizeBias": ["中景", "近景"],
+      "allowedMotions": ["static", "slow pan", "gentle push", "subtle drift"],
+      "transitionBias": ["切"],
+      "dialogueCamPolicy": "prefer_static",
+      "audioMoodHints": [],
+      "fxIntentCeiling": "F2"
+    }
+  }
+}

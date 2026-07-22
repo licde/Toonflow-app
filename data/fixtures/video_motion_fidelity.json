@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "sampleFrames": 4,
+  "judgeModel": "vlm",
+  "failTriggers": ["QC-MOTION-MISMATCH"],
+  "actions": {
+    "mismatch": "strengthen",
+    "severe": "retry",
+    "structureRoot": "heal"
+  },
+  "thresholds": {
+    "motionMatchMin": 0.55,
+    "severityStableMin": 0.5
+  }
+}

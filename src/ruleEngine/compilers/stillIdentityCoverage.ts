@@ -1,9 +1,12 @@
 /**
- * Still multi-character identity coverage — one face per named role before vendor spend.
+ * Still multi-character identity coverage — casting sheet only (one face per CHAR).
  */
 import { buildPrimaryBlock } from "./primaryBlock";
 import type { BurnNextStep } from "./burnGateEnvelope";
 import type { ComposeStillCharHint } from "./composeStillPrompt";
+import { looksLikeSceneName } from "./hydrateComposeStillContext";
+import { normalizeDialogueSpeaker, normalizeDialogueSpeakers } from "./normalizeDialogueSpeaker";
+import { buildRequiredCast, isTrueDualCast } from "./castingSheet";
 
 export interface StillIdentityChar {
   code?: string;
@@ -14,58 +17,109 @@ export interface StillIdentityChar {
 
 export interface StillIdentityCoverageResult {
   ok: boolean;
-  code?: "IMG-CREF-CHAR" | "IMG-CREF";
+  code?: "IMG-CREF-CHAR" | "IMG-CREF" | "DC-16";
   missing: Array<{ code?: string; name?: string }>;
   requiredCodes: string[];
   imagedCodes: string[];
+  unmappedSpeakers?: string[];
   userMessage?: string;
   ctaLabel?: string;
   primaryNextStep?: BurnNextStep;
 }
 
-/** Collect required character codes/names from linked assets + dialogue speakers. */
+export function countRoleReferenceCredits(urls?: string[] | null): number {
+  let n = 0;
+  for (const u of urls ?? []) {
+    const p = String(u ?? "").toLowerCase();
+    if (!p.trim()) continue;
+    if (/\/scene\/|scene-/.test(p) && !/\/role\/|\/character\/|char-/.test(p)) continue;
+    if (/\/role\/|\/character\/|\/char\/|char-/.test(p)) n += 1;
+  }
+  return n;
+}
+
+export function charCrefCodesFromPrompt(codes?: string[] | null): string[] {
+  return [...new Set((codes ?? []).map((c) => String(c).toUpperCase()).filter((c) => /^CHAR-/i.test(c)))];
+}
+
+export function applyLookCreditsForChars<T extends StillIdentityChar>(
+  chars: T[],
+  opts: { referenceUrls?: string[] | null; promptCrefCodes?: string[] | null },
+): T[] {
+  const roleCredits = countRoleReferenceCredits(opts.referenceUrls);
+  const crefSet = new Set(charCrefCodesFromPrompt(opts.promptCrefCodes));
+  let remainingRole = roleCredits;
+  return chars.map((c) => {
+    if (c.hasImage) return c;
+    const code = (c.code || "").toUpperCase();
+    if (code && crefSet.has(code)) {
+      return { ...c, hasImage: true };
+    }
+    if (remainingRole > 0) {
+      remainingRole -= 1;
+      return { ...c, hasImage: true };
+    }
+    return c;
+  });
+}
+
+/** Collect required characters from casting sheet — no description NER phantoms. */
 export function collectRequiredStillChars(input: {
   characters?: StillIdentityChar[] | ComposeStillCharHint[] | null;
   dialogueSpeakers?: string[] | null;
+  nameToCode?: Record<string, string> | null;
+  refusePhantomNames?: boolean;
 }): StillIdentityChar[] {
-  const byKey = new Map<string, StillIdentityChar>();
-  for (const c of input.characters ?? []) {
-    if (c.kind === "scene") continue;
-    const key = (c.code || c.name || "").toUpperCase();
-    if (!key) continue;
-    byKey.set(key, { code: c.code, name: c.name, hasImage: c.hasImage, kind: "character" });
-  }
-  for (const sp of input.dialogueSpeakers ?? []) {
-    const name = String(sp ?? "").trim();
-    if (!name) continue;
-    // Match existing by name substring
-    let hit = false;
-    for (const [, c] of byKey) {
-      if (c.name && (c.name.includes(name) || name.includes(c.name))) {
-        hit = true;
-        break;
-      }
-    }
-    if (!hit) {
-      byKey.set(`NAME:${name}`, { name, hasImage: false, kind: "character" });
-    }
-  }
-  return [...byKey.values()];
+  const cast = buildRequiredCast({
+    characters: input.characters as StillIdentityChar[],
+    dialogueSpeakers: input.dialogueSpeakers,
+    nameToCode: input.nameToCode,
+    refusePhantomNames: input.refusePhantomNames !== false,
+  });
+  return cast.chars;
 }
 
 export function assertStillIdentityCoverage(input: {
   characters?: StillIdentityChar[] | ComposeStillCharHint[] | null;
   dialogueSpeakers?: string[] | null;
-  /** When false, skip hard gate (compose-only). Default true for generate. */
+  referenceUrls?: string[] | null;
+  promptCrefCodes?: string[] | null;
+  nameToCode?: Record<string, string> | null;
   enforce?: boolean;
 }): StillIdentityCoverageResult {
   if (input.enforce === false) {
     return { ok: true, missing: [], requiredCodes: [], imagedCodes: [] };
   }
-  const required = collectRequiredStillChars(input);
-  // Only gate when ≥2 named roles (dual/multi) — single missing lead still handled elsewhere
-  const chars = required.filter((c) => c.code || c.name);
-  if (chars.length < 2) {
+
+  const cast = buildRequiredCast({
+    characters: input.characters as StillIdentityChar[],
+    dialogueSpeakers: input.dialogueSpeakers,
+    nameToCode: input.nameToCode,
+    refusePhantomNames: true,
+  });
+
+  if (cast.unmappedSpeakers.length) {
+    const label = cast.unmappedSpeakers.join("、");
+    const primary = buildPrimaryBlock("chat_repair", {
+      stage: "prompt",
+      userMessageOverride: `${label}不在定妆册（CD）中，请补 CHAR 码与人设后再出静照`,
+    });
+    return {
+      ok: false,
+      code: "DC-16",
+      missing: cast.unmappedSpeakers.map((name) => ({ name })),
+      requiredCodes: [],
+      imagedCodes: [],
+      unmappedSpeakers: cast.unmappedSpeakers,
+      userMessage: primary.userMessage,
+      ctaLabel: "去补人设",
+      primaryNextStep: primary.primaryNextStep,
+    };
+  }
+
+  let chars = cast.chars.filter((c) => c.code || c.name);
+  // Dual gate only for true dual CHAR codes (casting sheet)
+  if (!isTrueDualCast(chars) && chars.length < 2) {
     return {
       ok: true,
       missing: [],
@@ -73,7 +127,21 @@ export function assertStillIdentityCoverage(input: {
       imagedCodes: chars.filter((c) => c.hasImage).map((c) => c.code || c.name || "").filter(Boolean),
     };
   }
-  const missing = chars.filter((c) => !c.hasImage);
+  // Single coded char + phantom-free: skip dual look gate when not true dual
+  if (!isTrueDualCast(chars)) {
+    return {
+      ok: true,
+      missing: [],
+      requiredCodes: chars.map((c) => c.code || c.name || "").filter(Boolean),
+      imagedCodes: chars.filter((c) => c.hasImage).map((c) => c.code || c.name || "").filter(Boolean),
+    };
+  }
+
+  chars = applyLookCreditsForChars(chars, {
+    referenceUrls: input.referenceUrls,
+    promptCrefCodes: input.promptCrefCodes,
+  });
+  const missing = chars.filter((c) => c.code && /^CHAR-/i.test(c.code) && !c.hasImage);
   const requiredCodes = chars.map((c) => c.code || c.name || "").filter(Boolean);
   const imagedCodes = chars.filter((c) => c.hasImage).map((c) => c.code || c.name || "").filter(Boolean);
   if (!missing.length) {
@@ -96,10 +164,11 @@ export function assertStillIdentityCoverage(input: {
   };
 }
 
-/** Speakers from package shot narrative.dialogue.lines */
 export function speakersFromShot(shot: Record<string, unknown> | null | undefined): string[] {
   if (!shot) return [];
   const lines =
     (shot.narrative as { dialogue?: { lines?: { speaker?: string }[] } } | undefined)?.dialogue?.lines ?? [];
-  return [...new Set(lines.map((l) => String(l.speaker ?? "").trim()).filter(Boolean))];
+  return normalizeDialogueSpeakers(lines.map((l) => String(l.speaker ?? "").trim()).filter(Boolean));
 }
+
+export { normalizeDialogueSpeaker, normalizeDialogueSpeakers, looksLikeSceneName };

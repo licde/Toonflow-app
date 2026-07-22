@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { ValidationIssue } from "../types";
 
-const AUTO_FIX: Record<string, (patch: Record<string, unknown>) => Record<string, unknown>> = {
+export const AUTO_FIX: Record<string, (patch: Record<string, unknown>) => Record<string, unknown>> = {
   V3: (p) => ({ imageAppend: p.append ?? " --ar 1:1" }),
   "MODE-AGNES": (p) => ({ shouldGenerateImage: p.shouldGenerateImage ?? 1 }),
   V1: (p) => ({ type: p.type ?? "CHAR-SCENE" }),
@@ -18,7 +18,12 @@ const AUTO_FIX: Record<string, (patch: Record<string, unknown>) => Record<string
   Y9: (p) => ({ emotionTag: p.emotion ?? 5 }),
   Y10: (p) => ({ cameraMove: p.move ?? "static" }),
   "QP-01": (p) => ({ addScene: p.scene ?? "补场" }),
-  "QP-02": (p) => ({ visualDescription: p.desc ?? "具体画面描述" }),
+  "QP-02": (p) => {
+    // Forbid inventing stub shorter than QP-02 floor — only accept explicit desc
+    const desc = String(p.desc ?? "").trim();
+    if (desc.length >= 8) return { visualDescription: desc };
+    return { visualDescription: undefined, refuseInvent: true, ruleId: "QP-02" };
+  },
   "PR-01": (p) => ({ splitShot: p.split ?? true }),
   "PR-04": (p) => ({ shotSize: p.shotSize ?? "CU" }),
   identity_mismatch: (p) => ({ recompileEN: true, genderTerms: p.terms }),
@@ -55,6 +60,8 @@ const AUTO_FIX: Record<string, (patch: Record<string, unknown>) => Record<string
 };
 
 export const FEEDBACK_ROUTING: Record<string, string> = {
+  runtime_type_error: "INFRA",
+  emotion_structure: "EN",
   dialogue_hash_mismatch: "SB",
   H2: "GB",
   H3: "SB",

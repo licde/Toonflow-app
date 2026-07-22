@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "enabled": true,
   "maxVisualRounds": 2,
   "vlmModelKey": "Doubao-Seed-1.6-Vision",
@@ -13,8 +13,15 @@
   "l0MaxInjectRounds": 2,
   "failClosedOnVlmError": true,
   "unknownDoesNotConverge": true,
+  "_layout": {
+    "twoStageConfig": "still_layout_control.json",
+    "countStageATowardBudget": true,
+    "note": "StageA counted inside generateOnce stageCost; draft skips two-stage"
+  },
   "_acceptance": {
     "localStillPath": "/oss/1784325819186/workFlow/97a9b7c0-0c37-4f21-905b-1f4b98bcba05.jpg",
-    "expectForbiddenAltarStanding": true
+    "expectForbiddenAltarStanding": true,
+    "pixelCheck48a3": "/oss/1784325819186/workFlow/48a3fdce-9393-46c8-9ef5-09ddeb4f6cc7.jpg",
+    "passCriteria": "高坐低跪可见，非香案站立"
   }
 }

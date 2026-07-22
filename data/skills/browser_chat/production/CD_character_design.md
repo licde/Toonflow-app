@@ -16,6 +16,14 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 - globalAnchors.G1.characterSoul 可用
 - art_skills 前缀已选（如 realpeople_urban_modern）
 
+## 出口 / CAST
+
+- export 前：dialogue speakers ∪ 上镜码 ⊆ characterDesign.assets 且非 stub-only（DC-16）
+- **APP / UI / 系统** 不可作 speaker — 改 `type` 或旁白策略（DEX-SPEAKER-BARE）
+- **CD.name 裸名**：禁 `沈清漪（OS）`；OS 用 dialogue `type=os`（DEX-STILL-OS-NAME；导入同剥）
+- reverseTarget=CD；修后可 `design_split_forward_reentry` 再正推
+- 静帧假双脸反推主链在 **SB**（改 visualDescription），非只补定妆册 regen
+
 ## L0–L6 层级
 
 | 层 | 字段 | 说明 |
@@ -68,6 +76,8 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 - 剧本出场主角/反派均有 CHAR-CODE（canonical `CHAR-NNN`，见 `docs/ASSET_CODE_CONTRACT.md`）
 - **凡 `preDesignPack.shots[].charCodes` 或 imagePrompt `--cref` 出现的码，必须写入 `characterDesign.assets` 与 `visualLockTable.characterAssets`**（禁止只引用不收录，如 CHAR-005）
 - **DC-16 / DG-CD-COVERAGE**：对白 `speaker` ∪ B6.characters ∪ 上镜码必须入 CD；禁止仅 `L0.stub` 过闸；最小骨架为 `code` + `name` + `L0.identity`（一句身份关系）。L1–L3 视觉可后置由资产 AI 补全，但导出前不得缺人设壳
+- **反例**：B6 含「侍女」但 `characterDesign.assets` 无对应项 → BLOCK；导入 stub **仍** BLOCK
+- **正例**：`{ "code": "CHAR-SHINV", "name": "侍女", "L0": { "identity": "沈府贴身侍女，报信出场" } }`
 - 修复话术：按 exportGate `chatRepairText` 中 RH-DC-16 补真实 CD → **再点预览/exportGate** 直至 `exportAllowed`
 - 码别名（`CHAR005` / `CHAR 005`）导出前归一为 `CHAR-005`
 - L0–L3 必填（设计完整态）；L5 主角必填；键名用短键 `L0`…`L6`（勿只输出 `L0_identity` 长键）

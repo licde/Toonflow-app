@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "description": "Casting-sheet phantom name matrix — Production Pillars Identity",
+  "cases": [
+    { "id": "gou-smile", "desc": "沈清漪勾起唇角", "known": ["沈清漪"], "forbidNames": ["沈清漪勾", "沈清漪勾起"] },
+    { "id": "peng", "desc": "沈清漪捧起玉佩", "known": ["沈清漪"], "forbidNames": ["沈清漪捧"] },
+    { "id": "bite-kerchief", "desc": "沈清漪咬帕", "known": ["沈清漪"], "forbidNames": ["沈清漪咬"] },
+    { "id": "stab", "desc": "沈清漪刺入锁骨", "known": ["沈清漪"], "forbidNames": ["沈清漪刺"] },
+    { "id": "true-dual", "desc": "沈清漪与谢玄辞对峙", "known": ["沈清漪", "谢玄辞"], "expectDual": true },
+    { "id": "scene-hall", "desc": "沈府正厅内", "known": ["沈清漪"], "forbidNames": ["沈府正厅"] }
+  ]
+}

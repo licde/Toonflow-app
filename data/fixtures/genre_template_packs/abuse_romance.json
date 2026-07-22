@@ -1,0 +1,142 @@
+{
+  "packId": "abuse_romance",
+  "label": "虐恋",
+  "source": "handbook§题材档案/虐恋",
+  "emotionSupplyMix": { "虐": 0.5, "甜": 0.15, "爽": 0.2, "惊": 0.15 },
+  "storyFormula": {
+    "openingHookTypes": ["crisis", "emotion_hit"],
+    "conflictPer15s": true,
+    "paypointHints": ["分手前", "真相将揭"],
+    "empathyBeats": ["痛感", "牺牲", "延迟爆发"]
+  },
+  "scriptFormula": {
+    "forbidden": ["opaque_mystery"],
+    "dialogueClusterIntent": "speak_react_insert",
+    "voiceIntentHints": ["哽咽", "静音嘶吼"]
+  },
+  "shotFormula": {
+    "shotSizeBias": ["特写", "近景"],
+    "allowedMotions": ["static", "gentle push", "slow push"],
+    "speakMotion": "static",
+    "reactMotion": "gentle push",
+    "fxIntentCeiling": "F2",
+    "audioMoodHints": ["rain", "heartbeat", "silence_then_hit"],
+    "cutGrammar": ["eye_line", "same_angle_jump"]
+  },
+  "sceneTagVocabulary": ["abuse_romance", "破碎光", "静音嘶吼", "雨声底", "窥视框"],
+  "weapons": ["silence_scream", "same_angle_jump_x3"],
+  "sceneRecipes": [{ "id": "breakup", "label": "分手爆发", "weaponId": "silence_scream", "source": "handbook§虐恋" }],
+  "adaptationPrompts": {
+    "short": "按虐恋公式：痛感延迟爆发、特写、静音嘶吼；Speak 静。",
+    "w3": "打标 [abuse_romance]；崩溃场可用 silence_scream；sidecar 填 shotDesignIntent。"
+  },
+  "designThinking": {
+    "dimensions": {
+      "narrative": {
+        "principles": ["开场危机或情感暴击", "痛感→牺牲→延迟爆发"],
+        "mustDo": ["peak 兑现背叛/分手/泪目", "延迟爆发前压抑"],
+        "forbidden": ["假爆点写景", "无痛感空虐"],
+        "examples": ["离婚协议特写→静音嘶吼"],
+        "mustEmit": ["openingHook", "empathyBeats"]
+      },
+      "dialogue": {
+        "principles": ["哽咽短句", "爆发前静"],
+        "mustDo": ["speak_react_insert 簇", "反应镜"],
+        "forbidden": ["说明堆砌"],
+        "examples": ["签字。→静音→嘶吼"],
+        "mustEmit": ["splitHint", "reactionAction"]
+      },
+      "scene": {
+        "principles": ["痛感空间", "打标 abuse_romance"],
+        "mustDo": ["场内真痛点落点"],
+        "forbidden": ["无信息氛围过长"],
+        "examples": ["雨夜分手场"],
+        "mustEmit": ["sceneAvTags"]
+      },
+      "shotPicture": {
+        "principles": ["特写泪目/协议", "破碎光"],
+        "mustDo": ["shotDesignIntent", "Speak=static"],
+        "forbidden": ["正文括注"],
+        "examples": ["瞳孔泪珠特写"],
+        "mustEmit": ["shotDesignIntent"]
+      },
+      "cutTransition": {
+        "principles": ["同角度跳切×3", "静音后击穿"],
+        "mustDo": ["audioIntent silence_then_hit", "durationSec"],
+        "forbidden": ["无动机花哨切"],
+        "examples": ["静0.4s→嘶吼"],
+        "mustEmit": ["cutIntent", "durationSec"]
+      }
+    },
+    "peakHookGuidance": {
+      "truePeakForms": ["背叛证据特写", "分手爆发", "泪目特写", "静音嘶吼"],
+      "falsePeakLabels": ["别墅写景", "开会交代", "纯环境描写"],
+      "hookTypes": ["crisis", "emotion_hit"],
+      "empathyThreeBeat": ["痛感", "牺牲", "延迟爆发"],
+      "infoGapRules": ["观众知痛因可先于角色接受", "禁opaque_mystery", "ep1前30s核心info≤1"]
+    },
+    "durationNormLines": [
+      "对白镜 ≥ 口型+留白；爆发前可静音0.4s",
+      "反应镜0.8–2s；插入0.6–1.5s",
+      "开场钩前3s痛感冲击",
+      "单场须有痛感升级"
+    ]
+  },
+  "stageOutputTemplates": {
+    "P0": {
+      "mustEmit": ["peakLedger", "hookPlan", "genreTemplate"],
+      "writingSteps": ["选定虐恋公式", "抓取背叛/分手/泪目", "hookPlan", "衍生"],
+      "forbid": ["假爆点"]
+    },
+    "W1": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan"],
+      "writingSteps": ["痛感三排骨架", "peak 落集"]
+    },
+    "W2": { "mustEmit": ["conflictCurve"], "writingSteps": ["峰值场对齐延迟爆发"] },
+    "W3": {
+      "mustEmit": ["scriptItem", "sceneAvTags", "shotDesignIntent", "hookPlan"],
+      "writingSteps": ["读 brief", "△+sidecar", "共生产"],
+      "forbid": ["正文技术括注"]
+    },
+    "designBrief": { "mustEmit": ["shotDesignIntent"], "writingSteps": ["镜像意图"] },
+    "SB": { "mustEmit": ["shotDesignIntent"], "writingSteps": ["执行意图"] },
+    "G": { "mustEmit": ["genreTemplate"], "writingSteps": ["原创选公式+抓取"] },
+    "P06": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan", "paypointIntent", "changeLogFakeToTrue"],
+      "writingSteps": ["先打印原→改", "痛感三拍排事件", "changeLog 假→真", "付费卡标注"],
+      "forbid": ["空虐写景", "正文技术括注"]
+    }
+  },
+  "reconstructionExamples": [
+    {
+      "id": "ar-rain-breakup",
+      "from": "原：雨夜女主误会男主出轨，两人吵架分手，女主哭着回家，男主很绝情。",
+      "to": "改：雨幕手持看见拥抱（不信）→甩镜冲出→泪瞳静音准备→抓住袖→时间跳切甩开→狠话画外看女主反应→惨笑静音嘶吼+玻璃碎→俯拍渺小蹲地（钩）。",
+      "why": "吵架说明→伤害力量在承受者反应；静音嘶吼可拍",
+      "empathyBeat": "痛感→牺牲→延迟爆发",
+      "peakForms": ["背叛证据特写", "分手爆发", "泪目特写", "静音嘶吼"],
+      "emotionTask": "心碎与不值，期待追妻火葬场",
+      "paypointHint": "静音嘶吼爆点后、火葬场预告前切断",
+      "weaponId": "silence_scream",
+      "sceneRecipeId": "breakup"
+    },
+    {
+      "id": "ar-divorce-paper",
+      "from": "原：客厅里放着离婚协议，女主签字，哭得很伤心，旁白介绍婚姻破裂原因。",
+      "to": "改：进门湿透尾随感→协议入眼手抖压制→急推泪目决堤→同机位跳切×3惨笑→远景俯拍抱团；删旁白堆砌。",
+      "why": "履历旁白→情绪任务前置的视听崩溃；假爆点说明删除",
+      "empathyBeat": "痛感→延迟爆发",
+      "peakForms": ["背叛证据特写", "泪目特写"],
+      "emotionTask": "被全世界抛弃的孤独感",
+      "paypointHint": "签字手将落笔/惨笑后切断",
+      "weaponId": "silence_scream"
+    }
+  ],
+  "emotionParabola": {
+    "s0_3": "不信/窥视",
+    "s3_8": "冲动与最后希望",
+    "s8_12": "致命伤害+静音嘶吼",
+    "s12_15": "疏离远景钩"
+  },
+  "extensions": []
+}

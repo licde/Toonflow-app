@@ -5,11 +5,45 @@
 import { stableHash } from "../utils/hash";
 import type { ScriptBundle } from "../bundle/types";
 
-export type DialogueLineLike = { speaker?: string; text?: string; lineId?: string } | string;
+export type DialogueLineObject = {
+  speaker?: string;
+  text?: string;
+  lineId?: string;
+  splitHint?: string;
+  reactionAction?: string;
+  functions?: string[];
+  causedByActionId?: string;
+  subtext?: string;
+};
+
+export type DialogueLineLike = DialogueLineObject | string;
 
 export type DialoguePlanData = {
   dialoguePlan?: { lines?: { speaker?: string; text?: string; lineId?: string }[] };
 };
+
+/**
+ * Normalize dual-shape dialogue.lines (string | structured[]) to objects.
+ * Never assume Array — string lines caused "lines.find is not a function" (Untitled-1).
+ */
+export function asDialogueLineObjects(lines: unknown): DialogueLineObject[] {
+  if (lines == null) return [];
+  if (typeof lines === "string") {
+    const t = lines.trim();
+    if (!t) return [];
+    return t.split(/\n+/).map((part) => {
+      const m = part.match(/^([^：:]{1,20})[：:]\s*(.*)$/);
+      if (m) return { speaker: m[1].trim(), text: (m[2] ?? "").trim() };
+      return { text: part.trim() };
+    }).filter((l) => Boolean(l.text));
+  }
+  if (!Array.isArray(lines)) return [];
+  return lines.map((l) => {
+    if (typeof l === "string") return { text: l };
+    if (l && typeof l === "object") return l as DialogueLineObject;
+    return { text: String(l ?? "") };
+  });
+}
 
 export function normalizeDialogueKey(raw: string): string {
   return String(raw ?? "")

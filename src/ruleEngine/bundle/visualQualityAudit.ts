@@ -2,10 +2,45 @@
  * Visual quality (QP-02) + adjacent-shot continuity (CUT-01) audits.
  */
 import type { ScriptBundle } from "../bundle/types";
+import { readFixtureJson } from "../utils/fixturesPath";
 
-const ABSTRACT_BANS = /很美|美丽|好看|氛围感|高级感|绝美|震撼|精彩|感人|漂亮|wonderful|beautiful|amazing|cinematic masterpiece/i;
-const CONCRETE =
-  /手|眼|门|窗|灯|桌|椅|剑|杯|衣|发|光|影|雨|雪|石|墙|台|阶|烛|扇|泪|血|烟|雾|袖|指|膝|肩|廊|院|匾|香|烛火|玉|扳指/;
+export type Qp02VisualPolicy = {
+  minChars?: number;
+  weakLengthHint?: number;
+  abstractBanPattern?: string;
+  concretePattern?: string;
+};
+
+let cachedPolicy: Qp02VisualPolicy | null = null;
+
+export function loadQp02VisualPolicy(): Qp02VisualPolicy {
+  if (cachedPolicy) return cachedPolicy;
+  cachedPolicy = readFixtureJson<Qp02VisualPolicy>("qp02_visual_policy.json", {
+    minChars: 8,
+    weakLengthHint: 24,
+  });
+  return cachedPolicy;
+}
+
+export function qp02MinChars(): number {
+  return loadQp02VisualPolicy().minChars ?? 8;
+}
+
+function abstractBanRe(): RegExp {
+  const p = loadQp02VisualPolicy().abstractBanPattern;
+  return new RegExp(
+    p ||
+      "很美|美丽|好看|氛围感|高级感|绝美|震撼|精彩|感人|漂亮|wonderful|beautiful|amazing|cinematic masterpiece",
+    "i",
+  );
+}
+
+function concreteRe(): RegExp {
+  const p = loadQp02VisualPolicy().concretePattern;
+  return new RegExp(
+    p || "手|眼|门|窗|灯|桌|椅|剑|杯|衣|发|光|影|雨|雪|石|墙|台|阶|烛|扇|泪|血|烟|雾|袖|指|膝|肩|廊|院|匾|香|烛火|玉|扳指",
+  );
+}
 
 export interface VisualFinding {
   id: string;
@@ -20,6 +55,7 @@ export function checkQp02VisualDescription(input: {
   shotIndex?: number;
 }): VisualFinding | null {
   const vd = String(input.visualDescription ?? "").trim();
+  const minChars = qp02MinChars();
   if (!vd) {
     return {
       id: "QP-02",
@@ -29,17 +65,17 @@ export function checkQp02VisualDescription(input: {
       evidence: { reason: "empty" },
     };
   }
-  if (vd.length < 8) {
+  if (vd.length < minChars) {
     return {
       id: "QP-02",
       severity: "BLOCK",
       message: `镜 ${input.shotIndex ?? "?"} 画面描述过短`,
       shotIndex: input.shotIndex,
-      evidence: { reason: "too_short", len: vd.length },
+      evidence: { reason: "too_short", len: vd.length, minChars },
     };
   }
-  const abstractHit = ABSTRACT_BANS.test(vd);
-  const concreteCount = (vd.match(new RegExp(CONCRETE.source, "g")) ?? []).length;
+  const abstractHit = abstractBanRe().test(vd);
+  const concreteCount = (vd.match(new RegExp(concreteRe().source, "g")) ?? []).length;
   if (abstractHit && concreteCount < 1) {
     return {
       id: "QP-02",
@@ -49,7 +85,8 @@ export function checkQp02VisualDescription(input: {
       evidence: { reason: "abstract", sample: vd.slice(0, 40) },
     };
   }
-  if (abstractHit && concreteCount < 2 && vd.length < 24) {
+  const weakLen = loadQp02VisualPolicy().weakLengthHint ?? 24;
+  if (abstractHit && concreteCount < 2 && vd.length < weakLen) {
     return {
       id: "QP-02",
       severity: "WARN",

@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "description": "Still identity SSOT — casting name authority + multiFace predicate + one-beat design + egress layers. Extend via JSON rows, not verb whack-a-mole.",
+  "freeze": {
+    "neverNerInventNames": true,
+    "neverVerbWhitelistAsPrimaryGlueFix": true,
+    "designExitStillTextBlock": false,
+    "noNewTodosWithoutSample": true
+  },
+  "nameAuthority": {
+    "source": "castingSheet_bareNames",
+    "normalizeOs": true,
+    "rejectOsInDisplayName": true
+  },
+  "multiFacePredicate": {
+    "requireDistinctCharCodes": 2,
+    "requireBareNamesAfterNormalize": 2,
+    "alignWithCrefCharCount": true,
+    "neverEmitWhenSingleCref": true
+  },
+  "oneBeat": {
+    "beatVerbPattern": "刺入|咬帕|咬唇|包扎|露出|勾起|渗出|拂过|跪地|端坐",
+    "maxStrongBeatsBeforeWarn": 2,
+    "designWarnId": "DEX-STILL-ONEBEAT",
+    "trimWarn": "still_multi_beat_trim"
+  },
+  "designFillerForbidden": ["对白瞬间神态", "对白瞬间", "瞬间神态"],
+  "egressLayers": {
+    "identityNoisePrefixes": ["不同脸", "对白瞬间", "沈清漪（OS）", "（OS）与"],
+    "contractEnPatterns": [
+      "face\\s+identity\\s+from\\s+character\\s+refs[^.；;]*",
+      "environment\\s+from\\s+scene\\s+refs[^.；;]*",
+      "do\\s+not\\s+blend\\s+faces\\s+into\\s+background[^.；;]*"
+    ]
+  },
+  "reverse": {
+    "trigger": "still_firstframe_dirty",
+    "primaryTarget": "SB",
+    "thenRegen": "MD-IMG",
+    "forbidRegenWithoutDescFix": true
+  },
+  "phases": ["P1_design", "P2_import", "P3_compose", "P4_egress", "P5_firstframe", "P6_golden"]
+}

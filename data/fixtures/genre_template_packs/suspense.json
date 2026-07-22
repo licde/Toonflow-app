@@ -1,0 +1,140 @@
+{
+  "packId": "suspense",
+  "label": "悬疑",
+  "source": "handbook§题材档案/悬疑",
+  "emotionSupplyMix": { "惊": 0.45, "虐": 0.2, "爽": 0.25, "甜": 0.1 },
+  "storyFormula": {
+    "openingHookTypes": ["crisis", "opaque_then_clarify"],
+    "conflictPer15s": true,
+    "paypointHints": ["真相将揭"],
+    "empathyBeats": ["好奇", "紧张", "恍然"]
+  },
+  "scriptFormula": {
+    "forbidden": ["exposition_dump"],
+    "dialogueClusterIntent": "speak_react",
+    "voiceIntentHints": ["低语", "忙音"]
+  },
+  "shotFormula": {
+    "shotSizeBias": ["中近景", "特写"],
+    "allowedMotions": ["static", "subtle drift", "slow pan"],
+    "speakMotion": "static",
+    "reactMotion": "subtle drift",
+    "fxIntentCeiling": "F1",
+    "audioMoodHints": ["low_drone", "clock_tick"],
+    "cutGrammar": ["frame_in_frame", "sound_mislead"]
+  },
+  "sceneTagVocabulary": ["suspense", "框中框", "手电筒光", "听觉误导"],
+  "weapons": ["follow_handheld"],
+  "sceneRecipes": [],
+  "adaptationPrompts": {
+    "short": "按悬疑公式：信息差、框中框、低频嗡鸣；Speak 静。",
+    "w3": "打标 [suspense]；fx≤F1；sidecar 填 shotDesignIntent。"
+  },
+  "designThinking": {
+    "dimensions": {
+      "narrative": {
+        "principles": ["危机开场或先遮后澄", "好奇→紧张→恍然"],
+        "mustDo": ["peak 兑现危机/真相", "信息差清晰"],
+        "forbidden": ["opaque_mystery 到底不澄", "写景假爆点"],
+        "examples": ["倒计时危机→监控真相"],
+        "mustEmit": ["openingHook", "empathyBeats"]
+      },
+      "dialogue": {
+        "principles": ["低语短句", "忙音/信息差"],
+        "mustDo": ["反应镜", "口型时长"],
+        "forbidden": ["exposition_dump"],
+        "examples": ["看监控。→恍然反应"],
+        "mustEmit": ["splitHint"]
+      },
+      "scene": {
+        "principles": ["框中框空间", "打标 suspense"],
+        "mustDo": ["场内信息差落点"],
+        "forbidden": ["无信息空转"],
+        "examples": ["监控室"],
+        "mustEmit": ["sceneAvTags"]
+      },
+      "shotPicture": {
+        "principles": ["中近景特写", "框中框", "证据插入"],
+        "mustDo": ["shotDesignIntent", "Speak=static"],
+        "forbidden": ["正文括注"],
+        "examples": ["监控屏插入"],
+        "mustEmit": ["shotDesignIntent"]
+      },
+      "cutTransition": {
+        "principles": ["听觉误导", "声画错位后澄清"],
+        "mustDo": ["audioIntent", "durationSec"],
+        "forbidden": ["无动机炫技切"],
+        "examples": ["嗡鸣骤停→证据"],
+        "mustEmit": ["cutIntent", "durationSec"]
+      }
+    },
+    "peakHookGuidance": {
+      "truePeakForms": ["危机开场冲击", "真相恍然", "证据插入"],
+      "falsePeakLabels": ["别墅写景", "开会交代", "纯环境描写"],
+      "hookTypes": ["crisis", "opaque_then_clarify"],
+      "empathyThreeBeat": ["好奇", "紧张", "恍然"],
+      "infoGapRules": ["先遮后必须澄", "禁opaque_mystery", "ep1前30s核心info≤1"]
+    },
+    "durationNormLines": [
+      "对白镜 ≥ 口型+留白",
+      "反应镜0.8–2s；插入0.6–1.5s",
+      "开场钩前3s危机冲击",
+      "单场须有信息升级"
+    ]
+  },
+  "stageOutputTemplates": {
+    "P0": {
+      "mustEmit": ["peakLedger", "hookPlan", "genreTemplate"],
+      "writingSteps": ["选悬疑公式", "抓危机/真相 peak", "hookPlan"],
+      "forbid": ["假爆点"]
+    },
+    "W1": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan"],
+      "writingSteps": ["好奇紧张恍然骨架", "peak 落集"]
+    },
+    "W2": { "mustEmit": ["conflictCurve"], "writingSteps": ["信息差曲线"] },
+    "W3": {
+      "mustEmit": ["scriptItem", "sceneAvTags", "shotDesignIntent", "hookPlan"],
+      "writingSteps": ["读 brief", "△+sidecar", "共生产"],
+      "forbid": ["正文技术括注"]
+    },
+    "designBrief": { "mustEmit": ["shotDesignIntent"], "writingSteps": ["镜像意图"] },
+    "SB": { "mustEmit": ["shotDesignIntent"], "writingSteps": ["执行意图"] },
+    "G": { "mustEmit": ["genreTemplate"], "writingSteps": ["原创选公式+抓取"] },
+    "P06": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan", "paypointIntent", "changeLogFakeToTrue"],
+      "writingSteps": ["先打印原→改", "好奇紧张恍然排事件", "changeLog 假→真", "付费卡标注"],
+      "forbid": ["opaque_mystery 到底", "正文技术括注"]
+    }
+  },
+  "reconstructionExamples": [
+    {
+      "id": "su-fridge",
+      "from": "原：女主回家发现东西被动过，心里很害怕，怀疑有人进过家，然后打电话报警。",
+      "to": "改：尾随手持进门死寂→摆件歪了视线匹配→脚跳切转身→遮挡墙切厨房→榴莲少一块慢推→镜中黑影一闪→瞳孔收缩真空死寂→背后声「你回来了？」（钩）。",
+      "why": "说明害怕→安全区被入侵的可拍细思；关键信息藏背景",
+      "empathyBeat": "好奇→紧张→恍然",
+      "peakForms": ["危机开场冲击", "真相恍然"],
+      "emotionTask": "日常恐怖与背脊发凉",
+      "paypointHint": "背后声出口前或出口瞬间切断",
+      "weaponId": "follow_handheld"
+    },
+    {
+      "id": "su-monitor",
+      "from": "原：警察调监控发现凶手是熟人，众人开会讨论案情很久。",
+      "to": "改：框中框监控特写→低频嗡鸣→证据插入恍然→禁开会说明；信息差先遮后澄，ep1前30s只释1条核心info。",
+      "why": "开会exposition→框中框+听觉误导可拍",
+      "empathyBeat": "紧张→恍然",
+      "peakForms": ["真相恍然", "证据插入"],
+      "emotionTask": "解谜后的恍然与讨论欲",
+      "paypointHint": "凶手身份画面将定格前切断"
+    }
+  ],
+  "emotionParabola": {
+    "s0_3": "微弱异常",
+    "s3_8": "疑问警觉",
+    "s8_12": "发现+细思",
+    "s12_15": "真空钩"
+  },
+  "extensions": []
+}

@@ -309,6 +309,8 @@ export interface ImportResult {
   integrityGaps?: { id: string; severity: string; message: string; field?: string }[];
   feedbackLog?: { gapId: string; action: "ignore" | "report" | "fixed"; note?: string }[];
   shapeSalvageLog?: ShapeSalvageEntry[];
+  /** Human-readable「已自动适配」summary when salvage ran */
+  shapeSalvageSummary?: string;
   shapeResidualGaps?: ShapeResidualGap[];
   assetQuality?: AssetQualityReport;
 }
@@ -370,10 +372,13 @@ export interface DryRunImportSummary {
     };
     chatRepairText?: string;
     shapeSalvageLog?: ShapeSalvageEntry[];
+    shapeSalvageSummary?: string;
   };
   endpoint?: "ext" | "int";
   postImport?: IntValidationSummary;
   shapeSalvageLog?: ShapeSalvageEntry[];
+  /** Human-readable「已自动适配」summary when salvage ran */
+  shapeSalvageSummary?: string;
   shapeResidualGaps?: ShapeResidualGap[];
 }
 

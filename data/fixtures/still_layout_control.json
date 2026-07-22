@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "twoStageEnabled": true,
+  "skipTwoStageOnDraft": true,
+  "countStageATowardBudget": true,
+  "poseProvider": "template",
+  "templates": [
+    {
+      "id": "high_sit_low_kneel_2p",
+      "file": "layout_templates/high_sit_low_kneel_2p.svg",
+      "match": { "requireVerbs": ["端坐", "跪"], "minChars": 2 },
+      "stageAPrompt": "竖屏构图灰模：上方高位坐姿人物，下方低位跪姿人物，座次权力反差，无香案无供桌无站立仪式，简单家具剪影"
+    },
+    {
+      "id": "single_throne_sit",
+      "file": "layout_templates/single_throne_sit.svg",
+      "match": { "requireVerbs": ["端坐"], "forbidVerbs": ["跪"], "minChars": 1 },
+      "stageAPrompt": "竖屏构图灰模：单人高位端坐太师椅，正面朝向镜头，背景虚化"
+    },
+    {
+      "id": "single_kneel",
+      "file": "layout_templates/single_kneel.svg",
+      "match": { "requireVerbs": ["跪"], "forbidVerbs": ["端坐"], "minChars": 1 },
+      "stageAPrompt": "竖屏构图灰模：单人低位跪姿于蒲团，正面可读，背景虚化"
+    }
+  ]
+}

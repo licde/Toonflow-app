@@ -1,0 +1,316 @@
+{
+  "version": "1.1.0",
+  "description": "Design-time exit checklist SSOT — doctrine + layered rhythm + recon applied; no false green",
+  "forbidFalseGreen": true,
+  "byStage": {
+    "P0": [
+      "DEX-FORMULA-PICKER",
+      "DEX-TASTE-STYLE",
+      "DEX-PEAK-LEDGER",
+      "DEX-HOOK-PLAN"
+    ],
+    "P03": [
+      "DEX-MATRIX-LOCKED",
+      "DEX-NAME-MAP",
+      "DEX-PACK-RECONCILE"
+    ],
+    "P06": [
+      "DEX-HOOK-PLAN",
+      "DEX-EMPATHY",
+      "DEX-PAYPOINT",
+      "DEX-RECON-EXAMPLE",
+      "DEX-RECON-APPLIED"
+    ],
+    "W1": [
+      "DEX-STORY-HOOK",
+      "DEX-HOOK-PLAN",
+      "DEX-EMPATHY",
+      "DEX-PAYPOINT",
+      "DEX-RHYTHM-EP1",
+      "DEX-LITERARY-STALE"
+    ],
+    "W2": [
+      "DEX-CONFLICT-CURVE",
+      "DEX-LITERARY-STALE"
+    ],
+    "W3": [
+      "DEX-AV-TAGS",
+      "DEX-LIP-SPLIT",
+      "DEX-FX-INTENT",
+      "DEX-SCENE-CARD",
+      "DEX-RET-OPEN",
+      "DEX-VOICE-AV",
+      "DEX-CAM-TAGS",
+      "DEX-SHOT-INTENT",
+      "DEX-TEMPLATE-FILL",
+      "DEX-HOOK-PLAN",
+      "DEX-PAYPOINT",
+      "DEX-ADAPT-SCORE",
+      "DEX-DC-ALIGN",
+      "DEX-PRIMARY-DRIVE",
+      "DEX-RHYTHM-EP1",
+      "DEX-CAUSAL-EP",
+      "DEX-RECON-APPLIED",
+      "DEX-LITERARY-STALE",
+      "NAR-14",
+      "NAR-15",
+      "RET-01",
+      "DEX-VIS-SPLIT",
+      "DEX-VIS-TAG-MISSING",
+      "DEX-STILL-ONEBEAT",
+      "DEX-STILL-OS-NAME",
+      "DEX-STILL-FILLER",
+      "DEX-QP-02"
+    ],
+    "designBrief": [
+      "DEX-PAYPOINT",
+      "DEX-B16-NAMEMAP",
+      "DEX-TAGS-MIRRORED",
+      "DEX-SHOT-INTENT",
+      "DEX-SFX-BRIDGE",
+      "DEX-VIS-TAG-MISSING",
+      "DEX-STILL-ONEBEAT",
+      "DEX-STILL-OS-NAME",
+      "DEX-STILL-FILLER",
+      "DEX-QP-02"
+    ],
+    "SB": [
+      "DEX-ESTABLISHING",
+      "DEX-LIP-SPLIT",
+      "NAR-14",
+      "NAR-15",
+      "DC-01",
+      "DEX-DC-ALIGN",
+      "DEX-SPEAKER-BARE",
+      "DC-16",
+      "DEX-SHOT-INTENT",
+      "DEX-SFX-BRIDGE",
+      "DEX-VIS-TAG-MISSING",
+      "DEX-VIS-SPLIT",
+      "DEX-VIS-TAG-INCONSISTENT",
+      "DEX-STILL-ONEBEAT",
+      "DEX-STILL-OS-NAME",
+      "DEX-STILL-FILLER",
+      "DEX-QP-02"
+    ],
+    "AS": [
+      "DEX-ASSET-CREF"
+    ],
+    "CD": [
+      "DEX-CAST-CODES",
+      "DC-16",
+      "DG-CD-COVERAGE",
+      "DEX-SPEAKER-BARE"
+    ],
+    "G": [
+      "DEX-FORMULA-PICKER",
+      "DEX-TASTE-STYLE",
+      "DEX-RHYTHM-EP1",
+      "DEX-PRIMARY-DRIVE"
+    ]
+  },
+  "checks": {
+    "DEX-FORMULA-PICKER": {
+      "severity": "BLOCK",
+      "message": "P0/G 须推荐并选定或改选爆款公式 packId"
+    },
+    "DEX-TASTE-STYLE": {
+      "severity": "WARN",
+      "message": "须选定 audienceTaste + storyStyle（Chat 选择；缺省用契约默认）"
+    },
+    "DEX-MATRIX-LOCKED": {
+      "severity": "BLOCK",
+      "message": "P03 userConfirmed + 强制维齐全"
+    },
+    "DEX-NAME-MAP": {
+      "severity": "BLOCK",
+      "message": "full_rename/modernize 须有 nameMap[{from,to}]"
+    },
+    "DEX-PACK-RECONCILE": {
+      "severity": "BLOCK",
+      "message": "V05 与 packId 冲突须仲裁"
+    },
+    "DEX-PEAK-LEDGER": {
+      "severity": "BLOCK",
+      "message": "须有真视听 peakLedger（含 avPayload），禁假爆点"
+    },
+    "DEX-HOOK-PLAN": {
+      "severity": "BLOCK",
+      "message": "hookPlan 开场钩须有 visualBeat+可拍△+时长+付费卡意图"
+    },
+    "DEX-EMPATHY": {
+      "severity": "BLOCK",
+      "message": "共鸣三拍 empathyThreeBeat 非空"
+    },
+    "DEX-RECON-EXAMPLE": {
+      "severity": "BLOCK",
+      "message": "题材包须有 reconstructionExamples 原→改"
+    },
+    "DEX-RECON-APPLIED": {
+      "severity": "BLOCK",
+      "message": "须已应用原→改：changeLog/reconstructionTrace 非空"
+    },
+    "DEX-STORY-HOOK": {
+      "severity": "BLOCK",
+      "message": "骨架须含开场钩与微循环（对齐 hookPlan）"
+    },
+    "DEX-CONFLICT-CURVE": {
+      "severity": "WARN",
+      "message": "冲突/情绪曲线峰值场"
+    },
+    "DEX-AV-TAGS": {
+      "severity": "BLOCK",
+      "message": "每场 sceneAvTags 非空"
+    },
+    "DEX-LIP-SPLIT": {
+      "severity": "BLOCK",
+      "message": "NAR分句/多句同镜口型/超vendor须 Confirm拆镜或改短；对齐 duration_norms + lip_split_doctrine"
+    },
+    "DEX-FX-INTENT": {
+      "severity": "BLOCK",
+      "message": "fxIntent≤pack ceiling；F3须已物理拆镜或降级，禁绿出站后烧录挡"
+    },
+    "DEX-SCENE-CARD": {
+      "severity": "BLOCK",
+      "message": "implementationPlan 与 sceneName 基数对齐"
+    },
+    "DEX-RET-OPEN": {
+      "severity": "BLOCK",
+      "message": "ep1 opening5s/avCausality"
+    },
+    "DEX-VOICE-AV": {
+      "severity": "WARN",
+      "message": "有台词场 voiceIntent/avCausality"
+    },
+    "DEX-CAM-TAGS": {
+      "severity": "WARN",
+      "message": "打标运镜须在白名单；Speak→static"
+    },
+    "DEX-SHOT-INTENT": {
+      "severity": "BLOCK",
+      "message": "shotDesignIntent 须含 picture/durationSec；爆点钩子回溯 peakId/hookId"
+    },
+    "DEX-VIS-TAG-MISSING": {
+      "severity": "BLOCK",
+      "message": "SB/designBrief：有画面须打 visualBeatTags（L0）；W3 仅 WARN"
+    },
+    "DEX-VIS-SPLIT": {
+      "severity": "BLOCK",
+      "message": "visualBeatTags×景别冲突须拆镜（conflict_matrix）；shadow 不 BLOCK"
+    },
+    "DEX-VIS-TAG-INCONSISTENT": {
+      "severity": "BLOCK",
+      "message": "已打 tags 但缺 picture，或标签互斥不完整"
+    },
+    "DEX-SFX-BRIDGE": {
+      "severity": "BLOCK",
+      "message": "designBrief/SB 须续读 shotDesignIntent 与音效意图，禁重发明爆点"
+    },
+    "DEX-TEMPLATE-FILL": {
+      "severity": "BLOCK",
+      "message": "阶段 mustEmit 模板填满（peak/hook/意图等）"
+    },
+    "DEX-ADAPT-SCORE": {
+      "severity": "BLOCK",
+      "message": "adaptScore 不低于阈值"
+    },
+    "DEX-DC-ALIGN": {
+      "severity": "BLOCK",
+      "message": "dialoguePlan.lineId 须与 shots 台词三方对齐"
+    },
+    "DEX-PAYPOINT": {
+      "severity": "BLOCK",
+      "message": "付费卡切断意图 paypointIntent.cutBeforeBeat 非空"
+    },
+    "DEX-B16-NAMEMAP": {
+      "severity": "BLOCK",
+      "message": "B16 与 nameMap 一致"
+    },
+    "DEX-TAGS-MIRRORED": {
+      "severity": "BLOCK",
+      "message": "sceneAvTags 进入 designBrief"
+    },
+    "DEX-EMOTION-CURVE": {
+      "severity": "WARN",
+      "message": "GB 情绪曲线非空"
+    },
+    "DEX-ESTABLISHING": {
+      "severity": "WARN",
+      "message": "首登场 establishing"
+    },
+    "DEX-ASSET-CREF": {
+      "severity": "WARN",
+      "message": "角色资产与 cref 计划"
+    },
+    "DEX-CAST-CODES": {
+      "severity": "BLOCK",
+      "message": "CastingSheet：speakers∪charCodes ⊆ CD 且非 stub-only PASS"
+    },
+    "DEX-PRIMARY-DRIVE": {
+      "severity": "BLOCK",
+      "message": "对白/独白主推；禁观众元叙述；不可空台词"
+    },
+    "DEX-RHYTHM-EP1": {
+      "severity": "BLOCK",
+      "message": "ep1 硬规范：开场钩+前30s有用信息不堆叠"
+    },
+    "DEX-CAUSAL-EP": {
+      "severity": "BLOCK",
+      "message": "ep2+ 须 carryInfo + causedByAction 因果连续"
+    },
+    "DEX-LITERARY-STALE": {
+      "severity": "BLOCK",
+      "message": "故事核/公式已变，须重写本阶段后再出站"
+    },
+    "NAR-14": {
+      "severity": "BLOCK",
+      "message": "长句须物理拆行或 splitHint（plan+shots 同核）"
+    },
+    "NAR-15": {
+      "severity": "BLOCK",
+      "message": "emotion_hit 须 reactionAction（plan+shots 同核）"
+    },
+    "DC-01": {
+      "severity": "BLOCK",
+      "message": "dialoguePlan.lineId 须在 shots 台词覆盖"
+    },
+    "DC-16": {
+      "severity": "BLOCK",
+      "message": "说话人须入 CD 且非 stub；APP/UI 禁作 speaker"
+    },
+    "DG-CD-COVERAGE": {
+      "severity": "BLOCK",
+      "message": "characterDesign 配角入册缺口"
+    },
+    "DEX-SPEAKER-BARE": {
+      "severity": "BLOCK",
+      "message": "speaker 裸名；禁 OS/VO 后缀与非人码"
+    },
+    "RET-01": {
+      "severity": "BLOCK",
+      "message": "avCausality 非空"
+    },
+    "FALSE_GREEN_SELFCHECK": {
+      "severity": "BLOCK",
+      "message": "自检 passed 与服务器闸不一致"
+    },
+    "DEX-STILL-ONEBEAT": {
+      "severity": "WARN",
+      "message": "visualDescription/picture 一镜一可静帧拍；多拍须拆镜或 VisBeat Confirm"
+    },
+    "DEX-STILL-OS-NAME": {
+      "severity": "WARN",
+      "message": "画面/CD/speaker 禁名（OS）；speaker 裸名+type=os"
+    },
+    "DEX-STILL-FILLER": {
+      "severity": "WARN",
+      "message": "禁对白瞬间神态等无画面填料进 visualDescription"
+    },
+    "DEX-QP-02": {
+      "severity": "BLOCK",
+      "message": "visualDescription 须可拍：非空、≥minChars 底线、禁抽象无物象；与 export QP-02 同核"
+    }
+  },
+  "adaptScorePass": 65,
+  "maxOptimizeRoundsPerStage": 5
+}

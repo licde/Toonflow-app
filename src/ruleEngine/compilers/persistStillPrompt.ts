@@ -17,6 +17,7 @@ import {
 } from "./composeStillPrompt";
 import { hydrateComposeStillContext } from "./hydrateComposeStillContext";
 import { mergeReasonMeta, parseStillMetaFromReason } from "./stillQuality";
+import { hashLiteraryDesc } from "../qc/stillFirstFrameGate";
 
 export async function composeAndPersistStillPrompt(
   db: Knex,
@@ -154,6 +155,8 @@ export async function composeAndPersistStillPrompt(
         collapsed: pipeline.collapsed,
         autoHealed: pipeline.autoHealed,
         pipelineVersion: pipeline.pipelineVersion,
+        recipeHeals: pipeline.recipeHeals ?? result.recipeHeals,
+        literaryDescHash: hashLiteraryDesc(String(ctx.visualDescription ?? "")),
       }),
     });
 

@@ -4,6 +4,11 @@ import u from "@/utils";
 import { z } from "zod";
 import { validateFields } from "@/middleware/middleware";
 import { normalizeDeepAdaptation } from "@/ruleEngine/bundle/normalizeDeepAdaptation";
+import {
+  getEmotionNormFromPlan,
+  mapMatrixEmotionLogicToProfile,
+} from "@/ruleEngine/emotion/emotionNorm";
+import { setGenreTemplateOnPlan, getGenreTemplateFromPlan } from "@/ruleEngine/genre/loadGenreTemplatePack";
 
 const matrixEntrySchema = z.object({
   dimId: z.string(),
@@ -25,6 +30,8 @@ export default router.post(
           relationMap: z.unknown().optional(),
           substitutions: z.unknown().optional(),
           settingProfile: z.record(z.string(), z.unknown()).optional(),
+          storyKernel: z.unknown().optional(),
+          contentTranslatePlan: z.unknown().optional(),
         })
         .passthrough()
         .optional(),
@@ -87,12 +94,35 @@ export default router.post(
     stepStatus.matrixConfirm = { status: "done", completedAt: Date.now() };
     plan._stepStatus = JSON.stringify(stepStatus);
 
+    // Prefill/lock genre formula from 情感逻辑 or V05
+    const locked: Record<string, string> = {};
+    for (const e of structured.matrix) {
+      locked[e.dimId] = e.choice;
+      if (/情感|emotion/i.test(e.dimId)) locked["情感逻辑"] = e.choice;
+    }
+    const v05 = structured.matrix.find((e) => /V05|genreFramework|类型/i.test(e.dimId))?.choice;
+    const v05Map: Record<string, string> = {
+      甜宠: "sweet",
+      虐恋: "abuse_romance",
+      战神: "war_god",
+      悬疑: "suspense",
+    };
+    const mapped =
+      (v05 && v05Map[v05]) || mapMatrixEmotionLogicToProfile(locked) || getGenreTemplateFromPlan(plan).packId;
+    setGenreTemplateOnPlan(plan, { packId: mapped, provisional: false, markStale: false });
+
     if (row) {
       await u.db("o_agentWorkData").where({ projectId, key: "scriptAgent" }).update({ data: JSON.stringify(plan) });
     } else {
       await u.db("o_agentWorkData").insert({ projectId, key: "scriptAgent", data: JSON.stringify(plan), createTime: Date.now() });
     }
 
-    return res.status(200).send(success({ adaptationMatrixStructured: structured }));
+    return res.status(200).send(
+      success({
+        adaptationMatrixStructured: structured,
+        emotionNorm: getEmotionNormFromPlan(plan),
+        genreTemplate: getGenreTemplateFromPlan(plan),
+      }),
+    );
   },
 );

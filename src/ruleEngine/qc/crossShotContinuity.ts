@@ -14,16 +14,15 @@ export function buildCrossShotContinuityInject(input: {
   const bits: string[] = [];
   const cont = String(input.continuityFrom ?? "").trim();
   if (cont) {
-    bits.push(`continuity: continues from ${cont.slice(0, 80)}`);
+    bits.push(`continuity: continues from ${cont.slice(0, 40)}`);
     notes.push("continuityFrom");
   }
+  // Neighbor shotSize + soft-ref kept as notes only — do not dump into still prompt body
   if (input.neighborShotSize) {
-    bits.push(`neighbor shotSize ${input.neighborShotSize}`);
-    notes.push("neighborShotSize");
+    notes.push(`neighborShotSize:${input.neighborShotSize}`);
   }
   const softRefRequired = Boolean(cont) && input.neighborStillPresent === true;
   if (softRefRequired) {
-    bits.push("soft ref: previous still for wardrobe/lighting continuity");
     notes.push("neighbor_still_soft_ref");
   }
   return {

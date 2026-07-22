@@ -7,7 +7,17 @@ rulePackVersion: "2.0.1"
 
 # 编剧爆款思维 · Browser Chat 可执行版
 
-> **必读**：进入 W 阶段前通读本节。W3 写剧本时对照 `planData.narrativeBrief` 逐条兑现，禁止只填 JSON 字段不落地正文。
+> **必读**：进入 W 阶段前通读本节，并通读 `viral_adaptation_playbook.md`。W3 对照 `viralWritingContext.stageBrief` + `peakLedger`/`hookPlan`/`shotDesignIntent` 兑现，禁止只填 JSON 不落地。
+
+读取：`getPlanData.viralWritingContext` / `viralFormulaPicker` / `extractPeakHook`。
+
+## 0. 视听爆点与钩子（先于文笔）
+
+- **真爆点**：巴掌/下跪/掉马/背叛证据/泪目/告白等带声画载荷
+- **假爆点禁标**：别墅写景、开会交代、纯环境
+- **开场钩**：0–3s 第一强刺激；须可拍 △ + 建议秒数
+- **共鸣**：题材三拍（如困境→无门→微反击）；`emotionTarget` 必填
+- **时长**：对白≥口型；反应 0.8–2s；开场钩组前 3s 完成强刺激
 
 ## 1. 有用信息 vs 猜谜式悬念
 
@@ -90,3 +100,30 @@ ep1 前 30s **最多 1 条**核心 info 释放；禁止连续猜谜。
 5. ep1 首场 `sceneMeta.avCausality` 非空？
 
 未过 → 跑 `W3_narrative_selfcheck.md`，不得进 designBrief。
+
+## 10. 情绪规范 profile（emotionNorm）与视听 sidecar
+
+项目锁定 `planData.emotionNorm.activeProfileId`（甜宠/虐恋/战神/悬疑/generic）。W3 **按当前档写正文**；导入后机器**不改措辞**，只自愈结构。
+
+### 必写 sidecar（禁止塞进文学括注）
+
+每场 `sceneMeta` / 镜级 sidecar：
+
+| 字段 | 说明 |
+|------|------|
+| `activeProfileId` | 须与项目 `emotionNorm.activeProfileId` 一致 |
+| `avStyle` | 与 profile 对齐：sweet / abuse_romance / war_god / suspense / generic |
+| `emotionPhase` | suppress → signal → burst → release → hook |
+| `intensity` | 0–10；驱动簇策略与景别偏置 |
+| `beatRole` | speak \| reaction \| emphasize \| action（对白簇） |
+
+**禁止**：在 `<scriptItem>` 正文用「（缓推特写）（BGM 骤停）」等技术括注。运镜/声画进 sidecar 与 SB，不进台词原文。
+
+### 对白簇意图（D2）
+
+- `emotion_hit` / `conflict_escalate` / 单句 >20 字：`splitHint: speak_react`（或 `reaction_shot`）
+- Speak 镜口型 + **static**；React 镜可 gentle push；口型仅 speak
+
+### 换档
+
+创作中换 profile：继续按新风格写；已写正文不会被机器改写，需作者修订。制作台换档 → 结构 heal，对白不动。

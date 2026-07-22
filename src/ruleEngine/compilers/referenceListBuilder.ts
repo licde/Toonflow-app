@@ -3,6 +3,7 @@ import u from "@/utils";
 import { parsePromptRefs } from "./vendorPromptAdapter";
 import { normalizeAssetCode, normalizeAssetCodes } from "../codes/assetCodeContract";
 import { resolveShotIdentityBinding } from "./resolveShotIdentityBinding";
+import { formatMissingAssetRowWarning, formatMissingLookImageWarning } from "./refWarnMessage";
 
 export interface ReferenceWarning {
   code: string;
@@ -60,20 +61,27 @@ export async function resolveCrefCodesToAssetIds(
           (a.prompt && String(a.prompt).includes(code)),
       );
       if (hit) assetIds.push(hit.id!);
-      else warnings.push({ code, message: `未找到资产 ${code}` });
+      else warnings.push({ code, message: formatMissingAssetRowWarning(code) });
     }
   }
 
   // Re-order unique ids by preferredOrder when codeToId reverse map available
   const uniqueIds = [...new Set(assetIds)];
   if (uniqueIds.length) {
-    const rows = await db("o_assets").whereIn("id", uniqueIds).select("id", "name", "imageId");
+    const rows = await db("o_assets").whereIn("id", uniqueIds).select("id", "name", "imageId", "remark", "type");
     for (const row of rows) {
       if (!row.imageId) {
+        const m = String(row.remark ?? "").match(/(?:assetCode|charCode):([A-Za-z]+-[A-Za-z0-9]+)/i);
+        const code = m?.[1]?.toUpperCase() ?? "";
+        const isScene =
+          /^SCENE-/i.test(code) ||
+          row.type === "scene" ||
+          /scene|场景/i.test(String(row.type ?? "")) ||
+          /scene|场景/i.test(String(row.name ?? ""));
         warnings.push({
           code: row.name ?? String(row.id),
           assetId: row.id,
-          message: `请先生成角色参考图：${row.name ?? row.id}`,
+          message: formatMissingLookImageWarning(row.name ?? String(row.id), isScene ? code || "SCENE-?" : code),
         });
       }
     }
@@ -90,9 +98,13 @@ export async function mergeAssociateAssetIds(
   charCodes: string[] = [],
   codeToId?: Record<string, number>,
   preferredOrder?: string[],
+  opts?: { excludeScene?: boolean },
 ): Promise<{ assetIds: number[]; warnings: ReferenceWarning[] }> {
   const refs = parsePromptRefs(prompt);
-  const codes = [...new Set([...charCodes, ...refs.crefs, ...refs.srefs])];
+  const codes = [...new Set([...charCodes, ...refs.crefs, ...refs.srefs])].filter((c) => {
+    if (opts?.excludeScene && /^SCENE-/i.test(c)) return false;
+    return true;
+  });
   const order = preferredOrder?.length
     ? preferredOrder
     : resolveShotIdentityBinding({
@@ -115,8 +127,28 @@ export async function mergeAssociateAssetIds(
       orderedIds.push(id);
     }
   }
+
+  let finalIds = orderedIds;
+  if (opts?.excludeScene && finalIds.length) {
+    const rows = await db("o_assets")
+      .whereIn("id", finalIds)
+      .select("id", "type", "remark", "name");
+    const sceneIds = new Set<number>();
+    for (const a of rows as Array<{ id: number; type?: string; remark?: string; name?: string }>) {
+      const m = String(a.remark ?? "").match(/(?:assetCode|charCode):([A-Za-z]+-[A-Za-z0-9]+)/i);
+      const code = m?.[1]?.toUpperCase() ?? "";
+      const isScene =
+        a.type === "scene" ||
+        /^SCENE-/i.test(code) ||
+        /scene|场景/i.test(String(a.type ?? "")) ||
+        /scene|场景/i.test(String(a.name ?? ""));
+      if (isScene) sceneIds.add(a.id);
+    }
+    finalIds = finalIds.filter((id) => !sceneIds.has(id));
+  }
+
   return {
-    assetIds: orderedIds,
+    assetIds: finalIds,
     warnings: resolved.warnings,
   };
 }
@@ -159,7 +191,12 @@ export async function buildReferenceListForStoryboard(
   prompt: string,
   charCodes: string[] = [],
   preferredOrder?: string[],
-): Promise<{ referenceList: { type: "image"; base64: string }[]; warnings: ReferenceWarning[] }> {
+  opts?: { excludeScene?: boolean },
+): Promise<{
+  referenceList: { type: "image"; base64: string }[];
+  warnings: ReferenceWarning[];
+  sceneRefsDropped?: number;
+}> {
   const assetRows = await db("o_assets2Storyboard").where("storyboardId", storyboardId).orderBy("rowid").pluck("assetId");
   const order =
     preferredOrder?.length
@@ -168,7 +205,23 @@ export async function buildReferenceListForStoryboard(
           description: prompt,
           assetCodes: [...charCodes, ...parsePromptRefs(prompt).crefs].filter((c) => /^CHAR-/i.test(c)),
         }).orderedCodes;
-  const merged = await mergeAssociateAssetIds(db, projectId, assetRows as number[], prompt, charCodes, undefined, order);
+  const beforeCount = (assetRows as number[]).length;
+  const merged = await mergeAssociateAssetIds(
+    db,
+    projectId,
+    assetRows as number[],
+    prompt,
+    charCodes,
+    undefined,
+    order,
+    { excludeScene: opts?.excludeScene },
+  );
   const referenceList = await buildReferenceListFromAssetIds(db, merged.assetIds);
-  return { referenceList, warnings: merged.warnings };
+  const sceneRefsDropped =
+    opts?.excludeScene && beforeCount > merged.assetIds.length
+      ? beforeCount - merged.assetIds.length
+      : opts?.excludeScene
+        ? Math.max(0, beforeCount - merged.assetIds.length)
+        : 0;
+  return { referenceList, warnings: merged.warnings, sceneRefsDropped };
 }

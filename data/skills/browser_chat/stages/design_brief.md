@@ -3,7 +3,7 @@ name: design_brief
 description: B 层 designBrief 11 联动字段
 stageId: B
 outputTag: designBrief
-rulePackVersion: "2.0.1"
+rulePackVersion: "2.1.0"
 ---
 
 # designBrief（B 层 11 字段）
@@ -31,7 +31,7 @@ rulePackVersion: "2.0.1"
 | B10 | platformSpec | 平台规格（竖屏等） | SB 构图 |
 | B11 | linkageTargets | 十链目标 stage 列表 | linkageAudit |
 | B12 | rhythmZoneOutline | 场级节奏区（起/承/转/合） | SB rhythmZone |
-| B13 | spatialAnchors | 空间锚点（轴线/站位） | SB spatialRelation |
+| B13 | spatialAnchors | 空间锚点（轴线/站位） | SB spatialRelation（**压成 string**） |
 
 ## 执行步骤
 
@@ -41,7 +41,7 @@ rulePackVersion: "2.0.1"
 4. 写 B7/B8 跨集状态（有上集则读 continuity）
 5. 填 B11 linkageTargets = `["台词","资产","连贯","视听","故事","场景","运镜","改编","模态编译","修复"]`
 6. 按 GB 分场标 B12 rhythmZoneOutline（每场起承转合）
-7. 标 B13 spatialAnchors：主轴线与关键站位，供 SB spatialRelation 引用
+7. 标 B13 spatialAnchors：主轴线与关键站位，供 SB **写成站位 string**（禁止把 B13 对象原样塞进 `spatialRelation`）
 
 ## 输出
 
@@ -57,12 +57,20 @@ rulePackVersion: "2.0.1"
     "B6": { "characters": ["..."], "scenes": ["..."], "props": ["..."] },
     "B7": "...", "B8": "...", "B9": "轻快钢琴", "B10": "竖屏9:16",
     "B11": ["台词","资产","连贯","视听","故事","场景","运镜","改编","模态编译","修复"],
-    "B12": [{ "scene": "Sc1", "zone": "起", "beats": 2 }],
+    "B12": [{ "scene": "Sc1", "zone": "起", "beats": 2, "summary": "开场立意（可选）" }],
     "B13": [{ "scene": "Sc1", "axis": "女主-男主", "anchors": ["女主左", "男主右"] }]
   },
-  "rulePackVersion": "2.0.1"
+  "rulePackVersion": "2.1.0"
 }
 ```
+
+### B12 权威形状（DEX-B12-BEATS-NUM · BLOCK）
+
+- **`beats` = 节拍数量 number**（如 `2`），不是叙事句子。
+- 叙事说明写可选 **`summary`**（或 `beatSummary`）。
+- **正例**：`{ "scene": "祠堂", "zone": "起", "beats": 2, "summary": "自残取佩，立下决意" }`
+- **反例（禁止）**：`{ "scene": "祠堂", "zone": "起", "beats": "自残取佩，立下决意" }`
+- 导入 salvage（SH-B12-BEATS）仅兜底；Chat **不得**依赖 salvage 导出错形。
 
 ## BLOCK 闸门
 
@@ -70,6 +78,7 @@ rulePackVersion: "2.0.1"
 - 无镜级/prompt 内容
 - B6 与 script 角色场景一致
 - B5 每条：`payoffEp` 仅未来集号（number）；本集收/当集兑现用 `payoffLabel: "本集收"`，**禁止**把语义串写进 `payoffEp`
+- **DEX-B12-BEATS-NUM**：扫描 `designBrief.B12[]`；任一 `beats` 非 number → **不得导出**
 
 ## 下游
 

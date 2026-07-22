@@ -3,8 +3,16 @@
  */
 import { extractDescPredicates } from "./extractDescPredicates";
 import type { ComposeStillCharHint } from "./composeStillPrompt";
-import { assertStillIdentityCoverage } from "./stillIdentityCoverage";
+import {
+  assertStillIdentityCoverage,
+  applyLookCreditsForChars,
+  collectRequiredStillChars,
+  countRoleReferenceCredits,
+  charCrefCodesFromPrompt,
+} from "./stillIdentityCoverage";
 import { buildPrimaryBlock } from "./primaryBlock";
+import { looksLikeSceneName } from "./hydrateComposeStillContext";
+import { normalizeDialogueSpeakers } from "./normalizeDialogueSpeaker";
 
 export interface StillIdentityPreflightResult {
   ok: boolean;
@@ -17,22 +25,39 @@ export interface StillIdentityPreflightResult {
   suggestBatchStill?: boolean;
 }
 
+function realCharacters(input?: ComposeStillCharHint[] | null): ComposeStillCharHint[] {
+  return (input ?? []).filter(
+    (c) => c.kind !== "scene" && !looksLikeSceneName(c.name) && Boolean(c.name || c.code),
+  );
+}
+
 export function assertStillIdentityPreflight(input: {
   characters?: ComposeStillCharHint[] | null;
   description?: string | null;
   dialogueSpeakers?: string[] | null;
+  referenceUrls?: string[] | null;
+  promptCrefCodes?: string[] | null;
   enforce?: boolean;
 }): StillIdentityPreflightResult {
-  const chars = (input.characters ?? []).filter((c) => c.kind !== "scene");
-  const names = chars.map((c) => c.name || "").filter(Boolean);
+  const speakers = normalizeDialogueSpeakers(input.dialogueSpeakers).filter((s) => !looksLikeSceneName(s));
+  const required = collectRequiredStillChars({
+    characters: realCharacters(input.characters),
+    dialogueSpeakers: speakers,
+  });
+  // Credit once here; coverage below must not re-apply the same URLs/crefs
+  const credited = applyLookCreditsForChars(required, {
+    referenceUrls: input.referenceUrls,
+    promptCrefCodes: input.promptCrefCodes,
+  });
+
+  const names = credited.map((c) => c.name || "").filter(Boolean);
   const pack = extractDescPredicates({
     description: input.description,
     characterNames: names,
   });
 
-  // Dual seating: every named seating role should have look when enforce
   if (pack.hasSeatingOrKneel && names.length >= 2) {
-    const missingLooks = chars.filter((c) => (c.name || c.code) && !c.hasImage);
+    const missingLooks = credited.filter((c) => !c.hasImage);
     if (missingLooks.length && input.enforce !== false) {
       const missing = missingLooks.map((c) => c.name || c.code || "?").filter(Boolean);
       const primary = buildPrimaryBlock("batch_still", {
@@ -52,8 +77,8 @@ export function assertStillIdentityPreflight(input: {
   }
 
   const gate = assertStillIdentityCoverage({
-    characters: chars,
-    dialogueSpeakers: input.dialogueSpeakers,
+    characters: credited,
+    dialogueSpeakers: [],
     enforce: input.enforce !== false,
   });
   if (!gate.ok) {
@@ -69,3 +94,5 @@ export function assertStillIdentityPreflight(input: {
   }
   return { ok: true };
 }
+
+export { countRoleReferenceCredits, charCrefCodesFromPrompt };

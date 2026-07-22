@@ -4,6 +4,7 @@ import path from "path";
 import u from "@/utils";
 import type { AutoDesignJob, AutoDesignStage, ResolvedContext, StoryboardPanelInput } from "./types";
 import { extractScriptMeta } from "../parsers/scriptMetaExtractor";
+import { getEmotionNormFromPlan, loadStylePack } from "../emotion/emotionNorm";
 
 export interface AutoDesignInput {
   script: string;
@@ -46,6 +47,20 @@ export function runHeuristicAutoDesign(input: AutoDesignInput): AutoDesignOutput
   const characters = meta.characters ?? context.assets.map((a) => a.name).filter(Boolean);
   const brief = context.designBrief;
   const emotionCurve = brief?.emotionCurveOutline;
+  let profileId = "generic";
+  let styleMotions: string[] = ["static", "gentle push"];
+  try {
+    const planish = {
+      planData: {
+        emotionNorm: (context as { emotionNorm?: { activeProfileId?: string } }).emotionNorm,
+      },
+    };
+    profileId = getEmotionNormFromPlan(planish as never).activeProfileId;
+    const pack = loadStylePack(profileId);
+    styleMotions = pack.allowedMotions ?? styleMotions;
+  } catch {
+    /* fixtures optional at cold start */
+  }
 
   const scriptPlanLines: string[] = ["# 导演规划（autoDesign）", ""];
   if (brief?.infoLinkageChain?.length) {
@@ -81,12 +96,14 @@ export function runHeuristicAutoDesign(input: AutoDesignInput): AutoDesignOutput
       const type = hasDialogue ? "CHAR-SCENE" : "PURE-SCENE";
       const duration = estimateDuration(line);
       const char = characters.find((c) => line.includes(c)) ?? characters[0] ?? "角色";
+      const motion = hasDialogue ? "static" : (styleMotions.find((m) => m !== "static") ?? styleMotions[0] ?? "static");
+      const shotSize = hasDialogue ? "近景" : "中景";
       tableRows.push(`| ${shotIndex} | ${type} | ${scene.name} | ${line.replace(/\|/g, "\\|")} | ${duration}s |`);
       panels.push({
         clientId: `sb-${shotIndex}`,
         duration,
         prompt: `${char}，${scene.name}，${line.slice(0, 40)}`,
-        videoDesc: `medium shot static, ${duration}s`,
+        videoDesc: `${shotSize} ${motion}, ${duration}s`,
         shouldGenerateImage: 1,
         associateAssetsIds: [],
         track: String(shotIndex),

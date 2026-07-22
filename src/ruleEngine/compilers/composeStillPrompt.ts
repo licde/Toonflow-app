@@ -19,6 +19,13 @@ import {
 } from "./resolveShotIdentityBinding";
 import { extractDescPredicates, predicateAnchorTokens, type DescPredicatePack } from "./extractDescPredicates";
 import { assertStillDescCoverage } from "./stillDescCoverage";
+import { resolveStillBgPolicy, type StillBgPolicy } from "./stillBgPolicy";
+import {
+  applyContinuityPolicy,
+  healStillRecipePolicy,
+  loadStillRecipePolicy,
+  pickIdentityLockLines,
+} from "./stillRecipePolicy";
 
 const IDENTITY_TOKEN_RE =
   /(?:^|\s)--(?:cref|sref)\s+[^\n]*?(?=(?:\s--(?:cref|sref|ar)\b)|$)|(?:^|\s)--ar\s+\S+/gi;
@@ -107,6 +114,12 @@ export interface ComposeStillResult {
   descCoverageOk?: boolean;
   descCoverageMissing?: string[];
   orderedCrefCodes?: string[];
+  /** Background policy: drop/demote SCENE refs; keep only for establishing */
+  bgPolicy?: StillBgPolicy;
+  excludeScene?: boolean;
+  bgPolicyReason?: string;
+  /** Recipe policy self-heal ids (FE / reverse audit) */
+  recipeHeals?: string[];
 }
 
 export function stripIdentityTokens(prompt: string): { body: string; tokenTail: string } {
@@ -180,38 +193,55 @@ export function assertStillPromptClean(prompt: string): { ok: boolean; reason?: 
   return { ok: true };
 }
 
-function cleanTokenTail(tokenTail: string, orderedCrefs?: string[]): string {
+function cleanTokenTail(
+  tokenTail: string,
+  orderedCrefs?: string[],
+  opts?: { omitSref?: boolean },
+): string {
   const crefs = new Set<string>();
   const srefs = new Set<string>();
   let ar = "";
   tokenTail
-    .replace(/--sref\s+([^\s,]+),?/gi, (_, c: string) => {
-      srefs.add(c.replace(/,$/, ""));
+    .replace(/--sref\s+([^\s,，。；;]+)[,，。；;]*/gi, (_, c: string) => {
+      srefs.add(String(c).replace(/[,，。；;]+$/g, ""));
       return " ";
     })
     .replace(/--cref\s+((?:[A-Za-z]+-[A-Za-z0-9]+\s*)+)/gi, (_, block: string) => {
       for (const c of block.trim().split(/\s+/)) {
-        if (c) crefs.add(c.toUpperCase());
+        if (c) crefs.add(c.replace(/[,，。；;]+$/g, "").toUpperCase());
       }
       return " ";
     })
     .replace(/--ar\s+(\S+)/gi, (_, v: string) => {
-      ar = v;
+      ar = String(v).replace(/[,，。；;]+$/g, "");
       return " ";
     });
   const parts: string[] = [];
+  // SCENE-* must never stay in --cref; move to --sref
+  for (const c of [...crefs]) {
+    if (/^SCENE-/i.test(c)) {
+      crefs.delete(c);
+      srefs.add(c);
+    }
+  }
   const ordered = (orderedCrefs ?? []).map((c) => c.toUpperCase()).filter((c) => /^CHAR-/i.test(c));
   if (ordered.length) {
     for (const c of [...crefs]) {
-      if (!ordered.includes(c)) ordered.push(c);
+      if (!ordered.includes(c) && /^CHAR-/i.test(c)) ordered.push(c);
     }
     parts.push(`--cref ${ordered.join(" ")}`);
   } else if (crefs.size) {
-    parts.push(`--cref ${[...crefs].join(" ")}`);
+    const onlyChar = [...crefs].filter((c) => /^CHAR-/i.test(c));
+    if (onlyChar.length) parts.push(`--cref ${onlyChar.join(" ")}`);
   }
-  if (srefs.size) parts.push(`--sref ${[...srefs].join(" ")}`);
+  if (srefs.size && !opts?.omitSref) parts.push(`--sref ${[...srefs].join(" ")}`);
   if (ar) parts.push(`--ar ${ar}`);
   return parts.join(" ").replace(/\s{2,}/g, " ").trim();
+}
+
+/** Test/helper: rewrite token tail so SCENE-* leaves --cref for --sref. */
+export function relocateSceneCrefsInTokenTail(tokenTail: string): string {
+  return cleanTokenTail(tokenTail);
 }
 
 const SHOT_SIZE_ZH: Record<string, string> = {
@@ -242,7 +272,7 @@ export function formatShotSizeZh(shotSize: string | null | undefined): string | 
   return SHOT_SIZE_ZH[key] ?? null;
 }
 
-/** Extract concrete noun-like anchors from Chinese/English description. */
+/** Extract concrete noun-like anchors — person names only from extraNames (casting sheet). */
 export function extractEntityAnchors(text: string, extraNames: string[] = []): string[] {
   const t = String(text ?? "");
   const anchors = new Set<string>();
@@ -250,34 +280,42 @@ export function extractEntityAnchors(text: string, extraNames: string[] = []): s
     const name = String(n ?? "").trim();
     if (name.length >= 2) anchors.add(name.slice(0, 8));
   }
-  // Person names: 沈清瓷 / 沈母 / X某
-  const names =
-    t.match(/[\u4e00-\u9fff]{1,3}(?:清瓷|清辞|阿母|母|爹|父|公子|小姐|夫人)|沈[\u4e00-\u9fff]{1,3}/g) ?? [];
-  for (const n of names) anchors.add(n.slice(0, 8));
+  // Props / scene nouns only — never 沈[汉]{1,3} invent; avoid name+prop glue
   const zhNouns =
     t.match(
-      /[\u4e00-\u9fff]{1,6}(?:祠堂|廊桥|扳指|烛火|墨滴|窗|门|雨|剑|杯|衣|发|手|泪|玉|纸|跪|站|坐|捧|望)/g,
+      /(?:祠堂|廊桥|扳指|烛火|墨滴|银簪|手帕|帕子|窗格|玉扳指)/g,
     ) ?? [];
   for (const n of zhNouns) anchors.add(n.slice(0, 8));
   const chunks =
     t.match(
-      /(?:祠堂|廊下|廊桥|扳指|烛火|玉扳指|清瓷|沈母|沈清瓷|跪地|对峙|望雨|发丝|窗格|侧光|墨滴|纸上|眼眶)/g,
+      /(?:祠堂|廊下|廊桥|扳指|烛火|玉扳指|跪地|对峙|望雨|发丝|窗格|侧光|墨滴|纸上|眼眶|银簪)/g,
     ) ?? [];
   for (const c of chunks) anchors.add(c);
-  const en = t.match(/\b[A-Z][a-z]{2,12}\b/g) ?? [];
-  for (const e of en.slice(0, 4)) anchors.add(e);
   return [...anchors].slice(0, 14);
 }
 
-function pickPrimaryDescription(ctx: ComposeStillContext): { text: string; source: string } | null {
+function pickPrimaryDescription(ctx: ComposeStillContext): { text: string; source: string; trimmed?: boolean } | null {
+  const { trimToOneBeat } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
   const vd = String(ctx.visualDescription ?? "").trim();
-  if (vd) return { text: vd, source: "shot.visualDescription" };
+  if (vd) {
+    const t = trimToOneBeat(vd);
+    return { text: t.text, source: "shot.visualDescription", trimmed: t.trimmed };
+  }
   const compiled = scrubStillPromptNoise(stripIdentityTokens(String(ctx.compiledImagePrompt ?? "")).body).cleaned;
-  if (compiled && measureVisualBody(compiled).ok) return { text: compiled.slice(0, 360), source: "shot.compiledImagePrompt" };
+  if (compiled && measureVisualBody(compiled).ok) {
+    const t = trimToOneBeat(compiled.slice(0, 360));
+    return { text: t.text, source: "shot.compiledImagePrompt", trimmed: t.trimmed };
+  }
   const vdesc = stripMotionOnlyForStill(String(ctx.videoDesc ?? ""));
-  if (vdesc && measureVisualBody(vdesc).ok) return { text: vdesc.slice(0, 300), source: "shot.videoDesc" };
+  if (vdesc && measureVisualBody(vdesc).ok) {
+    const t = trimToOneBeat(vdesc.slice(0, 300));
+    return { text: t.text, source: "shot.videoDesc", trimmed: t.trimmed };
+  }
   const sb = scrubStillPromptNoise(stripIdentityTokens(String(ctx.promptFromStoryboard ?? "")).body).cleaned;
-  if (sb && measureVisualBody(sb).ok) return { text: sb.slice(0, 300), source: "storyboard.prompt" };
+  if (sb && measureVisualBody(sb).ok) {
+    const t = trimToOneBeat(sb.slice(0, 300));
+    return { text: t.text, source: "storyboard.prompt", trimmed: t.trimmed };
+  }
   return null;
 }
 
@@ -378,14 +416,19 @@ function layerBeatBlocking(
 ): void {
   const split = String(ctx.splitHint ?? "").trim();
   const reaction = String(ctx.reactionAction ?? "").trim();
+  const shot = String(ctx.shotSize ?? "").toLowerCase();
+  const isEcu = /ecu|extreme|大特|特写/.test(shot);
   if (reaction || /reaction|反应/i.test(split)) {
     parts.push("反应镜：偏听者/过肩构图，非双人对峙抢戏");
     sources.push("beat.reaction");
+  } else if (isEcu) {
+    // ECU: skip power-blocking recipe
+    sources.push("beat.ecu.skipPower");
   } else if (bindHighName) {
     parts.push(`权力位：${bindHighName}（高位）靠近视觉重心，正脸清晰`);
     sources.push("beat.power.named");
   } else if (ctx.dialogueDominantSpeaker) {
-    parts.push(`权力位：${ctx.dialogueDominantSpeaker}靠近画面中心，正脸清晰`);
+    parts.push(`权力位：${String(ctx.dialogueDominantSpeaker)}靠近画面中心，正脸清晰`);
     sources.push("beat.power");
   } else if (/confront|对峙|face.?off/i.test(split)) {
     parts.push("对峙站位：双人关系清楚，主体均不裁切");
@@ -399,33 +442,38 @@ function layerRefIdentityLock(
   sources: string[],
   opts?: { seatingHard?: boolean },
 ): void {
+  const policy = loadStillRecipePolicy();
+  const { canEmitMultiFace, uniqueBareCastingNames } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
   const chars = (ctx.characters ?? []).filter((c) => c.kind !== "scene");
+  const coded = chars.filter((c) => c.code && /^CHAR-/i.test(String(c.code)));
+  // Multi lock ONLY by CHAR count — never referenceUrlCount (role+scene URLs ≠ dual face).
   if ((ctx.referenceUrlCount ?? 0) >= 1 || chars.length > 0) {
-    if (opts?.seatingHard) {
-      parts.push(
-        "身份锁定：脸型来自角色定妆参考；姿态与家具以描写为准，场景参考只补背景木作/匾额，不得替换太师椅或蒲团",
-      );
-      parts.push(
-        "座次锁：SCENE/--sref 仅作环境纹理，禁止把香案/供桌/站立礼佛仪式升为主构图；太师椅与蒲团必须按描写出现",
-      );
+    const picked = pickIdentityLockLines({
+      charCodeCount: coded.length,
+      hasCharacters: chars.length > 0,
+      seatingHard: opts?.seatingHard,
+      policy,
+    });
+    for (const line of picked.lines) parts.push(line);
+    if (picked.mode === "seating") {
       sources.push("refs.identityLock");
       sources.push("refs.identityLock.descFirst");
       sources.push("refs.sceneSrefSeatLock");
-    } else {
-      parts.push("严格锁定多参考身份：脸型来自角色定妆参考，环境来自场景参考，禁止把脸融进背景");
+    } else if (picked.mode === "multi") {
       sources.push("refs.identityLock");
+    } else if (picked.mode === "single") {
+      sources.push("refs.identityLock.single");
     }
   }
-  if (chars.length >= 2) {
-    const names = [
-      ...new Set(
-        chars
-          .map((c) => c.name || c.code)
-          .filter(Boolean)
-          .map((n) => String(n).trim()),
-      ),
-    ].slice(0, 3);
-    parts.push(`${names.join("与") || "二人"}不同脸，年龄与身份可辨，禁止共用同一张脸`);
+  const bareNames = uniqueBareCastingNames(coded.map((c) => c.name || c.code));
+  if (
+    canEmitMultiFace({
+      charCodes: coded.map((c) => String(c.code)),
+      names: bareNames,
+      crefCharCount: coded.length,
+    })
+  ) {
+    parts.push(`${bareNames.slice(0, 3).join("与") || "二人"}不同脸，年龄与身份可辨，禁止共用同一张脸`);
     sources.push("refs.multiFace");
   }
 }
@@ -485,16 +533,35 @@ function layerQcStrengthen(ctx: ComposeStillContext, parts: string[], sources: s
   }
 }
 
-/** Strip stale identity/binding tails before refine/fidelity reuses previousVisualBody. */
+/** Strip stale identity/binding/recipe tails before refine/fidelity reuses previousVisualBody. */
 export function stripStaleBindingFromPrevious(body: string): string {
-  return String(body ?? "")
+  let next = String(body ?? "")
     .replace(/站位绑定：[^。；;\n]*/g, " ")
     .replace(/身份顺序：[^。；;\n]*/g, " ")
     .replace(/权力位：[^。；;\n]*/g, " ")
     .replace(/(?:^|\s)--(?:cref|sref)\s+[^\n]*?(?=(?:\s--(?:cref|sref|ar)\b)|$)/gi, " ")
-    .replace(/(?:^|\s)--ar\s+\S+/gi, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+    .replace(/(?:^|\s)--ar\s+\S+/gi, " ");
+  const prefixes = loadStillRecipePolicy().recipeLayerPrefixes ?? [
+    "背景弱化",
+    "景别：",
+    "必须出现",
+    "锁定角色",
+    "严格锁定",
+    "身份锁定",
+    "座次锁",
+    "权力位",
+  ];
+  for (const prefix of prefixes) {
+    const esc = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    next = next.replace(new RegExp(`${esc}[^。；;\\n]*[。；;]?`, "g"), " ");
+  }
+  try {
+    const { stripIdentityNoiseFromBody, dedupeNarrativeClauses } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+    next = dedupeNarrativeClauses(stripIdentityNoiseFromBody(next));
+  } catch {
+    /* optional */
+  }
+  return next.replace(/\s{2,}/g, " ").trim();
 }
 
 function hasAnyAnchor(ctx: ComposeStillContext): boolean {
@@ -556,6 +623,10 @@ export function composeStillPrompt(
 
   const primary = pickPrimaryDescription(ctx);
   if (primary) {
+    if (primary.trimmed) {
+      warnings.push("still_multi_beat_trim");
+      sources.push("policy.oneBeat.trim");
+    }
     // full/fidelity: description must lead; refine: reinforce if missing
     if (mode === "full" || mode === "fidelity" || !descParts.length) {
       if (mode === "full") descParts.length = 0;
@@ -585,6 +656,16 @@ export function composeStillPrompt(
     description: primary?.text ?? ctx.visualDescription ?? "",
     characterNames: charNamesForBind,
   });
+  const bgPolicyResult = resolveStillBgPolicy({
+    description: primary?.text ?? ctx.visualDescription ?? "",
+    characterNames: charNamesForBind,
+    shotSize: ctx.shotSize,
+    pack: predPack,
+  });
+  if (bgPolicyResult.bgGuidance) {
+    supportParts.push(bgPolicyResult.bgGuidance);
+    sources.push(`bgPolicy.${bgPolicyResult.policy}`);
+  }
   // Stack: description → predicate hard → binding → anchors
   if (predPack.hardConstraintLine) {
     descParts.push(predPack.hardConstraintLine);
@@ -663,8 +744,13 @@ export function composeStillPrompt(
   layerRefIdentityLock(ctx, supportParts, sources, { seatingHard: predPack.hasSeatingOrKneel });
   layerNeighborWarn(ctx, warnings);
   if (ctx.continuityInject?.trim()) {
-    supportParts.push(ctx.continuityInject.trim());
-    sources.push("cross.continuity");
+    const cont = applyContinuityPolicy(ctx.continuityInject, ctx.shotSize);
+    if (cont.text) {
+      supportParts.push(cont.text);
+      sources.push(cont.truncated ? "cross.continuity.truncated" : "cross.continuity");
+    } else if (cont.omitted) {
+      sources.push("cross.continuity.ecuOmit");
+    }
   }
   layerMouthLipGuard(ctx, supportParts, sources);
   layerQcStrengthen(ctx, supportParts, sources);
@@ -781,10 +867,20 @@ export function composeStillPrompt(
   const orderedTokens = cleanTokenTail(
     [rawTokens, strippedBody.tokenTail, identityBind.crefTail ?? ""].filter(Boolean).join(" "),
     identityBind.orderedCodes,
+    { omitSref: bgPolicyResult.omitSrefToken },
   );
   if (identityBind.orderedCodes.length) sources.push("identity.crefOrder");
+  if (bgPolicyResult.omitSrefToken) sources.push("bgPolicy.omitSref");
 
-  const prompt = [visualBody, recipeTail, orderedTokens].filter(Boolean).join(" ").replace(/\s{2,}/g, " ").trim();
+  const promptRaw = [visualBody, recipeTail, orderedTokens].filter(Boolean).join(" ").replace(/\s{2,}/g, " ").trim();
+  const recipeHeal = healStillRecipePolicy(promptRaw, {
+    charCodeCount: identityBind.orderedCodes.filter((c) => /^CHAR-/i.test(c)).length,
+  });
+  const prompt = recipeHeal.prompt;
+  if (recipeHeal.changed) {
+    sources.push("recipe.heal");
+    for (const id of recipeHeal.healed) sources.push(`recipe.heal.${id}`);
+  }
 
   const coverage = assertStillDescCoverage({
     prompt,
@@ -823,6 +919,7 @@ export function composeStillPrompt(
       descCoverageOk: coverage.ok,
       descCoverageMissing: coverage.missing,
       orderedCrefCodes: identityBind.orderedCodes,
+      recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
     };
   }
 
@@ -844,6 +941,10 @@ export function composeStillPrompt(
     descCoverageOk: coverage.ok,
     descCoverageMissing: coverage.missing,
     orderedCrefCodes: identityBind.orderedCodes,
+    bgPolicy: bgPolicyResult.policy,
+    excludeScene: bgPolicyResult.excludeScene,
+    bgPolicyReason: bgPolicyResult.reason,
+    recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
   };
 }
 

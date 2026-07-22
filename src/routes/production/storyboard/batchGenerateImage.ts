@@ -250,6 +250,7 @@ export default router.post(
         /* template optional */
       }
       const { markHqOk, mergeReasonMeta } = await import("@/ruleEngine/compilers/stillQuality");
+      const { hashLiteraryDesc } = await import("@/ruleEngine/qc/stillFirstFrameGate");
       const { composeStillPrompt, isDirtyStillPrompt, resolveComposeMode, scrubStillPromptNoise, stripIdentityTokens, computeComposeHash } =
         await import("@/ruleEngine/compilers/composeStillPrompt");
       const { hydrateComposeStillContext } = await import("@/ruleEngine/compilers/hydrateComposeStillContext");
@@ -306,10 +307,13 @@ export default router.post(
         return;
       }
       const { assertStillIdentityPreflight } = await import("@/ruleEngine/compilers/stillIdentityPreflight");
+      const { parsePromptRefs } = await import("@/ruleEngine/compilers/vendorPromptAdapter");
+      const batchRefs = parsePromptRefs(promptText || composed.prompt || "");
       const idGate = assertStillIdentityPreflight({
         characters: composeCtx.characters,
         description: composeCtx.visualDescription,
         dialogueSpeakers: composeCtx.dialogueSpeakers,
+        promptCrefCodes: batchRefs.crefs,
         enforce: true,
       });
       if (!idGate.ok) {
@@ -338,7 +342,7 @@ export default router.post(
         .map((c) => String(c.code).toUpperCase());
       const identitySlots = buildIdentitySlots({
         charCodes: imagedCodes,
-        sceneCode: composeCtx.sceneCode ?? null,
+        sceneCode: composed.excludeScene ? null : (composeCtx.sceneCode ?? null),
       });
       const designFields = extractDesignFields({
         modality: "image",
@@ -355,10 +359,17 @@ export default router.post(
       const { runStillVisualFidelityLoop } = await import("@/ruleEngine/qc/stillVisualFidelityLoop");
       const charNames = (composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[];
       const literaryDesc = composeCtx.visualDescription ?? composeCtx.videoDesc ?? composed.visualBody;
+      const { resolveStillBgPolicy } = await import("@/ruleEngine/compilers/stillBgPolicy");
+      const bgPol = resolveStillBgPolicy({
+        description: literaryDesc,
+        characterNames: charNames,
+        shotSize: (item as { shotSize?: string }).shotSize ?? composeCtx.shotSize,
+      });
       const checklist = buildLiteraryFidelityChecklist({
         description: literaryDesc,
         characterNames: charNames,
         requireDualIdentity: charNames.length >= 2,
+        bgPolicy: bgPol.policy,
       });
       let pipeline = runStillPromptPipeline({
         composed,
@@ -388,7 +399,9 @@ export default router.post(
           storyboardId: item.id!,
           description: literaryDesc,
           checklist,
-          generateOnce: async ({ strengthen, mode, fixHints, failedImageBase64 }) => {
+          db: u.db,
+          bgPolicy: bgPol.policy,
+          generateOnce: async ({ strengthen, mode, fixHints, failedImageBase64, layoutPreserve }) => {
             const useEdit = mode === "edit";
             if (!useEdit && Object.keys(strengthen).length) {
               composeCtx.strengthen = { ...(composeCtx.strengthen ?? {}), ...strengthen };
@@ -404,7 +417,7 @@ export default router.post(
             });
             const reboundSlots = buildIdentitySlots({
               charCodes: bind.orderedCodes.length ? bind.orderedCodes : imagedCodes,
-              sceneCode: composeCtx.sceneCode ?? null,
+              sceneCode: composedForPipe.excludeScene ? null : (composeCtx.sceneCode ?? null),
             });
             pipeline = runStillPromptPipeline({
               composed: composedForPipe,
@@ -426,17 +439,24 @@ export default router.post(
               vendorPrompt,
               bind.orderedCodes.length ? bind.orderedCodes : imagedCodes,
               bind.orderedCodes.length ? bind.orderedCodes : imagedCodes,
+              { excludeScene: Boolean(composedForPipe.excludeScene) },
             ).then((b) => b.referenceList);
-            if (!referenceList.length) {
+            if (!referenceList.length && !composedForPipe.excludeScene) {
               referenceList = await buildReferenceListFromAssetIds(u.db, assetIds);
             }
             let editStrategy: string | undefined;
             if (useEdit) {
               const { prepareStillImageEdit } = await import("@/ruleEngine/qc/stillImageEdit");
+              const { buildLiteraryEditPrompt } = await import("@/ruleEngine/compilers/stillEditLiteraryPrompt");
+              const litEdit = buildLiteraryEditPrompt({
+                fullPrompt: vendorPrompt,
+                description: literaryDesc,
+                fixHints: fixHints ?? [],
+              });
               const prep = prepareStillImageEdit({
                 failedImageBase64: failedImageBase64 || "",
                 fixHints: fixHints ?? [],
-                literaryPrompt: vendorPrompt,
+                literaryPrompt: litEdit,
                 crefOrderedRefs: referenceList.map((r) => ({
                   type: "image" as const,
                   base64: r.base64,
@@ -444,6 +464,9 @@ export default router.post(
                 })),
                 model: String(projectSettingData?.imageModel ?? ""),
                 vendorHint: String(projectSettingData?.imageModel ?? "").split(":")[0],
+                layoutPreserve: Boolean(layoutPreserve) || Boolean(composedForPipe.excludeScene),
+                strategy:
+                  layoutPreserve || composedForPipe.excludeScene ? "layout_preserve" : undefined,
               });
               vendorPrompt = prep.promptUsed;
               referenceList = prep.referenceList.map((r) => ({ type: "image" as const, base64: r.base64 }));
@@ -489,6 +512,7 @@ export default router.post(
               qualityMode: "hq_update",
               composeSources: composed.sources,
               promptUsed: loopOut.promptUsed,
+              literaryDescHash: hashLiteraryDesc(String(literaryDesc ?? composeCtx.visualDescription ?? "")),
               compositionContractApplied: composed.compositionContractApplied,
               composeMode: composed.composeMode,
               entityAnchors: composed.entityAnchors,
@@ -497,6 +521,7 @@ export default router.post(
               collapsed: pipeline.collapsed,
               autoHealed: [...(pipeline.autoHealed ?? []), ...loopOut.autoHealed],
               pipelineVersion: pipeline.pipelineVersion,
+              recipeHeals: pipeline.recipeHeals ?? composed.recipeHeals,
               visualPass: true,
               visualPassAt: loopOut.visualPassAt,
               fidelityItems: loopOut.fidelityItems,
@@ -506,10 +531,12 @@ export default router.post(
               qualityMode: "draft" as const,
               promptState: "composed" as const,
               promptUsed: loopOut.promptUsed.slice(0, 2000),
+              literaryDescHash: hashLiteraryDesc(String(literaryDesc ?? composeCtx.visualDescription ?? "")),
               literaryChars: pipeline.literaryChars,
               collapsed: pipeline.collapsed,
               autoHealed: [...(pipeline.autoHealed ?? []), ...loopOut.autoHealed],
               pipelineVersion: pipeline.pipelineVersion,
+              recipeHeals: pipeline.recipeHeals ?? composed.recipeHeals,
               visualPass: false,
               fidelityItems: loopOut.fidelityItems,
               fidelityStopReason: loopOut.stopReason,

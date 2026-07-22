@@ -1,8 +1,8 @@
 ---
 name: browser_chat_index
 description: Browser Chat 多文件套件 TOC · 对齐编排 §6 bundle 分区
-version: "2.0.1"
-rulePackVersion: "2.0.1"
+version: "2.1.0"
+rulePackVersion: "2.1.0"
 ---
 
 # Browser Chat 套件索引（00_index）
@@ -14,7 +14,7 @@ rulePackVersion: "2.0.1"
 | 项 | 值 |
 |----|-----|
 | 套件版本 | v2.0.1 |
-| rulePackVersion | `2.0.1` |
+| rulePackVersion | `2.1.0` |
 | 主编排 | `../browser_flow_orchestration.md` |
 | 合流点 | import → validate（INT 权威） |
 
@@ -109,6 +109,10 @@ Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`mu
 3. **阶段边界**：改编路径 P0→P03 须保留 `recommendedMatrixDraft[]`；P03 确认后 `userConfirmed: true`
 4. **自检回流**：export 前对照 `modality_closure_checklist` + `closureReport` 模板（missing/optimize）自修
 5. **契约对齐**：`adaptationMatrixStructured` 与 API `confirmMatrixChoices` Zod 同构
+6. **设计拆分闭环（v2.1 design-gate）**：决策树见 `W3_script` / `corridor_SB`；Confirm=`designSplitOps`；残句=`nar14_residual`（重设计∪导入B）；反推修好后必须 `forwardReentry`；深链见 chatRepairText
+7. **静帧 Identity 闭环**：casting 裸名权威 + multiFace 谓词 + egress 同谓词首帧闸；DEX-STILL-* WARN→chatRepair；反推 `still_firstframe_dirty`→SB→stale→MD-IMG；禁动词表白名单主修
+8. **QP-02 可拍描写闭环**：设计 DEX-QP-02 ≡ export QP-02；CHAT-SB 同核；导入仅溯源补写；深链 SB；minChars 为防空壳底线
+9. **冻结**：禁止静默发明 splitHint/reactionAction；B 须真实反应镜才绑 hint；静帧禁只 regen 假闭环；禁发明 visualDescription 占位
 
 ## §7 ScriptBundle 字段对照
 

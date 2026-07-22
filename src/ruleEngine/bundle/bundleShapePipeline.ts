@@ -42,12 +42,44 @@ export function tryFixPasteJson(text: string): string {
   return out;
 }
 
+/** Parse bundle JSON text with optional repair-prefix strip + C0 tryFix on failure. */
+export function stripChatRepairPrefix(text: string): string {
+  const raw = String(text ?? "");
+  const trimmed = raw.trimStart();
+  const looksLikeRepair =
+    trimmed.startsWith("【闭环修复清单") ||
+    trimmed.startsWith("待处理规则") ||
+    trimmed.includes("【BLOCK 明细】") ||
+    trimmed.includes("SCHEMA_SHAPE_BLOCK");
+  if (!looksLikeRepair) return raw;
+
+  // Prefer object that declares bundleVersion / bundleType (skip inline {level,desc} in hints)
+  const markers = ['"bundleVersion"', '"bundleType"', '"preDesignPack"', '"designBrief"'];
+  let best = -1;
+  for (const m of markers) {
+    const idx = raw.indexOf(m);
+    if (idx < 0) continue;
+    // walk back to opening brace
+    let i = idx;
+    while (i > 0 && raw[i] !== "{") i--;
+    if (raw[i] === "{" && (best < 0 || i < best)) best = i;
+  }
+  if (best >= 0) return raw.slice(best);
+
+  const firstBrace = raw.indexOf("\n{");
+  if (firstBrace >= 0) return raw.slice(firstBrace + 1);
+  const brace = raw.indexOf("{");
+  if (brace >= 0) return raw.slice(brace);
+  return raw;
+}
+
 /** Parse bundle JSON text with optional C0 tryFix on failure. */
 export function parseBundleJson(text: string): unknown {
+  const stripped = stripChatRepairPrefix(text);
   try {
-    return JSON.parse(text);
+    return JSON.parse(stripped);
   } catch (first) {
-    const fixed = tryFixPasteJson(text);
+    const fixed = tryFixPasteJson(stripped);
     try {
       return JSON.parse(fixed);
     } catch {

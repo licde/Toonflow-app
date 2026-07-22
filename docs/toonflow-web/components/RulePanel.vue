@@ -23,6 +23,8 @@ const emit = defineEmits<{
   rePush: [item: RePushPlanItem];
   /** CTA: POST /api/production/storyboard/applyDc01SoftPatch */
   applyDc01SoftPatch: [];
+  /** CTA: POST /api/scriptAgent/setEmotionNormProfile applyStructureHeal */
+  applyEmotionStructureHeal: [];
 }>();
 
 const activeTab = ref<ClosureDimension>("dc");
@@ -37,6 +39,18 @@ const showDc01SoftPatchCta = computed(() => {
       p.trigger === "dialogue_hash_mismatch" ||
       /dialogue_hash_mismatch/i.test(String(p.trigger || p.reason || "")),
   );
+});
+
+/** Structure / emotion-norm failures → heal CTA, never「去改剧本」as primary. */
+const showEmotionStructureHealCta = computed(() => {
+  const plan = props.result?.rePushPlan ?? [];
+  return plan.some((p) => {
+    const t = String(p.trigger || p.reason || "");
+    return (
+      /emotion_structure|cam_style|cluster|structure_stale|svq_|motion_mismatch/i.test(t) ||
+      p.reverseTarget === "EN" && /CAM|PR-CAM|structure/i.test(t)
+    );
+  });
 });
 
 const isBlocked = computed(() => {
@@ -76,8 +90,21 @@ function forkLabel(fork: RePushPlanItem["presentationFork"]): string {
 /** Never show bare dialogue_hash_mismatch→SB as the only UI copy. */
 function rePushLabel(p: RePushPlanItem): string {
   const trigger = String(p.trigger || p.reason || "");
+  if (trigger === "runtime_type_error" || /is not a function|TypeError/i.test(trigger)) {
+    return "运行时异常 → 重试生成（非台词保真）";
+  }
   if (trigger === "dialogue_hash_mismatch" || /dialogue_hash_mismatch/i.test(trigger)) {
     return "分镜台词与剧本对不上 → 补台词后再生成";
+  }
+  if (/emotion_structure|structure_stale|cam_style|cluster/i.test(trigger)) {
+    return "情绪结构待补齐 → 按当前风格自愈（不改台词）";
+  }
+  if (p.reverseTarget === "INFRA") {
+    return trigger ? `${trigger} → 检查环境后重试` : "基础设施异常 → 重试";
+  }
+  // Never present bare trigger→SB as the only copy for structure routes
+  if (p.reverseTarget === "SB" && /CAM|structure|emotion/i.test(trigger)) {
+    return "分镜结构问题 → 一键按当前情绪风格补齐";
   }
   const target = p.reverseTarget ? ` → ${p.reverseTarget}` : "";
   return `${trigger || "回推"}${target}`;
@@ -183,6 +210,14 @@ function onCopyFullBrief() {
       <p class="rule-panel__dc01-msg">分镜台词与剧本对不上，可一键把缺失台词补进空镜后再生成。</p>
       <button type="button" class="rule-panel__copy-primary" @click="emit('applyDc01SoftPatch')">
         一键补台词
+      </button>
+    </section>
+
+    <section v-if="showEmotionStructureHealCta" class="rule-panel__section">
+      <h4>情绪结构</h4>
+      <p class="rule-panel__dc01-msg">只更新情绪契约与分镜结构，不修改台词原文。设计期应已出站；此处为漏网兜底。</p>
+      <button type="button" class="rule-panel__copy-primary" @click="emit('applyEmotionStructureHeal')">
+        按当前题材公式补齐结构
       </button>
     </section>
 

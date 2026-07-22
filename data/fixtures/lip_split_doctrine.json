@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "description": "Lip / multi-line / vendor split doctrine — same predicates as burn decideVideoQuality L3",
+  "freeze": {
+    "neverSilentInvent": ["splitHint", "reactionAction"],
+    "neverPersistHintOnBurnBlock": true,
+    "neverFallbackReactionActionAsSplitHint": true,
+    "noNewTodosWithoutSample": true
+  },
+  "canonicalSplitHints": ["reaction_shot", "speak_react", "reveal_then_reaction", "clause_split"],
+  "predicates": {
+    "needsSplit": "texts.length>=2 && (lipMin>8 || authorDuration<lipMin)",
+    "overVendorMax": "required > vendorMax",
+    "lipOver": "lipMin > vendorMax",
+    "canSilentRaise": "!needsSplit && !overVendorMax && authorDuration < required <= vendorMax"
+  },
+  "forward": {
+    "designExit": ["needsSplit", "lipOver", "overVendorMax"],
+    "import": ["cluster_speak_react_or_hard_Confirm", "SH-DURATION-ALIGN_respect_vendor_and_needsSplit"],
+    "burn": "L3_split_shot_backstop_only"
+  },
+  "chatRepair": {
+    "must": ["needsSplit", "lipOver", "overVendorMax", "fx_f3_split"],
+    "auto": ["canSilentRaise"]
+  },
+  "reasonLabels": {
+    "needsSplit": "multi_line_one_shot",
+    "overVendorMax": "lip_over_vendor",
+    "lipOver": "lipMin_gt_vendorMax"
+  }
+}

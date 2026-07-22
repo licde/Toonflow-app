@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "defaultDepth": "viral",
+  "depths": {
+    "viral": { "hardExitGates": true, "requireAvTags": true, "adaptScorePass": 65 },
+    "standard": { "hardExitGates": false, "requireAvTags": false, "adaptScorePass": 50 },
+    "weakPath": { "hardExitGates": false, "requireAvTags": false, "adaptScorePass": 0, "audit": true }
+  },
+  "hintLeakRateWarn": 0.05,
+  "costHints": {
+    "designExitGate": "CPU-only",
+    "smartMatch": "heuristic; optional LLM later"
+  }
+}

@@ -234,6 +234,7 @@ export function resolveLipDuration(shot: PreDesignShot): {
   durationSec: number;
   lipMin: number;
   needsSplit: boolean;
+  overVendorMax?: boolean;
   splitHint?: string;
   required?: number;
 } {
@@ -243,7 +244,9 @@ export function resolveLipDuration(shot: PreDesignShot): {
   return {
     durationSec,
     lipMin: req.lipMin,
-    needsSplit: req.needsSplit || req.overVendorMax,
+    // Keep multi-line vs over-vendor distinct — burn reasons must not mislabel overVendor as multi_line.
+    needsSplit: req.needsSplit,
+    overVendorMax: req.overVendorMax,
     splitHint: req.splitHint,
     required: req.required,
   };

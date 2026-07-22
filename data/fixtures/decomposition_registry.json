@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "description": "分解族 SSOT — drivenBy emotion|structure|packaging",
+  "dimensions": [
+    { "id": "emotion_spine", "drivenBy": "emotion", "closure": "L-Full", "ruleIds": ["DC-EMO", "E1", "E2"] },
+    { "id": "narrative_beat", "drivenBy": "emotion", "closure": "L-Full", "ruleIds": ["DC-NAR-BEAT", "NAR-03"] },
+    { "id": "dialogue_cluster", "drivenBy": "emotion", "closure": "L-Full", "ruleIds": ["DC-DLG-CLUSTER", "NAR-14", "NAR-15"] },
+    { "id": "info_delivery", "drivenBy": "structure", "closure": "L-Full", "ruleIds": ["N2-INFO"] },
+    { "id": "retention_rhythm", "drivenBy": "emotion", "closure": "L-Full", "ruleIds": ["RET-01"] },
+    { "id": "empathy_beats", "drivenBy": "emotion", "closure": "L-Full", "ruleIds": ["N2-EMPATHY"] },
+    { "id": "packaging_debut_hook", "drivenBy": "packaging", "closure": "L-Full", "ruleIds": ["PR-16", "N3"] },
+    { "id": "lip_multiline", "drivenBy": "structure", "closure": "L-Full", "ruleIds": ["LIP-01"] },
+    { "id": "fx_feasibility", "drivenBy": "structure", "closure": "L-Half", "ruleIds": ["FX-GRADE-01"] },
+    { "id": "cam_variety", "drivenBy": "structure", "closure": "L-Half", "ruleIds": ["CAM-VARIETY"] },
+    { "id": "motion_vlm", "drivenBy": "structure", "closure": "L-Half", "ruleIds": ["QC-MOTION-MISMATCH"] },
+    { "id": "optical_axis", "drivenBy": "structure", "closure": "L-Out", "ruleIds": [] }
+  ]
+}

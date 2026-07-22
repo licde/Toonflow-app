@@ -6,6 +6,7 @@ import { dc13Adapter } from "../precheckLoop/adapters/dc13";
 import type { PrecheckScope } from "../precheckLoop/types";
 import { isAllowedTransition, loadCameraMotionWhitelist } from "../qualityGate/cameraWhitelist";
 import { auditCastCoverage } from "./designExportHelpers";
+import { evaluateVisBeatConflict, explainVisBeat } from "../design/visualBeatPolicy";
 
 function loadChecklist(): { id: string; severity: string }[] {
   return readFixtureJson<{ checks?: { id: string; severity: string }[] }>("design_closure_checklist.json", { checks: [] }).checks ?? [];
@@ -227,6 +228,37 @@ export function runDesignClosureDryRun(
         }
       : undefined,
   });
+
+  // VisBeat dryRun panel (inspect visibility) — WARN unless enforce meta
+  {
+    const meta = (bundle.planData as { meta?: Record<string, unknown> } | undefined)?.meta ?? {};
+    const enforce = String(meta.pillarsVisBeatV2 ?? "shadow") === "enforce";
+    for (const s of shots as Array<
+      Shot & { visualBeatTags?: unknown; shotSize?: string; visualDescription?: string; weaponId?: string; picture?: string }
+    >) {
+      const ev = evaluateVisBeatConflict({
+        visualBeatTags: s.visualBeatTags,
+        shotSize: s.shotSize ?? (s.narrative as { shotSize?: string } | undefined)?.shotSize,
+        picture: s.visualDescription ?? s.picture,
+        weaponId: s.weaponId,
+        requireTags: true,
+        meta,
+      });
+      if (ev.action === "ok" || ev.action === "off") continue;
+      checks.push({
+        id:
+          ev.action === "must_split"
+            ? "DEX-VIS-SPLIT"
+            : ev.action === "tag_missing"
+              ? "DEX-VIS-TAG-MISSING"
+              : "DEX-VIS-TAG-INCONSISTENT",
+        passed: !enforce || ev.ok,
+        message: explainVisBeat(ev) || ev.action,
+        severity: enforce && !ev.ok ? "BLOCK" : "WARN",
+        detail: { matrixRowId: ev.matrixRowId, tags: ev.tags, mode: ev.mode },
+      });
+    }
+  }
 
   return checks;
 }

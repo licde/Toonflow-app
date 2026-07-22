@@ -21,6 +21,7 @@ import {
   type StillFidelityItem,
 } from "./literaryFidelityChecklist";
 import { normalizeStillEgressPrompt } from "./stillEgressNormalize";
+import { healStillRecipePolicy } from "./stillRecipePolicy";
 import { readFixtureJson } from "../utils/fixturesPath";
 
 export interface StillPromptPipelineInput {
@@ -52,6 +53,8 @@ export interface StillPromptPipelineResult {
   fidelityOk: boolean;
   fidelityMissing: string[];
   checklist: StillFidelityItem[];
+  /** Recipe policy self-heal ids for FE / reverse */
+  recipeHeals?: string[];
 }
 
 interface LoopCfg {
@@ -206,12 +209,19 @@ export function runStillPromptPipeline(input: StillPromptPipelineInput): StillPr
     stages.push("egress_normalize");
     for (const n of normalized.notes) autoHealed.push(`egress:${n}`);
   }
+  const recipeHeal = healStillRecipePolicy(normalized.prompt);
+  if (recipeHeal.changed) {
+    stages.push("recipe_heal");
+    for (const id of recipeHeal.healed) autoHealed.push(`recipe:${id}`);
+  }
+  const fromCompose = input.composed.recipeHeals ?? [];
+  const recipeHeals = [...new Set([...fromCompose, ...recipeHeal.healed])];
   return {
-    egressPrompt: normalized.prompt,
+    egressPrompt: recipeHeal.prompt,
     literaryChars: measure.chars,
     collapsed,
     collapsedReason: measure.collapsedReason,
-    healed,
+    healed: healed || recipeHeal.changed,
     autoHealed,
     coverage,
     literaryOk,
@@ -222,6 +232,7 @@ export function runStillPromptPipeline(input: StillPromptPipelineInput): StillPr
     fidelityOk,
     fidelityMissing: fidelity.missing.map((m) => m.id),
     checklist,
+    recipeHeals: recipeHeals.length ? recipeHeals : undefined,
   };
 }
 

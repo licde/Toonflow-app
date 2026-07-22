@@ -1,0 +1,145 @@
+{
+  "packId": "sweet",
+  "label": "甜宠",
+  "source": "handbook§题材档案/甜宠",
+  "emotionSupplyMix": { "甜": 0.55, "爽": 0.2, "虐": 0.15, "惊": 0.1 },
+  "storyFormula": {
+    "openingHookTypes": ["emotion_hit", "identity_contrast"],
+    "conflictPer15s": true,
+    "paypointHints": ["告白前", "误会将解"],
+    "empathyBeats": ["心动", "偏爱", "安全感"]
+  },
+  "scriptFormula": {
+    "forbidden": ["exposition_dump"],
+    "dialogueClusterIntent": "speak_react",
+    "voiceIntentHints": ["气声", "轻快"]
+  },
+  "shotFormula": {
+    "shotSizeBias": ["近景", "特写"],
+    "allowedMotions": ["static", "gentle push", "subtle drift"],
+    "speakMotion": "static",
+    "reactMotion": "gentle push",
+    "fxIntentCeiling": "F2",
+    "audioMoodHints": ["heartbeat", "ukulele"],
+    "cutGrammar": ["eye_line", "intimate_ots"]
+  },
+  "sceneTagVocabulary": ["sweet", "马卡龙", "柔光", "贴身过肩", "听觉柔焦"],
+  "weapons": ["intimate_ots"],
+  "sceneRecipes": [{ "id": "intimate_care", "label": "亲密上药", "weaponId": "intimate_ots", "source": "handbook§甜宠" }],
+  "adaptationPrompts": {
+    "short": "按甜宠公式：心动偏爱、近景特写、柔光；Speak 静。",
+    "w3": "打标 [sweet]；亲密场可用 intimate_ots；fx≤F2；sidecar 填 shotDesignIntent。"
+  },
+  "designThinking": {
+    "dimensions": {
+      "narrative": {
+        "principles": ["开场情感暴击或身份反差甜钩", "心动→偏爱→安全感"],
+        "mustDo": ["peakLedger 兑现告白/守护/上药", "3-15-45 留存"],
+        "forbidden": ["纯写景当爆点", "无偏爱信息的空甜"],
+        "examples": ["雨夜护身→上药近景→告白"],
+        "mustEmit": ["openingHook", "empathyBeats"]
+      },
+      "dialogue": {
+        "principles": ["气声短句", "偏爱潜台词"],
+        "mustDo": ["emotion_hit 反应镜", "口型时长"],
+        "forbidden": ["说明性长独白"],
+        "examples": ["我在。→泪目反应"],
+        "mustEmit": ["splitHint", "reactionAction"]
+      },
+      "scene": {
+        "principles": ["亲密空间冲突微升级", "打标 sweet"],
+        "mustDo": ["每场偏爱动作落点"],
+        "forbidden": ["无信息纯氛围"],
+        "examples": ["诊所上药场"],
+        "mustEmit": ["sceneAvTags"]
+      },
+      "shotPicture": {
+        "principles": ["近景特写", "柔光贴身过肩", "拍手/瞳孔"],
+        "mustDo": ["shotDesignIntent.picture", "Speak=static"],
+        "forbidden": ["正文括注"],
+        "examples": ["手部上药特写"],
+        "mustEmit": ["shotDesignIntent"]
+      },
+      "cutTransition": {
+        "principles": ["视线匹配", "intimate_ots"],
+        "mustDo": ["audioIntent 心跳/气声", "durationSec"],
+        "forbidden": ["硬切打断心动节奏"],
+        "examples": ["对视眼线接"],
+        "mustEmit": ["cutIntent", "durationSec"]
+      }
+    },
+    "peakHookGuidance": {
+      "truePeakForms": ["告白近景", "亲密守护", "上药偏爱", "泪目心动"],
+      "falsePeakLabels": ["别墅写景", "开会交代", "纯环境描写"],
+      "hookTypes": ["emotion_hit", "identity_contrast"],
+      "empathyThreeBeat": ["心动", "偏爱", "安全感"],
+      "infoGapRules": ["观众感知偏爱先于角色承认", "ep1前30s核心info≤1"]
+    },
+    "durationNormLines": [
+      "对白镜 ≥ 口型估算+情绪留白",
+      "反应镜0.8–2s；插入0.6–1.5s",
+      "开场钩前3s情感暴击",
+      "单场须有偏爱升级点"
+    ]
+  },
+  "stageOutputTemplates": {
+    "P0": {
+      "mustEmit": ["peakLedger", "hookPlan", "genreTemplate"],
+      "writingSteps": ["选定甜宠公式", "抓取告白/守护/上药 peak", "hookPlan", "衍生询问"],
+      "forbid": ["假爆点"]
+    },
+    "W1": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan"],
+      "writingSteps": ["心动→偏爱→安全感排骨架", "peak 落到分集"]
+    },
+    "W2": {
+      "mustEmit": ["conflictCurve"],
+      "writingSteps": ["微冲突曲线对齐甜爆点"]
+    },
+    "W3": {
+      "mustEmit": ["scriptItem", "sceneAvTags", "shotDesignIntent", "hookPlan"],
+      "writingSteps": ["读 stageBrief", "文学△+sidecar 意图", "打标共生产"],
+      "forbid": ["正文技术括注"]
+    },
+    "designBrief": { "mustEmit": ["shotDesignIntent"], "writingSteps": ["镜像意图"] },
+    "SB": { "mustEmit": ["shotDesignIntent"], "writingSteps": ["执行意图 Speak=static"] },
+    "G": { "mustEmit": ["genreTemplate"], "writingSteps": ["原创：G前选公式并抓取爆点钩子"] },
+    "P06": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan", "paypointIntent", "changeLogFakeToTrue"],
+      "writingSteps": ["先打印原→改", "eventSequence 兑现心动偏爱", "changeLog 假→真", "付费卡标注"],
+      "forbid": ["空甜写景", "正文技术括注"]
+    }
+  },
+  "reconstructionExamples": [
+    {
+      "id": "sw-medicine",
+      "from": "原：女主受伤，男主给她上药，两人说了好多关心的话，气氛温馨。",
+      "to": "改：棉签将触伤口（特写）→过肩看男主心疼→触碰气声「嘶」先导→静0.3s对视→「我轻点」→女主耳根泛红定格（心动钩）。",
+      "why": "解释性关心→可拍亲密过肩+心跳；情绪在反应不在说明",
+      "empathyBeat": "心动→偏爱",
+      "peakForms": ["亲密守护", "上药偏爱"],
+      "emotionTask": "极致甜蜜与被偏爱的安全感",
+      "paypointHint": "脸红定格、下一句告白将出口前切断",
+      "weaponId": "intimate_ots",
+      "sceneRecipeId": "intimate_care"
+    },
+    {
+      "id": "sw-bookshelf",
+      "from": "原：图书馆里女主够不到书，男主帮忙拿下来，两人聊了几句书名。",
+      "to": "改：踮脚够书→气馁叹气→胸膛碰撞心跳先导→过肩亲密侧脸→递书气声「给你」→脸红蔓延定格钩。",
+      "why": "闲聊拿书→听觉柔焦+生理心动；删废话对话",
+      "empathyBeat": "心动→安全感",
+      "peakForms": ["告白近景", "亲密守护"],
+      "emotionTask": "恋爱脑级生理心动",
+      "paypointHint": "脸红定格后下一互动升级前切断",
+      "weaponId": "intimate_ots"
+    }
+  ],
+  "emotionParabola": {
+    "s0_3": "日常轻推",
+    "s3_8": "意外靠近+视线匹配",
+    "s8_12": "亲密过肩/心跳交叠",
+    "s12_15": "心动定格钩"
+  },
+  "extensions": []
+}

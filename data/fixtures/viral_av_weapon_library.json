@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "weapons": {
+    "intimate_ots": {
+      "id": "intimate_ots",
+      "label": "贴身过肩",
+      "profiles": ["sweet", "abuse_romance"],
+      "shotSize": "近景",
+      "motion": "static",
+      "audioHint": "breath"
+    },
+    "silence_scream": {
+      "id": "silence_scream",
+      "label": "无声尖叫",
+      "profiles": ["abuse_romance"],
+      "shotSize": "特写",
+      "motion": "static",
+      "audioHint": "silence_then_hit"
+    },
+    "same_angle_jump_x3": {
+      "id": "same_angle_jump_x3",
+      "label": "同机位跳切×3",
+      "profiles": ["abuse_romance", "suspense"],
+      "shotSize": "近景",
+      "motion": "static",
+      "audioHint": "cut_accent"
+    },
+    "five_cut_reveal": {
+      "id": "five_cut_reveal",
+      "label": "五刀亮身份",
+      "profiles": ["war_god"],
+      "shotSize": "近景",
+      "motion": "gentle push",
+      "audioHint": "bass_drop_intent"
+    },
+    "follow_handheld": {
+      "id": "follow_handheld",
+      "label": "跟拍手持感",
+      "profiles": ["suspense", "war_god"],
+      "shotSize": "中近景",
+      "motion": "subtle drift",
+      "audioHint": "low_drone"
+    }
+  }
+}

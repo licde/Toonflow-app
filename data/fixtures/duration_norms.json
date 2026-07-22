@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "description": "镜/场时长正向规范 — 写入 writing brief",
+  "dialogueShot": {
+    "minSecFormula": "chars / speechRate + emotionHold",
+    "speechRateCps": 4.5,
+    "emotionHoldSec": 0.4,
+    "vendorBucketSplitHint": "超厂商桶则预拆簇 speak_react(_insert)"
+  },
+  "reactionShotSec": { "min": 0.8, "max": 2.0 },
+  "insertShotSec": { "min": 0.6, "max": 1.5 },
+  "openingHookGroup": {
+    "firstStrongStimulusWithinSec": 3,
+    "maySpanMultipleShots": true
+  },
+  "scene": {
+    "requireConflictUpgrade": true,
+    "forbidLongAtmosphereOnly": true,
+    "maxAtmosphereOnlySec": 4
+  },
+  "briefLines": [
+    "对白镜 ≥ 口型估算（字数/语速）+ 情绪留白；超厂商桶 → 预拆簇",
+    "反应镜约 0.8–2s；强调/插入约 0.6–1.5s",
+    "开场钩镜头组：前 3s 内须完成第一强刺激（可多镜合计）",
+    "单场须有冲突升级点；禁止长时间无信息纯氛围"
+  ]
+}

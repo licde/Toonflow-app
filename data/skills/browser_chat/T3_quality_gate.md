@@ -3,7 +3,7 @@ name: T3_quality_gate
 description: T3 全链路出口质量闸门 — 四模态 prompt + 资产包
 stageId: T3
 outputTag: exportReady
-rulePackVersion: "2.0.1"
+rulePackVersion: "2.1.0"
 ---
 
 # T3 质量闸门（全链路出口）
@@ -70,14 +70,35 @@ Slot 定义 SSOT：`data/fixtures/modality_prompt_slots.json`（skills / compile
 - **SB 镜级 string 字段**（T3 Browser 出口；object 仅服务器 salvage，Chat 勿写）：
   - `visualEffect`: `"F1: 烛火摇曳，微光闪烁"`（可选同镜 `fxLevel: "F1"`）
   - `audioCue`: `"茶盏碎裂声骤停"`（来自 W3 avCausality.audioBeat）
+  - `spatialRelation`: `"axis=女主-男主；anchors=女主左|男主右"`（从 B13 压串；禁止 object）
   - 禁止 `"visualEffect": { "level", "desc" }`（V62 制作路径 legacy，非 T3 export）
-- **导出前自检（阻断）**：扫描全部 `preDesignPack.shots[].visualEffect` / `audioCue`；若为 object → **不得导出**，按 RH-MOD-01 改成 string 后再跑 `exportGate`。服务器 import salvage 仅兜底，Chat 输出仍以 string 为规范。
+  - 禁止 `"spatialRelation": { "axis", "anchors" }`
+- **B12.beats**：必须为 **number**；叙事写 `summary`。禁止 `"beats": "自残取佩…"`
+- **导出前自检（阻断）**：
+  - 扫描全部 `preDesignPack.shots[].visualEffect` / `audioCue` / `spatialRelation`（含 narrative）；若为 object → **不得导出**（RH-MOD-01 / RH-SPATIAL-OBJ）
+  - 扫描 `designBrief.B12[].beats`；若非 number → **不得导出**（DEX-B12-BEATS-NUM / RH-B12-BEATS）
+  - **DEX-NAR-14/15**：**优先**按标点拆成多条 `lines`（分句 ≤15）；`emotion_hit` **必须**同写 `reactionAction`（plan+shots 同 lineId）。决策树：标点→A；**残句无标点→must 重设计或 Confirm B**；VisBeat→C。
+  - **二次修复必再入编排**：改完字段后须 `designSplitOps.forwardReentry` / tool `design_split_forward_reentry`，或 SB `setStepStatus` heal（会自动 SplitOrchestrator mirror + 残句 B）。**禁止只改 plan 不 mirror**，否则镜级 NAR-15 / DC-01 会二次爆。
+  - **NAR-14「可不手改」仅当 A 拆净或已 B 绑 hint**；残句进【须手改】。导入 ingest 可 auto B，**仅当真实反应镜存在才绑 splitHint**（禁静默发明）。
+  - **契约不符＝重设计**：deep link `nar14_residual` → W3；禁止只改 `narrativeSelfcheck.passed`（服务器会覆写）。
+  - **DEX-DC-01 / DEX-DC-ALIGN**：`dialoguePlan.lineId` ⊆ shots 台词；拆行后缺镜行 → Confirm/Orchestrator
+  - **DEX-SPEAKER-BARE**：speaker 裸名；禁 OS/VO 后缀；禁 APP/UI 作说话人
+  - **DEX-STILL-ONEBEAT / OS-NAME / FILLER**（WARN）：visualDescription 一镜一可静帧拍；人名裸名禁（OS）；禁「对白瞬间神态」。首帧脏 → `still_firstframe_dirty` 主链 **SB 改描写** → stale → 重出；禁只 regen（RH-STILL-FIRSTFRAME）
+  - **DEX-QP-02 / QP-02**（BLOCK）：画面描写空/过短/抽象无物象 — 与 export 同核；须 SB 重设计。深链 `qp02_visual_short`。minChars 仅防空壳底线
+  - **DEX-DC-16**：`designBrief.B6.characters` 每人必须进 `characterDesign.assets`（code/name/`L0.identity`）；禁仅 stub（如「侍女」）
+  - **DEX-FX-F0**：无特效镜写 `visualEffect: "F0"`（或 fxLevel/fxFeasibility F0）；有特效写散文 `generation.fxPrompt`。禁止 `modalityPromptAudit.FX=pass` 却全空
+  - **DEX-DURATION**：对白镜 `duration` ≥ 朗读时长（DFW-DURATION 为 silent 双轨，不进须手改 RH）
+  - **DEX-MOD-SEED**：T3 每镜非空 `generation.imagePrompt` / `videoPrompt`；有台词则 `audioPrompt`
+  - 服务器 import salvage/heal 仅兜底；Chat 输出仍以权威形为规范
+  - `chatRepairText` 分两层：【须手改】vs【导入将自动适配】；并含【深链·反推舞台】`toonflow://stage/...`
+  - 若返回 `shapeSalvageSummary`（【已自动适配】），下次导出须改权威形，勿依赖 salvage
 
 ## 禁止写入 bundle
 
 - `ruleAudit: { passed: true }` 假通过
 - `linkageAudit` 假六链 pass
 - `externalHashCheck: { match: true }` demo 值
+- **只导出纯 JSON**：禁止把 `chatRepairText` 修复清单粘在 JSON 前面再回传
 
 ## 下游
 
@@ -85,3 +106,5 @@ export JSON → `POST /api/ruleEngine/exportGate` → `exportAllowed=true` 且�
 禁止仅靠 `ruleAudit` / `linkageAudit` / `modalityPromptAudit` 自报通过。
 
 **配角入册（DC-16）**：`chatRepairText` 含 RH-DC-16 时，补真实 `characterDesign`（code/name/`L0.identity`，禁仅 stub）后须**再预览**直至 `exportAllowed`。详见 `preview_vs_import_guide.md` 与 `docs/image-quality-chain.md`。
+
+**语义双轨**：形态/时长/空 prompt 种子等可在 dryRun·导入自动适配；NAR-15 / DC-16 / SPEAKER-BARE **必须** Chat 写完再过严闸；NAR-14 可愈则 Orchestrator，不可愈须手改。DEX-STILL-* 为 WARN 但须在 chatRepairText 可见并回 SB 改描写；禁止「只 regen 静照」假闭环。

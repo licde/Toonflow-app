@@ -139,6 +139,8 @@ export function buildLiteraryFidelityChecklist(input: {
   characterNames?: string[] | null;
   /** When true and ≥2 names + seating, add dual-cref identity item */
   requireDualIdentity?: boolean;
+  /** When not keep, skip atmosphere items (background demoted) */
+  bgPolicy?: "drop" | "demote" | "keep" | null;
 }): StillFidelityItem[] {
   const cfg = loadLiteraryFidelityChecklistConfig();
   const keys = cfg.strengthenKeys ?? FALLBACK.strengthenKeys!;
@@ -206,6 +208,7 @@ export function buildLiteraryFidelityChecklist(input: {
   }
 
   for (const pat of cfg.atmospherePatterns ?? []) {
+    if (input.bgPolicy && input.bgPolicy !== "keep") continue;
     if (!desc.includes(pat)) continue;
     const id = `atmosphere:${pat}`;
     if (seen.has(id)) continue;
@@ -214,7 +217,7 @@ export function buildLiteraryFidelityChecklist(input: {
       id,
       kind: "atmosphere",
       mustTokens: [pat],
-      vlmQuestion: `画面气氛是否可见「${pat}」？`,
+      vlmQuestion: `画面气氛是否可见「${pat}」（次要，勿因背景虚化误杀）？`,
       healInject: `${pat}氛围清晰可见`,
       strengthenKey: keys.atmosphere ?? "atmosphere",
       strengthenValue: pat,

@@ -8,6 +8,7 @@ import { getCompiledPromptForStoryboard } from "../facade";
 import type { EpisodePackage } from "../types";
 import type { ComposeStillCharHint, ComposeStillContext } from "./composeStillPrompt";
 import { resolveAssetTier } from "../bundle/assetVisualBrief";
+import { normalizeDialogueSpeaker, normalizeDialogueSpeakers } from "./normalizeDialogueSpeaker";
 
 function digMicro(shot: Record<string, unknown> | undefined): string | null {
   const sd = shot?.shotDesign as
@@ -36,15 +37,42 @@ function extractPersonality(remark?: string | null, describe?: string | null): s
   return null;
 }
 
-function dialogueBeatFromShot(shot: Record<string, unknown> | undefined): string | null {
+/** Place / set dressing names must never enter character identity gates. */
+export function looksLikeSceneName(name?: string | null): boolean {
+  const n = String(name ?? "").trim();
+  if (!n) return false;
+  if (/^SCENE-/i.test(n)) return true;
+  return /厅|府|殿|场景|室内|室外|宫殿|府邸|街|巷|园|庭|厢|堂|楼|阁|寺|庙|营|室|会议室|公寓|车内|会场|走廊|正厅|偏厅/.test(
+    n,
+  );
+}
+
+function assetHasImage(a: { imageId?: number | null; src?: string | null; filePath?: string | null; url?: string | null }): boolean {
+  if (a.imageId != null && Number(a.imageId) > 0) return true;
+  const path = String(a.src ?? a.filePath ?? a.url ?? "").trim();
+  return path.length > 0 && !/^null$/i.test(path);
+}
+
+function dialogueBeatFromShot(
+  shot: Record<string, unknown> | undefined,
+  visualDescription?: string | null,
+): string | null {
   const dial = (shot?.narrative as { dialogue?: { lines?: { speaker?: string; text?: string }[] } } | undefined)
     ?.dialogue;
   const lines = dial?.lines ?? [];
   if (!lines.length) return null;
-  const speakers = [...new Set(lines.map((l) => l.speaker).filter(Boolean))];
-  const first = lines[0];
-  const who = speakers.slice(0, 2).join("与") || first?.speaker || "角色";
-  return `${who}对白瞬间神态，目光交汇，嘴部自然微张或闭合`;
+  const desc = String(visualDescription ?? shot?.visualDescription ?? "");
+  // Mouth-action shots: do not inject generic lip/gaze beat (conflicts with 咬帕/刺 etc.)
+  if (/咬|刺|含|衔|捂嘴|咬唇|咬帕/.test(desc)) return null;
+  const micro = (shot?.shotDesign as { performance?: { microExpression?: { mouthDetail?: string } } } | undefined)
+    ?.performance?.microExpression;
+  if (micro?.mouthDetail) {
+    const speakers = normalizeDialogueSpeakers(lines.map((l) => l.speaker).filter(Boolean) as string[]);
+    const who = speakers.slice(0, 2).join("与") || "角色";
+    return `${who}表演：嘴型=${micro.mouthDetail}`;
+  }
+  // No authored performance — do not invent "嘴部自然微张"
+  return null;
 }
 
 async function resolvePackageShot(
@@ -161,10 +189,10 @@ export async function hydrateComposeStillContext(
           null;
         const dial = (shot.narrative as { dialogue?: { lines?: { speaker?: string }[] } } | undefined)?.dialogue;
         ctx.dialogueDominantSpeaker = Boolean(dial?.lines?.length);
-        ctx.dialogueBeat = dialogueBeatFromShot(shot);
-        ctx.dialogueSpeakers = [
-          ...new Set((dial?.lines ?? []).map((l) => String(l.speaker ?? "").trim()).filter(Boolean)),
-        ];
+        ctx.dialogueBeat = dialogueBeatFromShot(shot, ctx.visualDescription);
+        ctx.dialogueSpeakers = normalizeDialogueSpeakers(
+          (dial?.lines ?? []).map((l) => String(l.speaker ?? "").trim()).filter(Boolean),
+        );
         ctx.sceneCode =
           (shot.sceneCode as string) ??
           ((shot as { sceneName?: string }).sceneName ? String((shot as { sceneName?: string }).sceneName) : null);
@@ -201,8 +229,17 @@ export async function hydrateComposeStillContext(
   const assetIds = assetRows.map((r: { assetId: number }) => r.assetId).filter(Boolean);
   if (assetIds.length) {
     const assets = await db("o_assets")
-      .whereIn("id", assetIds)
-      .select("id", "name", "remark", "imageId", "type", "describe");
+      .leftJoin("o_image", "o_image.id", "o_assets.imageId")
+      .whereIn("o_assets.id", assetIds)
+      .select(
+        "o_assets.id",
+        "o_assets.name",
+        "o_assets.remark",
+        "o_assets.imageId",
+        "o_assets.type",
+        "o_assets.describe",
+        "o_image.filePath",
+      );
     const chars: ComposeStillCharHint[] = [];
     const scenes: ComposeStillCharHint[] = [];
     for (const a of assets as Array<{
@@ -212,21 +249,26 @@ export async function hydrateComposeStillContext(
       imageId?: number;
       type?: string;
       describe?: string;
+      filePath?: string | null;
     }>) {
       const m = String(a.remark ?? "").match(/(?:assetCode|charCode):([A-Za-z]+-[A-Za-z0-9]+)/i);
       const code = m?.[1]?.toUpperCase();
       const isScene =
-        a.type === "scene" || /^SCENE-/i.test(code ?? "") || /scene|场景/i.test(a.type ?? "");
+        a.type === "scene" ||
+        /^SCENE-/i.test(code ?? "") ||
+        /scene|场景/i.test(a.type ?? "") ||
+        looksLikeSceneName(a.name);
       const isChar =
         !isScene &&
         (a.type === "role" || a.type === "character" || !a.type || /^CHAR-/i.test(code ?? ""));
+      const hasImg = assetHasImage({ imageId: a.imageId, filePath: a.filePath });
       if (isScene) {
         if (code && !ctx.sceneCode) ctx.sceneCode = code;
         scenes.push({
           code,
           name: a.name,
           tier: "support",
-          hasImage: a.imageId != null && Number(a.imageId) > 0,
+          hasImage: hasImg,
           kind: "scene",
         });
         continue;
@@ -238,12 +280,19 @@ export async function hydrateComposeStillContext(
         name: a.name,
         tier,
         personality: extractPersonality(a.remark, a.describe) ?? undefined,
-        hasImage: a.imageId != null && Number(a.imageId) > 0,
+        hasImage: hasImg,
         kind: "character",
       });
     }
     if (!chars.length) {
-      for (const a of assets as Array<{ name?: string; remark?: string; imageId?: number; describe?: string }>) {
+      for (const a of assets as Array<{
+        name?: string;
+        remark?: string;
+        imageId?: number;
+        describe?: string;
+        filePath?: string | null;
+      }>) {
+        if (looksLikeSceneName(a.name)) continue;
         const m = String(a.remark ?? "").match(/(?:assetCode|charCode):(CHAR-[A-Za-z0-9]+)/i);
         if (!m) continue;
         chars.push({
@@ -251,7 +300,7 @@ export async function hydrateComposeStillContext(
           name: a.name,
           tier: resolveAssetTier({ code: m[1], name: a.name }),
           personality: extractPersonality(a.remark, a.describe) ?? undefined,
-          hasImage: a.imageId != null && Number(a.imageId) > 0,
+          hasImage: assetHasImage({ imageId: a.imageId, filePath: a.filePath }),
           kind: "character",
         });
       }
@@ -311,19 +360,33 @@ export function mergeCharacterHints(
       personality: prev.personality || c.personality,
     });
   };
-  for (const c of linked) put(c);
-  for (const sp of extra.dialogueSpeakers ?? []) {
-    if (!sp?.trim()) continue;
-    put({ name: sp.trim(), hasImage: false, kind: "character", tier: "support" });
+  for (const c of linked) {
+    if (c.kind === "scene" || looksLikeSceneName(c.name)) {
+      put({ ...c, kind: "scene" });
+      continue;
+    }
+    put(c);
   }
-  const blob = `${extra.visualDescription ?? ""}\n${extra.videoDesc ?? ""}`;
-  const hits =
-    blob.match(/沈[\u4e00-\u9fff]{1,3}|[\u4e00-\u9fff]{1,3}(?:清瓷|清辞|周氏)|沈母|阿母|家母/g) ?? [];
-  for (const h of hits) {
-    put({ name: h, hasImage: false, kind: "character", tier: "support" });
+  for (const sp of normalizeDialogueSpeakers(extra.dialogueSpeakers)) {
+    if (!sp || looksLikeSceneName(sp)) continue;
+    put({ name: sp, hasImage: false, kind: "character", tier: "support" });
   }
-  // Alias merge: 沈母 ↔ 沈母周氏
-  const list = [...byKey.values()];
+  // Casting sheet doctrine: NEVER invent character names from visualDescription NER
+  // (e.g. 沈清漪咬帕 → phantom 沈清漪咬). Description only matches known names via predicates.
+  void extra.visualDescription;
+  void extra.videoDesc;
+  // Alias merge: 沈母 ↔ 沈母周氏 — only among characters
+  const { toBareCastingName, stripToCastingName } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+  const list = [...byKey.values()]
+    .filter((c) => c.kind !== "scene" && !looksLikeSceneName(c.name))
+    .map((c) => {
+      const bare = toBareCastingName(c.name);
+      const castingPool = [...byKey.values()]
+        .map((x) => toBareCastingName(x.name))
+        .filter((n) => n.length >= 2);
+      const glued = bare && castingPool.length ? stripToCastingName(bare, castingPool) : bare;
+      return { ...c, name: glued || bare || c.name, kind: "character" as const };
+    });
   const out: ComposeStillCharHint[] = [];
   const used = new Set<string>();
   for (const c of list) {
@@ -342,13 +405,14 @@ export function mergeCharacterHints(
         ...alias,
         name: alias.name?.length >= (c.name?.length ?? 0) ? alias.name : c.name,
         hasImage: true,
+        kind: "character",
       });
       used.add(nameKey(alias.name));
       used.add(nk);
       continue;
     }
     used.add(nk);
-    out.push(c);
+    out.push({ ...c, kind: "character" });
   }
   return out;
 }

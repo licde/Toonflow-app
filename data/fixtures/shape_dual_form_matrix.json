@@ -1,0 +1,170 @@
+{
+  "version": "1.0.0",
+  "doctrine": {
+    "design": "strong_contract_DEX_BLOCK",
+    "import": "smart_salvage_then_zod",
+    "afterNormalize": "still_strongly_typed"
+  },
+  "rows": [
+    {
+      "field": "designBrief.B12[].beats",
+      "zod": "number",
+      "chatCanonical": "number (节拍数量); 叙事用 summary",
+      "chatWrong": "narrative string e.g. 自残取佩…",
+      "salvageId": "SH-B12-BEATS",
+      "repairHintId": "RH-B12-BEATS",
+      "dexId": "DEX-B12-BEATS-NUM",
+      "status": "salvage_extended"
+    },
+    {
+      "field": "preDesignPack.shots[].spatialRelation",
+      "zod": "string (top or narrative)",
+      "chatCanonical": "string 站位句; 从 B13 压串",
+      "chatWrong": "B13 object {axis,anchors}",
+      "salvageId": "SH-SHOT-SPATIAL",
+      "repairHintId": "RH-SPATIAL-OBJ",
+      "dexId": "DEX-SPATIAL-STR",
+      "status": "salvage_extended"
+    },
+    {
+      "field": "preDesignPack.shots[].visualEffect",
+      "zod": "string",
+      "chatCanonical": "string F1: desc",
+      "chatWrong": "object {level,desc}",
+      "salvageId": "SH-VISUAL-EFFECT-OBJ",
+      "repairHintId": "RH-MOD-01",
+      "dexId": "DEX-VE-STR",
+      "status": "covered"
+    },
+    {
+      "field": "preDesignPack.shots[].audioCue",
+      "zod": "string",
+      "chatCanonical": "string",
+      "chatWrong": "object {beat,type}",
+      "salvageId": "SH-AUDIO-CUE-OBJ",
+      "repairHintId": "RH-MOD-AV",
+      "dexId": "DEX-AUDIO-STR",
+      "status": "covered"
+    },
+    {
+      "field": "designBrief.B5[].payoffEp",
+      "zod": "number",
+      "chatCanonical": "number future ep; 本集收用 payoffLabel",
+      "chatWrong": "semantic string in payoffEp",
+      "salvageId": "SH-B5-PAYOFF",
+      "repairHintId": "RH-B5-PAYOFF",
+      "dexId": "DEX-B5-PAYOFF",
+      "status": "covered"
+    },
+    {
+      "field": "designBrief.B4 / emotionCurveOutline",
+      "zod": "number[]",
+      "chatCanonical": "number[]",
+      "chatWrong": "numeric strings",
+      "salvageId": "SH-B4-NUM",
+      "repairHintId": null,
+      "dexId": null,
+      "status": "covered"
+    },
+    {
+      "field": "designBrief.B20",
+      "zod": "string[]",
+      "chatCanonical": "infoId string[]",
+      "chatWrong": "object[] {infoId,delivery}",
+      "salvageId": "SH-B20",
+      "repairHintId": null,
+      "dexId": "DEX-B20-STR-ARR",
+      "status": "covered"
+    },
+    {
+      "field": "designBrief.B23",
+      "zod": "record",
+      "chatCanonical": "{retentionInfoDelivery,items?}",
+      "chatWrong": "array of objects",
+      "salvageId": "SH-B23",
+      "repairHintId": null,
+      "dexId": "DEX-B23-RECORD",
+      "status": "covered"
+    },
+    {
+      "field": "characterDesign.assets[].L6.stateVariants",
+      "zod": "array|{name,visual}",
+      "chatCanonical": "[{name,visual}] or record",
+      "chatWrong": "loose record without normalize",
+      "salvageId": "SH-L6-VARIANTS",
+      "repairHintId": null,
+      "dexId": null,
+      "status": "covered"
+    },
+    {
+      "field": "characterDesign.assets[].L*",
+      "zod": "L0..L6 short keys",
+      "chatCanonical": "L0..L6",
+      "chatWrong": "L0_identity / L6_arcVisual",
+      "salvageId": "SH-CD-LKEYS",
+      "repairHintId": null,
+      "dexId": null,
+      "status": "covered"
+    },
+    {
+      "field": "visualLockTable.characterAssets",
+      "zod": "code→display string (normalized)",
+      "chatCanonical": "code→string name",
+      "chatWrong": "code→{L0:...} object",
+      "salvageId": "SH-VLT-ASSET-LABEL",
+      "repairHintId": "BUNDLE-VLT-SHAPE",
+      "dexId": null,
+      "status": "covered"
+    },
+    {
+      "field": "visualLockTable.sceneColorLock",
+      "zod": "SCENE-* → {name,colorTemp}",
+      "chatCanonical": "SCENE-* keys",
+      "chatWrong": "Chinese keys / string colorTemp",
+      "salvageId": "SH-SCENE-KEY-RAW",
+      "repairHintId": "RH-DG-SCENE-KEY",
+      "dexId": "DEX-SCENE-KEY",
+      "status": "covered"
+    },
+    {
+      "field": "deepAdaptation.*Map",
+      "zod": "[{from,to}]",
+      "chatCanonical": "[{from,to}]",
+      "chatWrong": "record / arrow pseudo-object",
+      "salvageId": "SH-MAPS / SY-ARROW-OBJ",
+      "repairHintId": null,
+      "dexId": null,
+      "status": "covered"
+    },
+    {
+      "field": "meta.episodeIndex|projectId|scriptId",
+      "zod": "number",
+      "chatCanonical": "number",
+      "chatWrong": "numeric string",
+      "salvageId": "SH-META-NUM",
+      "repairHintId": null,
+      "dexId": null,
+      "status": "covered"
+    },
+    {
+      "field": "shots[].generation.*Prompt",
+      "zod": "string|omit",
+      "chatCanonical": "omit if empty",
+      "chatWrong": "null",
+      "salvageId": "SH-GEN-NULL",
+      "repairHintId": null,
+      "dexId": null,
+      "status": "covered"
+    },
+    {
+      "field": "toneLock / platformSpec / audioMood / B5 / B13",
+      "zod": "z.union intentional",
+      "chatCanonical": "any union arm",
+      "chatWrong": "n/a (not a bug)",
+      "salvageId": null,
+      "repairHintId": null,
+      "dexId": null,
+      "status": "intentional_union"
+    }
+  ]
+}

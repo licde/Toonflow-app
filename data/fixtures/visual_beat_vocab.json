@@ -1,0 +1,100 @@
+{
+  "version": "1.0.0",
+  "description": "VisBeat L0 SSOT — tags + conflict_matrix are law; patterns live only in suggestor packs",
+  "tags": [
+    "reveal",
+    "prop_insert",
+    "reaction",
+    "face_cu",
+    "establish",
+    "action",
+    "speak",
+    "os_vo"
+  ],
+  "shotSizeCanon": {
+    "ecu": "face_cu",
+    "ECU": "face_cu",
+    "cu": "face_cu",
+    "CU": "face_cu",
+    "特写": "face_cu",
+    "大特写": "face_cu",
+    "大特": "face_cu",
+    "近景": "近景",
+    "中近景": "近景",
+    "中景": "中景",
+    "MS": "中景",
+    "ms": "中景",
+    "全景": "全景",
+    "远景": "全景",
+    "insert": "insert",
+    "INSERT": "insert"
+  },
+  "faceOnlyCanon": ["face_cu"],
+  "purposeToTags": {
+    "信息": ["reveal"],
+    "钩子": ["reveal", "prop_insert"],
+    "反应": ["reaction"],
+    "共鸣": ["reaction"],
+    "爆点兑现": ["action", "reveal"]
+  },
+  "conflict_matrix": [
+    {
+      "id": "reveal_face_cu",
+      "whenTagsAny": ["reveal", "prop_insert"],
+      "whenShotSizeCanon": ["face_cu"],
+      "action": "must_split",
+      "template": "reveal_then_reaction",
+      "explain": "揭示/道具插入与纯脸特写同镜冲突，须拆为 insert→reaction"
+    },
+    {
+      "id": "reveal_reaction_same",
+      "whenTagsAll": ["reveal", "reaction"],
+      "whenShotSizeCanon": ["face_cu"],
+      "action": "must_split",
+      "template": "reveal_then_reaction",
+      "explain": "同镜同时标 reveal+reaction 且景别为脸特写，须拆镜"
+    }
+  ],
+  "splitTemplates": {
+    "reveal_then_reaction": {
+      "beats": [
+        { "role": "insert", "shotSize": "近景", "hasDialogue": false, "tags": ["prop_insert", "reveal"] },
+        { "role": "reaction", "shotSize": "特写", "hasDialogue": true, "tags": ["reaction", "face_cu"] }
+      ]
+    }
+  },
+  "compat": {
+    "weaponSupersedesVisual": ["five_cut_reveal"],
+    "seatingHardSkipsVisualMulti": true,
+    "osVoKeepsDialogueOnSpeakOnly": true
+  },
+  "tagMutexGroups": [
+    ["establish", "face_cu"],
+    ["os_vo", "prop_insert"]
+  ],
+  "suggestorPatterns": {
+    "reveal": ["镜头下移", "露出", "冷光", "匕首", "刃光", "簪尖", "梳妆台下", "reveal", "blade"],
+    "reaction": ["浅笑", "冷笑", "泪光", "咬唇", "smirk", "tears"],
+    "excludeMetaphor": ["心如刀", "笑里藏刀"]
+  },
+  "explainI18n": {
+    "reveal_face_cu": {
+      "zh": "揭示/道具插入与纯脸特写同镜冲突，须拆为 insert→reaction",
+      "en": "reveal/prop_insert conflicts with face CU — split insert→reaction"
+    },
+    "VIS-TAG-MISSING": {
+      "zh": "有画面/景别但缺少 visualBeatTags（L0）",
+      "en": "picture/shotSize present but visualBeatTags (L0) missing"
+    },
+    "VIS-TAG-INCONSISTENT": {
+      "zh": "已打 visualBeatTags 但 picture/描写为空或标签互斥",
+      "en": "tags set but picture empty or tags mutually exclusive"
+    }
+  },
+  "rollout": {
+    "metaKey": "pillarsVisBeatV2",
+    "defaultMode": "shadow",
+    "modes": ["off", "shadow", "enforce"],
+    "canaryPercentMetaKey": "pillarsVisBeatCanaryPercent"
+  }
+}

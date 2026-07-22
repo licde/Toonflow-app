@@ -26,7 +26,10 @@ export const lip01Adapter: CheckAdapter = {
     }[] = [];
     for (const s of shots) {
       const idx = s.shotIndex as number | undefined;
-      const req = resolveRequiredDuration(s);
+      const meta = (ctx.bundle as { meta?: { pillarsDurationV2?: boolean } }).meta;
+      const req = resolveRequiredDuration(s, {
+        pillarsDurationV2: meta?.pillarsDurationV2 === true,
+      });
       if (!req.texts.length) continue;
       const duration = req.authorDuration;
       if (req.needsSplit || req.overVendorMax || (duration > 0 && duration < req.required)) {

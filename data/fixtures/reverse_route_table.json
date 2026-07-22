@@ -2,20 +2,122 @@
   "version": "2.0.1",
   "routes": [
     {
+      "trigger": "visual_multi_beat",
+      "ruleIds": ["DEX-VIS-SPLIT", "VIS-MULTI-BEAT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN", "MD-IMG"],
+      "repairPriority": "P0",
+      "defaultAction": "confirmClusterSplit",
+      "presentationFork": ["确认拆镜", "艺术长镜头 override"],
+      "note": "须手改 Confirm；不进 autoAdapt 可不手改（shadow→enforce 本体 L-Out）"
+    },
+    {
+      "trigger": "visual_tag_missing",
+      "ruleIds": ["DEX-VIS-TAG-MISSING"],
+      "reverseTarget": "SB",
+      "forwardStages": ["W3", "SB"],
+      "repairPriority": "P0",
+      "presentationFork": ["补 visualBeatTags"]
+    },
+    {
+      "trigger": "visual_tag_inconsistent",
+      "ruleIds": ["DEX-VIS-TAG-INCONSISTENT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "visual_beat_score",
+      "ruleIds": ["VIS-BEAT-SCORE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "visual_sync_drift",
+      "ruleIds": ["VIS-SYNC-DRIFT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "still_firstframe_dirty",
+      "ruleIds": ["STILL-FIRSTFRAME-DIRTY", "STILL-FIRSTFRAME-STALE", "IMG-CREF-CHAR", "DC-16", "DEX-STILL-ONEBEAT", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "AS", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["改画面描写", "重出静照"],
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription", "characterDesign.assets[].name"],
+      "note": "身份脏主链 SB 改 visualDescription→stale→MD-IMG 重出；禁止只 regen"
+    },
+    {
+      "trigger": "lip_duration_short",
+      "ruleIds": ["DFW-DURATION"],
+      "reverseTarget": "SB",
+      "forwardStages": ["W3", "SB", "EN"],
+      "repairPriority": "P0",
+      "defaultAction": "soft_patch",
+      "note": "仅 canSilentRaise；needsSplit/lipOver 走 pr_lip_duration"
+    },
+    {
+      "trigger": "still_mouth_handoff",
+      "ruleIds": ["STILL-MOUTH-HANDOFF", "GEN-01"],
+      "reverseTarget": "EN",
+      "forwardStages": ["SB", "EN", "MD-VID"],
+      "repairPriority": "P1",
+      "defaultAction": "soft_patch"
+    },
+    {
+      "trigger": "qp02_visual_short",
+      "ruleIds": ["QP-02", "CHAT-SB-01", "DEX-QP-02"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["补可拍画面描写"],
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription", "shotDesign.picture"],
+      "note": "minChars 为防空壳底线；正式标准为可拍物象。禁止只改 audit。"
+    },
+    {
+      "trigger": "runtime_type_error",
+      "ruleIds": ["runtime_type_error"],
+      "reverseTarget": "INFRA",
+      "forwardStages": [],
+      "presentationFork": []
+    },
+    {
+      "trigger": "emotion_structure",
+      "ruleIds": ["DC-EMO", "E2", "CAM-VARIETY", "svq_cam"],
+      "reverseTarget": "EN",
+      "forwardStages": ["SB", "EN"],
+      "defaultAction": "soft_patch",
+      "presentationFork": []
+    },
+    {
       "trigger": "dialogue_hash_mismatch",
       "ruleIds": [
         "R2",
-        "H3"
+        "H3",
+        "DC-01",
+        "DC-13",
+        "DEX-DC-ALIGN"
       ],
       "reverseTarget": "SB",
       "forwardStages": [
         "SB",
-        "EN"
+        "EN",
+        "designSplitOps"
       ],
       "presentationFork": [
         "P1改剧本",
-        "P2改分镜"
-      ]
+        "P2改分镜",
+        "Confirm 同步 lineId"
+      ],
+      "authoritativeFields": [
+        "dialoguePlan.lines[].lineId",
+        "shots[].narrative.dialogue.lines[].lineId"
+      ],
+      "forwardReentry": "designSplitOps.forwardReentry"
     },
     {
       "trigger": "emotion_composition",
@@ -232,14 +334,12 @@
     },
     {
       "trigger": "pr_lip_duration",
-      "ruleIds": [
-        "PR-09"
-      ],
+      "ruleIds": ["PR-09", "LIP-01", "DEX-LIP-SPLIT"],
       "reverseTarget": "SB",
-      "forwardStages": [
-        "SB",
-        "EN"
-      ]
+      "forwardStages": ["SB", "EN", "W3"],
+      "repairPriority": "P0",
+      "defaultAction": "confirmClusterSplit",
+      "note": "needsSplit|lipOver|overVendor → Confirm 拆镜，勿 soft_patch 抬时"
     },
     {
       "trigger": "pr_os_voice",
@@ -577,13 +677,97 @@
       "trigger": "narrative_split_hint",
       "ruleIds": [
         "NAR-14",
-        "NAR-15"
+        "NAR-15",
+        "DEX-LIP-SPLIT"
       ],
       "reverseTarget": "W3",
       "forwardStages": [
         "W3",
         "SB"
+      ],
+      "authoritativeFields": [
+        "dialoguePlan.lines[].splitHint",
+        "dialoguePlan.lines[].reactionAction",
+        "shots[].narrative.dialogue.lines[].splitHint",
+        "shots[].narrative.dialogue.lines[].reactionAction"
       ]
+    },
+    {
+      "trigger": "nar14_split",
+      "ruleIds": ["NAR-14", "DEX-LIP-SPLIT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "designSplitOps"],
+      "repairPriority": "P0",
+      "defaultAction": "soft_patch",
+      "presentationFork": ["Confirm 物理拆行", "补 splitHint"],
+      "authoritativeFields": [
+        "dialoguePlan.lines[].text",
+        "dialoguePlan.lines[].lineId",
+        "shots[].narrative.dialogue.lines[].lineId"
+      ],
+      "forwardReentry": "designSplitOps.forwardReentry"
+    },
+    {
+      "trigger": "nar14_residual",
+      "ruleIds": ["NAR-14", "NAR-14-RESIDUAL"],
+      "reverseTarget": "W3",
+      "forwardStages": ["W3", "SB", "designSplitOps"],
+      "repairPriority": "P0",
+      "presentationFork": ["改短重设计", "Confirm拆镜B", "显式补splitHint"],
+      "authoritativeFields": [
+        "dialoguePlan.lines[].text",
+        "dialoguePlan.lines[].splitHint",
+        "shots[].narrative.dialogue.lines[].splitHint"
+      ],
+      "forwardReentry": "designSplitOps.forwardReentry",
+      "notes": "A拆后仍超预算无标点；禁只改 narrativeSelfcheck.passed"
+    },
+    {
+      "trigger": "nar15_reaction",
+      "ruleIds": ["NAR-15"],
+      "reverseTarget": "W3",
+      "forwardStages": ["W3", "SB"],
+      "repairPriority": "P0",
+      "presentationFork": ["补 reactionAction"],
+      "authoritativeFields": [
+        "dialoguePlan.lines[].functions",
+        "dialoguePlan.lines[].reactionAction",
+        "shots[].narrative.dialogue.lines[].reactionAction"
+      ],
+      "forwardReentry": "designSplitOps.forwardReentry"
+    },
+    {
+      "trigger": "dc16_cast",
+      "ruleIds": ["DC-16", "DG-CD-COVERAGE", "DEX-CAST-CODES"],
+      "reverseTarget": "CD",
+      "forwardStages": ["CD", "SB"],
+      "repairPriority": "P0",
+      "authoritativeFields": ["characterDesign.assets[].code", "characterDesign.assets[].name", "characterDesign.assets[].L0.identity"]
+    },
+    {
+      "trigger": "speaker_bare",
+      "ruleIds": ["DEX-SPEAKER-BARE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["W3", "SB"],
+      "repairPriority": "P0",
+      "authoritativeFields": ["dialoguePlan.lines[].speaker", "shots[].narrative.dialogue.lines[].speaker", "lines[].type"]
+    },
+    {
+      "trigger": "self_report_mismatch",
+      "ruleIds": ["DG-NAR-SELFCHECK", "FALSE_GREEN_SELFCHECK"],
+      "reverseTarget": "W3",
+      "forwardStages": ["W3", "SB"],
+      "repairPriority": "P0",
+      "authoritativeFields": ["narrativeSelfcheck.passed", "dialoguePlan.lines"]
+    },
+    {
+      "trigger": "design_split_orchestrator",
+      "ruleIds": ["DC-01", "NAR-14", "NAR-15"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "designSplitOps"],
+      "repairPriority": "P0",
+      "presentationFork": ["Confirm 编排", "forwardReentry"],
+      "forwardReentry": "designSplitOps.forwardReentry"
     },
     {
       "trigger": "mode_rules_mismatch",

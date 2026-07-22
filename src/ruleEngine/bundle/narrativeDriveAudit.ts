@@ -1,6 +1,7 @@
 import { readFixtureJson } from "../utils/fixturesPath";
 import type { ScriptBundle } from "./types";
 import type { BundleGap } from "./auditTypes";
+import { needsNar14Split } from "../nar14ClauseSplit";
 
 const EXPLAIN_RE = /因为|其实|当年|背景是|众所周知/;
 
@@ -84,11 +85,11 @@ export function auditNarrativeDriveGaps(bundle: ScriptBundle): BundleGap[] {
           field: "dialoguePlan.lines",
         });
       }
-      if (String(line.text ?? "").trim().length > 20 && !(line as { splitHint?: string }).splitHint) {
+      if (needsNar14Split(String(line.text ?? "").trim(), { splitHint: (line as { splitHint?: string }).splitHint })) {
         gaps.push({
           id: "NAR-14",
           severity: "BLOCK",
-          message: `长台词 ${line.lineId ?? "?"} 缺 splitHint（须拆镜或标注 reaction_shot）`,
+          message: `长台词 ${line.lineId ?? "?"} 缺 splitHint（须标点拆句或标注 reaction_shot）`,
           chainId: "narrative_drive",
           trigger: "narrative_split_hint",
           field: "dialoguePlan.lines",

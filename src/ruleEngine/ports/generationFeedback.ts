@@ -6,6 +6,7 @@ import { stripVendorTokens } from "../compilers/vendorPromptAdapter";
 
 /** 四模态修复优先级：VID/IMG → AUD → FX → SB（P0-P3） */
 const REPAIR_PRIORITY: { pattern: RegExp; layer: string; suggestion: string; fieldPath: string; priority: number; category?: string }[] = [
+  { pattern: /is not a function|TypeError|Cannot read propert/i, layer: "INFRA", suggestion: "运行时异常（勿当台词保真）；检查分镜台词结构后重试", fieldPath: "generation.runtime", priority: 0, category: "runtime_type_error" },
   { pattern: /Client network socket disconnected before secure TLS|socket disconnected before secure TLS|network socket disconnected|TLS connection was established|ECONNRESET|ETIMEDOUT/i, layer: "INFRA", suggestion: "网络/TLS 中断，检查代理与上游连通（勿改提示词）", fieldPath: "generation.network", priority: 0, category: "tls_socket" },
   { pattern: /queue is full|rate.?limit|retry later|429|RPM|upstream.?busy/i, layer: "INFRA", suggestion: "上游繁忙，稍后重试（勿改提示词）", fieldPath: "generation.vendor", priority: 0, category: "vendor_passthrough" },
   { pattern: /DERIVE_PARENT_REF_MISSING|衍生图缺少父图/i, layer: "AS", suggestion: "先生成父资产图再衍生", fieldPath: "assets.parent.src", priority: 0, category: "derive_parent_ref_missing" },
@@ -20,7 +21,7 @@ const REPAIR_PRIORITY: { pattern: RegExp; layer: string; suggestion: string; fie
   { pattern: /no people|PURE|negative/i, layer: "EN", suggestion: "PURE 词前置 EN-IMG", fieldPath: "generation.compiled.image", priority: 0 },
   { pattern: /native.?audio|generate_audio|dialogue-native|语音/i, layer: "EN", suggestion: "对齐 native 语音 EN-AUD", fieldPath: "generation.compiled.audio", priority: 1 },
   { pattern: /voiceProfile|voice|gender|female|male/i, layer: "BP", suggestion: "voiceProfile 对齐 BP L6", fieldPath: "voiceProfile", priority: 1 },
-  { pattern: /台词|dialogue|lines/i, layer: "SB", suggestion: "检查台词字数与保真", fieldPath: "narrative.dialogue.lines", priority: 1 },
+  { pattern: /台词|dialogue_hash|缺台词/i, layer: "SB", suggestion: "检查台词字数与保真", fieldPath: "narrative.dialogue.lines", priority: 1 },
   { pattern: /特效|fx|F5|火焰|无法实现|infeasible/i, layer: "W3", suggestion: "高难 FX 回 W3 改描写或拆镜", fieldPath: "visualEffect", priority: 0, category: "fx_f5_unhandled" },
   { pattern: /identity|换脸|wrong.?character|人物不一致/i, layer: "CD", suggestion: "身份冲突回 CD/BP", fieldPath: "charCodes", priority: 0, category: "identity_mismatch" },
   { pattern: /prompt|提示词/i, layer: "EN", suggestion: "重新 dry-run 编译", fieldPath: "generation.compiled", priority: 2 },
@@ -28,6 +29,7 @@ const REPAIR_PRIORITY: { pattern: RegExp; layer: string; suggestion: string; fie
 ];
 
 function inferRuleId(error: string, layer: string): string | undefined {
+  if (/is not a function|TypeError|Cannot read propert/i.test(error)) return "runtime_type_error";
   if (/Client network socket disconnected before secure TLS|socket disconnected before secure TLS|TLS connection|ECONNRESET|ETIMEDOUT/i.test(error)) return "tls_socket";
   if (/queue is full|rate.?limit|retry later/i.test(error)) return "vendor_passthrough";
   if (/DERIVE_PARENT_REF_MISSING|衍生图缺少父图/i.test(error)) return "derive_parent_ref_missing";

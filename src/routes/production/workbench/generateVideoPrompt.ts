@@ -192,7 +192,7 @@ export default router.post(
       }).prompt;
 
       // Quality decision → silent soft patches → re-decide (HealRegistry SSOT)
-      const { decideVideoQuality, persistSplitHintSuggestion, serializeQualityDecision } = await import(
+      const { decideVideoQuality, serializeQualityDecision } = await import(
         "@/ruleEngine/compilers/qualityDecision"
       );
       const { applySilentSoftPatches } = await import("@/ruleEngine/heal/applySilentSoftPatches");
@@ -205,6 +205,17 @@ export default router.post(
       );
       let workingShot = shotMeta as Record<string, unknown> | null | undefined;
       let workingPrompt = result.prompt;
+      try {
+        const { appendViralSidecarToPrompt } = await import("@/ruleEngine/design/bindViralSidecarForCompile");
+        const workRow = await u.db("o_agentWorkData").where({ projectId, key: "scriptAgent" }).first();
+        if (workRow?.data) {
+          const agentPlan = JSON.parse(String(workRow.data)) as Record<string, unknown>;
+          workingPrompt = appendViralSidecarToPrompt(workingPrompt, agentPlan);
+          result.prompt = workingPrompt;
+        }
+      } catch {
+        /* sidecar bind best-effort */
+      }
       let qd = decideVideoQuality({
         videoPrompt: workingPrompt,
         shot: workingShot as never,
@@ -232,15 +243,7 @@ export default router.post(
           fxGrade: fxGradeStr,
         });
       }
-      if (qd.splitHint && !qd.burnAllowed && resolvedScriptId) {
-        await persistSplitHintSuggestion({
-          db: u.db,
-          projectId,
-          scriptId: resolvedScriptId,
-          storyboardId: storyboardId ?? shotMeta?.storyboardId,
-          splitHint: qd.splitHint,
-        }).catch(() => false);
-      }
+      // Never persist splitHint on burn/prompt block — false-green.
       const autoHealed = heal.autoHealed;
       const healedDuration = heal.duration;
 
@@ -397,9 +400,24 @@ export default router.post(
     } catch (e) {
       const errMsg = u.error(e).message;
       const feedback = await classifyGenerationFailure({ modality: "video", shotId: String(trackId), error: errMsg });
-      const rePushPlan = buildRePushPlan([feedback.ruleId || "vendor_passthrough"].filter(Boolean));
+      const trigger = feedback.ruleId || "vendor_passthrough";
+      const rePushPlan = buildRePushPlan([trigger].filter(Boolean));
+      const isRuntime =
+        /is not a function|TypeError|Cannot read propert/i.test(errMsg) ||
+        feedback.category === "runtime_type_error" ||
+        trigger === "runtime_type_error";
+      const userMessage = isRuntime
+        ? "生成提示词时发生结构异常（非台词保真问题）。请重试；若仍失败请检查分镜台词是否为结构化 lines。"
+        : feedback.upstreamPatches?.[0]?.suggestion || errMsg;
       await u.db("o_videoTrack").where({ id: trackId }).update({ state: "生成失败", reason: errMsg });
-      return res.status(400).send(error(errMsg, { feedback, rePushPlan }));
+      return res.status(400).send(
+        error(userMessage, {
+          feedback,
+          rePushPlan,
+          userMessage,
+          nextStep: isRuntime ? "retry_shot" : undefined,
+        }),
+      );
     }
   },
 );

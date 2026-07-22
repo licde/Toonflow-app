@@ -1,0 +1,53 @@
+{
+  "normVersion": "1.0.0",
+  "description": "情绪主导设计契约 SSOT — intensity/相位 → 分解与视听默认；Speak 静 / React 可推",
+  "emotionPhases": ["suppress", "signal", "burst", "release", "hook"],
+  "authorRights": {
+    "machineMayPatch": ["sidecar", "SB_structure", "EN_prompts", "intensity_defaults", "cluster_expand"],
+    "machineMustNotRewrite": ["scriptItem_dialogue_text", "plot_wording"]
+  },
+  "intensityBands": [
+    {
+      "min": 0,
+      "max": 3,
+      "clusterPolicy": "speak_only",
+      "shotSizeBias": "中景",
+      "speakMotion": "static",
+      "reactMotion": "static",
+      "soundIntent": "ambient"
+    },
+    {
+      "min": 4,
+      "max": 5,
+      "clusterPolicy": "speak_react",
+      "shotSizeBias": "中近景",
+      "speakMotion": "static",
+      "reactMotion": "subtle drift",
+      "soundIntent": "light_cue"
+    },
+    {
+      "min": 6,
+      "max": 7,
+      "clusterPolicy": "speak_react",
+      "shotSizeBias": "近景",
+      "speakMotion": "static",
+      "reactMotion": "gentle push",
+      "soundIntent": "heartbeat"
+    },
+    {
+      "min": 8,
+      "max": 10,
+      "clusterPolicy": "speak_react_insert",
+      "shotSizeBias": "特写",
+      "speakMotion": "static",
+      "reactMotion": "gentle push",
+      "soundIntent": "silence_then_hit",
+      "burstQuotaPerScene": 3
+    }
+  ],
+  "dialogueCamPolicy": {
+    "speakMustStatic": true,
+    "reactMayPush": true
+  },
+  "defaultProfileId": "generic"
+}

@@ -8,6 +8,16 @@ import { buildCodeAliasMap, resolveAliasedCode } from "../codes/assetCodeAlias";
 import { speakersMissingFromCd } from "./designExportHelpers";
 import { flattenDialogueText } from "../design/dialogueCoverage";
 import { measureDialogue } from "../dialogueMetrics";
+import { assetDisplayName } from "./assetLabel";
+import { isAllowedTransition, loadCameraMotionWhitelist } from "../qualityGate/cameraWhitelist";
+import type { ShapeSalvageEntry } from "./shapeSalvageTypes";
+import { ShapeSalvageLog } from "./shapeSalvageTypes";
+import { expandLinesByClauseSplit, type Nar14LineLike } from "../nar14ClauseSplit";
+import { normalizeDialogueSpeaker } from "../compilers/normalizeDialogueSpeaker";
+import { ensureShotPerformanceDefaults } from "../emotion/defaultPerformance";
+import { healNar14ResidualWithB } from "../design/nar14Residual";
+import { healLipMultiLineWithB } from "../design/lipSplit";
+import { resolveRequiredDuration } from "../compilers/resolveRequiredDuration";
 
 /** Stable SCENE-* allocator from sceneName list. */
 export function allocateSceneCodes(sceneNames: string[]): Map<string, string> {
@@ -148,11 +158,12 @@ function voiceFromCd(
 }
 
 function cdNameSet(bundle: ScriptBundle): Set<string> {
-  const assets = (bundle.characterDesign as { assets?: { name?: string; code?: string }[] } | undefined)?.assets ?? [];
+  const assets = (bundle.characterDesign as { assets?: { name?: unknown; code?: string }[] } | undefined)?.assets ?? [];
   const set = new Set<string>();
   for (const a of assets) {
-    if (a.name) set.add(a.name.trim());
-    if (a.code) set.add(a.code.trim());
+    const label = assetDisplayName(a.name);
+    if (label) set.add(label);
+    if (a.code) set.add(String(a.code).trim());
   }
   return set;
 }
@@ -182,12 +193,166 @@ function collectSpeakerOrphans(shots: PreDesignShot[], bundle: ScriptBundle): st
 }
 
 function slugSpeakerCode(name: string): string {
-  const ascii = name.replace(/[^\w]+/g, "").toUpperCase();
+  const bare = normalizeDialogueSpeaker(name).name || name;
+  const ascii = bare.replace(/[^\w]+/g, "").toUpperCase();
   if (ascii.length >= 2) return `CHAR-${ascii.slice(0, 16)}`;
   // Chinese → hash-ish stable
   let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < bare.length; i++) h = (h * 31 + bare.charCodeAt(i)) >>> 0;
   return `CHAR-SP${(h % 10000).toString().padStart(4, "0")}`;
+}
+
+/** Strip 名（OS） wrappers on all dialogue speakers; tag type=os when detected. */
+export function normalizeBundleDialogueSpeakers(bundle: ScriptBundle): number {
+  let n = 0;
+  const touchLine = (line: { speaker?: string; type?: string; [k: string]: unknown }) => {
+    const raw = String(line.speaker ?? "").trim();
+    if (!raw) return;
+    const { name, isOs } = normalizeDialogueSpeaker(raw);
+    if (name && name !== raw) {
+      line.speaker = name;
+      n += 1;
+    } else if (!name && isOs) {
+      line.speaker = "旁白";
+      n += 1;
+    }
+    if (isOs && !line.type) {
+      line.type = "os";
+    }
+  };
+  for (const shot of bundle.preDesignPack?.shots ?? []) {
+    for (const line of shot.narrative?.dialogue?.lines ?? []) {
+      touchLine(line as { speaker?: string; type?: string });
+    }
+  }
+  const planLines =
+    (bundle.planData as { dialoguePlan?: { lines?: { speaker?: string; type?: string }[] } } | undefined)?.dialoguePlan
+      ?.lines ?? [];
+  for (const line of planLines) touchLine(line);
+  return n;
+}
+
+/** Same OS strip as speakers — CD/asset display names must be bare casting names. */
+export function normalizeCharacterDesignOsNames(bundle: ScriptBundle): number {
+  let n = 0;
+  const assets =
+    (bundle.characterDesign as { assets?: { name?: unknown; [k: string]: unknown }[] } | undefined)?.assets ?? [];
+  for (const a of assets) {
+    const raw = String(a.name ?? "").trim();
+    if (!raw) continue;
+    const { name } = normalizeDialogueSpeaker(raw);
+    if (name && name !== raw) {
+      a.name = name;
+      n += 1;
+    }
+  }
+  // visualLockTable.characterAssets is Record<code, name> (canonical); tolerate rare array shape
+  const vltTable = bundle.visualLockTable as
+    | { characterAssets?: Record<string, unknown> | Array<{ name?: unknown; code?: string }> }
+    | undefined;
+  const ca = vltTable?.characterAssets;
+  if (Array.isArray(ca)) {
+    for (const a of ca) {
+      const raw = String(a.name ?? "").trim();
+      if (!raw) continue;
+      const { name } = normalizeDialogueSpeaker(raw);
+      if (name && name !== raw) {
+        a.name = name;
+        n += 1;
+      }
+    }
+  } else if (ca && typeof ca === "object") {
+    for (const code of Object.keys(ca)) {
+      const raw = String(ca[code] ?? "").trim();
+      if (!raw) continue;
+      const { name } = normalizeDialogueSpeaker(raw);
+      if (name && name !== raw) {
+        ca[code] = name;
+        n += 1;
+      }
+    }
+  }
+  return n;
+}
+
+/**
+ * Import/export salvage: build longer shootable visualDescription from existing shot fields.
+ * Never invent literary placeholders (QP-02 softPatch false).
+ * Returns healed count; unsalvageable indexes go to warnings via caller.
+ */
+export function healShortVisualDescriptionFromDesign(bundle: ScriptBundle): {
+  healed: number;
+  unsalvageable: number[];
+} {
+  const { checkQp02VisualDescription, qp02MinChars } = require("./visualQualityAudit") as typeof import("./visualQualityAudit");
+  let healed = 0;
+  const unsalvageable: number[] = [];
+  const min = qp02MinChars();
+
+  const collectCandidates = (shot: PreDesignShot, vd: string): string[] => {
+    const sd = (shot.shotDesign ?? {}) as Record<string, unknown>;
+    const comp = (sd.composition ?? {}) as { foreground?: string; background?: string };
+    const blocking = (sd.blocking ?? {}) as { bodyAction?: string; spatial?: string };
+    const perf = (sd.performance ?? {}) as { expression?: string; action?: string; gesture?: string };
+    const narrative = (shot.narrative ?? {}) as {
+      sceneName?: string;
+      shotSize?: string;
+      markers?: { desc?: string }[];
+    };
+    const scene = String(shot.sceneName ?? narrative.sceneName ?? "").trim();
+    const size = String(shot.shotSize ?? narrative.shotSize ?? "").trim();
+    const picture = String(sd.picture ?? "").trim();
+    const fgBg = [comp.foreground, comp.background].filter(Boolean).join("，");
+    const body = String(blocking.bodyAction ?? perf.action ?? perf.gesture ?? "").trim();
+    const expr = String(perf.expression ?? "").trim();
+    const markerBlob = (narrative.markers ?? [])
+      .map((m) => String(m.desc ?? "").trim())
+      .filter(Boolean)
+      .join("。");
+
+    const out: string[] = [];
+    const push = (s: string) => {
+      const t = s.replace(/\s+/g, " ").trim();
+      if (t.length >= min) out.push(t);
+    };
+    push(picture);
+    push(fgBg);
+    push(body);
+    push([body, expr].filter(Boolean).join("，"));
+    push(markerBlob);
+    // Compose from existing crumbs only (scene/size/vd/body) — no canned filler
+    if (scene && vd) push(`${scene}。${vd}`);
+    if (scene && size && vd) push(`${scene}，${size}。${vd}`);
+    if (scene && body) push(`${scene}。${body}`);
+    if (scene && picture) push(`${scene}。${picture}`);
+    if (fgBg && vd) push(`${fgBg}。${vd}`);
+    if (body && vd) push(`${body}。${vd}`);
+    if (scene && fgBg && vd) push(`${scene}，${fgBg}。${vd}`);
+    return [...new Set(out)];
+  };
+
+  for (const shot of bundle.preDesignPack?.shots ?? []) {
+    const idx = Number(shot.shotIndex) || 0;
+    const vd = String(shot.visualDescription ?? "").trim();
+    const fail = checkQp02VisualDescription({ visualDescription: vd, shotIndex: idx || undefined });
+    if (!fail || fail.severity !== "BLOCK") continue;
+
+    let picked: string | undefined;
+    for (const c of collectCandidates(shot, vd)) {
+      const ok = checkQp02VisualDescription({ visualDescription: c });
+      if (!ok || ok.severity !== "BLOCK") {
+        picked = c;
+        break;
+      }
+    }
+    if (picked) {
+      shot.visualDescription = picked;
+      healed += 1;
+    } else if (idx) {
+      unsalvageable.push(idx);
+    }
+  }
+  return { healed, unsalvageable };
 }
 
 type DialoguePlanLine = {
@@ -197,7 +362,9 @@ type DialoguePlanLine = {
   functions?: string[];
 };
 
-/** Mirror dialoguePlan splitHint/reactionAction/functions onto shots[].narrative.dialogue.lines by lineId. */
+/** Mirror dialoguePlan splitHint/reactionAction/functions onto shots[].narrative.dialogue.lines by lineId.
+ * Also append missing plan lineIds into first dialogue shot (post-split sync → DC-01=0).
+ */
 export function mirrorDialoguePlanToShots(bundle: ScriptBundle): number {
   const planLines =
     (bundle.planData as { dialoguePlan?: { lines?: DialoguePlanLine[] } } | undefined)?.dialoguePlan?.lines ?? [];
@@ -207,10 +374,12 @@ export function mirrorDialoguePlanToShots(bundle: ScriptBundle): number {
     if (pl.lineId) byId.set(pl.lineId, pl);
   }
   let mirrored = 0;
+  const present = new Set<string>();
   for (const shot of bundle.preDesignPack?.shots ?? []) {
     const lines = shot.narrative?.dialogue?.lines ?? [];
     for (const line of lines) {
       const lid = (line as { lineId?: string }).lineId;
+      if (lid) present.add(lid);
       if (!lid) continue;
       const src = byId.get(lid);
       if (!src) continue;
@@ -233,12 +402,27 @@ export function mirrorDialoguePlanToShots(bundle: ScriptBundle): number {
       }
     }
   }
+  const missing = planLines.filter((p) => p.lineId && !present.has(String(p.lineId)));
+  const shots = bundle.preDesignPack?.shots ?? [];
+  if (missing.length && shots.length) {
+    let targetIdx = shots.findIndex((s) => (s.narrative?.dialogue?.lines ?? []).length > 0);
+    if (targetIdx < 0) targetIdx = 0;
+    const t = shots[targetIdx]!;
+    if (!t.narrative) t.narrative = { type: "CHAR-SCENE" } as PreDesignShot["narrative"];
+    if (!t.narrative!.dialogue) t.narrative!.dialogue = { lines: [] };
+    const lines = t.narrative!.dialogue!.lines as Nar14LineLike[];
+    for (const m of missing) {
+      lines.push({ ...(m as Nar14LineLike) });
+      mirrored++;
+    }
+  }
   return mirrored;
 }
 
 /**
  * No-op stubs removed: auto-writing splitHint/reactionAction caused false-green import
  * while hydrate/burn still blocked. Keep mirrorDialoguePlanToShots only.
+ * NAR-14 relief is physical clause-split via applyNar14ClauseSplitInBundle (not inventing hints).
  */
 export function healDialoguePlanMetadata(_bundle: ScriptBundle): number {
   return 0;
@@ -246,6 +430,40 @@ export function healDialoguePlanMetadata(_bundle: ScriptBundle): number {
 
 export function healShotDialogueMetadata(_bundle: ScriptBundle): number {
   return 0;
+}
+
+/**
+ * Physical NAR-14 clause split on dialoguePlan + shots (safe: preserves text, no invented splitHint).
+ * Runs on both Chat-strict and ingest paths.
+ */
+export function applyNar14ClauseSplitInBundle(bundle: ScriptBundle, healLog?: ShapeSalvageLog): number {
+  let total = 0;
+  const plan = bundle.planData as { dialoguePlan?: { lines?: Nar14LineLike[] } } | undefined;
+  if (plan?.dialoguePlan?.lines?.length) {
+    const { lines, splitCount } = expandLinesByClauseSplit(plan.dialoguePlan.lines);
+    if (splitCount > 0) {
+      plan.dialoguePlan.lines = lines;
+      total += splitCount;
+      healLog?.push("SH-NAR-CLAUSE-SPLIT", "planData.dialoguePlan.lines", `+${splitCount} clause lines`);
+    }
+  }
+  for (const shot of bundle.preDesignPack?.shots ?? []) {
+    const raw = (shot.narrative?.dialogue?.lines ?? []) as Nar14LineLike[];
+    if (!raw.length) continue;
+    const { lines, splitCount } = expandLinesByClauseSplit(raw);
+    if (splitCount <= 0) continue;
+    shot.narrative = {
+      ...shot.narrative,
+      dialogue: { ...shot.narrative?.dialogue, lines: lines as NonNullable<NonNullable<PreDesignShot["narrative"]>["dialogue"]>["lines"] },
+    };
+    total += splitCount;
+    healLog?.push(
+      "SH-NAR-CLAUSE-SPLIT",
+      `preDesignPack.shots[${shot.shotIndex ?? "?"}].dialogue.lines`,
+      `+${splitCount} clause lines`,
+    );
+  }
+  return total;
 }
 
 function cloneShotForDialogueBatch(template: PreDesignShot, lines: Record<string, unknown>[], maxSec: number): PreDesignShot {
@@ -353,20 +571,121 @@ function parseFxLevelFromVisualEffect(ve?: string): string | undefined {
 
 const DURATION_CAP_SEC = 30;
 
-function alignShotDurationFromDialogue(shot: PreDesignShot, warnings: string[]): void {
+function alignShotDurationFromDialogue(shot: PreDesignShot, warnings: string[], healLog?: ShapeSalvageLog): void {
   const lines = shot.narrative?.dialogue?.lines ?? [];
   if (!lines.length) return;
+  // Respect lip-split SSOT: never silent-raise into needsSplit / overVendorMax
+  const req = resolveRequiredDuration(shot);
+  if (req.needsSplit || req.overVendorMax) {
+    warnings.push(`duration_align_skip_needs_split:shot${shot.shotIndex ?? "?"}`);
+    return;
+  }
   const text = flattenDialogueText(lines);
   if (!text.trim()) return;
   const metrics = measureDialogue({ text, speechSpeed: 4 });
   if (metrics.minDurationSec <= 0) return;
-  const needed = Math.min(DURATION_CAP_SEC, Math.max(1, metrics.minDurationSec));
+  const vendorCap = req.vendorMax > 0 ? req.vendorMax : DURATION_CAP_SEC;
+  const needed = Math.min(vendorCap, DURATION_CAP_SEC, Math.max(1, metrics.minDurationSec));
   const current = shot.duration ?? 0;
   if (needed > current) {
     if (metrics.minDurationSec > DURATION_CAP_SEC) {
       warnings.push(`duration_over_cap:shot${shot.shotIndex ?? "?"}:${metrics.minDurationSec}s`);
     }
+    const prev = current;
     shot.duration = needed;
+    healLog?.push(
+      "SH-DURATION-ALIGN",
+      `preDesignPack.shots[${shot.shotIndex ?? "?"}].duration`,
+      `${prev}→${needed}s`,
+    );
+  }
+}
+
+const TRANSITION_ALIAS: Record<string, string> = {
+  硬切: "切",
+  软切: "切",
+  溶解: "叠化",
+  交叉叠化: "叠化",
+  cut: "cut",
+  "hard cut": "切",
+  "soft cut": "切",
+};
+
+function healTransitionType(shot: PreDesignShot, healLog?: ShapeSalvageLog): void {
+  const wl = loadCameraMotionWhitelist();
+  const narr = shot.narrative as { transitionType?: string } | undefined;
+  const top = (shot as { transitionType?: string }).transitionType;
+  const raw = String(narr?.transitionType ?? top ?? "").trim();
+  if (!raw) return;
+  if (isAllowedTransition(raw, wl)) return;
+  const mapped = TRANSITION_ALIAS[raw] ?? TRANSITION_ALIAS[raw.toLowerCase()] ?? wl.defaultTransition;
+  if (narr) narr.transitionType = mapped;
+  if (top != null) (shot as { transitionType?: string }).transitionType = mapped;
+  healLog?.push(
+    "SH-TRANSITION",
+    `preDesignPack.shots[${shot.shotIndex ?? "?"}].transitionType`,
+    `${raw}→${mapped}`,
+  );
+}
+
+function parseFxLevelToken(raw: unknown): string | undefined {
+  const t = String(raw ?? "").trim();
+  if (!t) return undefined;
+  const m = t.match(/^(F[0-5])\b/i);
+  return m ? m[1]!.toUpperCase() : undefined;
+}
+
+function healFxFeasibilityF0(shot: PreDesignShot, healLog?: ShapeSalvageLog): void {
+  const existing =
+    parseFxLevelToken((shot as { fxFeasibility?: string }).fxFeasibility) ??
+    parseFxLevelToken(shot.generation && (shot.generation as { fxFeasibility?: string }).fxFeasibility);
+  if (existing) return;
+  const fromVe =
+    parseFxLevelToken(typeof shot.visualEffect === "string" ? shot.visualEffect : undefined) ??
+    parseFxLevelToken((shot as { fxLevel?: string }).fxLevel);
+  if (fromVe !== "F0") return;
+  (shot as { fxFeasibility?: string }).fxFeasibility = "F0";
+  shot.generation = { ...shot.generation, fxFeasibility: "F0" } as typeof shot.generation;
+  healLog?.push("SH-FX-F0", `preDesignPack.shots[${shot.shotIndex ?? "?"}]`, "visualEffect F0→fxFeasibility");
+}
+
+function healMinimalGenerationPrompts(shot: PreDesignShot, healLog?: ShapeSalvageLog): void {
+  const vd = String(shot.visualDescription ?? "").trim();
+  const audioCue = String(shot.audioCue ?? "").trim();
+  const lines = shot.narrative?.dialogue?.lines ?? [];
+  const dialogueText = flattenDialogueText(lines).trim();
+  shot.generation = shot.generation ?? {};
+  const gen = shot.generation;
+
+  if (!String(gen.imagePrompt ?? "").trim() && vd) {
+    gen.imagePrompt = vd;
+    healLog?.push(
+      "SH-IMG-SEED",
+      `preDesignPack.shots[${shot.shotIndex ?? "?"}].generation.imagePrompt`,
+      "from visualDescription",
+    );
+  }
+
+  if (!String(gen.audioPrompt ?? "").trim() && (audioCue || dialogueText)) {
+    const summary = (audioCue || dialogueText).slice(0, 80);
+    gen.audioPrompt = audioCue
+      ? `音效与对白：${summary}`
+      : `口型同步对白：${summary}${dialogueText.length > 80 ? "…" : ""}`;
+    healLog?.push(
+      "SH-AUD-SEED",
+      `preDesignPack.shots[${shot.shotIndex ?? "?"}].generation.audioPrompt`,
+      audioCue ? "from audioCue" : "from dialogue",
+    );
+  }
+
+  if (!String(gen.videoPrompt ?? "").trim() && vd) {
+    const lip = dialogueText ? ", speaking lip-sync" : "";
+    gen.videoPrompt = `${vd}${lip}`;
+    healLog?.push(
+      "SH-VID-SEED",
+      `preDesignPack.shots[${shot.shotIndex ?? "?"}].generation.videoPrompt`,
+      "from visualDescription",
+    );
   }
 }
 
@@ -407,6 +726,7 @@ export interface NormalizePreDesignResult {
   rewrittenSceneLock: Record<string, SceneLockEntry>;
   speakerOrphans: { name: string; code: string }[];
   warnings: string[];
+  semanticHealLog: ShapeSalvageEntry[];
 }
 
 export interface NormalizePreDesignOpts {
@@ -421,6 +741,7 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
   const ingestHeal = opts.ingestHeal !== false;
   const pack = bundle.preDesignPack;
   const warnings: string[] = [];
+  const healLog = new ShapeSalvageLog();
   if (!pack?.shots?.length) {
     return {
       shots: [],
@@ -428,15 +749,81 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
       rewrittenSceneLock: {},
       speakerOrphans: [],
       warnings: ["no_shots"],
+      semanticHealLog: [],
     };
   }
 
+  mirrorDialoguePlanToShots(bundle);
+  // Always: physical clause-split (no invented splitHint) — Chat-strict + ingest
+  const clauseSplits = applyNar14ClauseSplitInBundle(bundle, healLog);
+  if (clauseSplits > 0) warnings.push(`nar14_clause_split:${clauseSplits}`);
+  // Residual NAR-14 → B cluster + truthful bind (import/ingest only)
+  if (ingestHeal && pack.shots?.length) {
+    const planLines =
+      ((bundle.planData as { dialoguePlan?: { lines?: Nar14LineLike[] } } | undefined)?.dialoguePlan?.lines ??
+        []) as Nar14LineLike[];
+    if (planLines.length) {
+      const healed = healNar14ResidualWithB({
+        planLines,
+        shots: pack.shots as Record<string, unknown>[],
+      });
+      if (bundle.planData && typeof bundle.planData === "object") {
+        const pd = bundle.planData as { dialoguePlan?: { lines?: Nar14LineLike[] } };
+        pd.dialoguePlan = { ...(pd.dialoguePlan ?? {}), lines: healed.planLines };
+      }
+      pack.shots = healed.shots as PreDesignShot[];
+      if (healed.expandedCount || healed.bound) {
+        warnings.push(`nar14_residual_B:expand=${healed.expandedCount},bound=${healed.bound}`);
+        healLog.push(
+          "NAR-14",
+          "preDesignPack.shots",
+          `residual_B_expand:${healed.expandedCount};bind:${healed.bound};remain:${healed.remainingResiduals.length}`,
+        );
+      }
+    }
+    const lipHeal = healLipMultiLineWithB({
+      shots: pack.shots as Record<string, unknown>[],
+    });
+    if (lipHeal.expandedCount || lipHeal.healedShotIndexes.length) {
+      pack.shots = lipHeal.shots as PreDesignShot[];
+      warnings.push(
+        `lip_multi_B:expand=${lipHeal.expandedCount},healed=${lipHeal.healedShotIndexes.join(",")},remain=${lipHeal.remainingPressure}`,
+      );
+      healLog.push(
+        "LIP-01",
+        "preDesignPack.shots",
+        `lip_multi_B_expand:${lipHeal.expandedCount};remain:${lipHeal.remainingPressure}`,
+      );
+    }
+  }
+  // Strip 名（OS） before CD stubs / orphan slug so identity matches bare names
+  const speakerNorm = normalizeBundleDialogueSpeakers(bundle);
+  if (speakerNorm > 0) warnings.push(`speaker_os_normalize:${speakerNorm}`);
+  const cdOsNorm = normalizeCharacterDesignOsNames(bundle);
+  if (cdOsNorm > 0) warnings.push(`cd_os_normalize:${cdOsNorm}`);
+  const vdSalvage = healShortVisualDescriptionFromDesign(bundle);
+  if (vdSalvage.healed > 0) warnings.push(`qp02_vd_salvage:${vdSalvage.healed}`);
+  if (vdSalvage.unsalvageable.length) {
+    warnings.push(`qp02_vd_unsalvageable:shot${vdSalvage.unsalvageable.join(",")}`);
+  }
+  // Re-mirror after split so shot lines pick up plan metadata on shared roots
   mirrorDialoguePlanToShots(bundle);
   if (ingestHeal) {
     healDialoguePlanMetadata(bundle);
     healShotDialogueMetadata(bundle);
     const stubbed = ensureCdSpeakerStubs(bundle);
     if (stubbed.length) warnings.push(`cd_speaker_stub:${stubbed.join(",")}`);
+    let perfN = 0;
+    for (const shot of pack.shots) {
+      if (ensureShotPerformanceDefaults(shot as never)) perfN += 1;
+    }
+    if (perfN > 0) warnings.push(`performance_default:${perfN}`);
+    // New imports enable duration_norms cps (migrate flag) — history unset keeps legacy
+    const meta = (bundle as { meta?: Record<string, unknown> }).meta ?? {};
+    if (meta.pillarsDurationV2 == null) {
+      (bundle as { meta?: Record<string, unknown> }).meta = { ...meta, pillarsDurationV2: true };
+      warnings.push("pillarsDurationV2:true");
+    }
   }
 
   const sceneNames = pack.shots.map((s) => s.sceneName ?? "").filter(Boolean);
@@ -558,7 +945,12 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
     if (voice) (shot as { voice?: string }).voice = voice;
 
     alignFxFromVisualEffect(shot);
-    alignShotDurationFromDialogue(shot, warnings);
+    if (ingestHeal) {
+      healFxFeasibilityF0(shot, healLog);
+      healMinimalGenerationPrompts(shot, healLog);
+      healTransitionType(shot, healLog);
+      alignShotDurationFromDialogue(shot, warnings, healLog);
+    }
 
     return shot;
   });
@@ -613,21 +1005,40 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
   const speakerOrphans = orphanNames.map((name) => ({ name, code: slugSpeakerCode(name) }));
   (bundle as { _speakerOrphans?: { name: string; code: string }[] })._speakerOrphans = speakerOrphans;
 
-  // CD slug SSOT: remap digit charCodes / --cref to slug aliases
+  // CD slug SSOT: remap digit charCodes / --cref to slug aliases; SCENE out of --cref
   const alias = buildCodeAliasMap(bundle);
   for (const shot of shots) {
     if (shot.charCodes?.length) {
       shot.charCodes = shot.charCodes.map((c) => resolveAliasedCode(normalizeAssetCode(c) ?? c, alias));
     }
-    const img = shot.generation?.imagePrompt ?? "";
-    if (img && /--cref\s+CHAR-\d+/i.test(img)) {
-      shot.generation = {
-        ...shot.generation,
-        imagePrompt: img.replace(/--cref\s+(CHAR-\d+)/gi, (_m, dig: string) => {
+    let img = shot.generation?.imagePrompt ?? "";
+    if (img) {
+      // Move --cref SCENE-* → --sref SCENE-*
+      const sceneFromCref: string[] = [];
+      img = img.replace(/--cref\s+((?:(?!--sref|--ar)\S+\s*)+)/gi, (_m, block: string) => {
+        const toks = String(block).trim().split(/\s+/).filter(Boolean);
+        const chars = toks.filter((t) => /^CHAR-/i.test(t));
+        for (const t of toks) {
+          if (/^SCENE-/i.test(t)) sceneFromCref.push(t.toUpperCase());
+        }
+        return chars.length ? `--cref ${chars.join(" ")}` : " ";
+      });
+      if (sceneFromCref.length) {
+        const existing = img.match(/--sref\s+([^\n]+?)(?=\s+--(?:cref|ar)\b|$)/i);
+        const merged = [...new Set([...(existing?.[1]?.trim().split(/\s+/) ?? []), ...sceneFromCref])];
+        if (existing) {
+          img = img.replace(/--sref\s+[^\n]+?(?=\s+--(?:cref|ar)\b|$)/i, `--sref ${merged.join(" ")}`);
+        } else {
+          img = `${img.trim()} --sref ${merged.join(" ")}`.trim();
+        }
+      }
+      if (/--cref\s+CHAR-\d+/i.test(img)) {
+        img = img.replace(/--cref\s+(CHAR-\d+)/gi, (_m, dig: string) => {
           const resolved = resolveAliasedCode(dig, alias);
           return `--cref ${resolved}`;
-        }),
-      };
+        });
+      }
+      shot.generation = { ...shot.generation, imagePrompt: img.replace(/\s{2,}/g, " ").trim() };
     }
   }
 
@@ -639,7 +1050,14 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
   }
   const finalShots = bundle.preDesignPack.shots;
 
-  return { shots: finalShots, sceneMap, rewrittenSceneLock, speakerOrphans, warnings };
+  return {
+    shots: finalShots,
+    sceneMap,
+    rewrittenSceneLock,
+    speakerOrphans,
+    warnings,
+    semanticHealLog: healLog.entries,
+  };
 }
 
 /** Apply normalized shots back onto bundle.preDesignPack */

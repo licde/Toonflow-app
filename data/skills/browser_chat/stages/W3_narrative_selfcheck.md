@@ -3,7 +3,7 @@ name: W3_narrative_selfcheck
 description: W3 叙事质性 BLOCK 自检（export 前必跑）
 stageId: W3_selfcheck
 outputTag: narrativeSelfcheck
-rulePackVersion: "2.0.1"
+rulePackVersion: "2.1.0"
 ---
 
 # W3 叙事质性 BLOCK 自检
@@ -27,12 +27,18 @@ W3 文学剧本完成后、**进入 designBrief 前**必须逐项自检。任一
 | NAR-05 | changeLog 中 ≥80% P-issue 在剧本可追踪 | 回改 P06/W3 |
 | NAR-06 | reconstructionTrace ≥80% 在 ep1 可指出 △/对白 | 回改 W3 |
 | NAR-07 | ep1 无 forbiddenSuspense 模式 | 改信息交付 |
-| NAR-14 | 长台词 >20 字有 **splitHint**（如 `reaction_shot`）+ 反应 △ | 拆句/补 `dialoguePlan.lines[].splitHint` |
+| NAR-14 | 长台词：优先按标点拆成 ≤15 字分句写入多条 `lines`；整句保留时须有 **splitHint**（如 `reaction_shot`）+ 反应 △ | 标点拆句 / 补 `dialoguePlan.lines[].splitHint` |
 | NAR-15 | emotion_hit 台词有 **reactionAction** | 补 `dialoguePlan.lines[].reactionAction` |
 | RET-01 | ep1 首场 sceneMeta.avCausality 非空 | 补声画峰值 |
 | RET-02 | opening3to10s / rhythm31545 与正文时间轴一致；SB 镜可标 rhythm31545 | 对齐 retentionPlan |
+| DEX-AV-TAGS | 每场 `sceneAvTags`（或 sceneMeta.avTags）非空 | 按当前公式打标 |
+| DEX-FX-INTENT | 每场 `fxIntent.level`（含 F0）；≤ pack 天花板 | 补声明/降级 |
+| DEX-SCENE-CARD | implementationPlan 条数与 sceneMeta/唯一 sceneName 对齐 | 删孤儿或独立场名 |
+| DEX-ADAPT-SCORE | 设计期 adaptScore 过阈值 | 补维度兑现/打标/拆镜 |
 
-**禁止假绿：** 不得在缺 splitHint/reactionAction 时写 `narrativeSelfcheck.passed=true`。
+**禁止假绿：** 不得在缺 splitHint/reactionAction/**sceneAvTags** 时写 `narrativeSelfcheck.passed=true`。  
+**NAR-14 优先**：按 `，。！？；` 标点拆成多条 `dialoguePlan.lines`（每分句 ≤15 字）；服务器也会物理拆句兜底，但导出 JSON 应直接写权威形。整句无标点且超长时才用 `splitHint: reaction_shot`。  
+出站以服务器 `POST /api/scriptAgent/designExitGate` + `setStepStatus` 硬闸为准（见 `viral_adaptation_playbook.md`）。
 
 ## 输出
 

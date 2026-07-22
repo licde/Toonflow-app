@@ -19,13 +19,14 @@ subject, scene, composition, lighting, style, negative, cref, identity
 | CAN | CANNOT |
 |-----|--------|
 | 从 EN Y.subject 编译 prompt | 修改 SB lines |
-| 写入 --cref CHAR-CODE | 漂移锚点 token |
+| 写入 `--cref CHAR-*` | `--cref SCENE-*`（场景必须 `--sref`） |
+| 写入 `--sref SCENE-*` | 漂移锚点 token |
 | PURE-SCENE 前置 no people | T1 档位写 imagePrompt |
 
 ## BaseSpec 规则
 
 - V1–V4：type / cref / negative 位置 / --ar
-- CHAR-SCENE 须 `--cref CHAR-CODE`
+- CHAR-SCENE 须 `--cref CHAR-CODE`；场景码只进 `--sref`，禁止 `--cref SCENE-*`
 - PURE-SCENE 前 10 词含 `no people, no characters`
 - identity 与 BP L0.gender 一致（identityAudit）
 

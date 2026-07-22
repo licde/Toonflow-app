@@ -1,9 +1,10 @@
 /**
- * Post-burn QC → re-repair strategy table (M3) + still literary fidelity hits.
+ * Post-burn QC → re-repair strategy table (M3) + still literary fidelity hits + SVQ umbrella.
  */
 import type { BurnNextStep } from "../compilers/burnGateEnvelope";
 import { buildPrimaryBlock, type PrimaryBlock } from "../compilers/primaryBlock";
 import { canRegenRetry, consumeRegenRetry, createHealBudget, type HealBudgetState } from "../heal/healBudgetLedger";
+import { scoreShortVideo, type SvqResult } from "./shortVideoQuality";
 
 export type QcHit =
   | "QC-LIP-PIXEL"
@@ -16,7 +17,8 @@ export type QcHit =
   | "QC-STILL-LIT-PROP"
   | "QC-STILL-LIT-COMP"
   | "QC-STILL-LIT-FORBIDDEN"
-  | "QC-STILL-LIT-ID";
+  | "QC-STILL-LIT-ID"
+  | "QC-SVQ";
 
 export interface QcFinding {
   id: QcHit;
@@ -88,7 +90,34 @@ const STRATEGY: Record<QcHit, Omit<QcRepairAction, "primary" | "findingId">> = {
     strengthen: { crefWeight: "high" },
     consumeRegen: true,
   },
+  "QC-SVQ": {
+    nextStep: "soft_patch",
+    consumeRegen: false,
+  },
 };
+
+/** Burn-time short_video_quality_scorecard (≠ design adaptScorecard). */
+export function evaluateBurnScorecard(flags: {
+  identityOk?: boolean;
+  emotionOk?: boolean;
+  lipOk?: boolean;
+  camVarietyOk?: boolean;
+  audioOk?: boolean;
+  retentionOk?: boolean;
+  packagingOk?: boolean;
+  motionOk?: boolean;
+}): { svq: SvqResult; finding?: QcFinding } {
+  const svq = scoreShortVideo({ flags });
+  if (svq.pass) return { svq };
+  return {
+    svq,
+    finding: {
+      id: "QC-SVQ",
+      severity: "WARN",
+      message: `成片记分未过：${svq.failDims.map((d) => d.id).join(",")}`,
+    },
+  };
+}
 
 export function planPostBurnRepairs(
   findings: QcFinding[],

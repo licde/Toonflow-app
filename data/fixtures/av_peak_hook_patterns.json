@@ -1,0 +1,140 @@
+{
+  "version": "1.0.0",
+  "description": "视听爆点/钩子智能抓取规则 SSOT — 真爆点形态 + 假爆点黑名单 + 钩子类型",
+  "falsePeakLabels": [
+    "别墅写景",
+    "开会交代",
+    "纯环境描写",
+    "人物履历说明",
+    "时间线旁白堆砌",
+    "无冲突日常闲聊"
+  ],
+  "falsePeakKeywords": [
+    "别墅很大",
+    "豪华装修",
+    "会议室",
+    "汇报工作",
+    "天气很好",
+    "阳光明媚",
+    "走过长廊"
+  ],
+  "peakPatterns": [
+    {
+      "id": "slap",
+      "keywords": ["巴掌", "耳光", "扇了", "抽了她", "抽了他"],
+      "avForm": "巴掌落点特写",
+      "emotionType": "爽",
+      "visualPayload": "巴掌落点/脸颊震动",
+      "audioPayload": "巴掌声先导",
+      "retainRole": "吸住",
+      "packBias": ["war_god", "abuse_romance", "generic"]
+    },
+    {
+      "id": "kneel",
+      "keywords": ["跪下", "下跪", "跪地", "跪着"],
+      "avForm": "下跪仰拍",
+      "emotionType": "爽",
+      "visualPayload": "膝落地/仰拍压迫",
+      "audioPayload": "膝撞地+静场",
+      "retainRole": "升级",
+      "packBias": ["war_god", "generic"]
+    },
+    {
+      "id": "identity_reveal",
+      "keywords": ["真实身份", "你就是", "总裁", "战神", "军牌", "掉马", "身份揭穿"],
+      "avForm": "身份掉马五刀",
+      "emotionType": "爽",
+      "visualPayload": "证件/令牌/众人齐跪",
+      "audioPayload": "bass_drop + 齐声跪",
+      "retainRole": "付费卡前",
+      "packBias": ["war_god", "generic"]
+    },
+    {
+      "id": "betrayal",
+      "keywords": ["背叛", "出轨", "离婚协议", "分手", "不爱了", "另娶", "另嫁"],
+      "avForm": "背叛证据特写",
+      "emotionType": "虐",
+      "visualPayload": "协议/口红印/短信屏",
+      "audioPayload": "静音0.4s后击穿",
+      "retainRole": "吸住",
+      "packBias": ["abuse_romance", "generic"]
+    },
+    {
+      "id": "tear_closeup",
+      "keywords": ["泪目", "眼泪", "哭了", "哽咽", "泪水"],
+      "avForm": "泪目特写",
+      "emotionType": "虐",
+      "visualPayload": "瞳孔反光泪珠",
+      "audioPayload": "气声哽咽",
+      "retainRole": "升级",
+      "packBias": ["abuse_romance", "sweet", "generic"]
+    },
+    {
+      "id": "confession",
+      "keywords": ["我爱你", "告白", "喜欢你", "嫁给我", "求婚"],
+      "avForm": "告白近景偏爱",
+      "emotionType": "甜",
+      "visualPayload": "贴身过肩/手交握",
+      "audioPayload": "心跳+气声",
+      "retainRole": "吸住",
+      "packBias": ["sweet", "generic"]
+    },
+    {
+      "id": "care_intimate",
+      "keywords": ["上药", "包扎", "抱起", "护在身后", "罩住"],
+      "avForm": "亲密守护近景",
+      "emotionType": "甜",
+      "visualPayload": "手部上药/护身遮挡",
+      "audioPayload": "轻呼吸/ukulele",
+      "retainRole": "升级",
+      "packBias": ["sweet", "generic"]
+    },
+    {
+      "id": "crisis_open",
+      "keywords": ["救命", "撞车", "绑架", "血", "枪", "爆炸", "倒计时"],
+      "avForm": "危机开场冲击",
+      "emotionType": "惊",
+      "visualPayload": "危机主体特写",
+      "audioPayload": "冲击音/倒计时",
+      "retainRole": "吸住",
+      "packBias": ["suspense", "war_god", "generic"]
+    },
+    {
+      "id": "truth_twist",
+      "keywords": ["真相", "原来是", "不是你想的", "证据", "监控"],
+      "avForm": "真相恍然",
+      "emotionType": "惊",
+      "visualPayload": "证据插入/框中框",
+      "audioPayload": "低频嗡鸣骤停",
+      "retainRole": "付费卡前",
+      "packBias": ["suspense", "generic"]
+    },
+    {
+      "id": "power_slap_face",
+      "keywords": ["打脸", "打肿脸", "嘲讽", "看不起", "废物", "赘婿"],
+      "avForm": "言语打脸后反转",
+      "emotionType": "爽",
+      "visualPayload": "嘲讽者僵住反应",
+      "audioPayload": "crowd hush",
+      "retainRole": "升级",
+      "packBias": ["war_god", "generic"]
+    }
+  ],
+  "hookTypes": {
+    "opening": ["crisis", "identity_contrast", "emotion_hit"],
+    "mid": ["first_power_shift", "first_plot_turn"],
+    "end": ["unresolved_question", "twist_tease"]
+  },
+  "empathyThreeBeat": ["困境", "无门", "微反击"],
+  "retention": {
+    "openingWindowSec": [0, 3],
+    "openingHookMaxSec": 6,
+    "beat31545": { "s3": "情绪冲击", "s15": "第一次变化", "s45": "强期待" },
+    "requireUpgradePerEp": true
+  },
+  "infoGap": {
+    "forbidOpaqueMystery": true,
+    "ep1CoreInfoMaxIn30s": 1,
+    "requireAudienceCharacterGap": true
+  }
+}

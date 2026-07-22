@@ -18,6 +18,7 @@ import {
   findImplPlanItem,
   type ImplPlanItem,
 } from "./promptIR";
+import { asDialogueLineObjects } from "../design/dialogueCoverage";
 import type { PreDesignShot } from "../bundle/types";
 
 export type RefSlot = {
@@ -211,10 +212,13 @@ export function postModeSanitize(prompt: string, modeId: string): string {
 function resolveDialogueLines(input: CompileOrGenerateInput): string[] {
   if (input.dialogueLines?.length) return input.dialogueLines;
   const shot = input.designShot;
-  if (shot?.narrative?.dialogue?.lines?.length) {
-    return shot.narrative.dialogue.lines.map((l) => String(l.text ?? "").trim()).filter(Boolean);
+  const raw = shot?.narrative?.dialogue?.lines;
+  if (raw == null || (typeof raw === "string" && !raw.trim()) || (Array.isArray(raw) && !raw.length)) {
+    return [];
   }
-  return [];
+  return asDialogueLineObjects(raw)
+    .map((l) => String(l.text ?? "").trim())
+    .filter(Boolean);
 }
 
 function finalizePrompt(

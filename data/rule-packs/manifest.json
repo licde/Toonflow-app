@@ -1,5 +1,5 @@
 {
-  "version": "2.0.1",
+  "version": "2.1.0",
   "domains": [
     "core",
     "adaptation",
@@ -14,7 +14,32 @@
     "L3"
   ],
   "defaultImplLevel": "L1",
-  "rulePackVersion": "2.0.1",
+  "rulePackVersion": "2.1.0",
+  "designGate": {
+    "mountMatrix": "data/fixtures/design_gate_mount_matrix.json",
+    "splitCapability": "data/fixtures/design_split_capability.json",
+    "reverseTriggers": [
+      "nar14_split",
+      "nar15_reaction",
+      "dc16_cast",
+      "speaker_bare",
+      "self_report_mismatch",
+      "design_split_orchestrator",
+      "dialogue_hash_mismatch",
+      "visual_multi_beat"
+    ],
+    "opsApi": "/api/scriptAgent/designSplitOps",
+    "parityTest": "yarn test:design-export-parity",
+    "residualDoctrine": "data/fixtures/nar14_residual_doctrine.json",
+    "lipSplitDoctrine": "data/fixtures/lip_split_doctrine.json",
+    "stillIdentityDoctrine": "data/fixtures/still_identity_doctrine.json",
+    "qp02VisualPolicy": "data/fixtures/qp02_visual_policy.json",
+    "residualLoopTest": "yarn test:nar14-residual-loop",
+    "lipSplitLoopTest": "yarn test:lip-split-loop",
+    "stillIdentityLoopTest": "yarn test:still-identity-loop",
+    "qp02DesignLoopTest": "yarn test:qp02-design-loop",
+    "freeze": "neverSilentInvent splitHint/reactionAction; never persist hint on burn block; still casting name authority; no verb-whitelist primary glue; QP-02 minChars floor only"
+  },
   "sections": {
     "core": {
       "file": "core.json",

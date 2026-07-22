@@ -22,6 +22,7 @@ import {
   parseStillMetaFromReason,
   resolveImageQualityAnchor,
 } from "@/ruleEngine/compilers/stillQuality";
+import { hashLiteraryDesc } from "@/ruleEngine/qc/stillFirstFrameGate";
 import { buildPrimaryBlock } from "@/ruleEngine/compilers/primaryBlock";
 import { applyLifecycleInvalidation } from "@/ruleEngine/heal/lifecycleInvalidate";
 import {
@@ -200,10 +201,15 @@ export async function runGenerateFlowImageCore(
   }
 
   // Dual seating + multi-char: missing look → hard stop (一人一脸)
+  // Role URL refs + --cref CHAR-* credit looks before vendor spend; scene URLs never credit faces
+  const { parsePromptRefs } = await import("@/ruleEngine/compilers/vendorPromptAdapter");
+  const promptRefs = parsePromptRefs(composed.prompt || prompt);
   const identityGate = assertStillIdentityPreflight({
     characters: composeCtx.characters,
     description: descSsot.description || composeCtx.visualDescription,
     dialogueSpeakers: composeCtx.dialogueSpeakers,
+    referenceUrls: references,
+    promptCrefCodes: promptRefs.crefs,
     enforce: true,
   });
   if (!identityGate.ok) {
@@ -349,10 +355,38 @@ export async function runGenerateFlowImageCore(
 
   const charNames = (composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[];
   const literaryDesc = descSsot.description || composeCtx.visualDescription || composed.visualBody;
+  const { resolveStillBgPolicy } = await import("@/ruleEngine/compilers/stillBgPolicy");
+  const { extractDescPredicates } = await import("@/ruleEngine/compilers/extractDescPredicates");
+  const { preflightSeatingCref } = await import("@/ruleEngine/qc/stillCrefPreflight");
+  const bgPol = resolveStillBgPolicy({
+    description: literaryDesc,
+    characterNames: charNames,
+    shotSize: composeCtx.shotSize,
+  });
+  const seatingPack = bgPol.pack;
+  const crefGate = preflightSeatingCref({
+    seatingHard: seatingPack.hasSeatingOrKneel,
+    characters: composeCtx.characters,
+  });
+  if (crefGate && qualityMode === "hq_update") {
+    const primary = buildPrimaryBlock(crefGate.primaryNextStep, {
+      stage: "prompt",
+      userMessageOverride: crefGate.userMessage,
+      ctaLabelOverride: crefGate.ctaLabel,
+    });
+    throw Object.assign(new Error(crefGate.userMessage), {
+      code: crefGate.code,
+      primaryNextStep: primary.primaryNextStep,
+      userMessage: primary.userMessage,
+      ctaLabel: primary.ctaLabel,
+      healBudget: budget,
+    });
+  }
   const checklist = buildLiteraryFidelityChecklist({
     description: literaryDesc,
     characterNames: charNames,
     requireDualIdentity: charNames.length >= 2,
+    bgPolicy: bgPol.policy,
   });
 
   const touched = touchPromptForVendor(composed.prompt, ratio);
@@ -360,6 +394,8 @@ export async function runGenerateFlowImageCore(
   const toB64 = deps.urlToBase64 ?? defaultUrlToBase64;
   const { runStillVisualFidelityLoop } = await import("@/ruleEngine/qc/stillVisualFidelityLoop");
   const { resolveShotIdentityBinding } = await import("@/ruleEngine/compilers/resolveShotIdentityBinding");
+  const { resolveLayoutForShot } = await import("@/ruleEngine/qc/stillLayoutControl");
+  void extractDescPredicates; // used via bgPol.pack
 
   let feedback: Awaited<ReturnType<typeof classifyGenerationFailure>> | undefined;
   let referenceCount = 0;
@@ -386,7 +422,17 @@ export async function runGenerateFlowImageCore(
       healBudget: budget,
       strengthen: body.strengthen,
       judgeFn: deps.vlmJudgeFn,
-      generateOnce: async ({ strengthen, mode, fixHints, failedImageBase64 }) => {
+      db,
+      bgPolicy: bgPol.policy,
+      generateOnce: async ({
+        strengthen,
+        mode,
+        fixHints,
+        failedImageBase64,
+        layoutPreserve,
+        swapLayoutTemplate,
+        excludeLayoutTemplateId,
+      }) => {
         const useEdit = mode === "edit";
         // Edit rounds: do not re-stack strengthen into compose; use fixHint focus prompt
         if (!useEdit) {
@@ -414,7 +460,7 @@ export async function runGenerateFlowImageCore(
             : (composeCtx.characters ?? [])
                 .filter((c) => c.kind !== "scene" && c.hasImage && c.code)
                 .map((c) => String(c.code).toUpperCase()),
-          sceneCode: composeCtx.sceneCode ?? null,
+          sceneCode: lastComposed.excludeScene ? null : (composeCtx.sceneCode ?? null),
         });
         lastPipeline = runStillPromptPipeline({
           composed: lastComposed,
@@ -432,6 +478,7 @@ export async function runGenerateFlowImageCore(
         if (pol.hasSensitiveTerms) vendorPrompt = pol.softenedPrompt;
 
         let referenceList: { type: "image"; base64: string }[] = [];
+        let sceneRefsDropped = 0;
         if (storyboardId) {
           const built = await buildReferenceListForStoryboard(
             db,
@@ -440,8 +487,10 @@ export async function runGenerateFlowImageCore(
             vendorPrompt,
             bind.orderedCodes.length ? bind.orderedCodes : lastComposed.orderedCrefCodes ?? [],
             bind.orderedCodes.length ? bind.orderedCodes : lastComposed.orderedCrefCodes,
+            { excludeScene: Boolean(lastComposed.excludeScene) },
           );
           referenceList = built.referenceList;
+          sceneRefsDropped = built.sceneRefsDropped ?? 0;
         }
         for (const url of references) {
           if (!url) continue;
@@ -449,6 +498,11 @@ export async function runGenerateFlowImageCore(
         }
 
         let editStrategy: string | undefined;
+        let layoutTemplateId: string | undefined;
+        let layoutSkipped: string | undefined;
+        let stageCost = 1;
+        const useLayoutPreserve = Boolean(layoutPreserve) || (useEdit && seatingPack.hasSeatingOrKneel);
+
         if (useEdit) {
           const { prepareStillImageEdit } = await import("@/ruleEngine/qc/stillImageEdit");
           const { buildLiteraryEditPrompt } = await import("@/ruleEngine/compilers/stillEditLiteraryPrompt");
@@ -468,10 +522,71 @@ export async function runGenerateFlowImageCore(
             })),
             model: String(model),
             vendorHint: String(model).split(":")[0],
+            layoutPreserve: useLayoutPreserve,
+            strategy: useLayoutPreserve ? "layout_preserve" : undefined,
           });
           vendorPrompt = prep.promptUsed;
           referenceList = prep.referenceList.map((r) => ({ type: "image" as const, base64: r.base64 }));
           editStrategy = prep.strategy;
+        } else if (seatingPack.hasSeatingOrKneel) {
+          const layout = await resolveLayoutForShot({
+            pack: seatingPack,
+            characterCount: charNames.length,
+            qualityMode,
+            excludeId: swapLayoutTemplate ? excludeLayoutTemplateId : undefined,
+          });
+          layoutTemplateId = layout.template?.id;
+          layoutSkipped = layout.layoutSkipped;
+          if (layout.twoStage && layout.layoutBase64 && layout.template) {
+            const stageAPrompt = layout.template.stageAPrompt;
+            const stageARefs = [{ type: "image" as const, base64: layout.layoutBase64 }];
+            let stageAB64 = "";
+            if (deps.imageRunner) {
+              const stub = await deps.imageRunner({
+                prompt: stageAPrompt,
+                referenceList: stageARefs,
+                size: quality,
+                aspectRatio: aspectRatio ?? ratio,
+              });
+              stageAB64 = stub.resultBase64 ?? "";
+              if (!stageAB64 && stub.getResultUrl) {
+                try {
+                  stageAB64 = await toB64(await stub.getResultUrl());
+                } catch {
+                  /* ignore */
+                }
+              }
+            } else {
+              const imageClass = await u.Ai.Image(model as `${string}:${string}`).run(
+                {
+                  prompt: stageAPrompt,
+                  referenceList: stageARefs,
+                  size: quality as "1K" | "2K" | "4K",
+                  aspectRatio: aspectRatio as `${number}:${number}`,
+                },
+                {
+                  taskClass: "工作流图片生成",
+                  describe: `still StageA layout template=${layout.template.id}`,
+                  relatedObjects: JSON.stringify({ stage: "layout", templateId: layout.template.id }),
+                  projectId,
+                },
+              );
+              const tmpPath = `/${projectId}/workFlow/${u.uuid()}-layout.jpg`;
+              await imageClass.save(tmpPath.replace(/^\//, ""));
+              const tmpUrl = await u.oss.getSmallImageUrl(tmpPath.replace(/^\//, ""));
+              stageAB64 = await toB64(tmpUrl);
+            }
+            if (stageAB64) {
+              stageCost = 2;
+              referenceList = [
+                { type: "image" as const, base64: stageAB64.replace(/^data:image\/\w+;base64,/, "") },
+                ...referenceList,
+              ];
+              vendorPrompt = `${vendorPrompt} 【布局锁】以上一方图为座次构图锚，保持高坐低跪相对位置，贴脸与服装来自角色定妆。`;
+            } else {
+              layoutSkipped = layoutSkipped ?? "no_file";
+            }
+          }
         }
         referenceCount = referenceList.length;
 
@@ -501,12 +616,16 @@ export async function runGenerateFlowImageCore(
             },
             {
               taskClass: "工作流图片生成",
-              describe: `工作流图片生成 mode=${modeRules.modeId} edit=${editStrategy ?? "generate"}`,
+              describe: `工作流图片生成 mode=${modeRules.modeId} edit=${editStrategy ?? "generate"} stageCost=${stageCost}`,
               relatedObjects: JSON.stringify({
                 ...body,
                 resolvedImageMode: modeRules.modeId,
                 qualityMode,
                 editStrategy,
+                layoutTemplateId,
+                bgPolicy: lastComposed.bgPolicy ?? bgPol.policy,
+                sceneRefsDropped,
+                stageCost,
               }),
               projectId,
             },
@@ -523,7 +642,12 @@ export async function runGenerateFlowImageCore(
           imageBase64,
           allowHqOkL0: lastPipeline.allowHqOk,
           fidelityMissing: lastPipeline.fidelityMissing,
-          strategy: (editStrategy as "agnes_i2i" | "atlas_native" | "focus_regen" | "generate") ?? "generate",
+          strategy: (editStrategy as "agnes_i2i" | "atlas_native" | "focus_regen" | "layout_preserve" | "generate") ?? "generate",
+          layoutTemplateId,
+          layoutSkipped,
+          bgPolicy: lastComposed.bgPolicy ?? bgPol.policy,
+          sceneRefsDropped,
+          stageCost,
         };
       },
     });
@@ -533,6 +657,7 @@ export async function runGenerateFlowImageCore(
       url: loopOut.url,
       savePath: loopOut.savePath,
       promptUsed: loopOut.promptUsed,
+      literaryDesc,
       policy,
       storyboardId,
       persistToStoryboard,
@@ -548,6 +673,7 @@ export async function runGenerateFlowImageCore(
       collapsed: lastPipeline.collapsed,
       autoHealed: [...(lastPipeline.autoHealed ?? []), ...loopOut.autoHealed],
       pipelineVersion: lastPipeline.pipelineVersion,
+      recipeHeals: lastPipeline.recipeHeals ?? lastComposed.recipeHeals,
       visualPass: loopOut.visualPass,
       visualPassAt: loopOut.visualPassAt,
       fidelityItems: loopOut.fidelityItems,
@@ -559,6 +685,12 @@ export async function runGenerateFlowImageCore(
       vlmError: loopOut.vlmError,
       pendingHumanRejudge: loopOut.pendingHumanRejudge,
       infraEditBypassUsed: loopOut.infraEditBypassUsed,
+      repairRoute: (loopOut as { repairRoute?: string }).repairRoute,
+      layoutTemplateId: (loopOut as { layoutTemplateId?: string }).layoutTemplateId,
+      bgPolicy: lastComposed.bgPolicy ?? bgPol.policy,
+      sceneRefsDropped: (loopOut as { sceneRefsDropped?: number }).sceneRefsDropped,
+      stageCost: (loopOut as { stageCost?: number }).stageCost,
+      settingsDeepLink: (loopOut as { settingsDeepLink?: string }).settingsDeepLink,
     });
   } catch (e) {
     const errMsg = u.error(e).message;
@@ -600,6 +732,7 @@ async function finalizeSuccess(
     url: string;
     savePath: string;
     promptUsed: string;
+    literaryDesc?: string;
     policy: ReturnType<typeof precheckContentPolicy>;
     storyboardId?: number;
     persistToStoryboard: boolean;
@@ -617,6 +750,7 @@ async function finalizeSuccess(
     collapsed?: boolean;
     autoHealed?: string[];
     pipelineVersion?: string;
+    recipeHeals?: string[];
     visualPass?: boolean;
     visualPassAt?: string;
     fidelityItems?: Array<{ id: string; pass: boolean; evidence?: string; fixHint?: string }>;
@@ -637,6 +771,7 @@ async function finalizeSuccess(
   const literaryGate = vlmSkipped ? input.allowHqOk === true : input.visualPass === true;
   const hq = input.qualityMode === "hq_update" && coverageOk && literaryGate && !input.collapsed;
   let stillQuality: "missing" | "weak" | "hq_ok" = hq ? "hq_ok" : "weak";
+  const keyMissing = /VLM_API_KEY_MISSING|api\s*key/i.test(String(input.vlmError ?? ""));
   // vlm_error: do NOT nudge regen_hq (would empty-loop while critic is down) — chat_repair / human rejudge
   const primary = buildPrimaryBlock(
     hq ? "burn" : input.fidelityStopReason === "vlm_error" ? "chat_repair" : "regen_storyboard_hq",
@@ -652,9 +787,11 @@ async function finalizeSuccess(
   );
   const vlmCta =
     input.fidelityStopReason === "vlm_error"
-      ? input.pendingHumanRejudge
-        ? "人审通过或修复评审配置"
-        : "修复评审配置后重试"
+      ? keyMissing
+        ? "去配置火山引擎 API Key"
+        : input.pendingHumanRejudge
+          ? "人审通过或修复评审配置"
+          : "修复评审配置后重试"
       : primary.ctaLabel;
   const userMessage = hq
     ? input.composed.didSynthesize
@@ -680,6 +817,7 @@ async function finalizeSuccess(
       collapsed: input.collapsed,
       autoHealed: input.autoHealed,
       pipelineVersion: input.pipelineVersion,
+      recipeHeals: input.recipeHeals ?? input.composed.recipeHeals,
       fidelityItems: input.fidelityItems,
       fidelityStopReason: input.fidelityStopReason,
       visualPass: input.visualPass,
@@ -689,6 +827,11 @@ async function finalizeSuccess(
       parallelM: input.parallelM,
       editStrategy: input.editStrategy,
       vlmError: input.vlmError,
+      bgPolicy: input.bgPolicy,
+      layoutTemplateId: input.layoutTemplateId,
+      repairRoute: input.repairRoute,
+      sceneRefsDropped: input.sceneRefsDropped,
+      stageCost: input.stageCost,
     };
     if (input.fidelityStopReason === "converged" || input.fidelityStopReason === "budget") {
       try {
@@ -715,6 +858,7 @@ async function finalizeSuccess(
           ...prevMeta,
           composeSources: input.composed.sources,
           promptUsed: input.promptUsed.slice(0, 2000),
+          literaryDescHash: hashLiteraryDesc(String(input.literaryDesc ?? "")),
           compositionContractApplied: input.composed.compositionContractApplied,
           resolvedQuality: input.resolvedQuality,
           composeMode: input.composed.composeMode,
@@ -729,6 +873,7 @@ async function finalizeSuccess(
           qualityMode: "draft",
           composeSources: input.composed.sources,
           promptUsed: input.promptUsed.slice(0, 2000),
+          literaryDescHash: hashLiteraryDesc(String(input.literaryDesc ?? "")),
           resolvedQuality: input.resolvedQuality,
           promptState: input.composed.composeMode === "fidelity" ? "fidelity" : "composed",
           composeMode: input.composed.composeMode,

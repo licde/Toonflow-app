@@ -1,0 +1,139 @@
+{
+  "packId": "generic",
+  "label": "通用",
+  "source": "baseline",
+  "emotionSupplyMix": { "爽": 0.3, "甜": 0.25, "虐": 0.25, "惊": 0.2 },
+  "storyFormula": {
+    "openingHookTypes": ["crisis", "emotion_hit"],
+    "conflictPer15s": true,
+    "paypointHints": [],
+    "empathyBeats": ["困境", "无门", "微反击"]
+  },
+  "scriptFormula": {
+    "forbidden": ["opaque_mystery", "exposition_dump"],
+    "dialogueClusterIntent": "speak_react",
+    "voiceIntentHints": []
+  },
+  "shotFormula": {
+    "shotSizeBias": ["中景", "近景"],
+    "allowedMotions": ["static", "slow pan", "gentle push"],
+    "speakMotion": "static",
+    "reactMotion": "subtle drift",
+    "fxIntentCeiling": "F2",
+    "audioMoodHints": [],
+    "cutGrammar": ["eye_line", "action_match"]
+  },
+  "sceneTagVocabulary": ["generic"],
+  "weapons": [],
+  "sceneRecipes": [],
+  "adaptationPrompts": {
+    "short": "通用爆款基础：冲突钩子、对白簇、Speak 静。",
+    "w3": "打标 [generic]；遵守 NAR-14/15 与 fxIntent F0；sidecar 填 shotDesignIntent。"
+  },
+  "designThinking": {
+    "dimensions": {
+      "narrative": {
+        "principles": ["开场危机或情感钩", "困境→无门→微反击"],
+        "mustDo": ["peakLedger 非空", "hookPlan 开场钩", "3-15-45"],
+        "forbidden": ["假爆点", "opaque_mystery"],
+        "examples": ["危机开场→微反击"],
+        "mustEmit": ["openingHook", "empathyBeats"]
+      },
+      "dialogue": {
+        "principles": ["冲突短句", "簇反应"],
+        "mustDo": ["splitHint", "reactionAction", "口型时长"],
+        "forbidden": ["有台词=有情绪"],
+        "examples": ["冲突句→反应"],
+        "mustEmit": ["splitHint"]
+      },
+      "scene": {
+        "principles": ["每场升级", "打标"],
+        "mustDo": ["真爆点或钩子落点"],
+        "forbidden": ["无信息氛围过长"],
+        "examples": [],
+        "mustEmit": ["sceneAvTags"]
+      },
+      "shotPicture": {
+        "principles": ["中近景", "拍动作落点"],
+        "mustDo": ["shotDesignIntent", "Speak=static"],
+        "forbidden": ["正文括注"],
+        "examples": [],
+        "mustEmit": ["shotDesignIntent"]
+      },
+      "cutTransition": {
+        "principles": ["视线/动作匹配"],
+        "mustDo": ["cutIntent", "durationSec"],
+        "forbidden": ["无动机切"],
+        "examples": [],
+        "mustEmit": ["durationSec"]
+      }
+    },
+    "peakHookGuidance": {
+      "truePeakForms": ["危机冲击", "情感暴击", "冲突升级"],
+      "falsePeakLabels": ["别墅写景", "开会交代", "纯环境描写"],
+      "hookTypes": ["crisis", "emotion_hit"],
+      "empathyThreeBeat": ["困境", "无门", "微反击"],
+      "infoGapRules": ["信息差清晰", "ep1前30s核心info≤1", "禁opaque_mystery"]
+    },
+    "durationNormLines": [
+      "对白镜 ≥ 口型估算+情绪留白；超桶预拆簇",
+      "反应镜0.8–2s；插入0.6–1.5s",
+      "开场钩前3s第一强刺激",
+      "单场须有冲突升级"
+    ]
+  },
+  "stageOutputTemplates": {
+    "P0": {
+      "mustEmit": ["peakLedger", "hookPlan", "genreTemplate"],
+      "writingSteps": ["选公式", "抓 peak/hook", "衍生"],
+      "forbid": ["假爆点"]
+    },
+    "W1": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan"],
+      "writingSteps": ["共鸣三拍骨架", "peak 落集"]
+    },
+    "W2": { "mustEmit": ["conflictCurve"], "writingSteps": ["冲突曲线"] },
+    "W3": {
+      "mustEmit": ["scriptItem", "sceneAvTags", "shotDesignIntent", "hookPlan"],
+      "writingSteps": ["读 brief", "△+sidecar", "共生产"],
+      "forbid": ["正文技术括注"]
+    },
+    "designBrief": { "mustEmit": ["shotDesignIntent"], "writingSteps": ["镜像意图"] },
+    "SB": { "mustEmit": ["shotDesignIntent"], "writingSteps": ["执行意图"] },
+    "G": { "mustEmit": ["genreTemplate"], "writingSteps": ["原创选公式+抓取"] },
+    "P06": {
+      "mustEmit": ["openingHook", "empathyBeats", "hookPlan", "paypointIntent", "changeLogFakeToTrue"],
+      "writingSteps": ["先打印原→改", "困境无门微反击排事件", "changeLog 假→真", "付费卡标注"],
+      "forbid": ["假爆点", "正文技术括注"]
+    }
+  },
+  "reconstructionExamples": [
+    {
+      "id": "gn-crisis-open",
+      "from": "原：天气很好，主角走在街上回忆往事，慢慢引出矛盾。",
+      "to": "改：开场3s内危机或情感暴击可拍△→15s第一次权力/剧情变化→集末未解钩；删纯写景开场。",
+      "why": "写景假爆点→真钩子；3-15-45留存",
+      "empathyBeat": "困境→无门→微反击",
+      "peakForms": ["危机冲击", "情感暴击"],
+      "emotionTask": "立刻抓住并替主角捏汗",
+      "paypointHint": "微反击将兑现前切断"
+    },
+    {
+      "id": "gn-meeting-cut",
+      "from": "原：会议室里众人汇报背景设定，主角听完才开始行动。",
+      "to": "改：删开会exposition；用冲突动作+一句信息差对白推进；反应镜兑现情绪。",
+      "why": "exposition_dump→有效信息差",
+      "empathyBeat": "无门→微反击",
+      "peakForms": ["冲突升级"],
+      "emotionTask": "冲突驱动而非说明驱动",
+      "paypointHint": "反转将揭前切断"
+    }
+  ],
+  "emotionParabola": {
+    "s0_3": "建立",
+    "s3_8": "失衡",
+    "s8_12": "爆发",
+    "s12_15": "钩子定格"
+  },
+  "extensions": []
+}

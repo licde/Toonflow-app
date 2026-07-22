@@ -72,8 +72,10 @@ rulePackVersion: "2.0.1"
 ## 产品契约（质量优先）
 
 - **rePush / 回推按钮 = 仅跳转设计台，不改 JSON 数据**。
-- 真正修复：复制 `chatRepairText`（exportGate / import 400 / burn 失败）→ Chat 改字段 → 再 dryRun/exportGate → 再导入/烧片。
-- 路由表须含 `cam_whitelist`、`img_cref_missing`、`narrative_split_hint`、`pr_lip_duration`、`modality_fx_missing`；禁止落到 INFRA 死路由。
+- 真正修复：复制 `chatRepairText`（含【深链·反推舞台】）→ Chat 改**权威字段** → **再入编排**（`design_split_forward_reentry` / Confirm / SB setStep heal）→ 再 dryRun/exportGate → 再导入/烧片。
+- **二次修复铁律**：只改 `dialoguePlan` 不 mirror shots → 仍会 DC-01 / 镜级 NAR-15；同 trigger≥3 升人工（loop_guard）。
+- **NAR-14 残句**：`nar14_residual` fork＝改短重设计(W3) | Confirm拆镜(SB) | 显式 splitHint；clause-split≠清零。
+- 设计拆族 trigger：`nar14_split` / `nar14_residual` / `nar15_reaction` / `dc16_cast` / `speaker_bare` / `design_split_orchestrator` / `dialogue_hash_mismatch`；另含 `cam_whitelist`、`img_cref_missing`、`pr_lip_duration`、`modality_fx_missing`；禁止落到 INFRA 死路由。
 
 ## BLOCK
 

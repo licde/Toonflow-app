@@ -1,65 +1,53 @@
 ---
 name: P06_story_core
-description: P0.6 改编后故事核心构建
+description: P0.6 改编后故事核心 — 先示范原→改再重构情绪过山车
 stageId: P06
 outputTag: storyCore
 rulePackVersion: "2.0.1"
 ---
 
-# P0.6 故事核心
+# P0.6 故事核心（爆款重构主示范站）
 
-基于源材料 + 改编矩阵，构建**新叙事内核**与事件序列。W1 骨架须引用本产出。
+基于源材料 + 改编矩阵 + **题材原→改示范**，构建新叙事内核。W1 骨架须引用本产出。
 
 ## 入口条件
 
-- `planData.adaptationMatrixStructured.userConfirmed` = true（P03 + confirmMatrixChoices）
-- 源材料摘要可用
+- `planData.adaptationMatrixStructured.userConfirmed` = true
+- 已选 `genreTemplate.packId`；建议已有 `peakLedger`/`hookPlan`（可调用 `extract_peak_hook`）
 
 ## 产出字段
 
-| 字段 | 说明 | ruleId 关联 |
-|------|------|-------------|
-| narrativeKernel | 一句话故事核心 | W1 故事核 |
-| characterAnchors | 角色/矛盾/初态/终态 | G1 预留 |
-| relationships | 关系表或简述 | G5 预留 |
-| eventSequence | 阶段/集数/事件/旧问题解决 | P0 问题闭环 |
-| changeLog | 改动项/旧/新/原因 | P09 可追溯 |
+| 字段 | 说明 |
+|------|------|
+| narrativeKernel | 一句话故事核 + 心理级爽点类型 |
+| characterAnchors | 角色/矛盾/初态/终态 ≤4 |
+| relationships | 关系表 |
+| eventSequence | 兑现 peak + 开场微循环 + 集末钩 + 付费卡前拍 |
+| changeLog | **假爆点→真视听钩** 必填 |
 
 ## 执行步骤
 
-1. 从 `adaptationMatrixStructured` + `adaptationProfile` 提取改编约束（含 deepAdaptation）
-2. 写 narrativeKernel（≤50 字，含心理级爽点类型）
-3. 立 characterAnchors，人物 ≤4（大三角原则）
-4. 排 eventSequence ≥3 行，标注解决的 P-00x
-5. 逐条记录 changeLog（必填 `matrixDim` + `densityImpact`）；写入 `narrativeBrief.reconstructionTrace[]` + `storyKernel` / `mustResolveIssues[]`
+**步骤 0（强制）**：调用 `get_viral_writing_context(stageId=P06)`；**先向用户展示 1 条「原→改」示范**（来自 brief），再动手写。
 
-## 边界条件
+1. 读取矩阵 + peakLedger/hookPlan；缺 peak 则 `extract_peak_hook`
+2. 写 narrativeKernel（≤50 字，含情绪任务）
+3. 立 characterAnchors ≤4
+4. 排 `eventSequence` ≥3：每行标注 `peakIds` / `hookSlot` / `resolves`；ep1 须开场微循环 + 3-15-45
+5. `changeLog` 每条须含：`from`(假/弱) → `to`(真视听钩) + `matrixDim` + `emotionTask` + `paypoint?`
+6. 写入 `narrativeBrief.reconstructionTrace[]`；镜像 `hookPlan.paypointIntent`
 
-- 新故事须解决 P0 中 ≥80% 识别问题
-- 人物 ≤4，为 W1 人物小传奠基
-- 金手指须有约束，非同质化（市面 >10 次须升级）
+## 边界
 
-## 输出
+- 解决 P0 ≥80% 问题；禁只改人名不改情绪过山车
+- 付费卡：高潮切断前一拍写进事件/钩子
+- 景别秒数不进本 XML 正文（留给 W3 sidecar）
 
-```xml
-<storyCore rulePackVersion="2.0.1">
-  <narrativeKernel>...</narrativeKernel>
-  <characterAnchors>...</characterAnchors>
-  <relationships>...</relationships>
-  <eventSequence>
-    <event phase="铺垫" episode="1-3" desc="..." resolves="P-001" />
-  </eventSequence>
-  <changeLog>...</changeLog>
-</storyCore>
-```
+## BLOCK
 
-## BLOCK 闸门
+- 步骤0 已展示原→改
+- narrativeKernel / eventSequence≥3 / changeLog≥1 含假→真
+- DEX-HOOK-PLAN / DEX-EMPATHY / DEX-PAYPOINT / DEX-RECON-EXAMPLE
 
-- narrativeKernel 非空
-- eventSequence ≥3 行
-- changeLog ≥1 条
-- 问题解决率 ≥80%
+## 下游
 
-## ruleAudit
-
-stage `P06`；未通过不得进 P08_postcheck。
+通过 → P08；W1 必须引用本 storyCore 的 peak 落点。

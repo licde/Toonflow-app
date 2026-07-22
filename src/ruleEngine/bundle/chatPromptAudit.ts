@@ -1,5 +1,6 @@
 import type { ScriptBundle, PreDesignShot, ShotGeneration } from "./types";
 import { dialogueCoverageReport, expandShotDialogueLines } from "../design/dialogueCoverage";
+import { checkQp02VisualDescription } from "./visualQualityAudit";
 
 export interface ChatPromptGap {
   id: string;
@@ -53,8 +54,28 @@ export function auditChatPromptGaps(
 
   shots.forEach((s, i) => {
     const idx = s.shotIndex ?? i + 1;
-    if (!s.visualDescription?.trim()) {
-      gaps.push({ id: "CHAT-SB-01", shotIndex: idx, severity: sev("BLOCK"), message: "缺 visualDescription", field: "visualDescription" });
+    const qp = checkQp02VisualDescription({
+      visualDescription: s.visualDescription,
+      shotIndex: idx,
+    });
+    if (qp && qp.severity === "BLOCK") {
+      // Same core as export QP-02; keep CHAT-SB-01 alias when empty for legacy scanners
+      gaps.push({
+        id: qp.evidence?.reason === "empty" ? "CHAT-SB-01" : "QP-02",
+        shotIndex: idx,
+        severity: "BLOCK",
+        message: qp.message,
+        field: "visualDescription",
+      });
+      if (qp.evidence?.reason === "empty") {
+        gaps.push({
+          id: "QP-02",
+          shotIndex: idx,
+          severity: "BLOCK",
+          message: qp.message,
+          field: "visualDescription",
+        });
+      }
     }
   });
 

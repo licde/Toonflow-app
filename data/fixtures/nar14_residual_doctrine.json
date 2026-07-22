@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "description": "NAR-14 residual doctrine — after A clause-split, over-budget no-punct lines",
+  "freeze": {
+    "neverSilentInvent": ["splitHint", "reactionAction"],
+    "bRequiresPhysicalReactionShot": true,
+    "noNewTodosWithoutSample": true
+  },
+  "dualPath": {
+    "must": {
+      "id": "redesign_or_explicit_hint",
+      "actions": ["shorten_text", "add_punct_for_A", "explicit_splitHint", "confirm_B"],
+      "reverseTarget": "W3",
+      "chatRepairClass": "must"
+    },
+    "auto": {
+      "id": "import_B_cluster",
+      "actions": ["dialogue_cluster_speak_react"],
+      "bindSplitHintOnlyWhenReactionSiblingExists": true,
+      "splitHintValue": "reaction_shot",
+      "reverseTrigger": "nar14_residual",
+      "chatRepairClass": "auto_only_after_B_clears"
+    }
+  },
+  "decisionTreeExtra": [
+    { "when": "residual_no_punct_over_budget", "action": "must_redesign_or_B", "priority": 1 }
+  ]
+}

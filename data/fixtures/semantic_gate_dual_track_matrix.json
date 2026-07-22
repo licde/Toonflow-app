@@ -1,0 +1,109 @@
+{
+  "version": "1.0.0",
+  "doctrine": {
+    "design": "strong_contract_DEX_BLOCK",
+    "import": "safe_semantic_heal_then_gate",
+    "preview": "layered_must_edit_vs_auto_adapt",
+    "pillars": {
+      "identity": ["DC-16", "DG-CD-COVERAGE", "DEX-CAST-CODES", "IMG-CREF-CHAR"],
+      "duration": ["DFW-DURATION", "NAR-14", "NAR-15", "LIP-01"],
+      "expression": ["GEN-01", "stillMouthVideoHandoff"]
+    },
+    "seeAlso": "docs/PRODUCTION_PILLARS.md"
+  },
+  "rows": [
+    {
+      "id": "DG-FALSE-GREEN-FX",
+      "chatDex": "F0 declaration or fxPrompt prose",
+      "ingestHeal": "gate accepts F0; fill fxFeasibility from visualEffect F0",
+      "neverAuto": "invent F1+ fx prose"
+    },
+    {
+      "id": "DFW-DURATION",
+      "chatDex": "duration >= dialogue read time",
+      "ingestHeal": "alignShotDurationFromDialogue + log",
+      "neverAuto": null
+    },
+    {
+      "id": "MOD-03",
+      "chatDex": "audioPrompt when dialogue/audioCue",
+      "ingestHeal": "compile from audioCue or dialogue summary",
+      "neverAuto": "empty silent shots"
+    },
+    {
+      "id": "MOD-IMG-M1",
+      "chatDex": "imagePrompt required",
+      "ingestHeal": "seed from visualDescription",
+      "neverAuto": null
+    },
+    {
+      "id": "MOD-VID-M1",
+      "chatDex": "videoPrompt required",
+      "ingestHeal": "seed from visualDescription + lip hint",
+      "neverAuto": null
+    },
+    {
+      "id": "TRANSITION",
+      "chatDex": "whitelist transitionType",
+      "ingestHeal": "illegal → alias/defaultTransition",
+      "neverAuto": "forbidden motions"
+    },
+    {
+      "id": "NAR-14",
+      "chatDex": "prefer punctuation clause lines ≤15 chars; else splitHint+reaction △",
+      "ingestHeal": "physical clause split SH-NAR-CLAUSE-SPLIT (plan+shots)",
+      "neverAuto": "invent splitHint"
+    },
+    {
+      "id": "NAR-15",
+      "chatDex": "reactionAction on emotion_hit",
+      "ingestHeal": "mirror only",
+      "neverAuto": "invent reactionAction"
+    },
+    {
+      "id": "DC-16",
+      "chatDex": "B6 names in CD with L0.identity",
+      "ingestHeal": "stub still BLOCK",
+      "neverAuto": "stub as PASS"
+    },
+    {
+      "id": "PASTE-HYBRID",
+      "chatDex": "export pure JSON only",
+      "ingestHeal": "strip chatRepairText prefix before parse",
+      "neverAuto": null
+    },
+    {
+      "id": "SHAPE-B12-SPATIAL",
+      "chatDex": "beats number; spatialRelation string",
+      "ingestHeal": "SH-B12-BEATS / SH-SHOT-SPATIAL",
+      "neverAuto": null
+    },
+    {
+      "id": "RULEPACK",
+      "chatDex": "rulePackVersion 2.1.0",
+      "ingestHeal": null,
+      "neverAuto": null
+    },
+    {
+      "id": "DEX-VIS-SPLIT",
+      "chatDex": "visualBeatTags × shotSize conflict_matrix → split or override",
+      "ingestHeal": "expandVisualBeats soft_patch when auto_adapt",
+      "neverAuto": "split from suggestor tags alone"
+    },
+    {
+      "id": "DEX-VIS-TAG-MISSING",
+      "chatDex": "L0 visualBeatTags required on SB shots with picture",
+      "ingestHeal": "suggestor → suggestedTags only; confirm to L0",
+      "neverAuto": "promote suggestedTags to L0 without confirm"
+    },
+    {
+      "id": "DEX-VIS-TAG-INCONSISTENT",
+      "chatDex": "tags require picture; no half-sets",
+      "ingestHeal": "warn + RH",
+      "neverAuto": null
+    }
+  ],
+  "autoAdaptBlockIds": ["DFW-DURATION", "MOD-03", "MOD-IMG-M1", "MOD-VID-M1", "DG-SCENE-KEY"],
+  "mustEditBlockIds": ["NAR-15", "DC-16", "DG-CD-COVERAGE", "DG-FALSE-GREEN-FX", "DG-NAR-SELFCHECK", "DEX-VIS-TAG-MISSING", "DEX-VIS-TAG-INCONSISTENT", "DEX-VIS-SPLIT", "LIP-01", "DEX-LIP-SPLIT", "FX-GRADE-01"],
+  "mustEditBlockIdsNote": "NAR-14 residual + LIP-01 needsSplit/lipOver + DEX-VIS-SPLIT are 须手改 (removed from autoAdapt)"
+}

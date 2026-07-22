@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "description": "对白多镜位簇公式 — Speak static + React 可推 ± Insert",
+  "policies": {
+    "speak_only": ["speak"],
+    "speak_react": ["speak", "reaction"],
+    "speak_react_insert": ["speak", "reaction", "emphasize"]
+  },
+  "roles": {
+    "speak": {
+      "beatRole": "speak",
+      "hasDialogue": true,
+      "lipRequired": true,
+      "motionIntent": "static",
+      "shotSize": "近景"
+    },
+    "reaction": {
+      "beatRole": "reaction",
+      "hasDialogue": false,
+      "lipRequired": false,
+      "motionIntent": "gentle_push",
+      "shotSize": "特写",
+      "durationSec": [0.8, 2]
+    },
+    "emphasize": {
+      "beatRole": "emphasize",
+      "hasDialogue": false,
+      "lipRequired": false,
+      "motionIntent": "static",
+      "shotSize": "大特写",
+      "durationSec": [0.6, 1.5]
+    }
+  },
+  "defaultPolicyByFunctions": {
+    "emotion_hit": "speak_react",
+    "conflict_escalate": "speak_react"
+  },
+  "longLineChars": 15,
+  "longLinePolicy": "speak_react"
+}

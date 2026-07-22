@@ -1,0 +1,55 @@
+{
+  "version": "1.0.0",
+  "profiles": {
+    "generic": {
+      "label": "通用",
+      "avStyle": "generic",
+      "colorMood": "neutral",
+      "paletteHints": ["balanced contrast", "natural skin"],
+      "weaponIds": [],
+      "intensityOverrides": {}
+    },
+    "sweet": {
+      "label": "甜宠",
+      "avStyle": "sweet",
+      "colorMood": "macaron",
+      "paletteHints": ["warm soft light", "pastel accents", "clear catchlights"],
+      "weaponIds": ["intimate_ots"],
+      "shotSizeBias": "近景",
+      "reactMotionDefault": "gentle push"
+    },
+    "abuse_romance": {
+      "label": "虐恋",
+      "avStyle": "abuse_romance",
+      "colorMood": "fade_red",
+      "paletteHints": ["desaturated", "retain lip red", "cold shadows"],
+      "weaponIds": ["silence_scream", "same_angle_jump_x3"],
+      "shotSizeBias": "特写",
+      "reactMotionDefault": "gentle push"
+    },
+    "war_god": {
+      "label": "战神",
+      "avStyle": "war_god",
+      "colorMood": "iron_fire",
+      "paletteHints": ["teal-orange", "hard top light", "gold rim"],
+      "weaponIds": ["five_cut_reveal"],
+      "shotSizeBias": "近景",
+      "reactMotionDefault": "gentle push"
+    },
+    "suspense": {
+      "label": "悬疑",
+      "avStyle": "suspense",
+      "colorMood": "teal_fade",
+      "paletteHints": ["narrow light", "desaturated teal", "silhouette"],
+      "weaponIds": ["follow_handheld"],
+      "shotSizeBias": "中近景",
+      "reactMotionDefault": "subtle drift"
+    }
+  },
+  "matrixEmotionLogicMap": {
+    "sweet": "sweet",
+    "angst": "abuse_romance",
+    "power": "war_god",
+    "blend": "generic"
+  }
+}

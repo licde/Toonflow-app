@@ -25,6 +25,7 @@ import { auditNarrativeDriveGaps } from "../bundle/narrativeDriveAudit";
 import { runPrValidator } from "../validators/prValidator";
 import { dialogueCoverageReport } from "../design/dialogueCoverage";
 import { readFixtureJson } from "../utils/fixturesPath";
+import { needsNar14Split } from "../nar14ClauseSplit";
 
 export type QualityStage = "export" | "preflight" | "promptGen" | "burn" | "post" | "design";
 
@@ -319,7 +320,8 @@ export function qualityGate(bundle: ScriptBundle, opts: QualityGateOptions): Qua
           severity: "BLOCK",
           message: item.message,
           shotIndex: item.shotIndex,
-          softPatch: true,
+          // needsSplit/lipOver are must-Confirm; silent raise is DFW/canSilentRaise path — never softPatch LIP BLOCK
+          softPatch: false,
         });
       } else if (item.ruleId === "PR-CAM-01") {
         push({
@@ -410,9 +412,13 @@ export function qualityGate(bundle: ScriptBundle, opts: QualityGateOptions): Qua
       }
     }
 
-    // NAR-14/15：导出 + 烧片 BLOCK（长句无 splitHint / emotion_hit 无 reaction）
+    // NAR-14/15：导出 + 烧片 BLOCK（分句超预算无 splitHint / emotion_hit 无 reaction）
+    const narSeen = new Set<string>();
     for (const g of auditNarrativeDriveGaps(bundle)) {
       if (g.id === "NAR-14" || g.id === "NAR-15") {
+        const k = `${g.id}:${g.message}`;
+        if (narSeen.has(k)) continue;
+        narSeen.add(k);
         push({
           id: g.id,
           severity: "BLOCK",
@@ -423,25 +429,35 @@ export function qualityGate(bundle: ScriptBundle, opts: QualityGateOptions): Qua
     }
     for (const s of shots) {
       const idx = s.shotIndex as number | undefined;
-      for (const line of (s.narrative as { dialogue?: { lines?: { text?: string; splitHint?: string; functions?: string[]; reactionAction?: string }[] } })
+      for (const line of (s.narrative as { dialogue?: { lines?: { text?: string; splitHint?: string; functions?: string[]; reactionAction?: string; lineId?: string }[] } })
         ?.dialogue?.lines ?? []) {
         const text = String(line.text ?? "").trim();
-        if (text.length > 20 && !line.splitHint) {
-          push({
-            id: "NAR-14",
-            severity: "BLOCK",
-            message: `镜 ${idx ?? "?"} 长台词缺 splitHint，须拆镜后重导出`,
-            shotIndex: idx,
-            evidence: { textPreview: text.slice(0, 24) },
-          });
+        if (needsNar14Split(text, { splitHint: line.splitHint })) {
+          const msg = `镜 ${idx ?? "?"} 长台词缺 splitHint，须标点拆句或拆镜后重导出`;
+          const k = `NAR-14:${line.lineId ?? ""}:${msg}`;
+          if (!narSeen.has(k) && !narSeen.has(`NAR-14:${msg}`)) {
+            narSeen.add(k);
+            push({
+              id: "NAR-14",
+              severity: "BLOCK",
+              message: msg,
+              shotIndex: idx,
+              evidence: { textPreview: text.slice(0, 24), lineId: line.lineId },
+            });
+          }
         }
         if (line.functions?.includes("emotion_hit") && !String(line.reactionAction ?? "").trim()) {
-          push({
-            id: "NAR-15",
-            severity: "BLOCK",
-            message: `镜 ${idx ?? "?"} emotion_hit 缺 reactionAction`,
-            shotIndex: idx,
-          });
+          const msg = `镜 ${idx ?? "?"} emotion_hit 缺 reactionAction`;
+          const k = `NAR-15:${line.lineId ?? ""}:${msg}`;
+          if (!narSeen.has(k)) {
+            narSeen.add(k);
+            push({
+              id: "NAR-15",
+              severity: "BLOCK",
+              message: msg,
+              shotIndex: idx,
+            });
+          }
         }
       }
     }

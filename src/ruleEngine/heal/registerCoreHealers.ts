@@ -1,5 +1,5 @@
 /**
- * Core silent healers — raise_duration / cam_whitelist_clamp / clamp_static / finalize_five_section.
+ * Core silent healers — raise_duration / cam_whitelist_clamp / clamp_static / finalize_five_section / emotion_style_cam_clamp.
  */
 import { resolveRequiredDuration } from "../compilers/resolveRequiredDuration";
 import { finalizeFiveSectionPrompt, hasFiveSectionPlaceholders, hasAudioDialogueContradiction } from "../compilers/finalizeFiveSectionPrompt";
@@ -21,10 +21,14 @@ import {
   type SilentHealApplyResult,
 } from "./healRegistry";
 import type { PreDesignShot } from "../bundle/types";
+import { asDialogueLineObjects } from "../design/dialogueCoverage";
+import { getEmotionNormFromPlan, loadStylePack } from "../emotion/emotionNorm";
 
 function dialLines(shot: PreDesignShot | Record<string, unknown> | null | undefined): string[] {
-  const lines = ((shot as PreDesignShot)?.narrative?.dialogue?.lines ?? []) as { text?: string }[];
-  return lines.map((l) => String(l.text ?? "").trim()).filter(Boolean);
+  const raw = (shot as PreDesignShot)?.narrative?.dialogue?.lines;
+  return asDialogueLineObjects(raw)
+    .map((l) => String(l.text ?? "").trim())
+    .filter(Boolean);
 }
 
 async function applyRaiseDuration(ctx: SilentHealContext): Promise<SilentHealApplyResult> {
@@ -222,6 +226,41 @@ function applyFinalizeFiveSection(ctx: SilentHealContext): SilentHealApplyResult
   };
 }
 
+function applyEmotionStyleCamClamp(ctx: SilentHealContext): SilentHealApplyResult {
+  const shot = ctx.shot as PreDesignShot | null | undefined;
+  let prompt = String(ctx.prompt ?? (shot as { videoPrompt?: string })?.videoPrompt ?? "");
+  const lines = dialLines(shot);
+  if (lines.length) {
+    return applyClampStatic(ctx);
+  }
+  const profileId = getEmotionNormFromPlan(
+    (ctx as { plan?: Record<string, unknown> }).plan ?? {
+      planData: { emotionNorm: (ctx as { emotionNorm?: unknown }).emotionNorm },
+    },
+  ).activeProfileId;
+  const pack = loadStylePack(profileId);
+  const allowed = pack.allowedMotions ?? ["static", "gentle push", "slow pan"];
+  const motion = extractMotionFromPrompt(prompt) ?? String((shot as { motion?: string })?.motion ?? "");
+  if (!motion) {
+    return { applied: false, skipped: true, skipReason: "no_motion", patches: [], detail: "no motion", prompt };
+  }
+  const ok = allowed.some((m) => motion.toLowerCase().includes(m.toLowerCase()));
+  if (ok) {
+    return { applied: false, skipped: true, skipReason: "already_ok", patches: [], detail: "style ok", prompt };
+  }
+  const nextMotion = allowed.includes("gentle push") ? "gentle push" : allowed[0] ?? "static";
+  const next = prompt
+    ? prompt.replace(new RegExp(motion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), nextMotion)
+    : `Camera: ${nextMotion}`;
+  return {
+    applied: true,
+    patches: [{ healerId: "emotion_style_cam_clamp", reason: "style_pack_clamp", detail: `${motion} → ${nextMotion}` }],
+    prompt: next,
+    shot: shot ?? ctx.shot,
+    detail: `style clamp ${motion} → ${nextMotion}`,
+  };
+}
+
 export function registerCoreHealers(): void {
   ensureCoreHealersRegistered(() => {
     registerHealer({
@@ -255,6 +294,16 @@ export function registerCoreHealers(): void {
         return hasAnyToken(tokens, "clamp_static", "camera_static_clamp", "CAM-SPEAK", "cam_speak");
       },
       apply: applyClampStatic,
+    });
+
+    registerHealer({
+      id: "emotion_style_cam_clamp",
+      confidence: 0.85,
+      match: (ctx) => {
+        const tokens = matchTokensFromDecision(ctx.decision, ctx.gateBlockIds);
+        return hasAnyToken(tokens, "emotion_style", "cam_style", "style_pack", "CAM-VARIETY", "svq_cam");
+      },
+      apply: applyEmotionStyleCamClamp,
     });
 
     registerHealer({

@@ -7,6 +7,7 @@ import useTools from "@/agents/scriptAgent/tools";
 import ResTool from "@/socket/resTool";
 import * as fs from "fs";
 import path from "path";
+import { loadViralInjectForProject, stageIdFromAgentKey } from "@/ruleEngine/genre/viralAgentInject";
 
 export interface AgentContext {
   socket: Socket;
@@ -62,10 +63,21 @@ export async function runDecisionAI(ctx: AgentContext) {
     `章节数量：${novelData.length}章`,
   ].join("\n");
 
+  let viralInject = "";
+  try {
+    const { injectBlock } = await loadViralInjectForProject(resTool.data.projectId, "P0");
+    viralInject = injectBlock;
+  } catch {
+    viralInject = "";
+  }
+
   const { fullStream } = await u.Ai.Text("scriptAgent:decisionAgent", ctx.thinkConfig.think, ctx.thinkConfig.thinlLevel).stream({
     messages: [
       { role: "system", content: prompt },
-      { role: "assistant", content: projectInfo + "\n" + mem },
+      {
+        role: "assistant",
+        content: [projectInfo, mem, viralInject].filter(Boolean).join("\n\n"),
+      },
       { role: "user", content: text },
     ],
     abortSignal,
@@ -112,8 +124,18 @@ function createSubAgent(parentCtx: AgentContext) {
     parentCtx.msg.complete();
     const subMsg = resTool.newMessage("assistant", name);
 
+    let viralInject = "";
+    try {
+      const stageId = stageIdFromAgentKey(key + ":" + memoryKey);
+      const { injectBlock } = await loadViralInjectForProject(resTool.data.projectId, stageId);
+      viralInject = injectBlock;
+    } catch {
+      viralInject = "";
+    }
+    const systemWithViral = viralInject ? `${system}\n\n${viralInject}` : system;
+
     const { fullStream } = await u.Ai.Text(key, parentCtx.thinkConfig.think, parentCtx.thinkConfig.thinlLevel).stream({
-      system,
+      system: systemWithViral,
       messages: messages ?? [{ role: "user", content: prompt }],
       abortSignal,
       tools: { ...extraTools, ...useTools({ resTool, msg: subMsg }) },

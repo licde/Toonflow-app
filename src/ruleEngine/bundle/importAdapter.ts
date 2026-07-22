@@ -15,6 +15,7 @@ import type {
 import { detectBundleType, episodeBundleSchema, normalizeLegacyFlowData, prepareBundleWithLog, scriptBundleSchema, seriesBundleSchema } from "./schema";
 import { auditShapeResidualGaps } from "./shapeResidualAudit";
 import type { ShapeSalvageEntry } from "./shapeSalvageTypes";
+import { formatShapeSalvageSummary } from "./shapeSalvageTypes";
 import { resolveContextFromScriptBundle } from "./resolveContext";
 import { syncStoryboardToDb, loadStoryboardFromDb } from "./storyboardSync";
 import { applyPreDesignPack, hasPreDesignShots } from "./preDesignPackAdapter";
@@ -30,6 +31,12 @@ import { loadProjectBlueprint, saveProjectBlueprint } from "../storage/episodePa
 import { auditChatPromptGaps } from "./chatPromptAudit";
 import { loadPlanData } from "./resolveContext";
 import { buildZ108 } from "../packager/zPackager";
+import {
+  normalizeCharacterAssetsNameMap,
+  extractCharacterAssetLocks,
+  assetDisplayName,
+  normalizeVisualLockTableOnBundle,
+} from "./assetLabel";
 import {
   upsertScriptWithMode,
   predictScriptUpsert,
@@ -205,10 +212,18 @@ async function persistBlueprintFromBundle(db: Knex, projectId: number, bundle: S
     delete lockOnly.designBrief;
     if (Object.keys(lockOnly).length) Object.assign(merged, lockOnly);
     if (vlt.characterAssets) {
+      const locks = extractCharacterAssetLocks(vlt.characterAssets as Record<string, unknown>);
+      const nameMap = normalizeCharacterAssetsNameMap(vlt.characterAssets as Record<string, unknown>);
       merged.characterAssets = {
-        ...((merged.characterAssets as Record<string, unknown>) ?? {}),
-        ...(vlt.characterAssets as Record<string, unknown>),
+        ...normalizeCharacterAssetsNameMap((merged.characterAssets as Record<string, unknown>) ?? {}),
+        ...nameMap,
       };
+      if (Object.keys(locks).length) {
+        merged.characterAssetLocks = {
+          ...((merged.characterAssetLocks as Record<string, unknown>) ?? {}),
+          ...locks,
+        };
+      }
     }
     if (vlt.sceneColorLock) {
       merged.sceneColorLock = {
@@ -218,19 +233,32 @@ async function persistBlueprintFromBundle(db: Knex, projectId: number, bundle: S
     }
   }
 
-  const cd = bundle.characterDesign as { assets?: { code?: string; [key: string]: unknown }[] } | undefined;
+  const cd = bundle.characterDesign as { assets?: { code?: string; name?: unknown; [key: string]: unknown }[] } | undefined;
   if (cd?.assets?.length) {
-    const characterAssets: Record<string, unknown> = { ...((merged.characterAssets as Record<string, unknown>) ?? {}) };
+    const characterAssets: Record<string, string> = {
+      ...normalizeCharacterAssetsNameMap((merged.characterAssets as Record<string, unknown>) ?? {}),
+    };
+    const locks: Record<string, Record<string, unknown>> = {
+      ...((merged.characterAssetLocks as Record<string, Record<string, unknown>>) ?? {}),
+    };
     for (const asset of cd.assets) {
-      if (asset.code) characterAssets[asset.code] = asset;
+      if (!asset.code) continue;
+      characterAssets[asset.code] = assetDisplayName(asset.name) || asset.code;
+      locks[asset.code] = asset as Record<string, unknown>;
     }
     merged.characterAssets = characterAssets;
+    merged.characterAssetLocks = locks;
     merged.characterDesign = cd; // keep full CD for heal/alias SSOT
   }
   if (bundle.visualLockTable) {
+    const vltCopy = { ...(bundle.visualLockTable as object) } as Record<string, unknown>;
+    normalizeVisualLockTableOnBundle({
+      visualLockTable: vltCopy,
+      characterDesign: bundle.characterDesign as { assets?: { code?: string; name?: unknown }[] },
+    });
     merged.visualLockTable = {
       ...((merged.visualLockTable as object) ?? {}),
-      ...(bundle.visualLockTable as object),
+      ...vltCopy,
     };
   }
 
@@ -337,6 +365,9 @@ export function buildDryRunSummary(
     "bundleType" in bundle && bundle.bundleType === "script" ? auditShapeResidualGaps(bundle as ScriptBundle) : [];
   for (const g of shapeResidualGaps) warnings.push(g.message);
 
+  const shapeSalvageSummary = formatShapeSalvageSummary(shapeExtras?.shapeSalvageLog);
+  if (shapeSalvageSummary) warnings.push(shapeSalvageSummary.split("\n")[0]!);
+
   return {
     willCreateScript: !scriptExists && opts.importMode !== "update",
     willOverwriteLayers: layers,
@@ -356,6 +387,7 @@ export function buildDryRunSummary(
     reverseHints,
     repairHints,
     shapeSalvageLog: shapeExtras?.shapeSalvageLog,
+    shapeSalvageSummary,
     shapeResidualGaps,
   };
 }
@@ -413,6 +445,7 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
       importMode,
     });
     const ruleConsistencyGaps = auditRuleConsistency(bundle, {});
+    const shapeSalvageSummary = formatShapeSalvageSummary(shapeSalvageLog);
     return {
       scriptId: predicted.scriptId ?? 0,
       idMap: {},
@@ -430,6 +463,7 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
       }),
       ruleConsistencyGaps,
       shapeSalvageLog,
+      shapeSalvageSummary,
       shapeResidualGaps,
       pathGuard: isT3Bundle(bundle)
         ? { recommended: "importScript", severity: "INFO", message: "T3 bundle 请使用 importScript 落库" }
@@ -798,6 +832,7 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
     integrityGaps,
     pathGuard,
     shapeSalvageLog,
+    shapeSalvageSummary: formatShapeSalvageSummary(shapeSalvageLog),
     shapeResidualGaps,
     assetQuality,
   };
@@ -1115,6 +1150,7 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
     preImport,
     tier,
     shapeSalvageLog: prep.shapeSalvageLog,
+    shapeSalvageSummary: formatShapeSalvageSummary(prep.shapeSalvageLog),
     exportGate: {
       exportAllowed: exportGate.exportAllowed,
       closureSnapshot: exportGate.closureSnapshot,
@@ -1131,6 +1167,7 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
       missingFieldReport: exportGate.missingFieldReport,
       missingFieldSummary: exportGate.missingFieldSummary,
       shapeSalvageLog: prep.shapeSalvageLog,
+      shapeSalvageSummary: formatShapeSalvageSummary(prep.shapeSalvageLog),
       rePushPlan: exportGate.inspected?.rePushPlan ?? [],
     },
     endpoint: "int" as const,

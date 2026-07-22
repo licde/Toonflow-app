@@ -49,7 +49,16 @@ export default router.post(
       if (e instanceof ExportGateBlockError) {
         return res.status(400).send(error(e.message, formatExportGateBlockPayload(e.details)));
       }
-      return res.status(400).send(error(u.error(e).message));
+      const msg = u.error(e).message;
+      if (/\.trim is not a function/i.test(msg)) {
+        return res.status(400).send(
+          error("visualLockTable.characterAssets 形态非法（期望 code→名字符串，已兼容对象态请重试导入）", {
+            code: "BUNDLE-VLT-SHAPE",
+            detail: msg,
+          }),
+        );
+      }
+      return res.status(400).send(error(msg));
     }
   },
 );

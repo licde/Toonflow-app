@@ -38,6 +38,7 @@ export default router.post(
           designFindings: result.designFindings,
           fieldWalkGaps: result.fieldWalkGaps,
           shapeSalvageLog: result.shapeSalvageLog,
+          shapeSalvageSummary: result.shapeSalvageSummary,
           endpoint: "exportGate",
         }),
       );

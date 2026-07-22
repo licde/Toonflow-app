@@ -101,11 +101,11 @@ export function checkFxGrade(input: {
     .toUpperCase()
     .replace(/^FX:/, "")
     .trim();
-  if (/^F[45]$/.test(grade) || /不可行|需拆镜|F5|F4/.test(fx)) {
+  if (/^F[345]$/.test(grade) || /不可行|需拆镜|F5|F4/.test(fx)) {
     return {
       ruleId: "FX-GRADE-01",
       severity: "BLOCK",
-      message: `镜 ${input.shotIndex ?? "?"} FX 等级 ${grade || "高难"} 硬拦截`,
+      message: `镜 ${input.shotIndex ?? "?"} FX 等级 ${grade || "高难"} ${/^F3$/.test(grade) ? "需拆镜" : "硬拦截"}`,
       shotIndex: input.shotIndex,
       reverseTrigger: "fx_infeasible",
       evidence: { grade, fxSample: fx.slice(0, 40) },

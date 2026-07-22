@@ -15,10 +15,12 @@
     { "dimId": "rhythm_plan", "name": "节奏规划", "choices": ["fast", "medium", "slow_with_breath"], "group": "base" }
   ],
   "deepDimensions": [
-    { "dimId": "D01_nameMap", "name": "姓名改编", "choices": ["keep", "modernize", "localize", "full_rename"], "structuredField": "deepAdaptation.nameMap", "group": "deep" },
-    { "dimId": "D02_relationMap", "name": "关系改编", "choices": ["keep", "simplify", "invert", "expand"], "structuredField": "deepAdaptation.relationMap", "group": "deep" },
-    { "dimId": "D03_substitutions", "name": "元素平替", "choices": ["keep", "partial", "full"], "structuredField": "deepAdaptation.substitutions", "group": "deep" },
-    { "dimId": "D04_settingProfile", "name": "背景迁移", "choices": ["keep", "era_shift", "world_shift"], "structuredField": "deepAdaptation.settingProfile", "group": "deep" }
+    { "dimId": "D01_nameMap", "name": "姓名改编", "choices": ["keep", "modernize", "localize", "full_rename"], "structuredField": "deepAdaptation.nameMap", "group": "deep", "defaultChoice": "keep", "userConfigurable": true, "recommendWeight": 0.8 },
+    { "dimId": "D02_relationMap", "name": "关系改编", "choices": ["keep", "simplify", "invert", "expand"], "structuredField": "deepAdaptation.relationMap", "group": "deep", "defaultChoice": "keep", "userConfigurable": true, "recommendWeight": 0.7 },
+    { "dimId": "D03_substitutions", "name": "元素平替", "choices": ["keep", "partial", "full"], "structuredField": "deepAdaptation.substitutions", "group": "deep", "defaultChoice": "partial", "userConfigurable": true, "recommendWeight": 0.75 },
+    { "dimId": "D04_settingProfile", "name": "背景迁移", "choices": ["keep", "era_shift", "world_shift"], "structuredField": "deepAdaptation.settingProfile", "group": "deep", "defaultChoice": "keep", "userConfigurable": true, "recommendWeight": 0.7 },
+    { "dimId": "D05_storyKernel", "name": "故事内核平移", "choices": ["keep", "shift", "translate_core"], "structuredField": "deepAdaptation.storyKernel", "group": "deep", "defaultChoice": "keep", "userConfigurable": true, "recommendWeight": 0.85, "requiredInDepth": "viral" },
+    { "dimId": "D06_contentTranslate", "name": "故事内容平移", "choices": ["keep", "partial", "full", "extensible"], "structuredField": "deepAdaptation.contentTranslatePlan", "group": "deep", "defaultChoice": "partial", "userConfigurable": true, "recommendWeight": 0.8, "requiredInDepth": "viral", "extensibleRequiresDerivation": true }
   ],
   "viralDimensions": [
     { "dimId": "V01_openingCard", "name": "开篇一卡", "choices": ["strict_3ep", "micro_compress", "standard"], "group": "viral" },

@@ -15,6 +15,7 @@ import { readFixtureJson } from "../utils/fixturesPath";
 import { runAssetStillQueue, type StillRunnerResult } from "./assetStillRunner";
 import { getBundleAlias, resolveAliasedCode } from "../codes/assetCodeAlias";
 import { normalizeAssetCode } from "../codes/assetCodeContract";
+import { assetDisplayName } from "../bundle/assetLabel";
 import type { Knex } from "knex";
 import type { ScriptBundle } from "../bundle/types";
 
@@ -179,10 +180,11 @@ function buildDisplayNames(bundle: ScriptBundle | null | undefined): Record<stri
       out[c] = a.name;
     }
   }
-  const ca = (bundle?.visualLockTable as { characterAssets?: Record<string, string> } | undefined)?.characterAssets;
+  const ca = (bundle?.visualLockTable as { characterAssets?: Record<string, unknown> } | undefined)?.characterAssets;
   if (ca) {
-    for (const [code, name] of Object.entries(ca)) {
+    for (const [code, raw] of Object.entries(ca)) {
       const c = normalizeAssetCode(code) ?? code;
+      const name = assetDisplayName(raw);
       if (name) out[c] = name;
     }
   }

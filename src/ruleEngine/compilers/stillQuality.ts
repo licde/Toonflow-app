@@ -3,16 +3,12 @@
  */
 export type StillQuality = "missing" | "weak" | "hq_ok";
 
-/** English fragment (kept for vendor bilingual). */
+/** Chinese first-frame recipe for hq_update (no English duplicate — egress strips EN). */
 export const STILL_HQ_COMPOSITION_CONTRACT =
   "vertical 9:16 safe area, power blocking, clear face toward camera, subject not cropped, high detail composition for video first frame";
 
-/** Chinese + English first-frame recipe for hq_update. */
 export const STILL_HQ_FIRST_FRAME_RECIPE_ZH_EN =
-  "竖屏9:16安全区构图，权力位站位清晰，正脸朝向镜头且主体不裁切，高细节视频首帧；微表情落在锁定脸型上，禁止重塑五官身份。" +
-  " " +
-  STILL_HQ_COMPOSITION_CONTRACT +
-  "; face identity from character refs, environment from scene refs, do not blend faces into background";
+  "竖屏9:16安全区构图，正脸朝向镜头且主体不裁切，高细节视频首帧；微表情落在锁定脸型上，禁止重塑五官身份。";
 
 export interface StillQualityMeta {
   stillQuality: StillQuality;
@@ -38,6 +34,10 @@ export interface StillQualityMeta {
   collapsed?: boolean;
   autoHealed?: string[];
   pipelineVersion?: string;
+  /** Recipe policy self-heal ids (still_recipe_policy egress) */
+  recipeHeals?: string[];
+  /** literary visualDescription hash at compose time — desc change → stale */
+  literaryDescHash?: string;
   /** keep/upload path — must not forge visualPass */
   keepPath?: boolean;
   fidelityStopReason?: string;
@@ -136,7 +136,29 @@ export function invalidateStillQuality(meta?: Partial<StillQualityMeta> | null):
     stillQualityAt: new Date().toISOString(),
     compositionContractApplied: false,
     promptState: "stale",
+    visualPass: false,
+    visualPassAt: undefined,
   };
+}
+
+/**
+ * When visualDescription changes vs last compose hash, mark still/prompt stale (cannot burn old still).
+ */
+export function markStillStaleOnDescChange(
+  meta: Partial<StillQualityMeta> | null | undefined,
+  currentLiteraryDesc: string | null | undefined,
+): StillQualityMeta | null {
+  const desc = String(currentLiteraryDesc ?? "").trim();
+  if (!desc || !meta?.literaryDescHash) return null;
+  let h = 2166136261;
+  const s = desc.replace(/\s+/g, "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const nowHash = (h >>> 0).toString(16);
+  if (nowHash === meta.literaryDescHash) return null;
+  return invalidateStillQuality({ ...meta, videoStale: true });
 }
 
 export function markVideoStale(meta?: Partial<StillQualityMeta> | null): StillQualityMeta {

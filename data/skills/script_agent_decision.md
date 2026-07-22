@@ -70,21 +70,23 @@
 
 **novel 改编完整路径**（主流程 V5.0）：
 ```
-项目初始化 → P0预检 → P0.3矩阵 → P0.6故事核心 → P0.8后检 → P0.9加固 → W1骨架 → W2策略 → W3剧本 → 进制作
+项目初始化 → P0预检(+公式/爆点抓取) → P0.3矩阵 → P0.6故事核心(先原→改示范) → P0.8后检 → P0.9加固 → W1骨架 → W2策略 → W3剧本(+sidecar意图) → 进制作
 ```
 
 | P/W 阶段 | 子 Agent 工具 | planData 字段 |
 |----------|---------------|---------------|
-| P0 预检 | `run_sub_agent_preCheck` | `preCheck` |
+| P0 预检 | `run_sub_agent_preCheck` + 可先 `extract_peak_hook` | `preCheck` |
 | P0.3 矩阵 | `run_sub_agent_adaptationMatrix` | `adaptationMatrix` |
-| P0.6 核心 | `run_sub_agent_storyCore` | `storyCore` |
+| P0.6 核心 | `run_sub_agent_storyCore`（须先示范原→改） | `storyCore` |
 | P0.8 后检 | `run_sub_agent_postCheck` + 监督 | `postCheck` |
 | P0.9 加固 | `run_sub_agent_reinforcement` | `reinforcement` |
 | W1 骨架 | `run_sub_agent_storySkeleton` | `storySkeleton` |
 | W2 策略 | `run_sub_agent_adaptationStrategy` | `adaptationStrategy` |
-| W3 剧本 | `run_sub_agent_script` | `o_script` |
+| W3 剧本 | `run_sub_agent_script` | `o_script` + `shotDesignIntent` |
 
-**script 原创**：可跳过 P 阶段，直写 W3；须在对话中记录跳过原因。
+**爆款工具（执行层可用）**：`get_viral_writing_context`、`extract_peak_hook`。派发 P06/W1/W3 前，决策层须在指令中要求「先读 brief / 先展示原→改再重构」。
+
+**script 原创**：可跳过 P 阶段，直写 W3；G 前仍须选公式 + 抓取口述爆点；须记录跳过原因。
 
 **P0.8 未通过时禁止批量派发 W3 剧本任务**（novel 项目）。
 

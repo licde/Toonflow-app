@@ -4,12 +4,12 @@
  */
 import { readFixtureJson } from "../utils/fixturesPath";
 
-export type StillEditStrategy = "agnes_i2i" | "atlas_native" | "focus_regen";
+export type StillEditStrategy = "agnes_i2i" | "atlas_native" | "focus_regen" | "layout_preserve";
 
 export interface StillImageEditRef {
   type: "image";
   base64: string;
-  role?: "cref" | "failed_still" | "neighbor" | "other";
+  role?: "cref" | "failed_still" | "neighbor" | "other" | "layout";
 }
 
 export interface StillImageEditInput {
@@ -21,6 +21,8 @@ export interface StillImageEditInput {
   vendorHint?: string | null;
   /** Override strategy */
   strategy?: StillEditStrategy;
+  /** When true, strip SCENE-like refs and keep failed_still as layout anchor */
+  layoutPreserve?: boolean;
 }
 
 export interface StillImageEditResult {
@@ -114,15 +116,28 @@ export function mergeEditReferenceList(input: {
   failedImageBase64?: string | null;
   neighborRefs?: StillImageEditRef[];
   config?: StillImageEditConfig;
+  /** layout_preserve: failed_still first as layout anchor, fewer crefs, no scene-tagged refs */
+  layoutPreserve?: boolean;
 }): StillImageEditRef[] {
   const cfg = input.config ?? loadStillImageEditConfig();
   const merge = cfg.refMerge ?? FALLBACK.refMerge!;
-  const maxCref = Math.max(1, merge.maxCrefRefs ?? 4);
+  const maxCref = input.layoutPreserve ? Math.min(2, Math.max(1, merge.maxCrefRefs ?? 4)) : Math.max(1, merge.maxCrefRefs ?? 4);
   const cref = (input.crefOrderedRefs ?? [])
     .filter((r) => r?.base64)
+    .filter((r) => !(input.layoutPreserve && (r.role === "other" || r.role === "layout")))
     .slice(0, maxCref)
     .map((r) => ({ ...r, type: "image" as const, role: r.role ?? ("cref" as const) }));
-  const out: StillImageEditRef[] = merge.crefFirst !== false ? [...cref] : [];
+  const out: StillImageEditRef[] = [];
+  if (input.layoutPreserve && input.failedImageBase64?.trim()) {
+    out.push({
+      type: "image",
+      base64: input.failedImageBase64,
+      role: "failed_still",
+    });
+    out.push(...cref);
+    return out;
+  }
+  if (merge.crefFirst !== false) out.push(...cref);
   for (const n of input.neighborRefs ?? []) {
     if (n?.base64) out.push({ ...n, type: "image", role: n.role ?? "neighbor" });
   }
@@ -139,21 +154,29 @@ export function mergeEditReferenceList(input: {
   return out;
 }
 
+/** SSOT Edit focus line — callers must not prepend another 【Edit焦点】. */
 export function buildEditFocusPrompt(input: {
   literaryPrompt: string;
   fixHints: string[];
   config?: StillImageEditConfig;
+  layoutPreserve?: boolean;
 }): string {
   const cfg = input.config ?? loadStillImageEditConfig();
   const max = Math.max(1, cfg.maxFixHints ?? 6);
+  let lit = String(input.literaryPrompt ?? "").trim().slice(0, 1200);
+  // Strip duplicate focus lines if literary already included one (SSOT)
+  lit = lit.replace(/\n?【Edit焦点】[^\n]*/g, "").trim();
   const hints = (input.fixHints ?? [])
     .map((h) => String(h ?? "").trim())
     .filter(Boolean)
     .slice(0, max);
-  const focus = hints.length
-    ? `【Edit焦点】仅修正：${hints.join("；")}。保持已正确部分与定妆身份，勿重写未点名的文学情节。`
-    : "【Edit焦点】按清单补全缺失文学保真项，保持定妆身份与已正确构图。";
-  const lit = String(input.literaryPrompt ?? "").trim().slice(0, 1200);
+  const focus = input.layoutPreserve
+    ? hints.length
+      ? `【Edit焦点】保构图，仅修正：${hints.join("；")}。禁止改座次/站位；勿重写未点名情节。`
+      : "【Edit焦点】保构图与座次，仅补身份/道具，禁止改布局。"
+    : hints.length
+      ? `【Edit焦点】仅修正：${hints.join("；")}。保持已正确部分与定妆身份，勿重写未点名的文学情节。`
+      : "【Edit焦点】按清单补全缺失文学保真项，保持定妆身份与已正确构图。";
   return `${lit}\n${focus}`.trim();
 }
 
@@ -171,16 +194,20 @@ export function prepareStillImageEdit(input: StillImageEditInput): {
   referenceList: StillImageEditRef[];
 } {
   const cfg = loadStillImageEditConfig();
-  const strategy = resolveEditStrategy({
-    vendorHint: input.vendorHint,
-    model: input.model,
-    explicit: input.strategy,
-    config: cfg,
-  });
+  const layoutPreserve = Boolean(input.layoutPreserve) || input.strategy === "layout_preserve";
+  const strategy = layoutPreserve
+    ? "layout_preserve"
+    : resolveEditStrategy({
+        vendorHint: input.vendorHint,
+        model: input.model,
+        explicit: input.strategy,
+        config: cfg,
+      });
   const promptUsed = buildEditFocusPrompt({
     literaryPrompt: input.literaryPrompt,
     fixHints: input.fixHints,
     config: cfg,
+    layoutPreserve,
   });
   let modelUsed = input.model;
   let referenceList: StillImageEditRef[];
@@ -197,13 +224,15 @@ export function prepareStillImageEdit(input: StillImageEditInput): {
       crefOrderedRefs: input.crefOrderedRefs,
       failedImageBase64: input.failedImageBase64,
       config: cfg,
+      layoutPreserve,
     });
   } else {
-    // agnes_i2i — cref first, failed still last
+    // agnes_i2i or layout_preserve — cref + failed still (layout_preserve puts failed first)
     referenceList = mergeEditReferenceList({
       crefOrderedRefs: input.crefOrderedRefs,
       failedImageBase64: input.failedImageBase64,
       config: cfg,
+      layoutPreserve,
     });
   }
 

@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "description": "爆款节奏与产品铁律 SSOT：对白主推、视听辅助、直白给信息、硬规范主落 ep1",
+  "doctrine": {
+    "primaryDrive": ["dialogue", "monologue", "OS"],
+    "avRole": "assist",
+    "delivery": "explicit_info_not_audience_feel",
+    "forbidAudienceMeta": ["观众感到", "观众觉得", "弹幕会", "让观众", "用户感觉"],
+    "forbidTechParentheticalsInLiterary": true,
+    "usefulInfo": "character_emotion_spoken + event_beat_complete"
+  },
+  "hardNorms": {
+    "episodeScope": "ep1",
+    "s0_3StrongStimulus": true,
+    "usefulInfoInFirst30sMax": 1,
+    "s15Change": true,
+    "s45Expectation": true,
+    "openingHook": true,
+    "paypointCutBeforeBeat": true
+  },
+  "causalNorms": {
+    "everyEpisode": true,
+    "requireCarryInfo": true,
+    "requireCausedByAction": true,
+    "requireHookPayoff": true,
+    "forbidFullEp1ChecklistOnEpN": true
+  },
+  "avAssist": {
+    "everyEpisode": "light",
+    "requireNonMonotone": true,
+    "neverReplacePrimaryInfo": true
+  },
+  "audienceTaste": ["爽感", "虐感", "甜宠", "悬疑压迫", "逆袭打脸", "共鸣治愈"],
+  "storyStyle": ["直白快节奏", "信息前置", "强冲突对白", "情绪抛物线", "微循环完整"],
+  "platformProfiles": {
+    "miniprogram_paywall": {
+      "label": "小程序付费",
+      "paypointDensity": "high",
+      "endHookRequired": true
+    },
+    "creator_clip": {
+      "label": "达人切片",
+      "paypointDensity": "low",
+      "endHookRequired": true
+    }
+  },
+  "wordBudget": {
+    "charsPerSecondSpeak": 3.5,
+    "maxSpeakRatioOfEpisode": 0.55
+  },
+  "heal": {
+    "maxRounds": 3,
+    "preferLocalBeforeReverse": true,
+    "requireUserConfirmOnStoryRecon": true
+  },
+  "briefLines": [
+    "【主推】台词/独白/OS 直白给出事件与角色情绪；禁止「观众感到…」元叙述。",
+    "【辅助】视听/镜头语言不单调、可拍，不得替代主信息通道；景别运镜秒数只进 sidecar。",
+    "【硬规范】仅第一集强制：0–3s 强刺激、前30s 核心有用信息≤1、15s变化、45s期待、开篇钩、付费前拍。",
+    "【后集】抓因果连续：carryInfo / causedByAction / 上集钩兑现；不通篇套 ep1 清单。",
+    "【设计期】可按爆款规则补/改/删台词；锁稿(literaryLocked)后禁止机器改正文。"
+  ]
+}

@@ -21,6 +21,11 @@ export function normalizeCrefEgress(prompt: string): string {
     text = next;
   }
   text = text.replace(/--cref\s+([A-Z0-9-]+)\s*,\s*([A-Z0-9-]+)/gi, "--cref $1 $2");
+  text = text.replace(/--sref\s+([^\s,，。；;]+)[,，。；;]*/gi, (_, c: string) => {
+    const clean = String(c).replace(/[,，。；;]+$/g, "");
+    return `--sref ${clean} `;
+  });
+  text = text.replace(/--cref\s+([A-Z0-9-]+)\s*[,，]/gi, "--cref $1 ");
   return text.replace(/[ \t]{2,}/g, " ").trim();
 }
 

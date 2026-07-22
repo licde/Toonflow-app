@@ -1,0 +1,27 @@
+{
+  "version": "1.1.0",
+  "description": "制作 RH → 设计期出站检查 SSOT。import 再中 = 漏网。含 viral/P06 反推行。",
+  "principle": "reverseTarget in designStages => must have designExitCheck",
+  "designStages": ["P0", "P03", "P06", "W1", "W2", "W3", "designBrief", "GB", "SB", "CD", "AS"],
+  "rows": [
+    { "prodSymptom": "lip_duration", "ruleIds": ["LIP-01", "NAR-14", "NAR-15", "PR-09"], "designStage": "W3", "exitCheckId": "DEX-LIP-SPLIT", "fallbackRh": "RH-PR-09" },
+    { "prodSymptom": "dialogue_coverage", "ruleIds": ["DC-01", "H3", "R2"], "designStage": "W3", "exitCheckId": "DEX-DC-ALIGN", "fallbackRh": "RH-QP-03" },
+    { "prodSymptom": "fx_empty_or_hard", "ruleIds": ["FX-GRADE-01", "MOD-01", "MOD-02"], "designStage": "W3", "exitCheckId": "DEX-FX-INTENT", "fallbackRh": "RH-FX-01" },
+    { "prodSymptom": "scene_orphan_cardinality", "ruleIds": ["DG-SCENE-CARDINALITY", "DG-SCENE-ORPHAN-FX"], "designStage": "W3", "exitCheckId": "DEX-SCENE-CARD", "fallbackRh": "RH-SCENE-CARD" },
+    { "prodSymptom": "asset_cref", "ruleIds": ["QP-11", "QP-12", "AG-GATE-01"], "designStage": "AS", "exitCheckId": "DEX-ASSET-CREF", "fallbackRh": "RH-QP-11" },
+    { "prodSymptom": "retention_opening", "ruleIds": ["RET-01"], "designStage": "W3", "exitCheckId": "DEX-RET-OPEN", "fallbackRh": "RH-RET-01" },
+    { "prodSymptom": "deep_adapt_nameMap", "ruleIds": ["ADP-D01"], "designStage": "P03", "exitCheckId": "DEX-NAME-MAP", "fallbackRh": "RH-ADP-D01" },
+    { "prodSymptom": "paypoint_design", "ruleIds": ["DSG-B14", "VIR-01"], "designStage": "designBrief", "exitCheckId": "DEX-PAYPOINT", "fallbackRh": "RH-DSG-B14" },
+    { "prodSymptom": "cam_whitelist_speak", "ruleIds": ["PR-CAM-01", "CAM-SPEAK"], "designStage": "W3", "exitCheckId": "DEX-CAM-TAGS", "fallbackRh": "RH-QP-14" },
+    { "prodSymptom": "voice_av_intent", "ruleIds": ["LANG-AUD-01"], "designStage": "W3", "exitCheckId": "DEX-VOICE-AV", "fallbackRh": "RH-LANG-01" },
+    { "prodSymptom": "scene_av_tags", "ruleIds": ["DEX-AV-TAGS"], "designStage": "W3", "exitCheckId": "DEX-AV-TAGS", "fallbackRh": null },
+    { "prodSymptom": "adapt_score", "ruleIds": ["DEX-ADAPT-SCORE"], "designStage": "W3", "exitCheckId": "DEX-ADAPT-SCORE", "fallbackRh": null },
+    { "prodSymptom": "peak_hook_missing", "ruleIds": ["DEX-PEAK-LEDGER", "DEX-HOOK-PLAN"], "designStage": "P0", "exitCheckId": "DEX-PEAK-LEDGER", "fallbackRh": "RH-VIR-PEAK" },
+    { "prodSymptom": "recon_not_applied", "ruleIds": ["DEX-RECON-APPLIED"], "designStage": "P06", "exitCheckId": "DEX-RECON-APPLIED", "fallbackRh": "RH-VIR-RECON" },
+    { "prodSymptom": "story_kernel_hollow", "ruleIds": ["DEX-PRIMARY-DRIVE", "DEX-RECON-APPLIED"], "designStage": "P06", "exitCheckId": "DEX-RECON-APPLIED", "fallbackRh": "RH-VIR-REVERSE" },
+    { "prodSymptom": "shot_intent_decay", "ruleIds": ["DEX-SHOT-INTENT", "DEX-SFX-BRIDGE"], "designStage": "W3", "exitCheckId": "DEX-SHOT-INTENT", "fallbackRh": "RH-VIR-INTENT" },
+    { "prodSymptom": "propulsion_opaque", "ruleIds": ["NAR-01", "NAR-05"], "designStage": "W3", "exitCheckId": "DEX-PRIMARY-DRIVE", "fallbackRh": "RH-NAR-05" },
+    { "prodSymptom": "literary_stale_advance", "ruleIds": ["DEX-LITERARY-STALE"], "designStage": "W1", "exitCheckId": "DEX-LITERARY-STALE", "fallbackRh": null }
+  ],
+  "leaveInProduction": ["VP-CONFLICT", "vendor_duration_snap", "motion_vlm", "INFRA", "runtime_type_error"]
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="576" height="1024" viewBox="0 0 576 1024">
+  <rect width="576" height="1024" fill="#2a2a2a"/>
+  <!-- high sit silhouette -->
+  <ellipse cx="288" cy="280" rx="48" ry="56" fill="#9a9a9a"/>
+  <rect x="240" y="330" width="96" height="140" rx="20" fill="#8a8a8a"/>
+  <rect x="200" y="450" width="176" height="28" rx="6" fill="#6a6a6a"/>
+  <rect x="220" y="478" width="136" height="70" rx="8" fill="#5a5a5a"/>
+  <!-- low kneel silhouette -->
+  <ellipse cx="288" cy="680" rx="40" ry="46" fill="#b0b0b0"/>
+  <rect x="248" y="720" width="80" height="90" rx="16" fill="#a0a0a0"/>
+  <ellipse cx="288" cy="830" rx="70" ry="22" fill="#707070"/>
+  <text x="288" y="980" text-anchor="middle" fill="#555" font-size="20" font-family="sans-serif">layout:high_sit_low_kneel</text>
+</svg>

@@ -17,7 +17,7 @@ import { collectAudioBindGaps } from "@/ruleEngine/compilers/audioBindDelivery";
 import { buildBurnGateEnvelope } from "@/ruleEngine/compilers/burnGateEnvelope";
 import { applyVendorPromptPack } from "@/ruleEngine/vendor-packs/videoVendorPack";
 import { finalizeFiveSectionPrompt } from "@/ruleEngine/compilers/finalizeFiveSectionPrompt";
-import { decideVideoQuality, ensureSplitHintOnShot, persistSplitHintSuggestion, serializeQualityDecision } from "@/ruleEngine/compilers/qualityDecision";
+import { decideVideoQuality, serializeQualityDecision } from "@/ruleEngine/compilers/qualityDecision";
 import { splitDialogueUtterances } from "@/ruleEngine/dialogueMetrics";
 import { resolveLipDuration } from "@/ruleEngine/compilers/promptIR";
 const router = express.Router();
@@ -291,6 +291,42 @@ export default router.post(
       if (stillMeta?.videoStale) {
         /* still may be hq_ok but video is stale — burn gate for still still allows; FE shows stale */
       }
+      const { assertStillFirstFrameContract } = await import("@/ruleEngine/qc/stillFirstFrameGate");
+      const { markStillStaleOnDescChange } = await import("@/ruleEngine/compilers/stillQuality");
+      const literaryDesc = String(
+        (shotMeta as { visualDescription?: string } | undefined)?.visualDescription ?? "",
+      );
+      const staleMeta = markStillStaleOnDescChange(stillMeta as never, literaryDesc);
+      if (staleMeta && sbRow) {
+        stillMeta = { ...(stillMeta as object), ...staleMeta };
+        stillQuality = "weak";
+      }
+      const ff = assertStillFirstFrameContract({
+        stillPrompt: stillPromptForHandoff,
+        stillFilePath: sbRow?.filePath,
+        requireStill: true,
+        literaryDesc,
+        literaryDescHashAtCompose: (stillMeta as { literaryDescHash?: string } | null)?.literaryDescHash,
+      });
+      if (!ff.ok && ff.severity === "BLOCK") {
+        const { buildBurnGateEnvelope } = await import("@/ruleEngine/compilers/burnGateEnvelope");
+        const env = buildBurnGateEnvelope(
+          [{ id: ff.code ?? "STILL-FIRSTFRAME-DIRTY", message: ff.message || "静照首帧不合格", reverseTrigger: ff.reverseTrigger }],
+          { nextStep: ff.primaryNextStep === "batch_still" ? "batch_still" : "chat_repair" },
+        );
+        return res.status(400).send(
+          error(ff.message || "静照首帧不合格", {
+            code: ff.code ?? "STILL-FIRSTFRAME-DIRTY",
+            primaryNextStep: ff.primaryNextStep ?? "chat_repair",
+            userMessage: ff.message,
+            ctaLabel: env.ctaLabel || "回 SB 改描写",
+            reverseTrigger: ff.reverseTrigger ?? "still_firstframe_dirty",
+            rePushPlan: env.rePushPlan,
+            repairHints: env.repairHints,
+            chatRepairText: env.userMessage,
+          }),
+        );
+      }
     } catch {
       stillQuality = null;
     }
@@ -467,16 +503,7 @@ export default router.post(
     }
     if (!qd.burnAllowed) {
       const env = qd.envelope ?? buildBurnGateEnvelope([{ id: "LIP-01", message: qd.reasons.join(","), reverseTrigger: "pr_lip_duration" }]);
-      if (qd.splitHint) {
-        if (workingShot) ensureSplitHintOnShot(workingShot as never, qd.splitHint);
-        await persistSplitHintSuggestion({
-          db: u.db,
-          projectId,
-          scriptId,
-          storyboardId,
-          splitHint: qd.splitHint,
-        }).catch(() => false);
-      }
+      // Never persist splitHint on burn block — false-green; Confirm/Orchestrator owns physical split.
       return res.status(400).send(
         error(env.userMessage || `质量决策挡烧: ${qd.decision} — ${qd.reasons.join("; ")}`, {
           qualityDecision: serializeQualityDecision(qd, { autoHealed: heal.autoHealed, duration: heal.duration }),
@@ -494,10 +521,11 @@ export default router.post(
           chatRepairText: [
             "【闭环修复清单 — 质量决策挡烧】",
             env.userMessage,
-            `nextStep=${qd.nextStep}`,
             `reasons: ${qd.reasons.join("; ")}`,
-            env.suggestedValue != null ? `suggestedValue: ${env.suggestedValue}` : "",
-            qd.splitHint ? `splitHint 建议: ${qd.splitHint}` : "",
+            qd.reasons.includes("multi_line_one_shot") || qd.reasons.includes("lip_over_vendor")
+              ? "须 Confirm 设计拆分（Orchestrator），不可只靠抬 duration / 不可把 reactionAction 当 splitHint"
+              : "",
+            qd.splitHint && /^[a-z][a-z0-9_]*$/i.test(qd.splitHint) ? `splitHint 建议(枚举): ${qd.splitHint}` : "",
             "",
             ...env.repairHints.map((h) => `[${h.id}] ${h.chatTemplate ?? ""}`).filter(Boolean),
             "",

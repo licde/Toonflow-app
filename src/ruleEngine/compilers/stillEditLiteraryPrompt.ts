@@ -1,5 +1,6 @@
 /**
  * Literary-only prompt for ImageEdit — strip T2I contract English / QF-EXPR noise.
+ * Does NOT append 【Edit焦点】 — stillImageEdit.buildEditFocusPrompt is SSOT.
  */
 const CONTRACT_EN_RE =
   /vertical\s*9:16[\s\S]{0,200}?first frame|subtle on the locked character face[\s\S]{0,120}?|power blocking[\s\S]{0,80}?|high detail composition[\s\S]{0,80}?/gi;
@@ -18,6 +19,7 @@ export function buildLiteraryEditPrompt(input: {
       .replace(CONTRACT_EN_RE, " ")
       .replace(QF_EXPR_RE, " ")
       .replace(NOISE_TAIL_RE, " ")
+      .replace(/\n?【Edit焦点】[^\n]*/g, " ")
       .replace(/\s{2,}/g, " ")
       .trim()
       .slice(0, 900);
@@ -28,9 +30,7 @@ export function buildLiteraryEditPrompt(input: {
     if (hard && !body.includes("场面硬约束")) body = `${body} ${hard}`.trim();
     if (bind && !body.includes("站位绑定")) body = `${body} ${bind}`.trim();
   }
-  const hints = (input.fixHints ?? []).map((h) => String(h).trim()).filter(Boolean).slice(0, 6);
-  const focus = hints.length
-    ? `【Edit焦点】仅修正：${hints.join("；")}。保持定妆身份与已正确部分。`
-    : "【Edit焦点】按文学描写补全缺失项，保持定妆身份。";
-  return `${body}\n${focus}`.trim();
+  // Strip any accidental focus lines — Edit SSOT adds one in buildEditFocusPrompt
+  body = body.replace(/\n?【Edit焦点】[^\n]*/g, "").trim();
+  return body;
 }

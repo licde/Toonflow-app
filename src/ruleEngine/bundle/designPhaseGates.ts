@@ -71,12 +71,27 @@ export function runDesignPhaseGates(bundle: ScriptBundle): {
     findings.push({ id: "DG-CODE-PARSE", severity: "WARN", message: "提示词含 cref/sref 但未能解析标准码" });
   }
 
-  // Anti false-green: if FX empty across all shots, cannot claim FX PASS
-  const allFxEmpty = shots.length > 0 && shots.every((s) => {
+  // Anti false-green: every shot must declare F0 (visualEffect/fxLevel/fxFeasibility) OR have fxPrompt prose
+  const shotFxDeclared = (s: (typeof shots)[number]): boolean => {
     const n = (s.narrative as Record<string, unknown>) ?? {};
     const gen = (s.generation as Record<string, unknown>) ?? {};
-    return !String(s.fxPrompt ?? n.fxPrompt ?? gen.fxPrompt ?? "").trim();
-  });
+    const prose = String(s.fxPrompt ?? n.fxPrompt ?? gen.fxPrompt ?? "").trim();
+    if (prose && !/^F[0-5]$/i.test(prose)) return true;
+    const levels = [
+      s.visualEffect,
+      (s as { fxLevel?: string }).fxLevel,
+      (s as { fxFeasibility?: string }).fxFeasibility,
+      gen.fxFeasibility,
+      n.fxFeasibility,
+      n.fxLevel,
+    ];
+    for (const lv of levels) {
+      const t = String(lv ?? "").trim();
+      if (/^F0\b/i.test(t) || /^F0\s*[:：]/i.test(t)) return true;
+    }
+    return false;
+  };
+  const allFxEmpty = shots.length > 0 && shots.every((s) => !shotFxDeclared(s));
   if (allFxEmpty && shots.length >= 3) {
     findings.push({
       id: "DG-FALSE-GREEN-FX",
@@ -130,11 +145,21 @@ export function runDesignPhaseGates(bundle: ScriptBundle): {
 
   const narSelf = bundle.narrativeSelfcheck as { passed?: boolean; failedIds?: string[] } | undefined;
   const serverNarFails = serverNarrativeSelfcheckFails(bundle);
+  if (serverNarFails.length > 0) {
+    // Authority overwrite — Chat 假绿不能挡住真实 NAR
+    (bundle as { narrativeSelfcheck?: Record<string, unknown> }).narrativeSelfcheck = {
+      ...(narSelf ?? {}),
+      passed: false,
+      failedIds: [...new Set([...(narSelf?.failedIds ?? []), ...serverNarFails.map((f) => f.id)])],
+      serverOverwritten: true,
+      checkedAt: new Date().toISOString(),
+    };
+  }
   if (narSelf?.passed === true && serverNarFails.length > 0) {
     findings.push({
       id: "DG-NAR-SELFCHECK",
       severity: "BLOCK",
-      message: `narrativeSelfcheck 自报 passed 但服务器检出 ${serverNarFails.map((f) => f.id).join(", ")}`,
+      message: `narrativeSelfcheck 自报 passed 但服务器检出 ${serverNarFails.map((f) => f.id).join(", ")}（已覆写 passed=false）`,
       field: "narrativeSelfcheck",
     });
   } else if (serverNarFails.length > 0) {

@@ -1,0 +1,10 @@
+node_modules/
+data/web/*
+data/web_new/*
+data/scripts/web/*
+data/oss/
+dist/
+build/
+.git/
+*.log
+*.tar.gz

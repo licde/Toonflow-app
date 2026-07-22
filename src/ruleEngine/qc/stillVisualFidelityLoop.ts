@@ -30,6 +30,7 @@ import {
   resolveParallelM,
   type StillEditStrategy,
 } from "./stillImageEdit";
+import { routeStillRepair } from "./stillRepairRoute";
 
 export interface StillVisualFidelityLoopConfig {
   version?: string;
@@ -109,6 +110,11 @@ export interface StillVisualGenerateOnceResult {
   allowHqOkL0: boolean;
   fidelityMissing: string[];
   strategy?: StillEditStrategy | "generate";
+  layoutTemplateId?: string;
+  layoutSkipped?: string;
+  bgPolicy?: string;
+  sceneRefsDropped?: number;
+  stageCost?: number;
 }
 
 export interface StillVisualGenerateRoundArgs {
@@ -119,6 +125,11 @@ export interface StillVisualGenerateRoundArgs {
   fixHints?: string[];
   failedImageBase64?: string;
   candidateIndex?: number;
+  /** Smart repair: preserve composition via layout_preserve Edit */
+  layoutPreserve?: boolean;
+  /** Smart repair: swap to alternate layout template on Stage A */
+  swapLayoutTemplate?: boolean;
+  excludeLayoutTemplateId?: string;
 }
 
 export interface StillVisualFidelityLoopResult {
@@ -150,6 +161,12 @@ export interface StillVisualFidelityLoopResult {
   /** VLM infra failed — FE should offer human rejudge; never treat as hq_ok */
   pendingHumanRejudge?: boolean;
   infraEditBypassUsed?: boolean;
+  repairRoute?: string;
+  layoutTemplateId?: string;
+  bgPolicy?: string;
+  sceneRefsDropped?: number;
+  stageCost?: number;
+  settingsDeepLink?: string;
 }
 
 function passCount(items: VlmItemResult[]): number {
@@ -294,6 +311,8 @@ export async function runStillVisualFidelityLoop(input: {
   generateOnce: (round: StillVisualGenerateRoundArgs) => Promise<StillVisualGenerateOnceResult>;
   judgeFn?: VlmJudgeFn;
   forceSkipVlm?: boolean;
+  db?: import("knex").Knex;
+  bgPolicy?: "drop" | "demote" | "keep" | null;
 }): Promise<StillVisualFidelityLoopResult> {
   const cfg = loadStillVisualFidelityLoopConfig();
   const editCfg = loadStillImageEditConfig();
@@ -347,17 +366,24 @@ export async function runStillVisualFidelityLoop(input: {
   let usedEdit = false;
   let lastFixHints: string[] = [];
   let editAttemptedOnSig = false;
+  let nextLayoutPreserve = false;
+  let nextSwapLayout = false;
+  let excludeLayoutId: string | undefined;
+  let lastRepairRoute: string | undefined;
+  let lastSettingsDeepLink: string | undefined;
 
   for (let round = 0; round < maxRounds; round++) {
-    const isEditRound = round > 0 && usedEdit;
-    const mode: "generate" | "edit" = isEditRound ? "edit" : round === 0 ? "generate" : "edit";
-    if (round > 0) usedEdit = true;
+    const isEditRound = round > 0 && (usedEdit || nextLayoutPreserve);
+    const mode: "generate" | "edit" = isEditRound ? "edit" : round === 0 ? "generate" : nextSwapLayout ? "generate" : "edit";
+    if (round > 0 && mode === "edit") usedEdit = true;
 
     emitHealObs("still_fidelity_round", {
       round,
       mode,
       strengthenKeys: Object.keys(strengthen),
       M: round === 0 ? 1 : M,
+      layoutPreserve: nextLayoutPreserve,
+      swapLayout: nextSwapLayout,
     });
 
     const candCount = round === 0 ? 1 : M;
@@ -367,7 +393,12 @@ export async function runStillVisualFidelityLoop(input: {
       mode,
       fixHints: lastFixHints,
       failedImageBase64: last?.imageBase64,
+      layoutPreserve: nextLayoutPreserve || mode === "edit",
+      swapLayoutTemplate: nextSwapLayout,
+      excludeLayoutTemplateId: excludeLayoutId,
     };
+    nextLayoutPreserve = false;
+    nextSwapLayout = false;
 
     const onceList = await Promise.all(
       Array.from({ length: candCount }, (_, candidateIndex) =>
@@ -408,6 +439,7 @@ export async function runStillVisualFidelityLoop(input: {
           items: input.checklist,
           modelKey: cfg.vlmModelKey,
           judgeFn: input.judgeFn,
+          db: input.db,
         });
         return { once, judged };
       }),
@@ -498,6 +530,35 @@ export async function runStillVisualFidelityLoop(input: {
 
     lastFixHints = collectFixHintsFromVlm(picked.items, input.checklist, editCfg.maxFixHints ?? 6);
 
+    // Smart repair route: layout swap vs layout_preserve Edit
+    try {
+      const { routeStillRepair } = await import("./stillRepairRoute");
+      const decision = routeStillRepair({
+        itemResults: picked.items,
+        checklist: input.checklist,
+        bgPolicy: input.bgPolicy,
+      });
+      lastRepairRoute = decision.route;
+      lastSettingsDeepLink = decision.settingsDeepLink;
+      if (decision.swapLayoutTemplate) {
+        nextSwapLayout = true;
+        excludeLayoutId = picked.once.layoutTemplateId;
+        usedEdit = false;
+        autoHealed.push("repair_swap_layout");
+      } else if (decision.layoutPreserveEdit) {
+        nextLayoutPreserve = true;
+        usedEdit = true;
+        autoHealed.push("repair_layout_preserve_edit");
+      }
+      emitHealObs("still_fidelity_repair_route", {
+        round,
+        route: decision.route,
+        nextStep: decision.nextStep,
+      });
+    } catch {
+      /* route optional */
+    }
+
     // Repeated missing: prefer one Edit pass with fixHint before converge
     if (cfg.stopOnRepeatedMissing && sig && sig === lastSig && !unknownsOnly) {
       if (cfg.preferEditOnRepeatedMissing && !editAttemptedOnSig && canRegenRetry(budget)) {
@@ -586,5 +647,11 @@ export async function runStillVisualFidelityLoop(input: {
     bestPassCount: keep.passCount,
     fixHintsUsed: lastFixHints,
     parallelM: M,
+    repairRoute: lastRepairRoute,
+    layoutTemplateId: keep.once.layoutTemplateId,
+    bgPolicy: keep.once.bgPolicy ?? input.bgPolicy ?? undefined,
+    sceneRefsDropped: keep.once.sceneRefsDropped,
+    stageCost: keep.once.stageCost,
+    settingsDeepLink: lastSettingsDeepLink,
   };
 }

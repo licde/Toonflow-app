@@ -94,6 +94,28 @@ NAR-14/15 在 **export / burn / designPhaseGates** 升为 **BLOCK**；有 `split
 | FX 空→F0 | 声明 F0 | F4/F5 RH-FX |
 | FX F1+ 有 visualEffect | 编译短散文 | 无材料 BLOCK |
 | 厂商 mute | capability 不假绿 | — |
+| 情绪结构 / style pack | `runContractStructureHeal` soft_patch | 文学旧风格 → Chat W3 重写（非制作回流改词） |
+| motion VLM mismatch | strengthen → retry；结构根因 → heal | — |
+
+## 情绪风格包 → SB / EN 闭环
+
+```
+planData.emotionNorm.activeProfileId
+  → emotion_norm_profiles + av_emotion_style_packs
+  → W3 craft 写正文+sidecar（K3）
+  → import 后 K1 structure heal（扩簇 / CAM-SPEAK / phase）
+  → EN 编译：Speak static；React 可推
+  → structureStale 时建议重编提示词（不改台词）
+```
+
+| 规则 | 行为 |
+|------|------|
+| Speak | 对白镜 motion=static（CAM-SPEAK） |
+| React | 可 gentle push / pack.allowedMotions |
+| 换 profile | 不改 `<scriptItem>`；heal 结构；标 stale |
+| FE | Chat 选档写；Web 换档+heal；RulePanel CTA「一键按当前情绪风格补齐」 |
+
+相关：[`docs/FE_EMOTION_NORM_SWITCH.md`](./FE_EMOTION_NORM_SWITCH.md) · `yarn test:emotion-norm-switch`
 
 ## 自测表
 

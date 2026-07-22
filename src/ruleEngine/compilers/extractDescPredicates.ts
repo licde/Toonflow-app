@@ -43,10 +43,24 @@ function splitClauses(text: string): string[] {
     .filter(Boolean);
 }
 
-export function stripWhoVerbGlue(who: string | undefined | null): string | undefined {
+export function stripWhoVerbGlue(who: string | undefined | null, castingNames?: string[]): string | undefined {
   let w = String(who ?? "").trim();
   if (!w) return undefined;
-  w = w.replace(/(跪|端坐|坐|立|摩挲|抄书)$/u, "");
+  try {
+    const { toBareCastingName, stripToCastingName } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+    const bare = toBareCastingName(w);
+    if (castingNames?.length) {
+      const hit = stripToCastingName(bare || w, castingNames);
+      if (hit) return hit;
+    }
+    w = bare || w;
+  } catch {
+    /* fall through */
+  }
+  w = w.replace(
+    /(咬|刺|捧|勾|勾起|望|握|持|含|衔|擦|抬|转|跪|端坐|坐|立|摩挲|抄书|包|包扎)$/u,
+    "",
+  );
   w = w.replace(/(跪|端坐)$/u, "");
   return w.trim() || undefined;
 }
@@ -54,14 +68,13 @@ export function stripWhoVerbGlue(who: string | undefined | null): string | undef
 function guessWho(clause: string, knownNames: string[]): string | undefined {
   const sorted = [...knownNames].filter((n) => n.length >= 2).sort((a, b) => b.length - a.length);
   for (const n of sorted) {
-    const clean = stripWhoVerbGlue(n) ?? n;
+    const clean = stripWhoVerbGlue(n, knownNames) ?? n;
     if (clause.includes(clean) || (clean.length >= 2 && clause.includes(clean.slice(0, 2)))) {
-      return stripWhoVerbGlue(clean);
+      return stripWhoVerbGlue(clean, knownNames);
     }
   }
-  // Bare 沈母 / 沈清瓷 style
-  const m = clause.match(/沈[\u4e00-\u9fff]{1,3}|[\u4e00-\u9fff]{1,3}(?:清瓷|清辞|阿母)/);
-  return stripWhoVerbGlue(m?.[0]);
+  // Casting sheet only — never invent from bare 沈[汉]{1,3}
+  return undefined;
 }
 
 /**
@@ -96,10 +109,10 @@ export function extractDescPredicates(input: {
         if (pm && pm[0] !== "香案" && pm[0] !== "供桌" && pm[0] !== "香炉") prop = pm[0];
       }
       predicates.push({
-        who: stripWhoVerbGlue(who),
+        who: stripWhoVerbGlue(who, names),
         verb: pat.verb,
         prop,
-        surface: [stripWhoVerbGlue(who), pat.verb, prop].filter(Boolean).join(""),
+        surface: [stripWhoVerbGlue(who, names), pat.verb, prop].filter(Boolean).join(""),
       });
       // Continue patterns in same clause (端坐+摩挲, 跪+抄书)
     }

@@ -7,8 +7,11 @@
 | 文件 | 用途 |
 |------|------|
 | `types/closure.ts` | API 响应 TypeScript 类型（含 `exportGate.chatRepairText`） |
+| `types/emotionNorm.ts` | 情绪规范 profile API / UX 文案契约 |
 | `api/inspectBundle.ts` | HTTP 客户端（dryRun 暴露 exportGate） |
-| `components/RulePanel.vue` | 闭环展示 + **复制闭环修复清单** 主 CTA |
+| `components/RulePanel.vue` | 闭环展示 + **复制闭环修复清单** + 情绪结构补齐 CTA |
+
+情绪规范切换说明见仓库根 [`docs/FE_EMOTION_NORM_SWITCH.md`](../FE_EMOTION_NORM_SWITCH.md)。
 
 ## 集成步骤
 

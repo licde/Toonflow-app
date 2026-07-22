@@ -33,12 +33,14 @@ rulePackVersion: "2.0.1"
 
 ## 执行步骤
 
-1. 读取 storySkeleton 删减记录与反转登记表
+**步骤 0**：读 `viralWritingContext.stageBrief`；冲突曲线峰值场必须对齐 `peakLedger`（禁假爆点）。
+
+1. 读取 storySkeleton 删减记录与反转登记表 + peak/hook
 2. 读取 `adaptationMatrixStructured` + `adaptationProfile`（含 deepAdaptation / V/R/C 维）
-3. 写 3–5 条核心原则，每条服务故事核
-3. 列删除决策表格（列：**三密度影响** + **替代爆点**）；写入 `narrativeBrief.densityBudget`
-4. 写世界观渐进披露方案（对话/OS/VO，禁大段旁白）
-5. 核对 ≈3 个反转与骨架登记表一致
+3. 写 3–5 条核心原则，每条服务故事核与真视听爆点
+3. 列删除决策表格（列：**三密度影响** + **替代爆点 peakId**）；写入 `narrativeBrief.densityBudget`
+4. 写世界观渐进披露方案（对话/OS/VO，禁大段旁白；遵守 infoGap）
+5. 核对 ≈3 个反转与骨架登记表一致；标注 3-15-45 留存点
 
 ## 输出
 

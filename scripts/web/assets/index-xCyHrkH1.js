@@ -408,8 +408,7 @@ const _sfc_main$3 = /* @__PURE__ */ defineComponent({
     async function loadComposePreview(opts) {
       previewing.value = true;
       gateMessage.value = "";
-      // Dual seating / re-complete: default fidelity (backend also prefers fidelity); dirty → full
-      const mode = opts?.mode ?? (looksDirtyPrompt(props.data.prompt ?? "") ? "full" : "fidelity");
+      const mode = opts?.mode ?? (looksDirtyPrompt(props.data.prompt ?? "") ? "full" : "refine");
       lastComposeMode.value = mode;
       try {
         const refs = props.data.references.map((i) => i.image).filter(Boolean);
@@ -426,12 +425,6 @@ const _sfc_main$3 = /* @__PURE__ */ defineComponent({
         });
         const body = data?.data ?? data;
         composePreview.value = body;
-        if (body?.fidelityItems?.length) {
-          const miss = (body.fidelityMissing || []).slice(0, 6).join("、");
-          gateMessage.value = body.fidelityOk
-            ? `提示词保真项已绿（成图验收另算）${body.note ? " · " + body.note : ""}`
-            : `提示词保真缺项：${miss || "见清单"}（仅 L0，成图另验）`;
-        }
         if (!body?.ok) {
           gateMessage.value = body?.userMessage || body?.blockReason || "缺少可拍画面锚点";
         } else if (body.didSynthesize || body.scrubbed) {
@@ -533,7 +526,7 @@ const _sfc_main$3 = /* @__PURE__ */ defineComponent({
       props.data.ratio = project.value?.videoRatio ?? "16:9";
       const sid = resolveStoryboardId();
       if (sid) {
-        const mode = looksDirtyPrompt(props.data.prompt ?? "") ? "full" : "fidelity";
+        const mode = looksDirtyPrompt(props.data.prompt ?? "") ? "full" : "refine";
         void loadComposePreview({ autoApply: true, mode, persist: true });
       }
     });
@@ -794,7 +787,7 @@ const _sfc_main$3 = /* @__PURE__ */ defineComponent({
                     size: "small",
                     variant: "outline",
                     loading: unref(previewing),
-                    onClick: _cache[6] || (_cache[6] = () => loadComposePreview({ mode: "fidelity", autoApply: true, persist: true }))
+                    onClick: _cache[6] || (_cache[6] = () => loadComposePreview({ mode: "refine", autoApply: true, persist: true }))
                   }, {
                     default: withCtx(() => [..._cache[16] || (_cache[16] = [
                       createTextVNode("补全(测)", -1)
