@@ -1440,6 +1440,37 @@ export function composeStillPrompt(
         supportParts.push(STILL_SHEET_AS_IDENTITY_ONLY_ZH);
         sources.push("identity.sheetAsIdentityOnly");
       }
+      // Multi-cref: primary look lock (anti costume blend from peer sheets)
+      try {
+        const { stillPrimaryLookLockLine } =
+          require("./stillLiteraryDetailQuality") as typeof import("./stillLiteraryDetailQuality");
+        const charCrefN = (ctx.characters ?? []).filter(
+          (c) => c.kind !== "scene" && c.hasImage,
+        ).length;
+        const primaryLookName =
+          (() => {
+            try {
+              const { pickVdLiteraryPrimary } =
+                require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+              return (
+                pickVdLiteraryPrimary(vdRaw || primary?.text, charNamesForBind) ||
+                identityBind.orderedNames[0] ||
+                identityBind.highRole?.name ||
+                charNamesForBind[0] ||
+                null
+              );
+            } catch {
+              return identityBind.orderedNames[0] || charNamesForBind[0] || null;
+            }
+          })();
+        const lookLine = stillPrimaryLookLockLine(charCrefN, primaryLookName);
+        if (lookLine && !supportParts.some((p) => /主look|禁止混用其他角色/.test(p))) {
+          supportParts.push(lookLine);
+          sources.push("identity.primaryLookLock");
+        }
+      } catch {
+        /* optional */
+      }
     } catch {
       /* optional */
     }

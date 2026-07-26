@@ -192,7 +192,7 @@ export function mergeReasonMeta(existingReason: unknown, patch: Record<string, u
 
 /** Hard pixel ids — human rejudge cannot hq_ok / 可燃片 while any fail or sheetLeak uncleared */
 const HUMAN_REJUDGE_HARD_PIXEL =
-  /single_frame|cast_cardinality|background_readable/i;
+  /single_frame|cast_cardinality|background_readable|contact_geom|primary_look/i;
 
 export function resolveStillHumanRejudgeOutcome(input: {
   items: Array<{ id: string; pass: boolean }>;

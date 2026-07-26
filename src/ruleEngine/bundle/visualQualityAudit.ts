@@ -191,15 +191,7 @@ export function checkCut01Adjacent(shots: {
         evidence: { from: a.colorTemp, to: b.colorTemp, qp: "QP-13" },
       });
     }
-    if (a.propState && b.propState && a.propState !== b.propState && !String(b.propState).includes("→")) {
-      out.push({
-        id: "CUT-01",
-        severity: "WARN",
-        message: `镜 ${idx} 道具状态瞬移 ${a.propState}→${b.propState}`,
-        shotIndex: idx,
-        evidence: { from: a.propState, to: b.propState },
-      });
-    }
+    // Prop state teleport → DEX-PROP-CONT (propContinuitySsot); CUT-01 no longer double-fires
   }
   out.push(...checkCamXshot(shots));
   return out;

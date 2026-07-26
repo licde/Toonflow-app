@@ -69,6 +69,54 @@
       "note": "特写×出镜≥2：VD只点名一人→slice_cast降人数（禁拆镜Confirm）；多人同框意图→auto split；歧义 Confirm；chatStrict 禁静默拆；导入 demote；禁只 regen"
     },
     {
+      "trigger": "lit_detail_contact",
+      "ruleIds": ["DEX-LIT-CONTACT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补接触落点（颊/唇/指尖等）", "拆镜若多拍混写", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "declare-only：禁 compose/Edit 发明落点；多参考服饰混用靠 primaryLookLock egress"
+    },
+    {
+      "trigger": "lit_detail_anchor",
+      "ruleIds": ["DEX-LIT-ANCHOR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补空间/握持/地面落点（地上/手持/膝前）", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "捡拾/持握/递接/抛落无锚点→静帧漂移；朝向≠锚点；禁只 hq_update"
+    },
+    {
+      "trigger": "lit_detail_expr",
+      "ruleIds": ["DEX-LIT-EXPR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P2",
+      "presentationFork": ["补眉/眼/唇落点", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "特写强表情无部位→脸部漂移；WARN 默认，禁只 regen"
+    },
+    {
+      "trigger": "prop_continuity",
+      "ruleIds": ["DEX-PROP-CONT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补离手/去向/来源交待", "写 propState→", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription", "preDesignPack.shots[].propState"],
+      "note": "邻镜道具消失/瞬变/空降；CUT-01 不管道具；禁发明专名；导入 demote"
+    },
+    {
       "trigger": "img_still_weak",
       "ruleIds": ["IMG-STILL-QA"],
       "reverseTarget": "MD-IMG",

@@ -411,6 +411,42 @@
       "chatTemplate": "【须重设计】公式已更换。请按新规范重走设计（入口 W1 → 验收 W3 redesignPass：NAR-15/intent 等同核），勿只改旧字段或只点 W1。选项：A 按新规范重设计（推荐） / B 保留旧稿继续补洞（须 acknowledgeKeepLegacy）。entry=W1；accept=W3。"
     },
     {
+      "id": "RH-LIT-CONTACT",
+      "ruleId": "DEX-LIT-CONTACT",
+      "checkIds": ["DEX-LIT-CONTACT", "lit_detail_contact"],
+      "symptom": "脸特写/微创缺接触落点结构",
+      "action": "手改 VD 补接触结构（划过X/贴在Y）；禁只 regen；可选 stillIntentOps suggestFill+Confirm",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·接触】缺 contactStruct。请手改 visualDescription（例：休书纸角划过面颊）。禁止只 hq_update。深链：toonflow://stage/SB?trigger=lit_detail_contact"
+    },
+    {
+      "id": "RH-LIT-ANCHOR",
+      "ruleId": "DEX-LIT-ANCHOR",
+      "checkIds": ["DEX-LIT-ANCHOR", "lit_detail_anchor"],
+      "symptom": "捡拾/持握/抛落缺空间或握持锚",
+      "action": "手改 VD 补地面/握持/门槛等结构槽；朝向≠锚点；禁只 regen",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·锚点】缺 groundOrPath/grip 等。请补「从地面捡起」「手持贴在胸前」等。禁止只 regen。深链：toonflow://stage/SB?trigger=lit_detail_anchor"
+    },
+    {
+      "id": "RH-LIT-EXPR",
+      "ruleId": "DEX-LIT-EXPR",
+      "checkIds": ["DEX-LIT-EXPR", "lit_detail_expr"],
+      "symptom": "特写强表情无眉眼唇落点",
+      "action": "手改 VD 落到眉/眼/唇",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·表情】特写强表情须落到眉/眼/唇。手改 VD。深链：toonflow://stage/SB?trigger=lit_detail_expr"
+    },
+    {
+      "id": "RH-PROP-CONT",
+      "ruleId": "DEX-PROP-CONT",
+      "checkIds": ["DEX-PROP-CONT", "prop_continuity"],
+      "symptom": "邻镜道具消失/瞬变/空降未交待",
+      "action": "手改 VD 交待离手/去向/来源或写 propState→；禁发明新道具名；禁只 regen",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【道具连续】邻镜道具链断裂。请交待放下/撕毁/仍持，或换场豁免。禁止静默发明道具。深链：toonflow://stage/SB?trigger=prop_continuity"
+    },
+    {
       "id": "RH-FALSE_GREEN",
       "ruleId": "FALSE_GREEN_SELFCHECK",
       "checkIds": ["FALSE_GREEN_SELFCHECK", "DG-NAR-SELFCHECK", "self_report_mismatch"],

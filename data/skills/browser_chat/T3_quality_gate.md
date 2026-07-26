@@ -93,6 +93,7 @@ Slot 定义 SSOT：`data/fixtures/modality_prompt_slots.json`（skills / compile
   - **VLM 基建**：缺 Key → evidence=`vlm_infra` / `pendingHumanRejudge`；CTA 配 Key；人审可过但记 `humanOverride:vlm_infra`
   - **DEX-STILL-OS-NAME / FILLER**（WARN）：人名裸名禁（OS）；禁「对白瞬间神态」
   - **DEX-QP-02 / QP-02**（BLOCK）：画面描写空/过短/抽象无物象 — 与 export 同核；须 SB 重设计。深链 `qp02_visual_short`。minChars 仅防空壳底线
+  - **DEX-LIT-CONTACT / ANCHOR / PROP-CONT**（BLOCK）：可拍结构槽与邻镜道具连续 — 手改 VD；禁只 regen；深链 `lit_detail_*` / `prop_continuity`
   - **DEX-CAST-ON-DESC**（BLOCK）：描写点名须进 `charCodes`（与 DEX-CAST-CODES 分立）。**智能绑定**：CD/资产唯一命中可自动补码+cref；歧义拒绑保留姓名；CD 无则 orphan stub（仍 BLOCK export 假绿）。**禁剥名**、禁自由 NER 造角。深链 `cast_on_desc_missing`（RH-CAST-ON-DESC）
   - **DEX-EMPTY-SHOT-CONSISTENCY**（BLOCK）：空镜声明不得与人名/出脸/codes 并存。深链 `empty_shot_conflict`（RH-EMPTY-SHOT）；forbidRegenWithoutDescFix。compose 出站禁再叠「正脸清晰」
   - **DEX-EXPR-SPEAK**（BLOCK）：高强度**出镜**对白须 `microExpression`+`lipSyncPolicy`；OS/VO 不强制口型闸。禁默认表演假过。深链 `expr_speak_missing`（RH-EXPR-SPEAK）

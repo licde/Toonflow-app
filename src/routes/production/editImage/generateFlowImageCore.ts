@@ -112,6 +112,8 @@ export async function runGenerateFlowImageCore(
   primaryNextStep?: string;
   userMessage?: string;
   ctaLabel?: string;
+  missingSlots?: string[];
+  irdPrimaryAction?: string;
   composeSources?: string[];
   didSynthesize?: boolean;
   healBudget?: HealBudgetState;
@@ -824,6 +826,9 @@ export async function runGenerateFlowImageCore(
       stageCost: (loopOut as { stageCost?: number }).stageCost,
       settingsDeepLink: (loopOut as { settingsDeepLink?: string }).settingsDeepLink,
       sheetLeak: Boolean(loopOut.sheetLeak),
+      repairCtaLabel: loopOut.repairCtaLabel,
+      repairMissingSlots: loopOut.repairMissingSlots,
+      repairIrdPrimaryAction: loopOut.repairIrdPrimaryAction,
     });
   } catch (e) {
     const errMsg = u.error(e).message;
@@ -896,6 +901,15 @@ async function finalizeSuccess(
     pendingHumanRejudge?: boolean;
     infraEditBypassUsed?: boolean;
     sheetLeak?: boolean;
+    repairRoute?: string;
+    layoutTemplateId?: string;
+    bgPolicy?: string;
+    sceneRefsDropped?: number;
+    stageCost?: number;
+    settingsDeepLink?: string;
+    repairCtaLabel?: string;
+    repairMissingSlots?: string[];
+    repairIrdPrimaryAction?: string;
   },
 ) {
   // Literary + visual gate: hq_ok only when L1 visualPass (or L0 when VLM skipped/disabled)
@@ -916,13 +930,22 @@ async function finalizeSuccess(
     !sheetLeak;
   let stillQuality: "missing" | "weak" | "hq_ok" = hq ? "hq_ok" : "weak";
   const keyMissing = /VLM_API_KEY_MISSING|api\s*key/i.test(String(input.vlmError ?? ""));
+  const litDebtStop = input.repairIrdPrimaryAction === "hand_edit_vd";
   // vlm_error: do NOT nudge regen_hq (would empty-loop while critic is down) — chat_repair / human rejudge
   const primary = buildPrimaryBlock(
-    hq ? "burn" : input.fidelityStopReason === "vlm_error" ? "chat_repair" : "regen_storyboard_hq",
+    hq
+      ? "burn"
+      : litDebtStop || input.fidelityStopReason === "vlm_error"
+        ? "chat_repair"
+        : "regen_storyboard_hq",
     {
       stage: "burn",
       userMessageOverride:
-        input.fidelityStopReason === "vlm_error"
+        litDebtStop
+          ? input.repairMissingSlots?.length
+            ? `文学细节契约未过（缺 ${input.repairMissingSlots.join("/")}）；请手改 VD，禁止只 regen；弱图不可作视频首帧`
+            : "文学细节契约未过；请手改 VD，禁止只 regen；弱图不可作视频首帧"
+          : input.fidelityStopReason === "vlm_error"
           ? keyMissing
             ? `图已出，但未过高质量：视觉评审缺少火山引擎 API Key，无法验拼图/多格。请到设置配置 Key 后重抽或人审；当前弱图不可作视频首帧。`
             : `图已出，但未过高质量：视觉评审不可用${input.infraEditBypassUsed ? "（已尝试 1 次禁拼图 Edit）" : ""}。请修复评审配置后人审或重抽；当前弱图不可作视频首帧。${
@@ -932,7 +955,9 @@ async function finalizeSuccess(
     },
   );
   const vlmCta =
-    input.fidelityStopReason === "vlm_error"
+    litDebtStop
+      ? input.repairCtaLabel || "手改VD"
+      : input.fidelityStopReason === "vlm_error"
       ? keyMissing
         ? "去配置火山引擎 API Key"
         : input.pendingHumanRejudge
@@ -943,7 +968,9 @@ async function finalizeSuccess(
     ? input.composed.didSynthesize
       ? "已按设计智能合成并标记高质量首帧"
       : "已标记高质量首帧"
-    : input.fidelityStopReason === "vlm_error"
+    : litDebtStop
+      ? primary.userMessage
+      : input.fidelityStopReason === "vlm_error"
       ? primary.userMessage
       : input.fidelityStopReason === "converged"
         ? "成图文学保真项反复未过，已收敛停机；弱图不可作视频首帧"
@@ -1028,11 +1055,16 @@ async function finalizeSuccess(
           ...pipelineMeta,
         };
     const life = applyLifecycleInvalidation("still_regenerated", hqMeta);
+    const nextStep = litDebtStop
+      ? "chat_repair"
+      : life.primaryNextStep === "burn" && !hq
+        ? "regen_storyboard_hq"
+        : life.primaryNextStep;
     const reason = mergeReasonMeta(row?.reason, {
       ...hqMeta,
       ...(life.stillMeta ?? {}),
-      nextStep: life.primaryNextStep,
-      primaryNextStep: life.primaryNextStep,
+      nextStep,
+      primaryNextStep: nextStep,
       userMessage,
       ctaLabel: vlmCta,
       didSynthesize: input.composed.didSynthesize,
@@ -1043,6 +1075,8 @@ async function finalizeSuccess(
       infraEditBypassUsed: input.infraEditBypassUsed,
       sheetLeak,
       videoStale: true,
+      missingSlots: input.repairMissingSlots,
+      irdPrimaryAction: input.repairIrdPrimaryAction,
       ...(input.policy.hasSensitiveTerms ? { policyWarnings: input.policy.warnings } : {}),
     });
     // Persist vendor egress (pipeline SSOT) — same string sent to vendor
@@ -1092,9 +1126,11 @@ async function finalizeSuccess(
     imageMode: input.imageMode,
     rePushPlan: input.rePushPlan,
     stillQuality,
-    primaryNextStep: primary.primaryNextStep,
+    primaryNextStep: litDebtStop ? "chat_repair" : primary.primaryNextStep,
     userMessage,
     ctaLabel: vlmCta,
+    missingSlots: input.repairMissingSlots,
+    irdPrimaryAction: input.repairIrdPrimaryAction,
     composeSources: input.composed.sources,
     didSynthesize: input.composed.didSynthesize,
     healBudget: input.healBudget,

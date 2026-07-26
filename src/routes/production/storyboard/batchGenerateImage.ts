@@ -736,38 +736,50 @@ export default router.post(
             exhausted,
             sheetLeak,
             literaryPrompt: composed.prompt ?? composed.visualBody,
+            visualDescription: String(literaryDesc ?? composeCtx.visualDescription ?? ""),
+            shotSize: (item as { shotSize?: string }).shotSize ?? composeCtx.shotSize,
+            castNames: charNames,
           });
         } catch {
           /* optional */
         }
         // Homology: do not let lifecycle overwrite design reverse with burn when weak/exhausted
+        const litDebtStop = loopOut.repairIrdPrimaryAction === "hand_edit_vd";
         const primaryNext =
           keyMissing
             ? "chat_repair"
-            : repairRoute?.nextStep === "split_shot"
-              ? "split_shot"
-              : loopOut.stopReason === "vlm_error" || !allowHq
-                ? repairRoute?.nextStep === "batch_still"
-                  ? "batch_still"
-                  : life.primaryNextStep === "burn"
+            : litDebtStop || repairRoute?.nextStep === "chat_repair"
+              ? "chat_repair"
+              : repairRoute?.nextStep === "split_shot"
+                ? "split_shot"
+                : loopOut.stopReason === "vlm_error" || !allowHq
+                  ? repairRoute?.nextStep === "batch_still"
                     ? "batch_still"
-                    : life.primaryNextStep ?? "batch_still"
-                : life.primaryNextStep;
+                    : life.primaryNextStep === "burn"
+                      ? "batch_still"
+                      : life.primaryNextStep ?? "batch_still"
+                  : life.primaryNextStep;
         const promptWrite = !isDirtyStillPrompt(composed.visualBody) ? loopOut.promptUsed : undefined;
         const { buildPrimaryBlock } = await import("@/ruleEngine/compilers/primaryBlock");
         const { buildRePushPlan } = await import("@/ruleEngine/design/reverseRouteEngine");
         const weakPrimary = buildPrimaryBlock(
           primaryNext === "split_shot"
             ? "split_shot"
-            : primaryNext === "batch_still"
-              ? "batch_still"
-              : "regen_storyboard_hq",
+            : primaryNext === "chat_repair"
+              ? "chat_repair"
+              : primaryNext === "batch_still"
+                ? "batch_still"
+                : "regen_storyboard_hq",
           { stage: "burn" },
         );
         const weakMsg =
           keyMissing
             ? `成图诊断服务不可用（${String(loopOut.vlmError ?? "").slice(0, 80)}）；请配置 API Key 后人审或重试；弱图不可作视频首帧`
-            : loopOut.stopReason === "converged"
+            : litDebtStop
+              ? (loopOut.repairMissingSlots?.length
+                  ? `文学细节契约未过（缺 ${loopOut.repairMissingSlots.join("/")}）；请手改 VD，禁止只 regen；弱图不可作视频首帧`
+                  : "文学细节契约未过；请手改 VD，禁止只 regen；弱图不可作视频首帧")
+              : loopOut.stopReason === "converged"
               ? "成图文学保真项反复未过，已收敛停机；弱图不可作视频首帧；请回设计或重出 HQ"
               : exhausted
                 ? repairRoute?.userMessage ??
@@ -782,13 +794,15 @@ export default router.post(
                       ? weakPrimary.userMessage
                       : undefined;
         const rePushPlan =
-          exhausted || primaryNext === "split_shot" || (!allowHq && primaryNext !== "burn")
+          exhausted || primaryNext === "split_shot" || primaryNext === "chat_repair" || (!allowHq && primaryNext !== "burn")
             ? buildRePushPlan([
                 keyMissing
                   ? "img_still_weak"
-                  : primaryNext === "split_shot"
-                    ? "still_onebeat_multi"
-                    : "still_firstframe_weak",
+                  : litDebtStop
+                    ? "lit_detail_anchor"
+                    : primaryNext === "split_shot"
+                      ? "still_onebeat_multi"
+                      : "still_firstframe_weak",
               ])
             : undefined;
         await u.db("o_storyboard").where("id", item.id).update({
@@ -808,8 +822,12 @@ export default router.post(
               : repairRoute?.settingsDeepLink,
             ctaLabel: keyMissing
               ? "去配置火山引擎 API Key"
-              : repairRoute?.ctaLabel ?? (!allowHq ? weakPrimary.ctaLabel : undefined),
+              : loopOut.repairCtaLabel ??
+                repairRoute?.ctaLabel ??
+                (!allowHq ? weakPrimary.ctaLabel : undefined),
             userMessage: weakMsg,
+            missingSlots: loopOut.repairMissingSlots ?? repairRoute?.missingSlots,
+            irdPrimaryAction: loopOut.repairIrdPrimaryAction ?? repairRoute?.irdPrimaryAction,
             ...(rePushPlan ? { rePushPlan } : {}),
           }),
         });

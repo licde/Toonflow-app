@@ -1,6 +1,7 @@
 <!-- VisBeat ConfirmBar — FE contract stub (a11y).
   Wire: primaryNextStep=split_shot → POST /api/scriptAgent/stillIntentOps|designSplitOps|visBeatOps
-  then force designExit. Also covers DEX-STILL-CU-CAST / still_cu_cast. -->
+  then force designExit. Also covers DEX-STILL-CU-CAST / still_cu_cast.
+  Literary debt (hand_edit_vd / missingSlots) → use LitDetailDebtBar.vue, not this bar. -->
 <template>
   <section
     class="visbeat-confirm"

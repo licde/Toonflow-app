@@ -53,6 +53,7 @@ BP L0 → SB charCodes/type → EN subject → MD-IMG imagePrompt
 | asset_cref | AS |
 | still_firstframe_dirty | SB → MD-IMG |
 | qp02_visual_short | SB |
+| lit_detail_contact / lit_detail_anchor / lit_detail_expr | SB（补落点/部位，禁只 regen） |
 | cref 无法解析 | EN → BP |
 | identity 与 VID/AUD 冲突 | EN 全模态重 compile |
 | PURE 词缺失 | EN 前置 negative |

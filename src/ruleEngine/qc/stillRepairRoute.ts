@@ -16,6 +16,9 @@ export interface StillRepairDecision {
   swapLayoutTemplate: boolean;
   layoutPreserveEdit: boolean;
   settingsDeepLink?: string;
+  /** When design debt open — FE LitDetailDebtBar chips */
+  missingSlots?: string[];
+  irdPrimaryAction?: string;
 }
 
 const LAYOUT_KINDS = new Set(["seating", "composition", "forbidden"]);
@@ -35,6 +38,8 @@ export function routeStillRepair(input: {
   /** Design framing — CU×cast 走智能拆而非换布局假愈 */
   shotSize?: string | null;
   literaryPrompt?: string | null;
+  /** Prefer pure VD for lit debt audit (not full compose prompt) */
+  visualDescription?: string | null;
   castNames?: string[] | null;
 }): StillRepairDecision {
   if (input.missingCref) {
@@ -88,12 +93,60 @@ export function routeStillRepair(input: {
   }
 
   const failed = (input.itemResults ?? []).filter((i) => !i.pass);
-  if (!failed.length) {
+  if (!failed.length && !input.exhausted) {
     return {
       route: "none",
       nextStep: "burn",
       ctaLabel: "继续",
       userMessage: "",
+      preserveLayout: false,
+      swapLayoutTemplate: false,
+      layoutPreserveEdit: false,
+    };
+  }
+
+  // Literary design debt (on weak/exhausted path) → hand_edit VD, never sole regen
+  const vdForLit = String(input.visualDescription ?? "").trim() || String(input.literaryPrompt ?? "").trim();
+  if (vdForLit.length >= 8 && (failed.length > 0 || input.exhausted)) {
+    try {
+      const { auditLiteraryDetailQuality } =
+        require("../compilers/stillLiteraryDetailQuality") as typeof import("../compilers/stillLiteraryDetailQuality");
+      const { irdCtaLabelFromAction } =
+        require("../design/stillIntentReverse") as typeof import("../design/stillIntentReverse");
+      const lit = auditLiteraryDetailQuality({
+        visualDescription: vdForLit,
+        shotSize: String(input.shotSize ?? ""),
+      });
+      const litBlocks = lit.findings.filter((f) => f.severity === "BLOCK");
+      if (litBlocks.length) {
+        const missingSlots = [
+          ...new Set(litBlocks.flatMap((f) => f.missingSlots ?? f.missing ?? []).map((s) => String(s)).filter(Boolean)),
+        ];
+        return {
+          route: "human",
+          nextStep: "chat_repair",
+          ctaLabel: irdCtaLabelFromAction({ primaryAction: "hand_edit_vd", missingSlots }),
+          userMessage: missingSlots.length
+            ? `文学细节契约未过（缺 ${missingSlots.join("/")}）；请手改 VD，禁止只 regen；弱图不可作视频首帧`
+            : "文学细节契约未过；请手改 VD，禁止只 regen；弱图不可作视频首帧",
+          preserveLayout: false,
+          swapLayoutTemplate: false,
+          layoutPreserveEdit: false,
+          missingSlots: missingSlots.length ? missingSlots : undefined,
+          irdPrimaryAction: "hand_edit_vd",
+        };
+      }
+    } catch {
+      /* optional */
+    }
+  }
+
+  if (!failed.length) {
+    return {
+      route: "human",
+      nextStep: "split_shot",
+      ctaLabel: "回设计智能拆镜",
+      userMessage: "静帧修复预算耗尽；请回 SB 智能拆镜或改描写，禁止无限 regen；弱图不可作视频首帧",
       preserveLayout: false,
       swapLayoutTemplate: false,
       layoutPreserveEdit: false,
@@ -107,6 +160,11 @@ export function routeStillRepair(input: {
   for (const f of failed) {
     const kind = byId.get(f.id)?.kind;
     const id = f.id || "";
+    // contact/primary_look have dedicated CTA — don't let composition kind drown them into layout swap
+    if (/contact_geom|contact:|primary_look/i.test(id)) {
+      identityHits++;
+      continue;
+    }
     if (kind && LAYOUT_KINDS.has(kind)) layoutHits++;
     else if (kind && IDENTITY_KINDS.has(kind)) identityHits++;
     else if (kind && BG_KINDS.has(kind)) bgHits++;
@@ -119,16 +177,22 @@ export function routeStillRepair(input: {
   // Background fails only matter when keep policy
   if (input.bgPolicy && input.bgPolicy !== "keep") bgHits = 0;
 
-  if (layoutHits >= identityHits && layoutHits > 0) {
-    return {
-      route: "layout",
-      nextStep: "regen_storyboard_hq",
-      ctaLabel: "换布局重抽",
-      userMessage: "构图/座次未达标，将换布局底图重抽（不堆文学硬约束）",
-      preserveLayout: false,
-      swapLayoutTemplate: true,
-      layoutPreserveEdit: false,
-    };
+  // Action/fight family=none — never lock bad still as layout_preserve
+  let actionNoLayout = false;
+  try {
+    const { selectLayoutFamily } =
+      require("./stillCompositionSpec") as typeof import("./stillCompositionSpec");
+    const fam = selectLayoutFamily({
+      visualDescription: input.visualDescription ?? input.literaryPrompt,
+      shotSize: input.shotSize,
+      characterCount: (input.castNames ?? []).length || undefined,
+    });
+    actionNoLayout =
+      fam.reason === "action_primary_no_layout" || fam.reason === "fight_action_no_layout";
+  } catch {
+    actionNoLayout = /动作主体|弯腰|捡|扑|撕|对打|武打/.test(
+      String(input.visualDescription ?? input.literaryPrompt ?? ""),
+    );
   }
 
   // Cast overcrowd / seat missing → never lock bad still as layout anchor
@@ -155,22 +219,6 @@ export function routeStillRepair(input: {
       `${f.id}${f.fixHint ?? ""}${(f as { evidence?: string }).evidence ?? ""}`,
     ),
   );
-
-  // Action/fight family=none — never lock bad still as layout_preserve
-  let actionNoLayout = false;
-  try {
-    const { selectLayoutFamily } =
-      require("./stillCompositionSpec") as typeof import("./stillCompositionSpec");
-    const fam = selectLayoutFamily({
-      visualDescription: input.literaryPrompt,
-      shotSize: input.shotSize,
-      characterCount: (input.castNames ?? []).length || undefined,
-    });
-    actionNoLayout =
-      fam.reason === "action_primary_no_layout" || fam.reason === "fight_action_no_layout";
-  } catch {
-    actionNoLayout = /动作主体|弯腰|捡|扑|撕|对打|武打/.test(String(input.literaryPrompt ?? ""));
-  }
 
   if (input.exhausted === true) {
     return {
@@ -216,6 +264,35 @@ export function routeStillRepair(input: {
       userMessage: seatFail
         ? "座次/家具未达标，禁止保构图锁死无座图；将换布局或不带布局重烧；弱图不可作视频首帧"
         : "出镜人数不符，禁止保构图锁死超员图；将换布局或不带布局重烧；弱图不可作视频首帧",
+      preserveLayout: false,
+      swapLayoutTemplate: true,
+      layoutPreserveEdit: false,
+    };
+  }
+
+  // Declared contact geometry / primary look — Edit heal, not layout swap
+  const geomFail = failed.some((f) => /contact_geom|contact:/i.test(f.id || ""));
+  const lookFail = failed.some((f) => /primary_look/i.test(f.id || ""));
+  if (geomFail || lookFail) {
+    return {
+      route: "identity",
+      nextStep: "regen_storyboard_hq",
+      ctaLabel: geomFail ? "修接触几何" : "修主look",
+      userMessage: geomFail
+        ? "接触几何未贴合声明落点；将按 Edit 焦点修贴合/划过，禁止悬空；弱图不可作视频首帧"
+        : "主look 未对齐 VD 主角定妆；将按主look 修衣装色系，禁止混用；弱图不可作视频首帧",
+      preserveLayout: !actionNoLayout,
+      swapLayoutTemplate: actionNoLayout,
+      layoutPreserveEdit: !actionNoLayout,
+    };
+  }
+
+  if (layoutHits >= identityHits && layoutHits > 0) {
+    return {
+      route: "layout",
+      nextStep: "regen_storyboard_hq",
+      ctaLabel: "换布局重抽",
+      userMessage: "构图/座次未达标，将换布局底图重抽（不堆文学硬约束）",
       preserveLayout: false,
       swapLayoutTemplate: true,
       layoutPreserveEdit: false,

@@ -61,6 +61,10 @@
       "DEX-STILL-CU-CAST",
       "DEX-STILL-OS-NAME",
       "DEX-STILL-FILLER",
+      "DEX-LIT-CONTACT",
+      "DEX-LIT-ANCHOR",
+      "DEX-LIT-EXPR",
+      "DEX-PROP-CONT",
       "DEX-QP-02",
       "DEX-CAST-ON-DESC",
       "DEX-EMPTY-SHOT-CONSISTENCY",
@@ -85,6 +89,10 @@
       "DEX-STILL-CU-CAST",
       "DEX-STILL-OS-NAME",
       "DEX-STILL-FILLER",
+      "DEX-LIT-CONTACT",
+      "DEX-LIT-ANCHOR",
+      "DEX-LIT-EXPR",
+      "DEX-PROP-CONT",
       "DEX-QP-02",
       "DEX-CAST-ON-DESC",
       "DEX-EMPTY-SHOT-CONSISTENCY",
@@ -108,6 +116,10 @@
       "DEX-STILL-CU-CAST",
       "DEX-STILL-OS-NAME",
       "DEX-STILL-FILLER",
+      "DEX-LIT-CONTACT",
+      "DEX-LIT-ANCHOR",
+      "DEX-LIT-EXPR",
+      "DEX-PROP-CONT",
       "DEX-QP-02",
       "DEX-CAST-ON-DESC",
       "DEX-EMPTY-SHOT-CONSISTENCY",
@@ -354,6 +366,22 @@
       "severity": "BLOCK",
       "message": "禁对白瞬间神态等无画面填料进 visualDescription；导入 soft demote"
     },
+    "DEX-LIT-CONTACT": {
+      "severity": "BLOCK",
+      "message": "脸部/特写道具或微创/撕拭须声明接触落点（颊/唇等）；declare-only，禁 regen 顶替改 VD；导入 WARN"
+    },
+    "DEX-LIT-ANCHOR": {
+      "severity": "BLOCK",
+      "message": "捡拾/持握/递接/抛落须声明空间或手部落点；朝向词≠锚点；缺锚则静帧漂移；禁发明；导入 WARN"
+    },
+    "DEX-LIT-EXPR": {
+      "severity": "WARN",
+      "message": "特写强表情须落到眉/眼/唇等部位；禁空泛情绪词导致脸部漂移；手改 VD"
+    },
+    "DEX-PROP-CONT": {
+      "severity": "BLOCK",
+      "message": "邻镜道具连续性：消失/瞬变/空降须交待；CUT-01 只管场景色温；导入 soft demote；禁发明道具改 VD"
+    },
     "DEX-QP-02": {
       "severity": "BLOCK",
       "message": "visualDescription 须可拍：非空、≥minChars 底线、禁抽象无物象；与 export QP-02 同核"
@@ -372,7 +400,7 @@
     },
     "DEX-CUT-01": {
       "severity": "WARN",
-      "message": "邻镜场景/色温/道具硬切突变（与 export CUT-01 同核）"
+      "message": "邻镜场景/色温硬切突变（道具交 DEX-PROP-CONT；与 export CUT-01 同核）"
     },
     "DEX-CAM-XSHOT": {
       "severity": "WARN",

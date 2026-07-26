@@ -307,16 +307,104 @@ export function buildLiteraryFidelityChecklist(input: {
     }
   }
 
+  // Declared contact loci must survive (declare-only — no invent)
+  try {
+    const { extractDeclaredContactLoci, extractDeclaredSpatialAnchors } =
+      require("./stillLiteraryDetailQuality") as typeof import("./stillLiteraryDetailQuality");
+    const {
+      STILL_CONTACT_GEOM_VLM_TEMPLATE,
+      STILL_CONTACT_GEOM_HEAL_TEMPLATE,
+      STILL_PRIMARY_LOOK_VLM_TEMPLATE,
+      STILL_PRIMARY_LOOK_HEAL_TEMPLATE,
+      pickVdLiteraryPrimary,
+    } = require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+
+    for (const locus of extractDeclaredContactLoci(desc)) {
+      const id = `contact:${locus}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const geomTouch = /划过|贴|压在|抵在/.test(desc) && desc.includes(locus);
+      items.push({
+        id,
+        kind: "composition",
+        mustTokens: [locus],
+        vlmQuestion: geomTouch
+          ? STILL_CONTACT_GEOM_VLM_TEMPLATE.replace(/\{LOCUS\}/g, locus)
+          : `图中道具/动作接触落点是否清晰可见「${locus}」？`,
+        healInject: geomTouch
+          ? STILL_CONTACT_GEOM_HEAL_TEMPLATE.replace(/\{LOCUS\}/g, locus)
+          : `接触落点必须落在${locus}，禁止悬浮漂移`,
+        strengthenKey: keys.composition ?? "composition",
+        strengthenValue: locus,
+      });
+      if (geomTouch) {
+        const gid = `contact_geom:${locus}`;
+        if (!seen.has(gid)) {
+          seen.add(gid);
+          items.push({
+            id: gid,
+            kind: "composition",
+            mustTokens: [],
+            vlmQuestion: STILL_CONTACT_GEOM_VLM_TEMPLATE.replace(/\{LOCUS\}/g, locus),
+            healInject: STILL_CONTACT_GEOM_HEAL_TEMPLATE.replace(/\{LOCUS\}/g, locus),
+            strengthenKey: keys.composition ?? "composition",
+            strengthenValue: `geom_${locus}`,
+          });
+        }
+      }
+    }
+    for (const anchor of extractDeclaredSpatialAnchors(desc)) {
+      const id = `spatialAnchor:${anchor}`;
+      if (seen.has(id) || seen.has(`contact:${anchor}`)) continue;
+      seen.add(id);
+      items.push({
+        id,
+        kind: "composition",
+        mustTokens: [anchor],
+        vlmQuestion: `图中空间/握持/承写落点是否清晰可见「${anchor}」？`,
+        healInject: `空间落点必须落在${anchor}，禁止无方位漂移`,
+        strengthenKey: keys.composition ?? "composition",
+        strengthenValue: anchor,
+      });
+    }
+
+    // Primary look VLM when multi-cast + VD primary (homology lookLock)
+    const primary = pickVdLiteraryPrimary(desc, input.characterNames ?? null);
+    const multiCast = (input.characterNames ?? []).filter((n) => String(n ?? "").trim().length >= 2).length >= 2;
+    if (primary && multiCast && !seen.has("identity:primary_look")) {
+      seen.add("identity:primary_look");
+      items.push({
+        id: "identity:primary_look",
+        kind: "identity",
+        mustTokens: [],
+        vlmQuestion: STILL_PRIMARY_LOOK_VLM_TEMPLATE.replace(/\{NAME\}/g, primary),
+        healInject: STILL_PRIMARY_LOOK_HEAL_TEMPLATE.replace(/\{NAME\}/g, primary),
+        strengthenKey: keys.identity ?? "crefWeight",
+        strengthenValue: "primary_look",
+      });
+    }
+  } catch {
+    /* optional */
+  }
+
   // Single cinematic frame — VLM-only (empty mustTokens ⇒ L0 skip); detect sheet/panel leak
   if (!seen.has("identity:single_frame")) {
     seen.add("identity:single_frame");
+    let singleHeal = "单镜头成片，禁四视图/拼版。";
+    try {
+      const { STILL_SINGLE_FRAME_LOCK_EDIT_ZH } =
+        require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      singleHeal = STILL_SINGLE_FRAME_LOCK_EDIT_ZH;
+    } catch {
+      /* keep short */
+    }
     items.push({
       id: "identity:single_frame",
       kind: "composition",
       mustTokens: [],
       vlmQuestion:
         "画面是否为单一电影镜头画幅（非四视图/定妆拼版/多宫格/character turnaround sheet）？",
-      healInject: "单镜头成片画幅，禁止四视图、定妆拼版、多格参考墙",
+      healInject: singleHeal,
       strengthenKey: "compositionLock",
       strengthenValue: "single_frame",
     });

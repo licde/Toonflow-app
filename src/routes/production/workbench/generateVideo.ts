@@ -576,6 +576,9 @@ export default router.post(
             hasStillFile: Boolean(resolvedStillPath),
             vlmInfraGap: vlmInfra,
             resolveSource: resolved.resolveSource,
+            irdPrimaryAction: detect.irdPrimaryAction,
+            missingSlots: detect.missingSlots,
+            ctaLabel: detect.ctaLabel ?? (detect.irdPrimaryAction === "hand_edit_vd" ? "手改VD" : undefined),
           }),
         );
       }

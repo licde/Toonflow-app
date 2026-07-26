@@ -156,6 +156,8 @@
     "test:design-hard-import-soft": "tsx scripts/test-design-hard-import-soft.ts",
     "test:dirty-hand-compose": "tsx scripts/test-dirty-hand-compose.ts",
     "test:literary-intent-survive": "tsx scripts/test-literary-intent-survive.ts",
+    "test:literary-detail-quality": "tsx scripts/test-literary-detail-quality.ts",
+    "test:still-cheek-contact-chain": "tsx scripts/test-still-cheek-contact-chain.ts",
     "test:intent-fullchain": "tsx scripts/test-intent-fullchain.ts",
     "test:still-burn-resolve": "tsx scripts/test-still-burn-resolve.ts",
     "test:video-prompt-cross-shot": "tsx scripts/test-video-prompt-cross-shot.ts",

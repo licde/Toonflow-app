@@ -61,15 +61,15 @@ rulePackVersion: "2.1.0"
 - **导入**：已有 `preDesignPack.shots` 时默认 **diagnose-only**（禁 IRD/cam/oneBeat 静默再拆 16→170）；`forceExpand` 才 apply；dryRun 须展示 **postHeal 镜数**（作者→愈后）与**非法同文占比**
 - **一镜一画面（语义强制）**：连续≥3 归一化同文 VD（**有对白也算**）→ `DEX-DUP-VD` BLOCK；禁止「同文口型复用」当设计；超 vendor/多句 → Confirm 语义拆（子镜须景别/运镜/`intent.picture` 相对父镜可区分）或改短，**禁止**指望导入静默拆成同文 N 镜
 - **DEX-DUP-VD / DEX-DIRTY-STILL-PROMPT / DEX-HAND-LIP**：同文连镜、手+眼同帧、文学体裸 `--cref CHAR`/`--sref SCENE`、手镜 lip≠none → BLOCK；composed prompt **尾** IR 码除外
-- **配方智能适配（≠改设计）**：分镜 VD/景别/intent 是 SSOT；compose 按镜型适配（手 CU **仅**显式手部特写；座次/中景/权力反差 **压过** 摩挲扳指动作，禁手CU禁出脸对撞）；**特写×出镜≥2**：VD 只点名一人 → **降出场人数+裁主角 cref**（禁拆镜 Confirm）；VD 多人同框意图 → `still_cu_cast` 智能拆；成稿泄漏「仅N人」同核；禁【Edit焦点】文学洗绿；文学意图原子（端坐太师椅/抄书等）须在 compose/首烧/Edit 存活；**禁止**把配方句回写 `visualDescription`。真脏手+脸 → Chat BLOCK + VisBeat Confirm 拆；导入与设计 **同核智能拆/降人数**（非仅软过）；残留才 `importOk≠designExitPass` / Confirm，禁静默同文拆手脸
+- **配方智能适配（≠改设计）**：分镜 VD/景别/intent 是 SSOT；compose 按镜型适配（手 CU **仅**显式手部特写；座次/中景/权力反差 **压过** 摩挲扳指动作，禁手CU禁出脸对撞）；**特写×出镜≥2**：VD 只点名一人 → **降出场人数+裁主角 cref**（禁拆镜 Confirm）；VD 多人同框意图 → `still_cu_cast` 智能拆；成稿泄漏「仅N人」同核；禁【Edit焦点】文学洗绿；Edit 反拼版用短锁（`*_EDIT_ZH`），接触几何/主look优先于拼版句；文学意图原子（端坐太师椅/抄书等）须在 compose/首烧/Edit 存活；**禁止**把配方句回写 `visualDescription`。真脏手+脸 → Chat BLOCK + VisBeat Confirm 拆；导入与设计 **同核智能拆/降人数**（非仅软过）；残留才 `importOk≠designExitPass` / Confirm，禁静默同文拆手脸
 - **PROMPT-FIDELITY / 文学存活**：HQ 座次镜缺抄书/太师椅等 → 不过绿；Edit 焦点只追加，禁掏空文学基底
 - **`importOk≠designExitPass`**：导入可进仓 ≠ 设计闭合；禁止只改 `modalityPromptAudit` / `narrativeSelfcheck.passed`
 - composeStillPromptPreview `persist:true` 写库用 `result.composeMode`（禁裸变量 `mode` → `mode is not defined`）
 - VLM 缺 Key：图已出、HQ 未过（≠ preview HTTP 400）
 - DC-01（缺覆盖）、**DC-01-EXTRA（乱入）**；时长噪点如「：3s」属伪台词，导入会剥离，勿当文学台词修
 - **RA×CAM 双轨**：`emotion_hit` 的 RA 写在 **dialoguePlan**；镜侧权威=说话镜+反应镜；禁单镜 onCam+RA
-- **质量同核（BLOCK）**：DEX-QP-02、DEX-CAST-ON-DESC、DEX-EMPTY-SHOT-CONSISTENCY、DEX-EXPR-SPEAK、**DEX-ASSET-CREF**、**DEX-SHOT-INTENT**
-- 出站前 L2 `healShotQuality`（CAST/EMPTY 可置信则愈）；愈后 `cascadeForwardStale`；chatStrict 仅 propose
+- **质量同核（BLOCK）**：DEX-QP-02、DEX-LIT-CONTACT、DEX-LIT-ANCHOR、DEX-PROP-CONT、DEX-CAST-ON-DESC、DEX-EMPTY-SHOT-CONSISTENCY、DEX-EXPR-SPEAK、**DEX-ASSET-CREF**、**DEX-SHOT-INTENT**
+- **文学细节**：缺接触/空间落点 → `hand_edit_vd`（stillIntentOps）；导入 WARN、SB BLOCK；禁 compose 发明落点
 - **残句**：A 拆后仍 NAR-14 → 须重设计/显式 splitHint/`Confirm B`；导入 ingest **禁**静默 residual B / 同文唇拆（标 `lipConfirmRequired`）
 - 拆行后须 `confirm_design_split` / Orchestrator（mirror+补缺 lineId），禁止只写 hint
 - VisBeat 与 Orchestrator：先 expanders，再 clause-split，再残句 B（禁双拆打架）
@@ -157,7 +157,36 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 
 | 字段 | 说明 |
 |------|------|
-| visualDescription | 画面主体与动作（供 EN subject / MD-IMG）；**一镜一拍、裸名** |
+| visualDescription | 画面主体与动作（供 EN subject / MD-IMG）；**一镜一拍、裸名**；须可拍五元组（见下） |
+
+### 可拍原子（DEX-LIT-CONTACT / DEX-LIT-ANCHOR / DEX-LIT-EXPR）
+
+大体构图够但描写稀疏 → 静帧漂移。VD 尽量声明：
+
+1. **who** 主体裸名  
+2. **action** 已声明动词（禁运行时发明）  
+3. **prop** 关键道具  
+4. **contactLocus** 接触落点（颊/唇/指尖…）— 脸特写+道具、渗血/咬唇、拭泪必备  
+5. **spatialOrGrip / groundLocus** 握持或地面锚（手持/地上/脚边…）— 捡拾/持握/递接/抛落必备  
+
+**朝向 ≠ 锚点**：`侧脸/正面` 不能顶替 `地上/脚边`（防捡书假绿）。
+
+| 衍生类 | 缺什么会漂 | 闸 |
+|--------|------------|-----|
+| 脸特写+道具 | 接触落点/接触动词 | DEX-LIT-CONTACT |
+| 捡拾/俯身 | 地面/脚边/手触 | DEX-LIT-ANCHOR |
+| 递接/抛落 | 交接或落点 | DEX-LIT-ANCHOR |
+| 微创/撕拭 | 部位或道具对象 | DEX-LIT-CONTACT |
+| 特写强表情 | 眉/眼/唇 | DEX-LIT-EXPR (WARN) |
+| 泼洒倾倒 | 脸上/身上/地上等承受点 | DEX-LIT-ANCHOR |
+| 抱拽按掐 | 腕/袖/肩/喉等接触 | DEX-LIT-CONTACT |
+| 书写/抄书 | 案上/纸上或笔纸物象 | DEX-LIT-ANCHOR (WARN) |
+| 推门/开门 | 门边/门外/门口 | DEX-LIT-ANCHOR (WARN) |
+| 邻镜道具链 | 消失/瞬变/空降须交待 | DEX-PROP-CONT |
+| 多定妆参考 | 服饰混色 | compose `primaryLookLock`（点名主 look）；VD 勿混写他角色衣装 |
+
+**结构优先**：句式落点（划过X / 从Y / 手持…）为主闸，词表仅 boost。缺槽 → IRD `hand_edit_vd`；可选 `stillIntentOps.suggestFill/applyFill`（flag+Confirm+复检）。  
+**禁只 regen 顶替改 VD**。
 
 ## 执行步骤
 

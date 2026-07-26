@@ -152,7 +152,7 @@
     }
   ],
   "autoAdaptBlockIds": ["DFW-DURATION", "MOD-03", "MOD-IMG-M1", "MOD-VID-M1", "DG-SCENE-KEY", "CAM-SPEAK", "DEX-CAM-FIT"],
-  "mustEditBlockIds": ["DEX-LITERARY-STALE", "NAR-15", "DC-16", "DG-CD-COVERAGE", "DG-FALSE-GREEN-FX", "DG-NAR-SELFCHECK", "DEX-VIS-TAG-MISSING", "DEX-VIS-TAG-INCONSISTENT", "DEX-VIS-SPLIT", "LIP-01", "DEX-LIP-SPLIT", "FX-GRADE-01", "DEX-CAST-ON-DESC", "DEX-EMPTY-SHOT-CONSISTENCY", "DEX-EXPR-SPEAK", "DEX-QP-02", "DEX-STILL-ONEBEAT", "DEX-STILL-CU-CAST", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER", "VIS-MULTI-BEAT", "NO-LIP-DIALOGUE", "DESIGN-LOSS", "DUR-DESYNC", "PROMPT-FIDELITY", "DC-01-EXTRA", "CHAIN-BEAT", "CHAT-AUD-01", "IMPORT-SPLIT-SYNC", "AUD-ORPHAN-SPEECH", "DEX-INTENT-PIC", "IRD-CONFIRM", "DEX-DUP-VD", "DEX-DIRTY-STILL-PROMPT", "DEX-HAND-LIP"],
+  "mustEditBlockIds": ["DEX-LITERARY-STALE", "NAR-15", "DC-16", "DG-CD-COVERAGE", "DG-FALSE-GREEN-FX", "DG-NAR-SELFCHECK", "DEX-VIS-TAG-MISSING", "DEX-VIS-TAG-INCONSISTENT", "DEX-VIS-SPLIT", "LIP-01", "DEX-LIP-SPLIT", "FX-GRADE-01", "DEX-CAST-ON-DESC", "DEX-EMPTY-SHOT-CONSISTENCY", "DEX-EXPR-SPEAK", "DEX-QP-02", "DEX-STILL-ONEBEAT", "DEX-STILL-CU-CAST", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER", "DEX-LIT-CONTACT", "DEX-LIT-ANCHOR", "DEX-PROP-CONT", "VIS-MULTI-BEAT", "NO-LIP-DIALOGUE", "DESIGN-LOSS", "DUR-DESYNC", "PROMPT-FIDELITY", "DC-01-EXTRA", "CHAIN-BEAT", "CHAT-AUD-01", "IMPORT-SPLIT-SYNC", "AUD-ORPHAN-SPEECH", "DEX-INTENT-PIC", "IRD-CONFIRM", "DEX-DUP-VD", "DEX-DIRTY-STILL-PROMPT", "DEX-HAND-LIP"],
   "mustEditBlockIdsNote": "Chat/设计须重设计过检（不过绿）。导入：见 importSalvageRegistry.demoteAfterHeal — 智能愈后残留 soft 不硬拦；importOk≠designExitPass。DEX-DUP-VD/QP-02 仍禁 demote。",
   "importSalvageRegistry": [
     {
@@ -309,6 +309,38 @@
       "healClass": "confirm_only",
       "importHeal": "none",
       "demoteAfterHeal": false
+    },
+    {
+      "ruleId": "DEX-LIT-CONTACT",
+      "chatBlock": true,
+      "healClass": "diagnose_only",
+      "importHeal": "ird_diagnose",
+      "demoteAfterHeal": true,
+      "notes": "Chat BLOCK 结构槽接触；导入 diagnose+demote；禁发明落点写 VD"
+    },
+    {
+      "ruleId": "DEX-LIT-ANCHOR",
+      "chatBlock": true,
+      "healClass": "diagnose_only",
+      "importHeal": "ird_diagnose",
+      "demoteAfterHeal": true,
+      "notes": "Chat BLOCK 空间锚；导入 demote；禁只 regen"
+    },
+    {
+      "ruleId": "DEX-LIT-EXPR",
+      "chatBlock": false,
+      "healClass": "diagnose_only",
+      "importHeal": "ird_diagnose",
+      "demoteAfterHeal": true,
+      "notes": "WARN 默认；手改 VD"
+    },
+    {
+      "ruleId": "DEX-PROP-CONT",
+      "chatBlock": true,
+      "healClass": "diagnose_only",
+      "importHeal": "ird_diagnose",
+      "demoteAfterHeal": true,
+      "notes": "邻镜道具连续；导入 demote；禁自动改 VD；importOk≠designExitPass"
     }
   ]
 }

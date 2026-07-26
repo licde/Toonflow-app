@@ -248,6 +248,41 @@
       "reverseTarget": "SB",
       "reverseTrigger": "still_firstframe_dirty",
       "note": "导入 soft demote"
+    },
+    {
+      "ruleId": "DEX-LIT-CONTACT",
+      "stages": ["SB", "designBrief", "export"],
+      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "lit_detail_contact",
+      "note": "结构槽接触落点；导入 demoteAfterHeal；禁发明 VD"
+    },
+    {
+      "ruleId": "DEX-LIT-ANCHOR",
+      "stages": ["SB", "designBrief", "export"],
+      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "lit_detail_anchor",
+      "note": "空间/握持锚；导入 demote；禁只 regen"
+    },
+    {
+      "ruleId": "DEX-LIT-EXPR",
+      "stages": ["SB", "designBrief", "export"],
+      "severity": { "SB": "WARN", "designBrief": "WARN", "export": "WARN" },
+      "dualTrack": "should",
+      "reverseTarget": "SB",
+      "reverseTrigger": "lit_detail_expr"
+    },
+    {
+      "ruleId": "DEX-PROP-CONT",
+      "stages": ["SB", "designBrief", "export"],
+      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
+      "dualTrack": "must",
+      "reverseTarget": "SB",
+      "reverseTrigger": "prop_continuity",
+      "note": "邻镜道具连续；CUT-01 只管场景色温；导入 demote；禁自动改 VD"
     }
   ]
 }

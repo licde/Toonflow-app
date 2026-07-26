@@ -361,6 +361,9 @@ export default router.post(
                   code,
                   primaryNextStep: detect.primaryNextStep ?? ff.primaryNextStep ?? "batch_still",
                   userMessage: msg,
+                  irdPrimaryAction: detect.irdPrimaryAction,
+                  missingSlots: detect.missingSlots,
+                  ctaLabel: detect.ctaLabel,
                 }),
               });
               tasks.push({

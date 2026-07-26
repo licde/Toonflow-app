@@ -1147,6 +1147,77 @@ export function runDesignExitGate(
         if (bad) warnings.push("STILL_FILLER:禁对白瞬间神态等无画面填料");
         break;
       }
+      case "DEX-LIT-CONTACT":
+      case "DEX-LIT-ANCHOR":
+      case "DEX-LIT-EXPR": {
+        const { auditLiteraryDetailQuality } =
+          require("../compilers/stillLiteraryDetailQuality") as typeof import("../compilers/stillLiteraryDetailQuality");
+        const shots = preDesignShots(pd);
+        let bad = false;
+        for (const s of shots) {
+          const detail = auditLiteraryDetailQuality({
+            visualDescription: String(s.visualDescription ?? ""),
+            shotSize: String(
+              s.shotSize ?? (s.narrative as { shotSize?: string } | undefined)?.shotSize ?? "",
+            ),
+            spatialRelation: String(
+              (s.narrative as { spatialRelation?: string } | undefined)?.spatialRelation ??
+                (s as { spatialRelation?: string }).spatialRelation ??
+                "",
+            ),
+          });
+          for (const f of detail.findings) {
+            if (f.id !== id) continue;
+            if (f.severity === "BLOCK") {
+              bad = true;
+              warnings.push(`${f.id}:${f.ruleId}:shot${s.shotIndex ?? "?"}`);
+            } else {
+              warnings.push(`${f.id}_WARN:${f.ruleId}:shot${s.shotIndex ?? "?"}`);
+            }
+          }
+        }
+        ok = !bad;
+        break;
+      }
+      case "DEX-PROP-CONT": {
+        const { auditPropContinuity, hydrateShotsPropState } =
+          require("../compilers/propContinuitySsot") as typeof import("../compilers/propContinuitySsot");
+        const intents = (() => {
+          try {
+            const { getShotDesignIntentsFromPlan } =
+              require("./shotDesignIntent") as typeof import("./shotDesignIntent");
+            return getShotDesignIntentsFromPlan(plan as Record<string, unknown>);
+          } catch {
+            return [] as { shotIndex?: number; picture?: string }[];
+          }
+        })();
+        const raw = preDesignShots(pd).map((s) => {
+          const idx = Number(s.shotIndex) || 0;
+          const intent = intents.find((x) => Number(x.shotIndex) === idx);
+          return {
+            shotIndex: idx || undefined,
+            visualDescription: String(s.visualDescription ?? ""),
+            sceneName: String((s as { sceneName?: string }).sceneName ?? (s as { scene?: string }).scene ?? ""),
+            transitionType: String((s as { transitionType?: string }).transitionType ?? ""),
+            propState: String((s as { propState?: string }).propState ?? ""),
+            shotSize: String(s.shotSize ?? ""),
+            intentPicture: intent?.picture ?? null,
+          };
+        });
+        const hydrated = hydrateShotsPropState(raw);
+        const findings = auditPropContinuity(hydrated);
+        let bad = false;
+        for (const f of findings) {
+          if (f.severity === "BLOCK") {
+            bad = true;
+            warnings.push(`${f.id}:${f.ruleId}:shot${f.shotIndex ?? "?"}`);
+          } else {
+            warnings.push(`${f.id}_WARN:${f.ruleId}:shot${f.shotIndex ?? "?"}`);
+          }
+        }
+        ok = !bad;
+        break;
+      }
       case "DEX-QP-02": {
         const { checkQp02 } = require("../quality/shotQualityPredicates") as typeof import("../quality/shotQualityPredicates");
         const shots = preDesignShots(pd);

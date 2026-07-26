@@ -86,7 +86,7 @@ const FALLBACK: StillImageEditConfig = {
     maxCrefRefs: 4,
     includeFailedStill: true,
   },
-  maxFixHints: 8,
+  maxFixHints: 6,
   disableStrengthenStackOnEdit: true,
   vendorRoutes: {
     agnes: "agnes_i2i",
@@ -175,6 +175,8 @@ export function mergeEditReferenceList(input: {
   return out;
 }
 
+const FACING_ONLY_LOCUS = /^(?:侧脸|正面|正脸|背影|侧身|半侧)$/;
+
 /** SSOT Edit focus line — callers must not prepend another 【Edit焦点】. */
 export function buildEditFocusPrompt(input: {
   literaryPrompt: string;
@@ -182,9 +184,10 @@ export function buildEditFocusPrompt(input: {
   config?: StillImageEditConfig;
   layoutPreserve?: boolean;
   visualDescription?: string | null;
+  castNames?: string[] | null;
 }): string {
   const cfg = input.config ?? loadStillImageEditConfig();
-  const max = Math.max(1, cfg.maxFixHints ?? 8);
+  const max = Math.max(1, cfg.maxFixHints ?? 6);
   let lit = String(input.literaryPrompt ?? "").trim();
   lit = lit.replace(/\n?【Edit焦点】[^\n]*/g, "").trim();
   try {
@@ -204,48 +207,135 @@ export function buildEditFocusPrompt(input: {
     lit = [vdCore, hard].filter(Boolean).join("。").replace(/。。+/g, "。").trim();
     if (lit.length > 2000) lit = lit.slice(0, 2000);
   }
+
+  const {
+    STILL_SINGLE_FRAME_LOCK_EDIT_ZH,
+    STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH,
+    STILL_CONTACT_GEOM_HEAL_TEMPLATE,
+    pickVdLiteraryPrimary,
+    STILL_PRIMARY_LOOK_HEAL_TEMPLATE,
+  } = (() => {
+    try {
+      return require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
+    } catch {
+      return {
+        STILL_SINGLE_FRAME_LOCK_EDIT_ZH: "单镜头成片，禁四视图/拼版。",
+        STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH: "四视图仅借身份，禁复刻多格拼版。",
+        STILL_CONTACT_GEOM_HEAL_TEMPLATE: "接触几何：须与{LOCUS}贴合/划过，禁止悬空",
+        pickVdLiteraryPrimary: () => "",
+        STILL_PRIMARY_LOOK_HEAL_TEMPLATE: "本镜主look以「{NAME}」定妆为准",
+      };
+    }
+  })();
+
+  /** Collapse long collage/identity soup → Edit-slim one-liners */
+  const slimHint = (h: string): string | null => {
+    const t = String(h ?? "").trim();
+    if (!t) return null;
+    if (/角色参考若为四视图|严禁复刻多格|character sheet|定妆拼版|分栏头像墙|仅借脸型/.test(t)) {
+      return STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH;
+    }
+    if (/单镜头成片|禁止四视图|turnaround sheet|禁四视图\/拼版|多宫格|拼图多格/.test(t) && (t.length > 20 || /画幅|拼版|turnaround/.test(t))) {
+      return STILL_SINGLE_FRAME_LOCK_EDIT_ZH;
+    }
+    if (/背景弱化|灰棚|纯色摄影棚|background_readable/.test(t) && t.length > 36) {
+      return "禁灰棚：浅景深保留室内可辨（木作/烛光）";
+    }
+    return t;
+  };
+
   const seen = new Set<string>();
-  const hints: string[] = (input.fixHints ?? [])
-    .map((h) =>
-      String(h ?? "")
+  const rawHints: string[] = [];
+  for (const h0 of input.fixHints ?? []) {
+    const h = slimHint(
+      String(h0 ?? "")
         .trim()
         .replace(/抄书书/g, "抄书")
         .replace(/必须必须/g, "必须"),
-    )
-    .filter(Boolean)
-    // Drop full hard-constraint dumps already in literary base
-    .filter((h) => {
-      if (/^场面硬约束/.test(h) && /场面硬约束/.test(lit)) return false;
-      if (hard && h.includes(hard.slice(0, 16))) return false;
-      // Do not re-pour cast cardinality when already present
-      if (/出镜人数|仅\d+人|禁止第\d+人/.test(h) && /出镜人数|仅\d+人/.test(lit)) return false;
-      const key = h.replace(/\s+/g, "").slice(0, 48);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      // Skip if already verbatim in literary body
-      if (h.length >= 8 && lit.includes(h.slice(0, Math.min(24, h.length)))) return false;
-      return true;
-    })
-    .slice(0, max);
-  // Always keep anti-collage + sheet-as-identity on Edit (append if missing)
-  const needSingle = !/单镜头成片|禁止四视图|禁止.*拼图/.test(lit) && !hints.some((h) => /单镜头|四视图|拼图/.test(h));
-  const needSheet =
-    !/仅借脸型|严禁复刻多格|四视图\/定妆拼版/.test(lit) && !hints.some((h) => /仅借脸型|严禁复刻多格/.test(h));
-  try {
-    const { STILL_SINGLE_FRAME_LOCK_ZH, STILL_SHEET_AS_IDENTITY_ONLY_ZH } =
-      require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
-    if (needSingle) hints.push(STILL_SINGLE_FRAME_LOCK_ZH);
-    if (needSheet) hints.push(STILL_SHEET_AS_IDENTITY_ONLY_ZH);
-  } catch {
-    if (needSingle) hints.push("单镜头成片，禁止四视图/多宫格/拼图");
-    if (needSheet) hints.push("参考四视图仅借身份，严禁复刻多格拼版");
+    );
+    if (!h) continue;
+    if (/^场面硬约束/.test(h) && /场面硬约束/.test(lit)) continue;
+    if (hard && h.includes(hard.slice(0, 16))) continue;
+    if (/出镜人数|仅\d+人|禁止第\d+人/.test(h) && /出镜人数|仅\d+人/.test(lit)) continue;
+    const key = h.replace(/\s+/g, "").slice(0, 48);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (h.length >= 8 && lit.includes(h.slice(0, Math.min(24, h.length)))) continue;
+    rawHints.push(h);
   }
+
+  // Prefer pure VD for literary priority (full compose soup confuses locus extract)
+  const vdRaw = String(input.visualDescription ?? "").trim();
+  const vd = vdRaw || lit.split(/场面硬约束|背景弱化|【Edit焦点】|出镜人数/)[0] || lit;
+  const priority: string[] = [];
+  // 1) Contact geometry first — same loci SSOT as checklist/VLM
+  try {
+    const { extractDeclaredContactLoci } =
+      require("../compilers/stillLiteraryDetailQuality") as typeof import("../compilers/stillLiteraryDetailQuality");
+    for (const locus of extractDeclaredContactLoci(vd).slice(0, 2)) {
+      if (!locus || FACING_ONLY_LOCUS.test(locus)) continue;
+      if (rawHints.some((h) => h.includes(locus) && /贴合|划过|接触几何/.test(h))) continue;
+      priority.push(STILL_CONTACT_GEOM_HEAL_TEMPLATE.replace(/\{LOCUS\}/g, locus));
+    }
+  } catch {
+    const touch = vd.match(/(?:划过|贴[在着]?|压[在着]?|抵[在着]?)([\u4e00-\u9fff]{1,3})/);
+    if (touch?.[1] && !FACING_ONLY_LOCUS.test(touch[1]!)) {
+      const geom = STILL_CONTACT_GEOM_HEAL_TEMPLATE.replace(/\{LOCUS\}/g, touch[1]!);
+      if (!rawHints.some((h) => h.includes(touch[1]!) && /贴合|划过|接触几何/.test(h))) {
+        priority.push(geom);
+      }
+    }
+  }
+  // 2) Primary look (VD literary name)
+  const primary = pickVdLiteraryPrimary(vd, input.castNames ?? null);
+  if (primary.length >= 2 && !rawHints.some((h) => /主look/.test(h)) && !/主look/.test(lit)) {
+    priority.push(STILL_PRIMARY_LOOK_HEAL_TEMPLATE.replace(/\{NAME\}/g, primary));
+  }
+  // 3) Grey-void when demote guidance already in prompt (VLM-less still needs Edit knife)
+  if (
+    /背景弱化|禁止灰棚|灰棚\/纯色/.test(lit) &&
+    !rawHints.some((h) => /禁灰棚|灰棚|室内可辨/.test(h)) &&
+    !priority.some((h) => /禁灰棚|灰棚/.test(h))
+  ) {
+    priority.push("禁灰棚：浅景深保留室内可辨（木作/烛光）");
+  }
+
+  const needSingle =
+    !/单镜头成片|禁止四视图|禁止.*拼图|禁四视图/.test(lit) &&
+    !rawHints.some((h) => /单镜头|四视图|拼图|拼版/.test(h));
+  const collageOne =
+    needSingle
+      ? STILL_SINGLE_FRAME_LOCK_EDIT_ZH
+      : (() => {
+          const hit = rawHints.find((h) => /单镜头|四视图|拼版|仅借身份|禁复刻多格/.test(h));
+          return hit ? slimHint(hit) : null;
+        })();
+  // Collage lock stays one slot after literary priority — never drowned by filler hints
+  const otherLit = rawHints.filter((h) => !/单镜头|四视图|拼版|仅借身份|禁复刻多格|character sheet|分栏头像/.test(h));
+  const orderedSrc = [
+    ...priority,
+    ...(collageOne ? [collageOne] : []),
+    ...otherLit,
+  ];
+
+  const dedup: string[] = [];
+  const seen2 = new Set<string>();
+  for (const h of orderedSrc) {
+    const t = String(h ?? "").trim();
+    if (!t) continue;
+    const k = t.replace(/\s+/g, "").slice(0, 40);
+    if (seen2.has(k)) continue;
+    seen2.add(k);
+    dedup.push(t);
+  }
+  const ordered = dedup.slice(0, max);
+
   const focus = input.layoutPreserve
-    ? hints.length
-      ? `【Edit焦点】保构图，仅修正：${hints.join("；")}。禁止改座次/站位；勿重写未点名情节。`
+    ? ordered.length
+      ? `【Edit焦点】保构图，仅修正：${ordered.join("；")}。禁止改座次/站位；勿重写未点名情节。`
       : "【Edit焦点】保构图与座次，仅补身份/道具，禁止改布局。"
-    : hints.length
-      ? `【Edit焦点】仅修正：${hints.join("；")}。保持已正确部分与定妆身份，勿重写未点名的文学情节。`
+    : ordered.length
+      ? `【Edit焦点】仅修正：${ordered.join("；")}。保持已正确部分与定妆身份，勿重写未点名的文学情节。`
       : "【Edit焦点】按清单补全缺失文学保真项，保持定妆身份与已正确构图。";
   return `${lit}\n${focus}`.trim();
 }
@@ -355,6 +445,7 @@ export function prepareStillImageEdit(input: StillImageEditInput): {
       config: cfg,
       layoutPreserve: strategy === "layout_preserve",
       visualDescription: input.visualDescription,
+      castNames,
     });
   }
   let modelUsed = input.model;

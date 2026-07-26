@@ -185,6 +185,10 @@ export interface StillVisualFidelityLoopResult {
   settingsDeepLink?: string;
   /** VLM single_frame / collage fail — persist for burn gate */
   sheetLeak?: boolean;
+  /** When lit debt stops the loop — FE LitDetailDebtBar */
+  repairCtaLabel?: string;
+  repairMissingSlots?: string[];
+  repairIrdPrimaryAction?: string;
 }
 
 export { detectSheetLeakFromVlmItems } from "../compilers/stillFirstFrameLiterarySsot";
@@ -242,26 +246,40 @@ async function finishOnVlmInfra(input: {
   const settingsDeepLink = "/settings/vendor?focus=volcengine&field=apiKey";
 
   if (allowBypass) {
-    // Thin dual lock: anti-collage + sheet-as-identity — no literary healInject soup
-    let singleLock = "单镜头成片画幅，禁止四视图、定妆拼版、多宫格、拼图";
-    let sheetLock = "角色参考若为四视图仅借身份，严禁复刻多格拼版";
+    // Thin intent locks: anti-collage + grey-void + declared contact — no cast soup
+    let singleLock = "单镜头成片，禁四视图/拼版。";
+    let sheetLock = "四视图仅借身份，禁复刻多格拼版。";
+    let bgLock = "禁灰棚：浅景深保留室内可辨（木作/烛光）";
+    let geomLock = "";
     try {
-      const { STILL_SINGLE_FRAME_LOCK_ZH, STILL_SHEET_AS_IDENTITY_ONLY_ZH } =
-        require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
-      singleLock = STILL_SINGLE_FRAME_LOCK_ZH;
-      sheetLock = STILL_SHEET_AS_IDENTITY_ONLY_ZH;
+      const {
+        STILL_SINGLE_FRAME_LOCK_EDIT_ZH,
+        STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH,
+        STILL_CONTACT_GEOM_HEAL_TEMPLATE,
+      } = require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
+      singleLock = STILL_SINGLE_FRAME_LOCK_EDIT_ZH;
+      sheetLock = STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH;
+      const { extractDeclaredContactLoci } =
+        require("../compilers/stillLiteraryDetailQuality") as typeof import("../compilers/stillLiteraryDetailQuality");
+      const locus = extractDeclaredContactLoci(input.hitOnce.promptUsed)[0];
+      if (locus) geomLock = STILL_CONTACT_GEOM_HEAL_TEMPLATE.replace(/\{LOCUS\}/g, locus);
     } catch {
       /* keep short */
     }
     const basePrompt = String(hitOnce.promptUsed ?? "");
     const hints: string[] = [];
-    if (!/单镜头成片|禁止四视图|禁止.*拼图/.test(basePrompt)) hints.push(singleLock);
-    if (!/仅借脸型|严禁复刻多格/.test(basePrompt)) hints.push(sheetLock);
-    fixHintsUsed = hints.length ? hints : [singleLock, sheetLock];
+    if (geomLock) hints.push(geomLock);
+    if (/背景弱化|禁止灰棚|灰棚/.test(basePrompt)) hints.push(bgLock);
+    if (!/单镜头成片|禁四视图/.test(basePrompt)) hints.push(singleLock);
+    if (!/四视图仅借身份|仅借脸型/.test(basePrompt)) hints.push(sheetLock);
+    // Cap thin bypass — never empty first slot, never long sheet soup
+    fixHintsUsed = [...new Set(hints.filter(Boolean))].slice(0, 4);
+    if (!fixHintsUsed.length) fixHintsUsed = [singleLock, bgLock];
     emitHealObs("still_fidelity_vlm_infra_edit_bypass", {
       round: input.round,
       fixHints: fixHintsUsed.length,
       thin: true,
+      hasGeom: Boolean(geomLock),
     });
     try {
       const edited = await input.generateOnce({
@@ -590,11 +608,41 @@ export async function runStillVisualFidelityLoop(input: {
         bgPolicy: input.bgPolicy,
         sheetLeak,
         literaryPrompt: input.description,
+        visualDescription: input.description,
         shotSize: input.shotSize,
         castNames: input.castNames,
       });
       lastRepairRoute = decision.route;
       lastSettingsDeepLink = decision.settingsDeepLink;
+      // Design debt: stop heal loop — FE/chat must hand-edit VD
+      if (decision.nextStep === "chat_repair" && decision.irdPrimaryAction === "hand_edit_vd") {
+        emitHealObs("still_fidelity_stop_lit_debt", {
+          round,
+          missingSlots: decision.missingSlots,
+        });
+        const keep = bestEver ?? { once: picked.once, items: picked.items, passCount: picked.passCount };
+        return {
+          url: keep.once.url,
+          savePath: keep.once.savePath,
+          promptUsed: keep.once.promptUsed,
+          visualPass: false,
+          stillQuality: "weak",
+          itemResults: keep.items,
+          rounds: round + 1,
+          autoHealed: [...autoHealed, "stop_lit_debt"],
+          healBudget: budget,
+          strengthen,
+          stopReason: "converged",
+          fidelityItems: compactFidelityItems(keep.items),
+          bestPassCount: keep.passCount,
+          fixHintsUsed: lastFixHints,
+          parallelM: candCount,
+          sheetLeak: detectSheetLeakFromVlmItems(keep.items),
+          repairCtaLabel: decision.ctaLabel,
+          repairMissingSlots: decision.missingSlots,
+          repairIrdPrimaryAction: decision.irdPrimaryAction,
+        };
+      }
       if (decision.swapLayoutTemplate || sheetLeak) {
         nextSwapLayout = true;
         excludeLayoutId = picked.once.layoutTemplateId;
