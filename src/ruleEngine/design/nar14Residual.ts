@@ -5,56 +5,7 @@
 import { canPhysicalClauseSplit, needsNar14Split, type Nar14LineLike } from "../nar14ClauseSplit";
 import { expandDialogueClusters, type ClusterShot } from "./expandDialogueClusters";
 import { readFixtureJson } from "../utils/fixturesPath";
-
-function mirrorPlanToShotsLocal(
-  planLines: Nar14LineLike[],
-  shots: Record<string, unknown>[],
-): { shots: Record<string, unknown>[]; mirrored: number; appended: number } {
-  // Inline light sync to avoid circular import with splitOrchestrator
-  const byId = new Map<string, Nar14LineLike>();
-  for (const pl of planLines) {
-    if (pl.lineId) byId.set(String(pl.lineId), pl);
-  }
-  let mirrored = 0;
-  let appended = 0;
-  const present = new Set<string>();
-  const nextShots = shots.map((s) => {
-    const n = { ...((s.narrative as object) ?? {}) } as { dialogue?: { lines?: Nar14LineLike[] } };
-    const lines = [...(n.dialogue?.lines ?? [])];
-    for (let i = 0; i < lines.length; i++) {
-      const lid = lines[i]?.lineId ? String(lines[i]!.lineId) : "";
-      if (lid) present.add(lid);
-      const src = lid ? byId.get(lid) : undefined;
-      if (!src) continue;
-      const cur = { ...lines[i]! };
-      if (src.splitHint && !cur.splitHint) {
-        cur.splitHint = src.splitHint;
-        mirrored++;
-      }
-      lines[i] = cur;
-    }
-    n.dialogue = { lines };
-    return { ...s, narrative: n };
-  });
-  const missing = planLines.filter((p) => p.lineId && !present.has(String(p.lineId)));
-  if (missing.length && nextShots.length) {
-    let targetIdx = nextShots.findIndex((s) => {
-      const lines = (s.narrative as { dialogue?: { lines?: unknown[] } })?.dialogue?.lines ?? [];
-      return lines.length > 0;
-    });
-    if (targetIdx < 0) targetIdx = 0;
-    const t = nextShots[targetIdx]!;
-    const n = { ...((t.narrative as object) ?? {}) } as { dialogue?: { lines?: Nar14LineLike[] } };
-    const lines = [...(n.dialogue?.lines ?? [])];
-    for (const m of missing) {
-      lines.push({ ...m });
-      appended++;
-    }
-    n.dialogue = { lines };
-    nextShots[targetIdx] = { ...t, narrative: n };
-  }
-  return { shots: nextShots, mirrored, appended };
-}
+import { mirrorAndSyncPlanToShots } from "./dialogueMirrorSsot";
 
 export type ResidualPath = "must_redesign" | "auto_B" | "cleared" | "none";
 
@@ -234,7 +185,7 @@ export function healNar14ResidualWithB(input: {
     shots,
     hintValue,
   );
-  const sync = mirrorPlanToShotsLocal(bound.planLines, bound.shots);
+  const sync = mirrorAndSyncPlanToShots(bound.planLines, bound.shots);
   const remaining = collectNar14Residuals(bound.planLines);
 
   return {

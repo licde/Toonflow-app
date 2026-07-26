@@ -1,7 +1,12 @@
 /**
  * Default microExpression + lipSyncPolicy from emotion intensity (Performance Field pillar).
  * Does not invent when already authored.
+ * High-intensity speak is must-edit — never auto-default (see still_video_quality_doctrine).
+ * hasDialogue = on-camera only (OS/VO do not force lip).
  */
+import { exprHighIntensityThreshold } from "../quality/loadSvqDoctrine";
+import { hasOnCameraDialogue } from "../design/onCameraDialogue";
+
 export function defaultPerformanceFromEmotion(input: {
   emotionIntensity?: number | string | null;
   hasDialogue?: boolean;
@@ -17,6 +22,10 @@ export function defaultPerformanceFromEmotion(input: {
   }
   const n = Number(input.emotionIntensity);
   const intensity = Number.isFinite(n) ? n : 0;
+  const thr = exprHighIntensityThreshold();
+  if (input.hasDialogue && intensity >= thr) {
+    return { applied: false };
+  }
   if (!input.hasDialogue && intensity < 4) {
     return { applied: false };
   }
@@ -45,7 +54,7 @@ export function ensureShotPerformanceDefaults(shot: {
   };
 }): boolean {
   const lines = shot.narrative?.dialogue?.lines ?? [];
-  const hasDialogue = Array.isArray(lines) && lines.length > 0;
+  const hasDialogue = hasOnCameraDialogue(lines);
   const intensity = shot.emotionIntensity ?? shot.narrative?.emotionIntensity;
   const existingMicro = shot.shotDesign?.performance?.microExpression;
   const existingLip = shot.shotDesign?.lipSyncPolicy;

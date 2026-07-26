@@ -4,6 +4,7 @@
   "rulePackVersion": "2.0.1",
   "bundleType": "script",
   "meta": { "episodeKey": "ep-01", "episodeName": "第1集", "episodeIndex": 1, "provenance": { "source": "external-chat" } },
+  "continuity": { "recapHint": "本集开篇：裴青梧苏醒" },
   "script": "裴青梧传 EP01：苏醒\n\n场1 寝殿 日 内\n人物：裴青梧 婢女\n△烛火摇曳。婢女俯身，轻声唤醒。\n婢女：殿下醒了。\n△裴青梧睁眼，烛火映面，眼神由迷茫转认命。\n裴青梧：我知道。\n△她攥紧被角，指节发白。",
   "planData": {
     "narrativeBrief": {

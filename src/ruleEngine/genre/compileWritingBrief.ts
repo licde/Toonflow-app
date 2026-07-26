@@ -319,7 +319,7 @@ export function compileViralWritingContext(
     agentInjectBlock: "",
     derivations: ders,
     literaryStale: gt.literaryStale,
-    ctaHint: gt.literaryStale ? "公式/故事核已变，请按新 brief 重写本阶段" : "按设计思路补全",
+    ctaHint: gt.literaryStale ? "请按新规范重设计" : "按设计思路补全",
   };
   ctx.agentInjectBlock = buildViralAgentInjectBlock(ctx);
   return ctx;

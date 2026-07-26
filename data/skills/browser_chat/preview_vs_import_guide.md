@@ -36,9 +36,15 @@ version: "2.0.1"
 
 | 层 | 含义 | 示例 |
 |----|------|------|
-| 【须手改 · Chat 契约】 | 导入不会编造 | NAR-15、**NAR-14 残句**、DC-16、SPEAKER-BARE、真缺 F0/散文 |
-| 【导入将自动适配 · 可不手改】 | dryRun/落库会修 | DFW-DURATION、空 prompt 种子、中文 sceneKey、形态 salvage；NAR-14 仅 A 拆净或 **已 B 绑 hint** |
+| 【须手改 · Chat 契约】 | 导入不会编造 | NAR-15、**NAR-14 残句**、DC-16、SPEAKER-BARE、真缺 F0/散文、**DEX-LITERARY-STALE（换公式→重设计）** |
+| 【导入将自动适配 · 可不手改】 | dryRun/落库会修 | 空 prompt 种子、中文 sceneKey、形态 salvage；时长仅历史残留兜底（设计主责已抬）；NAR-14 仅 A 拆净或 **已 B 绑 hint**。超限 LIP / 可抬短镜未抬 ≠ 可不手改 |
 | 【二次修复】 | 改字段后再入编排 | `forwardReentry` / SB setStep heal；残句 fork 见 `nar14_residual` |
+
+**换公式 / DEX-LITERARY-STALE**：短提示「请按新规范重设计」。**入口 W1 → 验收 W3 redesignPass**（NAR-15/intent 等同核后才消债；禁止只点 W1 清 stale）。选项 A 重设计（推荐）；B `acknowledgeKeepLegacy` 保留旧稿补洞。导入默认不消 stale。
+
+**重要：重设计 ≠ 消 NAR-15 / DC**  
+文学重写或换公式后，仍须：每条 `emotion_hit` **同写** `reactionAction`；清乱入（DC-01-EXTRA）；plan `lineId` 落镜（DC-01）；补 `shotDesignIntent` / 定妆 cref。  
+Toast「已自动修复 N」= **形态 salvage**（object→string 等），**不是**契约 BLOCK 已修。阻断时应看 `previewStatusLine` /【设计未闭合】与 `chatRepairText`。
 
 勿把整段 `chatRepairText` 粘在 JSON 前再导入——应只贴纯 JSON；服务器也会剥离清单前缀兜底。
 
@@ -87,7 +93,7 @@ version: "2.0.1"
 | `DG-CD-COVERAGE` | characterDesign 说话人缺失 | 在 `characterDesign.assets` 补充对应角色 |
 | `DG-MODALITY-MISMATCH` | modality 自报不一致 | 修正 `modality` 字段或重跑 modality closure |
 | `SCHEMA_SHAPE_BLOCK` | Zod 形态错误（如 visualEffect object / B12.beats 叙事串） | 改为 canonical；查看 `shapeSalvageLog` / `shapeSalvageSummary`；失败时 `repairHints` 含 RH-B12-BEATS / RH-SPATIAL-OBJ |
-| `LIP-01` | preDesignPack shot 缺 lipSync 字段 | 补充 `generation.lipSync` 或确认无台词场景 |
+| `LIP-01` | 对白镜时长不足 / 多句同镜 / 超 vendor | 可抬→设计侧调 `duration`；超限→Confirm 语义拆。导入 raise 仅兜底；禁止缺 lipSync 误诊 |
 
 ---
 

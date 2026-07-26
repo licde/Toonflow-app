@@ -57,12 +57,18 @@ export default router.post(
     }
 
     migrateEmotionNormIfNeeded(plan);
+    const prevPack = getGenreTemplateFromPlan(plan).packId;
     setGenreTemplateOnPlan(plan, {
       packId: activeProfileId,
       provisional: false,
       markStale: true,
       literaryStale: true,
     });
+    if (prevPack !== activeProfileId) {
+      const { cascadeAfterStoryRecon } =
+        require("@/ruleEngine/design/viralDoctrine") as typeof import("@/ruleEngine/design/viralDoctrine");
+      cascadeAfterStoryRecon(plan, `emotionNorm_switch:${prevPack}->${activeProfileId}`);
+    }
     const emotionNorm = getEmotionNormFromPlan(plan);
 
     let healSummary: Record<string, unknown> | undefined;

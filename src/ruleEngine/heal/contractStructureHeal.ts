@@ -64,7 +64,7 @@ function applyStyleToShot(shot: ClusterShot, profileId: string): { shot: Cluster
     const motion = allowed.some((m) => m.toLowerCase() === want.toLowerCase()) ? want : allowed[1] ?? "static";
     next.motion = motion;
     next.narrative!.shotSize = next.narrative!.shotSize || (beat === "emphasize" ? "大特写" : "特写");
-    next.videoDesc = `${next.narrative!.shotSize} ${motion}, ${next.duration ?? 1}s`;
+    next.videoDesc = `${next.narrative!.shotSize} ${motion}, ${Math.max(2, Number(next.duration) || 2)}s`;
     patch = `${beat}→${motion}`;
     return { shot: next, patch };
   }

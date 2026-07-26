@@ -124,17 +124,30 @@ export async function resolveLayoutForShot(input: {
   config?: StillLayoutControlConfig;
   preferId?: string | null;
   excludeId?: string | null;
+  /** Composition Spec family template id (preferred over verb match) */
+  familyTemplateId?: string | null;
+  /** When false, skip two-stage (insert/empty/ensemble) */
+  forceTwoStage?: boolean | null;
 }): Promise<{
   twoStage: boolean;
   template: StillLayoutTemplateDef | null;
   layoutBase64: string | null;
-  layoutSkipped?: "disabled" | "no_template" | "no_file" | "not_seating";
+  layoutSkipped?: "disabled" | "no_template" | "no_file" | "not_seating" | "stageA_cast_mismatch" | "family_skip";
 }> {
   const cfg = input.config ?? loadStillLayoutControlConfig();
+  if (input.forceTwoStage === false) {
+    return {
+      twoStage: false,
+      template: null,
+      layoutBase64: null,
+      layoutSkipped: "family_skip",
+    };
+  }
+  const seatingHard = input.pack.hasSeatingOrKneel || Boolean(input.familyTemplateId);
   if (
     !shouldRunTwoStageLayout({
       qualityMode: input.qualityMode,
-      seatingHard: input.pack.hasSeatingOrKneel,
+      seatingHard,
       config: cfg,
     })
   ) {
@@ -142,16 +155,23 @@ export async function resolveLayoutForShot(input: {
       twoStage: false,
       template: null,
       layoutBase64: null,
-      layoutSkipped: input.pack.hasSeatingOrKneel ? "disabled" : "not_seating",
+      layoutSkipped: seatingHard ? "disabled" : "not_seating",
     };
   }
-  const template = selectLayoutTemplate({
-    pack: input.pack,
-    characterCount: input.characterCount,
-    config: cfg,
-    preferId: input.preferId,
-    excludeId: input.excludeId,
-  });
+  let template: StillLayoutTemplateDef | null = null;
+  if (input.familyTemplateId) {
+    template =
+      (cfg.templates ?? []).find((t) => t.id === input.familyTemplateId && t.id !== input.excludeId) ?? null;
+  }
+  if (!template) {
+    template = selectLayoutTemplate({
+      pack: input.pack,
+      characterCount: input.characterCount,
+      config: cfg,
+      preferId: input.preferId,
+      excludeId: input.excludeId,
+    });
+  }
   if (!template) {
     return { twoStage: false, template: null, layoutBase64: null, layoutSkipped: "no_template" };
   }
@@ -160,4 +180,58 @@ export async function resolveLayoutForShot(input: {
     return { twoStage: false, template, layoutBase64: null, layoutSkipped: "no_file" };
   }
   return { twoStage: true, template, layoutBase64: stripToRawBase64(layoutBase64) };
+}
+
+/**
+ * Prepend StageA/layout anchor and remap prompt 图N to physical refs.
+ * Shared by generateFlowImageCore + batchGenerateImage.
+ */
+export function applyLayoutAnchorToBurn(input: {
+  vendorPrompt: string;
+  referenceList: { type: "image"; base64: string }[];
+  layoutBase64: string;
+  castNames?: string[];
+  highName?: string | null;
+  lowName?: string | null;
+  orderedCrefCodes?: string[];
+  /** StageA layout is seating-hard by design; default true. */
+  seatingHard?: boolean;
+}): {
+  vendorPrompt: string;
+  referenceList: { type: "image"; base64: string }[];
+} {
+  const {
+    buildPhysicalSlots,
+    remapPromptToPhysicalRefs,
+    alignCrefMetaToBindOrder,
+  } = require("../compilers/stillRefSlotContract") as typeof import("../compilers/stillRefSlotContract");
+  const layoutB64 = input.layoutBase64.replace(/^data:image\/\w+;base64,/, "");
+  const orderedNames = (input.castNames ?? []).filter(Boolean);
+  const seatingHard = input.seatingHard !== false;
+  const aligned = alignCrefMetaToBindOrder({
+    crefs: input.referenceList.map((r, i) => ({
+      base64: r.base64,
+      code: input.orderedCrefCodes?.[i],
+      name: orderedNames[i],
+    })),
+    orderedNames,
+    highName: input.highName,
+    lowName: input.lowName,
+  });
+  const referenceList = [
+    { type: "image" as const, base64: layoutB64 },
+    ...aligned.map((c) => ({ type: "image" as const, base64: c.base64 })),
+  ];
+  const slots = buildPhysicalSlots({
+    layoutBase64: layoutB64,
+    preferLayout: true,
+    crefOrdered: aligned,
+  });
+  const vendorPrompt = remapPromptToPhysicalRefs(input.vendorPrompt, slots, {
+    highName: input.highName ?? orderedNames[0],
+    lowName: input.lowName ?? orderedNames[1],
+    castNames: orderedNames,
+    seatingHard,
+  });
+  return { vendorPrompt, referenceList };
 }

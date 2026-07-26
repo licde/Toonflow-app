@@ -51,16 +51,20 @@ export default router.post(
           keepPath: true,
         }),
       });
+    const weak = hqMeta.stillQuality === "weak";
     res.status(200).send(
       success({
         message: "更新分镜成功",
         stillQuality: hqMeta.stillQuality,
         visualPass: Boolean((hqMeta as { visualPass?: boolean }).visualPass),
-        primaryNextStep: life.primaryNextStep,
-        userMessage:
-          hqMeta.stillQuality === "weak"
-            ? "外源/保留图未经验收，未标高质量；请跑静照文学保真或重新生成"
-            : undefined,
+        // Keep/upload must not wash to "done HQ" — FE must honor these fields
+        primaryNextStep: weak ? "batch_still" : life.primaryNextStep,
+        userMessage: weak
+          ? "外源/保留图未经验收，未标高质量；请跑静照文学保真或重新生成"
+          : primary.userMessage,
+        ctaLabel: weak ? "重新高质量生成" : primary.ctaLabel,
+        keepPath: true,
+        stateHint: weak ? "weak_keep" : "ok",
       }),
     );
   },

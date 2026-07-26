@@ -27,8 +27,10 @@ subject, scene, composition, lighting, style, negative, cref, identity
 
 - V1–V4：type / cref / negative 位置 / --ar
 - CHAR-SCENE 须 `--cref CHAR-CODE`；场景码只进 `--sref`，禁止 `--cref SCENE-*`
-- PURE-SCENE 前 10 词含 `no people, no characters`
+- PURE-SCENE / **空镜**：前缀禁人物正脸；不得与人名/出脸并存（DEX-EMPTY-SHOT）；compose 禁叠「正脸清晰」
+- 有出脸须 CHAR + 定妆真图（设计期可 stub+`assetCrefPlan` 延期；DEX-ASSET-CREF → `asset_cref`）；preview≡generate 同核，预览假绿不代替 generate BLOCK
 - identity 与 BP L0.gender 一致（identityAudit）
+- 保真环失败标 `fidelityFailed` → 禁作视频首帧（`still_firstframe_dirty`）
 
 ## Agnes VendorPack
 
@@ -44,8 +46,13 @@ BP L0 → SB charCodes/type → EN subject → MD-IMG imagePrompt
 
 ## 反推
 
-| 问题 | 目标 |
+| 触发 | 目标 |
 |------|------|
+| empty_shot_conflict | SB |
+| cast_on_desc_missing | SB |
+| asset_cref | AS |
+| still_firstframe_dirty | SB → MD-IMG |
+| qp02_visual_short | SB |
 | cref 无法解析 | EN → BP |
 | identity 与 VID/AUD 冲突 | EN 全模态重 compile |
 | PURE 词缺失 | EN 前置 negative |

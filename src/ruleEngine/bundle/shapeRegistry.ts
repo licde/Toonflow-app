@@ -1,6 +1,7 @@
 import { normalizeCharacterDesignInBundle } from "./normalizeCharacterDesign";
 import { normalizeDeepAdaptationInBundle } from "./normalizeDeepAdaptation";
 import { normalizeDesignBriefInBundle } from "./normalizeDesignBrief";
+import { runFrostShapeSalvage } from "./frostShapeSalvage";
 import type { ShapeSalvageLog } from "./shapeSalvageTypes";
 
 export interface ShapeRegistryEntry {
@@ -30,6 +31,16 @@ export const SHAPE_REGISTRY: ShapeRegistryEntry[] = [
   { id: "SH-AUDIO-CUE-OBJ", description: "audioCue object → string", paths: ["preDesignPack.shots[].audioCue"] },
   { id: "SH-SCENE-KEY-RAW", description: "Chinese sceneColorLock keys logged before normalize rewrite", paths: ["visualLockTable.sceneColorLock"] },
   { id: "SH-CD-SPEAKER-STUB", description: "B6/dialogue speakers → characterDesign minimal stub", paths: ["characterDesign.assets[]"] },
+  { id: "SH-JSON-BRACE", description: "Safe append missing root }", paths: ["$"] },
+  { id: "SH-HOIST-PDP", description: "planData.preDesignPack → top", paths: ["preDesignPack"] },
+  { id: "SH-HOIST-CD", description: "planData.characterDesign → top", paths: ["characterDesign"] },
+  { id: "SH-HOIST-VLT", description: "planData.visualLockTable → top", paths: ["visualLockTable"] },
+  { id: "SH-HOIST-BRIEF", description: "planData.designBrief → top", paths: ["designBrief"] },
+  { id: "SH-HOIST-CONFLICT", description: "top vs nested PDP conflict WARN", paths: ["preDesignPack"] },
+  { id: "SH-SERIES-CONT", description: "seriesContinuity prose string → record", paths: ["planData.narrativeBrief.seriesContinuity"] },
+  { id: "SH-BRIEF-STRING", description: "narrativeBrief JSON/prose string → object", paths: ["planData.narrativeBrief"] },
+  { id: "SH-SCENE-AV-TAGS", description: "sceneAvTags comma string → array + hoist", paths: ["planData.sceneMeta[].sceneAvTags", "planData.sceneAvTags"] },
+  { id: "SH-MICRO-EXPR", description: "named microExpression map → compileable eyes/mouth", paths: ["preDesignPack.shots[].shotDesign.performance.microExpression"] },
 ];
 
 export function getRegisteredShapeIds(): string[] {
@@ -43,4 +54,5 @@ export function runShapeRegistry(bundle: Record<string, unknown>, log: ShapeSalv
   normalizeDeepAdaptationInBundle(bundle);
   normalizeDesignBriefInBundle(bundle, log);
   normalizeCharacterDesignInBundle(bundle, log);
+  runFrostShapeSalvage(bundle, log);
 }

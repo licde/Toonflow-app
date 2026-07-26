@@ -34,14 +34,18 @@ export function buildImageIR(shot: EpisodeShot, config: ResolvedConfig): PromptI
 }
 
 export function buildVideoIR(shot: EpisodeShot, config: ResolvedConfig): PromptIR {
+  // Thin tag soup is no longer a video body author — narrative prefers existing five-section / desc only.
+  const existing =
+    shot.generation.videoPrompt?.trim() ||
+    shot.generation.videoDesc?.trim() ||
+    "";
   const n = shot.narrative;
-  const motion = inferMotion(n.transitionType, n.shotSize);
   return {
     modality: "video",
-    tags: [n.shotSize ?? "medium shot", motion, `${n.duration ?? 3}s`],
-    narrative: shot.generation.videoDesc ?? shot.generation.videoPrompt ?? "",
-    constraints: ["motion-from-frame"],
-    motion,
+    tags: [],
+    narrative: existing,
+    constraints: [],
+    motion: undefined,
     apiParams: { duration: n.duration ?? 3, aspectRatio: config.videoRatio },
   };
 }
@@ -65,13 +69,6 @@ export function buildAudioIR(shot: EpisodeShot, config: ResolvedConfig): PromptI
   };
 }
 
-function inferMotion(transition?: string, shotSize?: string): string {
-  if (transition === "快切") return "fast cut";
-  if (transition === "慢放") return "slow motion";
-  if (/特写|close/i.test(shotSize ?? "")) return "slow push";
-  if (/全景|wide/i.test(shotSize ?? "")) return "static";
-  return "slow pan";
-}
 
 export function irToPrompt(ir: PromptIR): string {
   const parts = [...ir.tags, ir.narrative, ...ir.constraints];
@@ -85,11 +82,57 @@ export function buildFxIR(shot: EpisodeShot): string {
 
 export function compileShot(shot: EpisodeShot, config: ResolvedConfig): EpisodeShot {
   const imageIR = buildImageIR(shot, config);
-  const videoIR = buildVideoIR(shot, config);
   const audioIR = buildAudioIR(shot, config);
   const fx = buildFxIR(shot);
   const image = shot.generation.manualOverride?.image ? (shot.generation.imagePrompt ?? irToPrompt(imageIR)) : irToPrompt(imageIR);
-  const video = shot.generation.manualOverride?.video ? (shot.generation.videoPrompt ?? irToPrompt(videoIR)) : irToPrompt(videoIR);
+
+  let video = shot.generation.videoPrompt ?? shot.generation.videoDesc ?? "";
+  if (!shot.generation.manualOverride?.video) {
+    try {
+      const { compileVideoPromptSpine } = require("./compileVideoPromptSpine") as typeof import("./compileVideoPromptSpine");
+      const { isVideoPromptStub } = require("./sanitizeVideoPrompt") as typeof import("./sanitizeVideoPrompt");
+      const { isVideoPromptThinShell } = require("./assertVideoPromptReady") as typeof import("./assertVideoPromptReady");
+      const needsSpine = !video || isVideoPromptStub(video) || isVideoPromptThinShell(video) || !/\[Visual\]/i.test(video);
+      if (needsSpine) {
+        const dial = shot.narrative?.dialogue?.lines;
+        const lines = Array.isArray(dial)
+          ? dial.map((l) => (typeof l === "string" ? { text: l } : { speaker: l.speaker, text: l.text }))
+          : [];
+        const spine = compileVideoPromptSpine({
+          designShot: {
+            shotIndex: shot.shotIndex,
+            visualDescription: shot.visualDescription,
+            shotSize: shot.narrative?.shotSize,
+            duration: shot.narrative?.duration,
+            sceneName: shot.narrative?.sceneName,
+            narrative: { dialogue: { lines }, debutBeat: (shot.narrative as { debutBeat?: string })?.debutBeat },
+            generation: {
+              videoPrompt: video || undefined,
+              stillIntentClass: (shot.generation as { stillIntentClass?: string }).stillIntentClass,
+            },
+          },
+          forceRebuild: true,
+          includeSidecar: false,
+          vendorId: (config as { vendorId?: string }).vendorId,
+        });
+        if (spine.ready || spine.prompt) {
+          video = spine.prompt;
+          if (spine.generationWriteback?.intentClass) {
+            (shot.generation as { intentClass?: string }).intentClass = spine.generationWriteback.intentClass;
+          }
+        }
+      }
+    } catch {
+      // Fallback: keep existing; never invent medium-shot comma soup
+      if (!video) video = String(shot.visualDescription ?? "").trim();
+    }
+  }
+
+  const vd = String(shot.visualDescription ?? "").trim();
+  const dialLines = shot.narrative?.dialogue?.lines;
+  const hasDial = Array.isArray(dialLines) && dialLines.length > 0;
+  const designGaps = !vd && !hasDial ? ["missing_dialogue_and_vd"] : shot.generation?.designGaps;
+
   const audio = shot.generation.audioPrompt?.trim() || irToPrompt(audioIR);
   const compiled = { image, video, audio, fx: fx || undefined, hash: stableHash({ image, video, audio, fx }) };
   return {
@@ -97,6 +140,8 @@ export function compileShot(shot: EpisodeShot, config: ResolvedConfig): EpisodeS
     generation: {
       ...shot.generation,
       videoDesc: shot.generation.videoDesc ?? video,
+      videoPrompt: video || shot.generation.videoPrompt,
+      designGaps,
       compiled,
     },
   };

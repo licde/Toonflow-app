@@ -174,19 +174,19 @@ export function ensureFiveSections(body: string, narrativeExtra: string): string
     if (!/\[Narrative\]/i.test(next)) next = `${next}\n\n[Narrative]\n${narrativeExtra}`;
     return next;
   }
-  const visual = body.trim() || "subject in scene, speaking or silent. keep face identity, no exaggerated expression.";
+  const visual = body.trim() || "画面主体，锁定脸型身份，禁止夸张改脸。";
   return [
     "[Visual]",
     visual,
     "",
     "[Motion]",
-    "0s-Ns: readable action beats from seed.",
+    "0s-Ns: 可读动作拍点。",
     "",
     "[Camera]",
-    "medium shot, subtle camera, duration Ns, single continuous take.",
+    "中景，轻微运镜，时长 Ns，单次连续镜头。",
     "",
     "[Audio]",
-    "No spoken dialogue. ambient/SFX only.",
+    "无对白。仅环境音效。",
     "",
     "[Narrative]",
     narrativeExtra,

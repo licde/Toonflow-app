@@ -18,11 +18,12 @@ import {
   type HookPlan,
   type PeakLedgerEntry,
 } from "./extractPeakLedger";
-import { exampleIntentsFromPeaks, getShotDesignIntentsFromPlan } from "./shotDesignIntent";
+import { getShotDesignIntentsFromPlan, ensureShotDesignIntentsFromPeaks } from "./shotDesignIntent";
 import { getGenreTemplateFromPlan, loadGenreTemplatePack } from "../genre/loadGenreTemplatePack";
 import { scoreTemplateFill } from "../genre/compileWritingBrief";
 import { runDesignExitGate, type DesignExitResult } from "./designExitGate";
 import { runForwardReentryAfterRepair } from "./designSplitLifecycle";
+import { runDesignAutoClose } from "./designAutoClose";
 
 export type HealDomain = "A_architecture" | "B_av" | "C_transposition" | "D_character" | "E_propulsion" | "reverse" | "F_split_orch";
 
@@ -154,13 +155,17 @@ function healAv(plan: Record<string, unknown>, notes: string[]): void {
 
   const intents = getShotDesignIntentsFromPlan(plan);
   if (!intents.length && fixedPeaks.length) {
-    const pd = asPd(plan);
-    pd.shotDesignIntent = exampleIntentsFromPeaks(fixedPeaks, pack.shotFormula?.shotSizeBias ?? ["近景"], {
-      weaponId: pack.weapons?.[0],
-    });
-    plan.planData = pd;
-    notes.push("B: 从 peak 生成 shotDesignIntent");
-    changed = true;
+    const ens = ensureShotDesignIntentsFromPeaks(plan);
+    if (ens.applied) {
+      notes.push(`B: 从 peak 生成 shotDesignIntent (${ens.reasons.join(",")})`);
+      changed = true;
+    }
+  } else if (intents.length && !validateIntentOk(plan)) {
+    const ens = ensureShotDesignIntentsFromPeaks(plan);
+    if (ens.applied) {
+      notes.push(`B: 补齐残缺 shotDesignIntent (${ens.reasons.join(",")})`);
+      changed = true;
+    }
   }
 
   if (changed) {
@@ -170,6 +175,16 @@ function healAv(plan: Record<string, unknown>, notes: string[]): void {
       rejectedFalsePeaks: [],
       packId: gt.packId,
     });
+  }
+}
+
+function validateIntentOk(plan: Record<string, unknown>): boolean {
+  try {
+    const { validateShotDesignIntents, getShotDesignIntentsFromPlan: get } =
+      require("./shotDesignIntent") as typeof import("./shotDesignIntent");
+    return validateShotDesignIntents(get(plan)).ok;
+  } catch {
+    return false;
   }
 }
 
@@ -276,7 +291,9 @@ function routeFailedIds(failedIds: string[]): HealDomain[] {
   return [...domains];
 }
 
-/** Secondary repair: re-run SplitOrchestrator so plan patches mirror to shots (DC-01/NAR dual-face). */
+/** Secondary repair: re-run SplitOrchestrator so plan patches mirror to shots (DC-01/NAR dual-face).
+ * diagnose-only：禁 VisBeat/lip 语义扩（与 setStepStatus/exportGate 同核）。
+ */
 function healSplitOrchestrator(plan: Record<string, unknown>, notes: string[]): void {
   const pd = asPd(plan);
   const pack = (pd.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ?? { shots: [] };
@@ -287,6 +304,8 @@ function healSplitOrchestrator(plan: Record<string, unknown>, notes: string[]): 
     shots,
     meta: (pd.meta as Record<string, unknown>) ?? {},
     applyClauseSplit: true,
+    applyVisBeatExpanders: false,
+    applySemanticSplit: false,
   });
   Object.assign(pd, re.planData);
   pd.preDesignPack = { ...pack, shots: re.shots };
@@ -323,14 +342,20 @@ export function healViralDesign(
   let exitGate = runDesignExitGate(stageId, plan);
   let rounds = 0;
 
-  // literaryStale: must not pretend success on W*
+  // literaryStale: must not pretend success on W2+
   if (literaryStaleBlocksExit(plan, stageId) && stageId !== "P06") {
-    changeDiff.notes.push("literaryStale：请先回 P06/W1 按新内核重写");
+    const { LITERARY_STALE_USER_MESSAGE } = require("./viralDoctrine") as typeof import("./viralDoctrine");
+    changeDiff.notes.push(LITERARY_STALE_USER_MESSAGE);
     return {
       ok: false,
       rounds: 0,
-      exitGate: { ...exitGate, ok: false, failedIds: [...exitGate.failedIds, "DEX-LITERARY-STALE"], userMessage: "literaryStale 阻断" },
-      rollbackTo: "P06",
+      exitGate: {
+        ...exitGate,
+        ok: false,
+        failedIds: [...exitGate.failedIds, "DEX-LITERARY-STALE"],
+        userMessage: LITERARY_STALE_USER_MESSAGE,
+      },
+      rollbackTo: "W1",
       changeDiff,
       plan,
     };
@@ -338,6 +363,21 @@ export function healViralDesign(
 
   while (!exitGate.ok && rounds < maxRounds) {
     rounds++;
+    // High-confidence auto-close first (placeholder RA / DC mirror / EXTRA noise)
+    const auto = runDesignAutoClose(plan, {
+      stageId,
+      maxRounds: 1,
+      failedIds: exitGate.failedIds,
+    });
+    if (auto.applied) {
+      changeDiff.notes.push(
+        ...auto.changes.map((c) => `autoClose:${c.ruleId}:${c.detail}`),
+        ...(auto.clearedIds.length ? [`autoClose:cleared=${auto.clearedIds.join(",")}`] : []),
+      );
+      exitGate = auto.exitGate;
+      if (exitGate.ok) break;
+    }
+
     const domains = routeFailedIds(exitGate.failedIds);
     changeDiff.domains = [...new Set([...changeDiff.domains, ...domains])];
 

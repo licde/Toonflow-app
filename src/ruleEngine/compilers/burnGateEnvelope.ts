@@ -27,6 +27,7 @@ const BLOCK_TO_TRIGGER: Record<string, string> = {
   "DEX-LIP-SPLIT": "nar14_split",
   "DG-NAR-SELFCHECK": "self_report_mismatch",
   "FALSE_GREEN_SELFCHECK": "self_report_mismatch",
+  "DEX-LITERARY-STALE": "literary_stale",
   "DC-01": "dialogue_hash_mismatch",
   R2: "dialogue_hash_mismatch",
   H3: "dialogue_hash_mismatch",
@@ -40,14 +41,56 @@ const BLOCK_TO_TRIGGER: Record<string, string> = {
   "IMG-CREF": "img_cref_missing",
   "IMG-STILL-QA": "img_still_weak",
   "STILL-FIRSTFRAME-DIRTY": "still_firstframe_dirty",
-  "STILL-FIRSTFRAME-STALE": "still_firstframe_dirty",
-  "DEX-STILL-ONEBEAT": "still_firstframe_dirty",
+  "STILL-FIRSTFRAME-STALE": "still_firstframe_stale",
+  "STILL-FIRSTFRAME-WEAK": "still_firstframe_weak",
+  "STILL-FIRSTFRAME-MISSING": "still_firstframe_weak",
+  "DEX-STILL-ONEBEAT": "still_onebeat_multi",
+  "DEX-STILL-CU-CAST": "still_cu_cast",
   "DEX-STILL-OS-NAME": "still_firstframe_dirty",
   "DEX-STILL-FILLER": "still_firstframe_dirty",
+  "VID-INHERIT-COMPOSITION": "vid_inherit_composition",
+  "VP-XML-ASK-STUB": "video_prompt_stub",
+  "VP-THIN-SHELL": "video_prompt_stub",
+  "VP-CROSS-SHOT-SIDECAR": "video_prompt_stub",
   "QP-02": "qp02_visual_short",
   "CHAT-SB-01": "qp02_visual_short",
   "DEX-QP-02": "qp02_visual_short",
-  "QF-EXPR-01": "qf_expr_face",
+  "DEX-CAST-ON-DESC": "cast_on_desc_missing",
+  "DEX-EMPTY-SHOT-CONSISTENCY": "empty_shot_conflict",
+  "DEX-EXPR-SPEAK": "expr_speak_missing",
+  "DEX-ASSET-CREF": "asset_cref",
+  "DEX-SHOT-INTENT": "shot_intent_decay",
+  "DEX-CUT-01": "cut01_adjacent",
+  "DEX-CAM-XSHOT": "cam_xshot",
+  "CUT-01": "cut01_adjacent",
+  "CAM-XSHOT": "cam_xshot",
+  "GEN-01": "expr_speak_missing",
+  "QF-EXPR-01": "expr_speak_missing",
+  "NO-LIP-DIALOGUE": "no_lip_dialogue",
+  "DESIGN-LOSS": "design_loss",
+  "DESIGN-LOSS-DURATION": "design_loss",
+  "DUR-DESYNC": "dur_desync",
+  "PROMPT-FIDELITY": "prompt_fidelity",
+  "DEX-CAM-FIT": "cam_fit",
+  "DC-01-EXTRA": "dialogue_extra",
+  "CHAIN-BEAT": "chain_beat",
+  "CHAT-AUD-01": "audio_missing",
+  "AUD-ORPHAN-SPEECH": "aud_orphan",
+  "IMPORT-SPLIT-SYNC": "import_split_sync",
+  "DEX-INTENT-PIC": "intent_pic",
+  "IRD-CONFIRM": "ird_confirm",
+  "DEX-DIRTY-STILL-PROMPT": "dirty_still_prompt",
+  "DEX-DUP-VD": "dirty_still_prompt",
+  "DEX-HAND-LIP": "dirty_still_prompt",
+  "VID-INHERIT-DIRTY-STILL": "dirty_still_prompt",
+  "SFX-UNBACKED": "sfx_unbacked",
+  "MIRROR-WARP": "svq_motion_fail",
+  "identity_cast": "still_firstframe_dirty",
+  "dialogue_lip": "still_mouth_handoff",
+  "emotion_clarity": "expr_speak_missing",
+  "motion_fidelity": "svq_motion_fail",
+  "audio_mood": "svq_audio_fail",
+  "sfx_unbacked": "sfx_unbacked",
 };
 
 /** Test/CI export — do not mutate at runtime. */
@@ -140,15 +183,22 @@ export function buildBurnGateEnvelope(
     opts?.nextStep ??
     (triggers.includes("img_cref_missing")
       ? "batch_still"
-      : triggers.includes("img_still_weak")
-        ? "regen_storyboard_hq"
+      : triggers.includes("img_still_weak") || triggers.includes("still_firstframe_weak")
+        ? "batch_still"
+        : triggers.includes("still_onebeat_multi") ||
+            triggers.includes("still_cu_cast") ||
+            triggers.includes("still_firstframe_dirty")
+          ? "split_shot"
         : triggers.includes("dialogue_hash_mismatch")
           ? "soft_patch"
-          : triggers.includes("narrative_split_hint") ||
+            : triggers.includes("narrative_split_hint") ||
               triggers.includes("pr_lip_duration") ||
-              triggers.includes("fx_infeasible")
-            ? blocks.some((b) => /拆镜|split|NAR-14|F3/i.test(`${b.id} ${b.message}`))
-              ? "split_shot"
+              triggers.includes("fx_infeasible") ||
+              triggers.includes("cam_fit")
+            ? blocks.some((b) => /拆镜|split|NAR-14|F3|IRD-CONFIRM/i.test(`${b.id} ${b.message}`))
+              ? triggers.includes("cam_fit")
+                ? "split_shot" // Confirm 智能拆；勿手改镜号
+                : "split_shot"
               : triggers.includes("pr_lip_duration")
                 ? "raise_duration"
                 : "split_shot"

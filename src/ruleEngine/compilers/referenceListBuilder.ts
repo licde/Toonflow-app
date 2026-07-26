@@ -49,19 +49,61 @@ export async function resolveCrefCodesToAssetIds(
       const suffix = code.replace(/^CHAR-/, "");
       const codeTag = `charCode:${code}`;
       const assetTag = `assetCode:${code}`;
-      const hit = assets.find(
+      // 1) remark / exact code tags — unique
+      const tagged = assets.filter(
         (a) =>
           a.remark === codeTag ||
           a.remark === assetTag ||
           (a.remark && String(a.remark).includes(codeTag)) ||
           (a.remark && String(a.remark).includes(assetTag)) ||
           a.name === code ||
-          a.name?.includes(suffix) ||
           (a.describe && String(a.describe).includes(code)) ||
           (a.prompt && String(a.prompt).includes(code)),
       );
-      if (hit) assetIds.push(hit.id!);
-      else warnings.push({ code, message: formatMissingAssetRowWarning(code) });
+      if (tagged.length === 1) {
+        assetIds.push(tagged[0]!.id!);
+        continue;
+      }
+      if (tagged.length > 1) {
+        warnings.push({
+          code,
+          message: `资产码歧义（${tagged.length} 条命中），已跳过模糊绑定：${code}`,
+        });
+        continue;
+      }
+      // 2) name exact / unique longest includes — refuse peer-sister collision
+      const exactName = assets.filter((a) => a.name === suffix || a.name === code);
+      if (exactName.length === 1) {
+        assetIds.push(exactName[0]!.id!);
+        continue;
+      }
+      const fuzzy = assets
+        .filter((a) => {
+          const nm = String(a.name ?? "");
+          if (!nm || !suffix) return false;
+          // Prefer full suffix in name; never short stem-only (沈清)
+          return nm === suffix || nm.includes(suffix) || (suffix.length >= 3 && suffix.includes(nm) && nm.length >= 3);
+        })
+        .sort((a, b) => String(b.name ?? "").length - String(a.name ?? "").length);
+      if (fuzzy.length === 1) {
+        assetIds.push(fuzzy[0]!.id!);
+        continue;
+      }
+      if (fuzzy.length > 1) {
+        // Unique longest only if strictly longer than runners-up
+        const top = String(fuzzy[0]!.name ?? "").length;
+        const uniqueTop = fuzzy.filter((a) => String(a.name ?? "").length === top);
+        if (uniqueTop.length === 1 && top >= suffix.length) {
+          assetIds.push(uniqueTop[0]!.id!);
+          continue;
+        }
+        warnings.push({
+          code,
+          message: `姓名相似资产歧义（${fuzzy.map((a) => a.name).join("/")}），拒绝错误关联：${code}`,
+        });
+        continue;
+      }
+      warnings.push({ code, message: formatMissingAssetRowWarning(code) });
     }
   }
 
@@ -156,10 +198,18 @@ export async function mergeAssociateAssetIds(
 export async function buildReferenceListFromAssetIds(
   db: Knex,
   assetIds: number[],
+  opts?: {
+    /** @deprecated ignored — turnaround sheets are cropped to identity plate */
+    excludeTurnaroundSheet?: boolean;
+    /** Crop 四视图 → single front plate (default true for storyboard) */
+    cropTurnaroundToPlate?: boolean;
+  },
 ): Promise<{ type: "image"; base64: string }[]> {
   if (!assetIds.length) return [];
 
-  const assets = await db("o_assets").whereIn("id", assetIds).select("id", "imageId");
+  const assets = await db("o_assets")
+    .whereIn("id", assetIds)
+    .select("id", "imageId", "prompt", "remark", "describe", "type");
   const byAsset = new Map(assets.map((a) => [a.id!, a]));
   const imageIds = assetIds.map((id) => byAsset.get(id)?.imageId).filter(Boolean) as number[];
   if (!imageIds.length) return [];
@@ -168,14 +218,30 @@ export async function buildReferenceListFromAssetIds(
   const byImage = new Map(imagePaths.map((r) => [r.id!, r]));
   const list: { type: "image"; base64: string }[] = [];
 
-  // Preserve assetIds order (= identity binding order)
+  const cropOn = opts?.cropTurnaroundToPlate !== false;
+  const { isTurnaroundSheetAsset } =
+    require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+  const { cropTurnaroundSheetToIdentityPlate } =
+    require("./cropTurnaroundToIdentityPlate") as typeof import("./cropTurnaroundToIdentityPlate");
+
+  void opts?.excludeTurnaroundSheet;
   for (const assetId of assetIds) {
     const asset = byAsset.get(assetId);
     if (!asset?.imageId) continue;
     const row = byImage.get(asset.imageId);
     if (!row?.filePath) continue;
     try {
-      const base64 = await u.oss.getImageBase64(row.filePath);
+      let base64 = await u.oss.getImageBase64(row.filePath);
+      const isSheet = isTurnaroundSheetAsset({
+        prompt: (asset as { prompt?: string }).prompt,
+        remark: (asset as { remark?: string }).remark,
+        describe: (asset as { describe?: string }).describe,
+        type: (asset as { type?: string }).type,
+      });
+      if (cropOn && isSheet) {
+        const cropped = await cropTurnaroundSheetToIdentityPlate(base64, { assumeSheet: true });
+        if (cropped.base64) base64 = cropped.base64;
+      }
       list.push({ type: "image", base64 });
     } catch {
       /* skip broken refs */
@@ -196,6 +262,8 @@ export async function buildReferenceListForStoryboard(
   referenceList: { type: "image"; base64: string }[];
   warnings: ReferenceWarning[];
   sceneRefsDropped?: number;
+  /** True when at least one character cref is a turnaround/四视图 sheet */
+  turnaroundCrefUsed?: boolean;
 }> {
   const assetRows = await db("o_assets2Storyboard").where("storyboardId", storyboardId).orderBy("rowid").pluck("assetId");
   const order =
@@ -216,12 +284,68 @@ export async function buildReferenceListForStoryboard(
     order,
     { excludeScene: opts?.excludeScene },
   );
-  const referenceList = await buildReferenceListFromAssetIds(db, merged.assetIds);
+
+  // Keep 四视图 as identity cref; warn so compose can tighten single-frame lock (no-VLM path)
+  const { isTurnaroundSheetAsset } =
+    require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+  const assetIds = merged.assetIds;
+  const sheetWarnings: ReferenceWarning[] = [...merged.warnings];
+  let turnaroundCrefUsed = false;
+  if (assetIds.length) {
+    const rows = await db("o_assets")
+      .whereIn("id", assetIds)
+      .select("id", "name", "prompt", "remark", "describe", "type");
+    for (const a of rows as Array<{
+      id: number;
+      name?: string;
+      prompt?: string;
+      remark?: string;
+      describe?: string;
+      type?: string;
+    }>) {
+      if (
+        isTurnaroundSheetAsset({
+          prompt: a.prompt,
+          remark: a.remark,
+          describe: a.describe,
+          type: a.type,
+        })
+      ) {
+        turnaroundCrefUsed = true;
+        sheetWarnings.push({
+          code: a.name ?? String(a.id),
+          assetId: a.id,
+          message: `四视图已裁正面单帧作身份锁：${a.name ?? a.id}`,
+        });
+      }
+    }
+  }
+
+  const referenceList = await buildReferenceListFromAssetIds(db, assetIds, {
+    cropTurnaroundToPlate: true,
+  });
+  // Aspect heuristic: crop ultra-wide refs even when promptMode unmarked (pixel layout leak)
+  {
+    const { cropTurnaroundSheetToIdentityPlate } =
+      require("./cropTurnaroundToIdentityPlate") as typeof import("./cropTurnaroundToIdentityPlate");
+    for (let i = 0; i < referenceList.length; i++) {
+      const item = referenceList[i]!;
+      const cropped = await cropTurnaroundSheetToIdentityPlate(item.base64);
+      if (cropped.cropped && cropped.base64) {
+        referenceList[i] = { type: "image", base64: cropped.base64 };
+        turnaroundCrefUsed = true;
+        sheetWarnings.push({
+          code: `ref${i}`,
+          message: `宽幅参考已裁单帧身份板（${cropped.reason}）`,
+        });
+      }
+    }
+  }
   const sceneRefsDropped =
     opts?.excludeScene && beforeCount > merged.assetIds.length
       ? beforeCount - merged.assetIds.length
       : opts?.excludeScene
         ? Math.max(0, beforeCount - merged.assetIds.length)
         : 0;
-  return { referenceList, warnings: merged.warnings, sceneRefsDropped };
+  return { referenceList, warnings: sheetWarnings, sceneRefsDropped, turnaroundCrefUsed };
 }

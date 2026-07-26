@@ -33,12 +33,21 @@
     "residualDoctrine": "data/fixtures/nar14_residual_doctrine.json",
     "lipSplitDoctrine": "data/fixtures/lip_split_doctrine.json",
     "stillIdentityDoctrine": "data/fixtures/still_identity_doctrine.json",
+    "stillCompositionSpec": "data/fixtures/still_composition_spec.json",
+    "stillLiteraryIntentDoctrine": "data/fixtures/still_literary_intent_doctrine.json",
+    "videoLiteraryIntentDoctrine": "data/fixtures/video_literary_intent_doctrine.json",
+    "stillIntentPolicy": "src/ruleEngine/compilers/stillIntentPolicy.ts",
+    "videoIntentPolicy": "src/ruleEngine/compilers/videoIntentPolicy.ts",
+    "videoPromptSpine": "src/ruleEngine/compilers/compileVideoPromptSpine.ts",
     "qp02VisualPolicy": "data/fixtures/qp02_visual_policy.json",
+    "stillVideoQualityDoctrine": "data/fixtures/still_video_quality_doctrine.json",
     "residualLoopTest": "yarn test:nar14-residual-loop",
     "lipSplitLoopTest": "yarn test:lip-split-loop",
     "stillIdentityLoopTest": "yarn test:still-identity-loop",
+    "stillOneBeatLoopTest": "yarn test:still-onebeat-loop",
     "qp02DesignLoopTest": "yarn test:qp02-design-loop",
-    "freeze": "neverSilentInvent splitHint/reactionAction; never persist hint on burn block; still casting name authority; no verb-whitelist primary glue; QP-02 minChars floor only"
+    "stillVideoQualityLoopTest": "yarn test:still-video-quality-loop",
+    "freeze": "neverSilentInvent splitHint/reactionAction; never persist hint on burn block; still casting name authority; no verb-whitelist primary glue; QP-02 minChars floor only; SVQ unknown≠0.7; L2 heal revalidate; still-onebeat Must closed then noNewTodosWithoutSample"
   },
   "sections": {
     "core": {

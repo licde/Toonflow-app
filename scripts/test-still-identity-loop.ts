@@ -62,15 +62,29 @@ const healed = healStillRecipePolicy(dirtySample);
 ok("heal removes phantom dual", !detectPhantomDualFace(healed.prompt) || !/不同脸/.test(healed.prompt));
 ok("heal removes ,。", !/,\s*。/.test(healed.prompt));
 
-const composed = composeStillPrompt({
+// Design strong contract: multi-beat VD must reverse to split_shot (no silent trim green)
+const composedDirty = composeStillPrompt({
   visualDescription: dirtySample,
   characters: [{ code: "CHAR-SHENQINGYI", name: "沈清漪", hasImage: true, kind: "character" }],
   qualityMode: "hq_update",
   referenceUrlCount: 1,
 });
-ok("compose ok", composed.ok);
+ok(
+  "compose multi-beat → split_shot block",
+  !composedDirty.ok &&
+    composedDirty.blockReason === "DEX-STILL-ONEBEAT" &&
+    composedDirty.primaryNextStep === "split_shot",
+);
+
+const composed = composeStillPrompt({
+  visualDescription: "中景。沈清漪侧脸，簪尖刺入指腹。",
+  characters: [{ code: "CHAR-SHENQINGYI", name: "沈清漪", hasImage: true, kind: "character" }],
+  qualityMode: "hq_update",
+  referenceUrlCount: 1,
+});
+ok("compose ok one-beat", composed.ok);
 ok("compose no multiFace for single", !/不同脸/.test(composed.prompt) && !composed.sources.includes("refs.multiFace"));
-ok("compose oneBeat warn or trim", composed.warnings.includes("still_multi_beat_trim") || /刺入|咬帕/.test(composed.visualBody));
+ok("compose oneBeat body", /刺入|侧脸/.test(composed.visualBody || composed.prompt));
 
 const refineBody = stripStaleBindingFromPrevious(dirtySample);
 ok("refine strip identity noise", !/不同脸|对白瞬间|face identity/i.test(refineBody));
@@ -125,9 +139,30 @@ ok(
       "沈清漪",
 );
 
-// designExit WARN path (bundle root preDesignPack)
+// designExit: multi-beat → auto split or BLOCK; OS/FILLER still WARN
 const { runDesignExitGate } = require("../src/ruleEngine/design/designExitGate") as typeof import("../src/ruleEngine/design/designExitGate");
-const exit = runDesignExitGate("SB", {
+const exitStrict = runDesignExitGate(
+  "SB",
+  {
+    preDesignPack: {
+      shots: [
+        {
+          shotIndex: 1,
+          visualDescription:
+            "刺入。咬帕。包扎。露出。勾起浅笑。对白瞬间神态。沈清漪（OS）。",
+        },
+      ],
+    },
+  },
+  { chatStrict: true },
+);
+ok(
+  "designExit DEX-STILL ONEBEAT BLOCK under chatStrict",
+  exitStrict.failedIds.includes("DEX-STILL-ONEBEAT") &&
+    exitStrict.warnings.some((w) => /DEX-STILL-OS-NAME|STILL_OS_NAME/.test(w)) &&
+    exitStrict.warnings.some((w) => /DEX-STILL-FILLER|STILL_FILLER/.test(w)),
+);
+const exitAuto = runDesignExitGate("SB", {
   preDesignPack: {
     shots: [
       {
@@ -139,10 +174,9 @@ const exit = runDesignExitGate("SB", {
   },
 });
 ok(
-  "designExit DEX-STILL warns",
-  exit.warnings.some((w) => /DEX-STILL-ONEBEAT|STILL_ONEBEAT/.test(w)) &&
-    exit.warnings.some((w) => /DEX-STILL-OS-NAME|STILL_OS_NAME/.test(w)) &&
-    exit.warnings.some((w) => /DEX-STILL-FILLER|STILL_FILLER/.test(w)),
+  "designExit auto expands or keeps OS/FILLER warnings",
+  Boolean(exitAuto.splitApplied) ||
+    exitAuto.warnings.some((w) => /DEX-STILL-OS-NAME|STILL_OS_NAME|DEX-STILL-FILLER|STILL_FILLER/.test(w)),
 );
 
 if (process.exitCode) {

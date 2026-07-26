@@ -1,5 +1,5 @@
 /**
- * CompileKernel — single entry wrap around compileOrGenerateVideoPrompt + identity slots.
+ * CompileKernel — single entry wrap; prefers compileVideoPromptSpine when design material exists.
  */
 import {
   compileOrGenerateVideoPrompt,
@@ -13,6 +13,10 @@ import { finalizeFiveSectionPrompt } from "../compilers/finalizeFiveSectionPromp
 import type { DesignFields } from "../design/designFieldRegistry";
 import { canonicalModeId } from "./types";
 import { assemblePromptWithSlots, buildIdentitySlots, buildMediaSlots } from "./promptKernel";
+import { compileVideoPromptSpine } from "../compilers/compileVideoPromptSpine";
+import { hydrateShotCompileContextSync } from "../compilers/hydrateShotCompileContext";
+import { resolveGenerationModeRules } from "../compilers/resolveGenerationModeRules";
+import { LANGUAGE_POLICY } from "../codes/assetCodeContract";
 
 export { canonicalModeId, buildMediaSlots };
 
@@ -22,16 +26,87 @@ export async function compileOrGenerate(
     sceneCode?: string | null;
     propCodes?: string[];
     designFields?: DesignFields;
+    agentPlan?: Record<string, unknown> | null;
+    shotIndex?: number | null;
   },
-): Promise<CompileOrGenerateResult & { identityBlock?: string }> {
+): Promise<CompileOrGenerateResult & { identityBlock?: string; spineReady?: boolean; spineCode?: string }> {
   const mode = canonicalModeId(input.mode);
   const identitySlots = buildIdentitySlots({
     charCodes: input.charCodes,
     sceneCode: input.sceneCode,
     propCodes: input.propCodes,
   });
+  const rules = resolveGenerationModeRules({
+    modality: input.modality ?? "video",
+    mode,
+    modelName: input.modelName,
+    referenceCount: input.slots?.length ?? 0,
+  });
+  const baseMeta = {
+    modeId: rules.modeId,
+    templatePath: rules.templatePath,
+    mediaContract: rules.mediaContract,
+    languagePolicy: LANGUAGE_POLICY,
+    aspectRatio: input.projectVideoRatio?.replace(/\s/g, "") || undefined,
+  };
 
-  const result = await compileOrGenerateVideoPrompt({ ...input, mode });
+  // Spine-first when designShot / storyboard VD / dialogue available
+  const storyboard0 = input.storyboard?.[0];
+  const seedFromSb = String(storyboard0?.videoDesc ?? storyboard0?.prompt ?? input.existingPrompt ?? "").trim();
+  const ctx = hydrateShotCompileContextSync({
+    designShot: input.designShot ?? null,
+    shotMeta: input.designShot
+      ? null
+      : storyboard0
+        ? {
+            visualDescription: (storyboard0 as { visualDescription?: string }).visualDescription,
+            videoDesc: storyboard0.videoDesc,
+            prompt: seedFromSb,
+            duration: (storyboard0 as { duration?: number }).duration,
+            shotSize: (storyboard0 as { shotSize?: string }).shotSize,
+            narrative: (storyboard0 as { narrative?: Record<string, unknown> }).narrative,
+          }
+        : null,
+    seedPrompt: seedFromSb,
+    shotIndex: input.shotIndex ?? input.designShot?.shotIndex ?? null,
+    vendorId: input.modelName?.split(":")[0] ?? null,
+  });
+
+  let result: CompileOrGenerateResult;
+  let spineReady: boolean | undefined;
+  let spineCode: string | undefined;
+
+  if (ctx.canAuthorFromDesign || input.preferCompile) {
+    const spine = compileVideoPromptSpine({
+      ctx,
+      designShot: input.designShot,
+      seedPrompt: seedFromSb,
+      agentPlan: input.agentPlan ?? null,
+      modeId: mode,
+      forceRebuild: true,
+      includeSidecar: Boolean(input.agentPlan),
+      vendorId: ctx.vendorId,
+    });
+    spineReady = spine.ready;
+    spineCode = spine.readyCode;
+    result = {
+      ...baseMeta,
+      prompt: spine.prompt,
+      source: "prompt_ir",
+      warnings: spine.warnings,
+      generationWriteback: {
+        videoPrompt: spine.generationWriteback.videoPrompt,
+        durationSec: spine.durationSec,
+      },
+      sanitizeConflicts: spine.readyReasons,
+    };
+    // LLM only when context insufficient AND seed stub — plan decision #6
+    if (!spine.ready && !ctx.canAuthorFromDesign && input.invokeLlm) {
+      result = await compileOrGenerateVideoPrompt({ ...input, mode, preferCompile: false });
+    }
+  } else {
+    result = await compileOrGenerateVideoPrompt({ ...input, mode });
+  }
 
   const assembled = assemblePromptWithSlots({
     basePrompt: result.prompt,
@@ -49,10 +124,13 @@ export async function compileOrGenerate(
   });
 
   const dialogueLines =
-    input.dialogueLines ?? input.designShot?.narrative?.dialogue?.lines?.map((l) => l.text ?? "").filter(Boolean);
-  const durationSec = result.generationWriteback?.durationSec ?? input.durationSec;
+    input.dialogueLines ??
+    ctx.dialogueLines ??
+    input.designShot?.narrative?.dialogue?.lines?.map((l) => l.text ?? "").filter(Boolean);
+  const durationSec = result.generationWriteback?.durationSec ?? ctx.durationSec ?? input.durationSec;
   let prompt = assembled.prompt;
-  if (!promptIncludesModeAnchors(prompt, mode)) {
+  // Dialect only supplements missing structure anchors — never sole body author
+  if (!/\[Visual\]/i.test(prompt) && !promptIncludesModeAnchors(prompt, mode)) {
     prompt = postModeSanitize(applyModeDialect(prompt, mode), mode);
   }
   const fin = finalizeFiveSectionPrompt({
@@ -63,11 +141,21 @@ export async function compileOrGenerate(
   });
   prompt = fin.prompt;
 
+  // Final sanitize pass (no second viral append here)
+  prompt = sanitizeVideoPrompt({
+    prompt,
+    dialogueLines,
+    durationSec,
+    modeId: mode,
+  }).prompt;
+
   return {
     ...result,
     prompt,
     warnings: [...result.warnings, ...assembled.warnings, ...fin.conflicts],
     identityBlock: assembled.identitySlots.map((s) => s.code).join(","),
+    spineReady,
+    spineCode,
   };
 }
 

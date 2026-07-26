@@ -1,26 +1,33 @@
 /**
- * M1 split stub — shape ⊂ M2 splitPlan (forward compatible).
- * Does not write to DB; only proposes.
+ * splitPlan stub — v1 lip duration; v2 still one-beat (visualDescription).
  */
 import { resolveRequiredDuration } from "./resolveRequiredDuration";
 import type { PreDesignShot } from "../bundle/types";
+import { planStillOneBeatSplit, type StillOneBeatChild } from "../design/expandStillOneBeat";
+import { shouldWarnOneBeat } from "./stillIdentitySsot";
 
 export interface SplitPlanShotStub {
   order: number;
   dialogueSlice: string;
   suggestedDurationSec: number;
-  role: "line" | "reaction";
+  role: "line" | "reaction" | string;
+  visualDescription?: string;
+  tags?: string[];
+  shotSize?: string;
+  confidence?: number;
 }
 
-/** Forward-compatible subset of future splitPlan. */
+/** Forward-compatible splitPlan. */
 export interface SplitPlanStub {
-  schemaVersion: "splitPlan/1";
+  schemaVersion: "splitPlan/1" | "splitPlan/2";
   shotIndex?: number;
   reason: string;
   splitHint: string;
   proposedShots: SplitPlanShotStub[];
-  /** M1: never auto-applied */
-  writeMode: "propose_only";
+  /** propose_only | auto_apply when confidence high */
+  writeMode: "propose_only" | "auto_apply";
+  confidence?: number;
+  template?: string;
 }
 
 export function buildSplitPlanStub(
@@ -48,5 +55,40 @@ export function buildSplitPlanStub(
       { order: 1, dialogueSlice: a, suggestedDurationSec: durA, role: "line" },
       { order: 2, dialogueSlice: b, suggestedDurationSec: durB, role: "reaction" },
     ],
+  };
+}
+
+function childToStub(c: StillOneBeatChild, order: number): SplitPlanShotStub {
+  return {
+    order,
+    dialogueSlice: "",
+    suggestedDurationSec: c.duration,
+    role: c.role,
+    visualDescription: c.visualDescription,
+    tags: c.tags,
+    shotSize: c.shotSize,
+    confidence: c.confidence,
+  };
+}
+
+/** Build splitPlan/2 from multi-beat visualDescription (Must). */
+export function buildStillOneBeatSplitPlan(
+  shot: PreDesignShot | Record<string, unknown>,
+): SplitPlanStub | null {
+  const vd = String((shot as { visualDescription?: string }).visualDescription ?? "").trim();
+  if (!vd || !shouldWarnOneBeat(vd)) return null;
+  const planned = planStillOneBeatSplit(vd);
+  if (planned.children.length < 2) return null;
+  return {
+    schemaVersion: "splitPlan/2",
+    shotIndex: Number((shot as PreDesignShot).shotIndex ?? 0) || undefined,
+    reason: planned.refuse
+      ? `still_onebeat low confidence ${planned.confidence}`
+      : `still_onebeat ${planned.template ?? "clause"}`,
+    splitHint: "still_onebeat",
+    writeMode: planned.refuse ? "propose_only" : "auto_apply",
+    confidence: planned.confidence,
+    template: planned.template,
+    proposedShots: planned.children.map((c, i) => childToStub(c, i + 1)),
   };
 }

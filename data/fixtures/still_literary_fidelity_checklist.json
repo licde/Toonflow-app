@@ -13,6 +13,14 @@
     "strengthenValue": "no_altar_standing_ritual",
     "forbidden": true
   },
+  "backgroundReadableWhenDemote": {
+    "id": "identity:background_readable",
+    "mustTokens": [],
+    "vlmQuestion": "背景是否为可辨室内/场景（非灰棚/纯色摄影棚空白/无环境）？",
+    "healInject": "背景弱化：浅景深，保留室内环境可辨（木作/墙面/烛光），禁止灰棚/纯色摄影棚空白背景，禁止香案升为主构图",
+    "strengthenKey": "compositionLock",
+    "strengthenValue": "background_readable"
+  },
   "strengthenKeys": {
     "role_action": "roleLock",
     "prop": "mustProps",

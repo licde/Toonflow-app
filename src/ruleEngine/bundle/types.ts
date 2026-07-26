@@ -74,6 +74,21 @@ export interface ShotGeneration {
   videoPrompt?: string;
   audioPrompt?: string;
   fxPrompt?: string;
+  /** Persisted still IntentClassifier class for video inherit */
+  stillIntentClass?: string;
+  /** Video intent class after spine classify */
+  intentClass?: string;
+  /** Import contract gaps (VD||dialogue) — warn only; generation heals or true-gap BLOCKs */
+  designGaps?: string[];
+  videoDesc?: string;
+  compiled?: {
+    image?: string;
+    video?: string;
+    audio?: string;
+    fx?: string;
+    hash?: string;
+  };
+  manualOverride?: { image?: boolean; video?: boolean };
 }
 
 export interface PreDesignShot {
@@ -102,6 +117,8 @@ export interface PreDesignShot {
     emotionIntensity?: number;
     sceneName?: string;
     type?: string;
+    debutBeat?: string;
+    duration?: number;
   };
   audioCue?: string;
   fxLevel?: string;
@@ -174,6 +191,10 @@ export interface StoryboardPanelInput {
   src?: string | null;
   filePath?: string | null;
   index?: number;
+  /** Split child: never inherit parent media by storyboard index */
+  burnParentForbidden?: boolean;
+  _stillBeatSplitId?: string;
+  _visualSplitId?: string;
 }
 
 export interface EpisodeBundleFlowData extends Omit<FlowData, "storyboard"> {
@@ -208,6 +229,10 @@ export interface ImportOptions {
   /** T3 默认 true：qualityGate / export gate BLOCK 时拒绝落库 */
   blockOnQualityGate?: boolean;
   projectId: number;
+  /** 保留旧稿继续补洞：跳过 DEX-LITERARY-STALE 硬闸（须显式确认） */
+  acknowledgeKeepLegacy?: boolean;
+  /** Author shots present: allow legacy IRD/cam/oneBeat apply (default false = diagnose-only) */
+  forceExpand?: boolean;
 }
 
 export interface ResolvedContext {
@@ -335,10 +360,20 @@ export interface DryRunImportSummary {
   willCreateScript: boolean;
   willOverwriteLayers: string[];
   storyboardCount: number;
+  /** Author pack shot count before prepare expand/heal */
+  rawShotCount?: number;
+  /** Shot count after prepareBundleForInspect */
+  postPrepareCount?: number;
+  /** True when author shots were diagnose-only (no silent expand) */
+  importDiagnoseOnly?: boolean;
+  /** IRD/ONEBEAT mustSplit — must Confirm, not silent import-green */
+  irdConfirmRequired?: boolean;
   mergeStrategy: MergeStrategy;
   warnings: string[];
   tier?: import("../portable/types").ClosureTier;
   skipAutoDesignSb?: boolean;
+  /** Morphological salvage alone must not imply contract-closed */
+  importOkNotExitPass?: boolean;
   productionClosureChecks?: ProductionClosureCheck[];
   designClosureChecks?: ProductionClosureCheck[];
   generationClosureChecks?: ProductionClosureCheck[];

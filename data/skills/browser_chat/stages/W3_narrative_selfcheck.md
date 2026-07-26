@@ -31,12 +31,16 @@ W3 文学剧本完成后、**进入 designBrief 前**必须逐项自检。任一
 | NAR-15 | emotion_hit 台词有 **reactionAction** | 补 `dialoguePlan.lines[].reactionAction` |
 | RET-01 | ep1 首场 sceneMeta.avCausality 非空 | 补声画峰值 |
 | RET-02 | opening3to10s / rhythm31545 与正文时间轴一致；SB 镜可标 rhythm31545 | 对齐 retentionPlan |
-| DEX-AV-TAGS | 每场 `sceneAvTags`（或 sceneMeta.avTags）非空 | 按当前公式打标 |
+| DEX-AV-TAGS | 每场 `sceneAvTags`（或 sceneMeta.avTags）非空且为 **string[]** | 按当前公式打标 |
 | DEX-FX-INTENT | 每场 `fxIntent.level`（含 F0）；≤ pack 天花板 | 补声明/降级 |
 | DEX-SCENE-CARD | implementationPlan 条数与 sceneMeta/唯一 sceneName 对齐 | 删孤儿或独立场名 |
 | DEX-ADAPT-SCORE | 设计期 adaptScore 过阈值 | 补维度兑现/打标/拆镜 |
+| DEX-CAM-FIT | 口播+反应同镜未拆 | **须已写出双镜**：speak（无 reactionAction）+ reaction（VD≥minChars，禁「听者反应特写」） |
 
-**禁止假绿：** 不得在缺 splitHint/reactionAction/**sceneAvTags** 时写 `narrativeSelfcheck.passed=true`。  
+**NAR-15 × DEX-CAM-FIT：** plan 行可写 `reactionAction`；**shots 禁止**单镜同时 onCam 对白 + `reactionAction`。  
+**禁止假绿：** 不得在缺 splitHint/reactionAction/**sceneAvTags**/`shotDesignIntent`、或仍有未拆同镜 DEX-CAM-FIT/NAR-14 时写 `narrativeSelfcheck.passed=true`。  
+**服务器自动闭环：** `setStepStatus` / export 会对 NAR-15 补占位 RA、从 peak 补 `shotDesignIntent`、唯一名+已定妆图绑 CREF；修不完仍 BLOCK，须按清单同轮重写 JSON，禁止只改 `passed`。  
+**形状：** `sceneAvTags` 必须数组；`seriesContinuity` 必须 record；`microExpression` 仅 `{eyes,mouthDetail}`（多角 `byName`）。  
 **NAR-14 优先**：按 `，。！？；` 标点拆成多条 `dialoguePlan.lines`（每分句 ≤15 字）；服务器也会物理拆句兜底，但导出 JSON 应直接写权威形。整句无标点且超长时才用 `splitHint: reaction_shot`。  
 出站以服务器 `POST /api/scriptAgent/designExitGate` + `setStepStatus` 硬闸为准（见 `viral_adaptation_playbook.md`）。
 

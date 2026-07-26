@@ -158,42 +158,42 @@ function buildFiveSectionVideo(shot: PreDesignShot, plan?: ImplPlanItem, duratio
 
   const vidAnchors = plan?.promptAnchors?.vid ?? [];
   const hasDial = dialogueTexts(shot).length > 0;
-  const motionPrimary = vidAnchors[0] ?? (hasDial ? "static hold" : "subtle camera follow");
+  const motionPrimary = vidAnchors[0] ?? (hasDial ? "静止持镜" : "轻微跟随");
   const dur = durationSec ?? (typeof shot.duration === "number" ? shot.duration : 4);
   const size = shotSizeLabel(shot);
-  const camMotion = hasDial ? "static" : "subtle camera";
+  const camMotion = hasDial ? "静止" : "轻微运镜";
 
   const lines = dialogueTexts(shot);
   const beat = String(plan?.avCausality?.audioBeat ?? "").trim();
   const audioBody = lines.length
-    ? [...lines.map((t) => `"${t}"`), "lip-sync active.", beat ? `SFX: ${beat}` : ""].filter(Boolean).join("\n")
+    ? [...lines.map((t) => `"${t}"`), "口型同步开启。", beat ? `音效：${beat}` : ""].filter(Boolean).join("\n")
     : beat
-      ? `No spoken dialogue. SFX: ${beat}`
-      : "No spoken dialogue. ambient only.";
+      ? `无对白。音效：${beat}`
+      : "无对白。仅环境音效。";
 
   const narrative = uniq([
-    peak ? `Peak: ${peak.slice(0, 80)}` : "",
-    "keep face identity, no exaggerated expression rewrite.",
-    vidAnchors.slice(1, 3).join("; "),
+    peak ? `情绪峰值：${peak.slice(0, 80)}` : "",
+    "锁定脸型身份，禁止夸张改脸。",
+    vidAnchors.slice(1, 3).join("；"),
   ])
     .filter(Boolean)
     .join(" ");
 
   return [
     "[Visual]",
-    visualBits || "subject in scene, keep face identity.",
+    visualBits || "画面主体，锁定脸型身份。",
     "",
     "[Motion]",
-    `0s-${dur}s: ${motionPrimary}.`,
+    `0s-${dur}s: ${motionPrimary}。`,
     "",
     "[Camera]",
-    `${size}, ${camMotion}, duration ${Math.round(dur)}s, single continuous take.`,
+    `${size}，${camMotion}，时长 ${Math.round(dur)}s，单次连续镜头。`,
     "",
     "[Audio]",
     audioBody,
     "",
     "[Narrative]",
-    narrative || "continuity from design intent.",
+    narrative || "设计连贯。",
   ].join("\n");
 }
 
@@ -327,7 +327,7 @@ export function buildPromptIR(shot: PreDesignShot, opts: BuildPromptIROptions = 
   // Sync Chinese lines into [Audio] when video has No dialogue
   const lines = dialogueTexts(shot);
   if (lines.length && ir.videoPrompt && /no\s*(spoken\s*)?dialogue/i.test(ir.videoPrompt)) {
-    const block = lines.map((t) => `"${t}"`).join("\n") + "\nlip-sync active.";
+    const block = lines.map((t) => `"${t}"`).join("\n") + "\n口型同步开启。";
     if (/\[Audio\]/i.test(ir.videoPrompt)) {
       ir.videoPrompt = ir.videoPrompt.replace(/\[Audio\][\s\S]*?(?=\[Narrative\]|$)/i, `[Audio]\n${block}\n\n`);
     }

@@ -7,20 +7,16 @@ import { z } from "zod";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import {
+  buildStillPreviousIngress,
   composeStillPrompt,
   computeComposeHash,
-  isDirtyStillPrompt,
-  resolveComposeMode,
-  scrubStillPromptNoise,
   shouldDefaultFidelityCompose,
-  stripIdentityTokens,
 } from "@/ruleEngine/compilers/composeStillPrompt";
 import {
   assertLiteraryFidelity,
   buildLiteraryFidelityChecklist,
 } from "@/ruleEngine/compilers/literaryFidelityChecklist";
 import { hydrateComposeStillContext } from "@/ruleEngine/compilers/hydrateComposeStillContext";
-import { parseStillMetaFromReason } from "@/ruleEngine/compilers/stillQuality";
 
 const router = express.Router();
 
@@ -57,30 +53,24 @@ export default router.post(
       });
       if (req.body.ratio) ctx.videoRatio = req.body.ratio;
 
-      let promptState: string | undefined;
-      let composeHashMeta: string | undefined;
+      let sbReason: unknown;
+      let sbPrompt: string | undefined;
       if (req.body.storyboardId) {
         const row = await u.db("o_storyboard").where({ id: req.body.storyboardId }).select("reason", "prompt").first();
-        const meta = parseStillMetaFromReason(row?.reason);
-        promptState = meta?.promptState;
-        composeHashMeta = meta?.composeHash;
-        const prev = scrubStillPromptNoise(stripIdentityTokens(String(meta?.promptUsed ?? row?.prompt ?? rawPrompt)).body)
-          .cleaned;
-        if (prev) ctx.previousVisualBody = prev;
+        sbReason = row?.reason;
+        sbPrompt = row?.prompt != null ? String(row.prompt) : undefined;
       }
-
-      const mode = resolveComposeMode({
-        requested: req.body.composeMode,
-        existingPrompt: rawPrompt,
-        promptState,
-        composeHash: composeHashMeta,
+      const ingress = buildStillPreviousIngress({
+        reason: sbReason,
+        storedPrompt: sbPrompt,
+        requestPrompt: rawPrompt,
+        requestedMode: req.body.composeMode,
         currentHash: computeComposeHash(ctx),
         preferFidelity: shouldDefaultFidelityCompose(ctx),
+        loadPrevious: Boolean(req.body.storyboardId),
       });
-      const forceFull = isDirtyStillPrompt(rawPrompt) || !String(rawPrompt).trim();
-      const result = composeStillPrompt(ctx, {
-        mode: forceFull && !req.body.composeMode ? "full" : mode,
-      });
+      ctx.previousVisualBody = ingress.previousVisualBody;
+      const result = composeStillPrompt(ctx, { mode: ingress.effectiveMode });
 
       if (req.body.persist && result.ok && req.body.storyboardId) {
         const { composeAndPersistStillPrompt } = await import("@/ruleEngine/compilers/persistStillPrompt");
@@ -103,16 +93,26 @@ export default router.post(
       });
       const fidelity = assertLiteraryFidelity(result.prompt, checklist);
 
+      // Preview ≡ generate compose kernel; surface egress warnings (never fake-green)
+      const previewBlocks: string[] = [];
+      if (!result.ok) previewBlocks.push(result.blockReason || "compose_blocked");
+      if ((result.warnings ?? []).some((w) => /EMPTY-SHOT|CAST-CREF/i.test(w))) {
+        previewBlocks.push("egress_quality_warn");
+      }
+      if (/空镜/.test(result.prompt) && /正脸/.test(result.prompt)) {
+        previewBlocks.push("empty_face_conflict");
+      }
+
       return res.status(200).send(
         success({
-          ok: result.ok,
+          ok: result.ok && previewBlocks.filter((b) => b === "empty_face_conflict").length === 0,
           prompt: result.prompt,
           visualBody: result.visualBody,
           didSynthesize: result.didSynthesize,
           scrubbed: result.scrubbed,
           composeMode: result.composeMode,
           sources: result.sources,
-          warnings: result.warnings,
+          warnings: [...(result.warnings ?? []), ...(previewBlocks.length ? [`previewParity:${previewBlocks.join(",")}`] : [])],
           entityAnchors: result.entityAnchors,
           blockReason: result.blockReason,
           primaryNextStep: result.primaryNextStep,
@@ -121,14 +121,19 @@ export default router.post(
           compositionContractApplied: result.compositionContractApplied,
           complianceHit: result.complianceHit,
           dirtyInput: result.dirtyInput,
-          /** L0 prompt items only — 成图验收另算 */
+          orderedCrefCodes: result.orderedCrefCodes,
+          /** L0 prompt items only — 成图验收另算；preview 不替代 generate BLOCK */
           fidelityLayer: "prompt",
           fidelityOk: fidelity.ok,
           fidelityItems: fidelity.passed
             .map((i) => ({ id: i.id, pass: true as const }))
             .concat(fidelity.missing.map((i) => ({ id: i.id, pass: false as const }))),
           fidelityMissing: fidelity.missing.map((m) => m.id),
-          note: "补全仅验收提示词项；高质量成图另走视觉保真环",
+          /** Preview is prompt-layer only — never claim pixel HQ / burn-ready */
+          pixelHq: false,
+          burnReady: false,
+          note:
+            "preview≡composeStillPrompt 同核；仅验收提示词项，≠成图像素HQ，不可据此燃片；无 cref 仍须 generate 路径 BLOCK",
         }),
       );
     } catch (e) {

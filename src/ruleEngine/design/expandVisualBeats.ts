@@ -55,26 +55,47 @@ export function expandVisualBeats(
     }
 
     const parentKey = String(shot.clientId ?? shot.shotIndex ?? `s${out.length}`);
+    const parentVd = String(shot.visualDescription ?? "").trim();
     const dlg = n?.dialogue;
-    // Parent replaced by children — mark expanded-away policy on children; parent is not emitted.
+    const { resolveShotDurationSec } = require("../quality/shotChainContract") as typeof import("../quality/shotChainContract");
+    const dur = resolveShotDurationSec(shot);
+    const durationSec = dur.durationSec > 0 ? dur.durationSec : 2;
+    // Slice parent VD into clause chunks for children (M8: VisBeat must cut VD)
+    const clauses = parentVd
+      .split(/[。；;\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     tpl.beats.forEach((beat, i) => {
+      const clause = clauses[i] ?? clauses[0] ?? parentVd;
+      const childVd = clause
+        ? /[。；;]$/.test(clause)
+          ? clause
+          : `${clause}。`
+        : parentVd;
       const child: Record<string, unknown> = {
         ...shot,
         clientId: `${parentKey}-vis-${beat.role}-${i}`,
         shotIndex: undefined,
         _visualSplitId: parentKey,
+        _parentVisualDescription: parentVd,
         visualSplitRole: beat.role,
         visualBeatTags: beat.tags ?? [],
         shotSize: beat.shotSize,
+        visualDescription: childVd || parentVd,
+        duration: durationSec,
         beatRole: beat.role === "reaction" ? "reaction" : beat.hasDialogue ? "speak" : "action",
         visBeatExpandedAway: false,
         burnParentForbidden: true,
+        promptState: "stale",
+        composeHash: undefined,
+        filePath: undefined,
         narrative: {
           ...(n ?? {}),
           shotSize: beat.shotSize,
+          duration: durationSec,
           dialogue: beat.hasDialogue ? dlg ?? { lines: [] } : { lines: [] },
         },
-        videoDesc: `${beat.shotSize} static, ${shot.duration ?? 1.5}s`,
+        videoDesc: `${beat.shotSize} static, ${durationSec}s`,
       };
       out.push(child);
     });

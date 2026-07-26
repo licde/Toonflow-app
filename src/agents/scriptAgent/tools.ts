@@ -21,13 +21,12 @@ import { suggestVisualBeatTags } from "@/ruleEngine/design/visualBeatSuggestor";
 import { runShotExpanders } from "@/ruleEngine/design/expanderRegistry";
 import { setVisBeatOverrideOnShot, planForwardReentry } from "@/ruleEngine/design/visBeatLifecycle";
 import { buildVisBeatDryRunPanel, exemplarSuggestTags } from "@/ruleEngine/design/visBeatEnhance";
-import { runSplitOrchestrator, dryRunSplitOrchestrator } from "@/ruleEngine/design/splitOrchestrator";
+import { dryRunSplitOrchestrator } from "@/ruleEngine/design/splitOrchestrator";
 import { decideSplitForLine } from "@/ruleEngine/design/designSplitDecision";
 import { runForwardReentryAfterRepair } from "@/ruleEngine/design/designSplitLifecycle";
 import { runContractStructureHeal } from "@/ruleEngine/heal/contractStructureHeal";
-import { preDesignShotsToPanels } from "@/ruleEngine/bundle/preDesignPackAdapter";
-import { syncStoryboardToDb } from "@/ruleEngine/bundle/storyboardSync";
-import type { PreDesignShot } from "@/ruleEngine/bundle/types";
+import { gateChatShotWriteback } from "@/ruleEngine/design/chatWriteGate";
+import { persistSplitTripleAtomic } from "@/ruleEngine/design/splitWritebackAtomic";
 
 export const ScriptSchema = z.object({
   name: z.string().describe("剧本名称"),
@@ -287,14 +286,15 @@ export default (toolCpnfig: ToolConfig) => {
       },
     }),
     run_design_exit_gate: tool({
-      description: "运行与出站相同的 designExitGate（监督与执行共用 SSOT）。",
-      inputSchema: jsonSchema<{ stageId?: string }>(
-        z.object({ stageId: z.string().optional() }).toJSONSchema(),
+      description:
+        "运行与出站相同的 designExitGate。默认 diagnose-only；传 forceExpand:true 才 apply IRD/cam/oneBeat。",
+      inputSchema: jsonSchema<{ stageId?: string; forceExpand?: boolean }>(
+        z.object({ stageId: z.string().optional(), forceExpand: z.boolean().optional() }).toJSONSchema(),
       ),
-      execute: async ({ stageId }) => {
+      execute: async ({ stageId, forceExpand }) => {
         const plan = await loadScriptAgentPlan(resTool.data.projectId);
         syncPackIdAliases(plan);
-        const gate = runDesignExitGate(stageId || "W3", plan);
+        const gate = runDesignExitGate(stageId || "W3", plan, { forceExpand: Boolean(forceExpand) });
         return JSON.stringify(gate);
       },
     }),
@@ -368,16 +368,17 @@ export default (toolCpnfig: ToolConfig) => {
       },
     }),
     confirm_visual_split: tool({
-      description: "确认并执行 VisBeat 扩镜（weapon→visual→dialogue_cluster）；可选 sync 到 o_storyboard。",
-      inputSchema: jsonSchema<{ scriptId?: number; syncStoryboard?: boolean }>(
+      description: "确认并执行 VisBeat 扩镜（weapon→visual→dialogue_cluster）；写回须过 Chat 闸；可选 sync。",
+      inputSchema: jsonSchema<{ scriptId?: number; syncStoryboard?: boolean; forceExpand?: boolean }>(
         z
           .object({
             scriptId: z.number().optional(),
             syncStoryboard: z.boolean().optional(),
+            forceExpand: z.boolean().optional(),
           })
           .toJSONSchema(),
       ),
-      execute: async ({ scriptId, syncStoryboard }) => {
+      execute: async ({ scriptId, syncStoryboard, forceExpand }) => {
         const thinking = msg.thinking("正在确认视觉拍点拆镜...");
         const plan = await loadScriptAgentPlan(resTool.data.projectId);
         const pd = (plan.planData ??= {}) as Record<string, unknown>;
@@ -389,26 +390,57 @@ export default (toolCpnfig: ToolConfig) => {
         });
         pack.shots = forced.shots;
         pd.preDesignPack = pack;
+        const gate = gateChatShotWriteback(plan, { forceExpand: forceExpand !== false, stageId: "SB" });
+        const row = await u.db("o_agentWorkData").where({ projectId: resTool.data.projectId, key: "scriptAgent" }).first();
         let syncResult: unknown;
         if (syncStoryboard && scriptId) {
-          const panels = preDesignShotsToPanels(forced.shots as PreDesignShot[], { enrichFromDesign: true });
-          syncResult = await syncStoryboardToDb(u.db, resTool.data.projectId, scriptId, panels, {
-            preserveMedia: true,
-          });
-        }
-        const payload = JSON.stringify(plan);
-        const row = await u.db("o_agentWorkData").where({ projectId: resTool.data.projectId, key: "scriptAgent" }).first();
-        if (row) await u.db("o_agentWorkData").where({ id: row.id }).update({ data: payload, updateTime: Date.now() });
-        else
-          await u.db("o_agentWorkData").insert({
+          const wb = await persistSplitTripleAtomic({
+            db: u.db,
             projectId: resTool.data.projectId,
-            key: "scriptAgent",
-            data: payload,
-            createTime: Date.now(),
+            scriptId,
+            plan: gate.plan,
+            shots: ((gate.plan.planData as { preDesignPack?: { shots?: Record<string, unknown>[] } })?.preDesignPack
+              ?.shots ?? pack.shots) as Record<string, unknown>[],
+            saveAgentWork: async (p) => {
+              const payload = JSON.stringify(p);
+              if (row) await u.db("o_agentWorkData").where({ id: row.id }).update({ data: payload, updateTime: Date.now() });
+              else
+                await u.db("o_agentWorkData").insert({
+                  projectId: resTool.data.projectId,
+                  key: "scriptAgent",
+                  data: payload,
+                  createTime: Date.now(),
+                });
+            },
           });
-        const out = { shotCount: forced.shots.length, log: forced.log, syncResult };
+          if (!wb.ok) {
+            thinking.updateTitle("写回失败");
+            thinking.complete();
+            return JSON.stringify({ ok: false, passed: false, code: wb.code, healFailed: wb.healFailed, gate });
+          }
+          syncResult = wb.syncResult;
+        } else {
+          const payload = JSON.stringify(gate.plan);
+          if (row) await u.db("o_agentWorkData").where({ id: row.id }).update({ data: payload, updateTime: Date.now() });
+          else
+            await u.db("o_agentWorkData").insert({
+              projectId: resTool.data.projectId,
+              key: "scriptAgent",
+              data: payload,
+              createTime: Date.now(),
+            });
+        }
+        const out = {
+          ok: gate.ok,
+          passed: gate.passed,
+          confirmRequired: gate.confirmRequired,
+          shotCount: ((gate.plan.planData as { preDesignPack?: { shots?: unknown[] } })?.preDesignPack?.shots ?? [])
+            .length,
+          log: [...forced.log, ...gate.log],
+          syncResult,
+        };
         thinking.appendText(JSON.stringify(out).slice(0, 3000));
-        thinking.updateTitle("视觉拆镜完成");
+        thinking.updateTitle(gate.passed ? "视觉拆镜完成" : gate.confirmRequired ? "须 Confirm" : "拆镜未闭合");
         thinking.complete();
         return JSON.stringify(out);
       },
@@ -471,61 +503,93 @@ export default (toolCpnfig: ToolConfig) => {
       },
     }),
     confirm_design_split: tool({
-      description: "确认设计拆分：VisBeat expanders → clause-split → mirror/sync lineId（SplitOrchestrator）。",
-      inputSchema: jsonSchema<{ scriptId?: number; syncStoryboard?: boolean }>(
+      description:
+        "确认设计拆分（同核 Orchestrator + Chat 写回闸）。有压力则拆或 Confirm；禁假绿 passed。",
+      inputSchema: jsonSchema<{ scriptId?: number; syncStoryboard?: boolean; forceExpand?: boolean }>(
         z
           .object({
             scriptId: z.number().optional(),
             syncStoryboard: z.boolean().optional(),
+            forceExpand: z.boolean().optional(),
           })
           .toJSONSchema(),
       ),
-      execute: async ({ scriptId, syncStoryboard }) => {
+      execute: async ({ scriptId, syncStoryboard, forceExpand }) => {
         const thinking = msg.thinking("正在确认设计拆分编排...");
         const plan = await loadScriptAgentPlan(resTool.data.projectId);
-        const pd = (plan.planData ??= {}) as Record<string, unknown>;
+        const gate = gateChatShotWriteback(plan, { forceExpand: forceExpand !== false, stageId: "SB" });
+        const pd = (gate.plan.planData ??= {}) as Record<string, unknown>;
         const pack = (pd.preDesignPack ??= { shots: [] }) as { shots: Record<string, unknown>[] };
-        const orch = runSplitOrchestrator({
-          planData: pd,
-          shots: pack.shots,
-          meta: pd.meta as Record<string, unknown>,
-        });
-        Object.assign(pd, orch.planData);
-        pack.shots = orch.shots;
-        pd.preDesignPack = pack;
+        const row = await u.db("o_agentWorkData").where({ projectId: resTool.data.projectId, key: "scriptAgent" }).first();
         let syncResult: unknown;
         if (syncStoryboard && scriptId) {
-          const panels = preDesignShotsToPanels(orch.shots as PreDesignShot[], { enrichFromDesign: true });
-          syncResult = await syncStoryboardToDb(u.db, resTool.data.projectId, scriptId, panels, { preserveMedia: true });
-        }
-        const payload = JSON.stringify(plan);
-        const row = await u.db("o_agentWorkData").where({ projectId: resTool.data.projectId, key: "scriptAgent" }).first();
-        if (row) await u.db("o_agentWorkData").where({ id: row.id }).update({ data: payload, updateTime: Date.now() });
-        else
-          await u.db("o_agentWorkData").insert({
+          const wb = await persistSplitTripleAtomic({
+            db: u.db,
             projectId: resTool.data.projectId,
-            key: "scriptAgent",
-            data: payload,
-            createTime: Date.now(),
+            scriptId,
+            plan: gate.plan,
+            shots: pack.shots,
+            saveAgentWork: async (p) => {
+              const payload = JSON.stringify(p);
+              if (row) await u.db("o_agentWorkData").where({ id: row.id }).update({ data: payload, updateTime: Date.now() });
+              else
+                await u.db("o_agentWorkData").insert({
+                  projectId: resTool.data.projectId,
+                  key: "scriptAgent",
+                  data: payload,
+                  createTime: Date.now(),
+                });
+            },
           });
-        const out = { shotCount: orch.shots.length, log: orch.log, narFails: orch.narFails, syncResult };
+          if (!wb.ok) {
+            thinking.updateTitle("写回失败");
+            thinking.complete();
+            return JSON.stringify({ ok: false, passed: false, code: wb.code, healFailed: wb.healFailed, gate });
+          }
+          syncResult = wb.syncResult;
+        } else {
+          const payload = JSON.stringify(gate.plan);
+          if (row) await u.db("o_agentWorkData").where({ id: row.id }).update({ data: payload, updateTime: Date.now() });
+          else
+            await u.db("o_agentWorkData").insert({
+              projectId: resTool.data.projectId,
+              key: "scriptAgent",
+              data: payload,
+              createTime: Date.now(),
+            });
+        }
+        const out = {
+          ok: gate.ok,
+          passed: gate.passed,
+          confirmRequired: gate.confirmRequired,
+          shotCount: pack.shots.length,
+          log: gate.log,
+          pressureShots: gate.pressureShots,
+          syncResult,
+        };
         thinking.appendText(JSON.stringify(out).slice(0, 3000));
-        thinking.updateTitle("设计拆分完成");
+        thinking.updateTitle(gate.passed ? "设计拆分完成" : gate.confirmRequired ? "须 Confirm" : "拆镜未闭合");
         thinking.complete();
         return JSON.stringify(out);
       },
     }),
     design_split_forward_reentry: tool({
-      description: "反推修好后正推再入：Orchestrator + stale 标记；保留 hq_ok 媒体。",
-      inputSchema: jsonSchema<Record<string, never>>(z.object({}).toJSONSchema()),
-      execute: async () => {
+      description:
+        "反推修好后正推再入：默认仅 mirror+stale（禁语义扩镜）；forceExpand:true 才 residual B/lip/VisBeat。",
+      inputSchema: jsonSchema<{ forceExpand?: boolean }>(
+        z.object({ forceExpand: z.boolean().optional() }).toJSONSchema(),
+      ),
+      execute: async ({ forceExpand }) => {
         const plan = await loadScriptAgentPlan(resTool.data.projectId);
         const pd = (plan.planData ??= {}) as Record<string, unknown>;
         const pack = (pd.preDesignPack ??= { shots: [] }) as { shots: Record<string, unknown>[] };
+        const allowSemantic = Boolean(forceExpand);
         const re = runForwardReentryAfterRepair({
           planData: pd,
           shots: pack.shots,
           meta: pd.meta as Record<string, unknown>,
+          applyVisBeatExpanders: allowSemantic,
+          applySemanticSplit: allowSemantic,
         });
         Object.assign(pd, re.planData);
         pack.shots = re.shots;
@@ -533,7 +597,7 @@ export default (toolCpnfig: ToolConfig) => {
         const payload = JSON.stringify(plan);
         const row = await u.db("o_agentWorkData").where({ projectId: resTool.data.projectId, key: "scriptAgent" }).first();
         if (row) await u.db("o_agentWorkData").where({ id: row.id }).update({ data: payload, updateTime: Date.now() });
-        return JSON.stringify({ ...re.reentry, log: re.log });
+        return JSON.stringify({ ...re.reentry, log: re.log, semanticExpand: allowSemantic });
       },
     }),
     decide_design_split_line: tool({

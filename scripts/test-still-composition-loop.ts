@@ -54,7 +54,15 @@ const DESC = "沈母端坐高位太师椅摩挲扳指，沈清瓷跪低位蒲团
     characterNames: ["沈清瓷"],
     shotSize: "ms",
   });
-  ok("character mid → demote", demote.policy === "demote" && demote.excludeScene, demote.reason);
+  ok(
+    "character mid → demote keep soft env",
+    demote.policy === "demote" &&
+      !demote.excludeScene &&
+      !demote.omitSrefToken &&
+      /室内环境可辨|禁止灰棚/.test(String(demote.bgGuidance ?? "")) &&
+      !/场景参考不送像素/.test(String(demote.bgGuidance ?? "")),
+    demote.reason + " " + demote.bgGuidance,
+  );
 }
 
 // --- compose omit --sref ---
@@ -133,7 +141,7 @@ await layoutLoad();
   ok("merge layoutPreserve order", merged[0]?.role === "failed_still" && merged[1]?.role === "cref");
 }
 
-// --- checklist skips atmosphere when demote ---
+// --- checklist: demote/drop still keeps VD-named atmosphere (homology); bg readable when not keep ---
 {
   const itemsDrop = buildLiteraryFidelityChecklist({
     description: DESC,
@@ -141,11 +149,40 @@ await layoutLoad();
     bgPolicy: "drop",
   });
   ok(
-    "no atmosphere under drop",
-    !itemsDrop.some((i) => i.kind === "atmosphere"),
-    itemsDrop.map((i) => i.kind).join(","),
+    "atmosphere survives drop when in VD",
+    itemsDrop.some((i) => i.kind === "atmosphere") || !/烛火|烛光|侧光/.test(DESC),
+    itemsDrop.map((i) => i.id).join(","),
   );
   ok("has seating/composition", itemsDrop.some((i) => i.kind === "seating" || i.kind === "composition"));
+  ok(
+    "background_readable under drop",
+    itemsDrop.some((i) => i.id === "identity:background_readable"),
+    itemsDrop.map((i) => i.id).join(","),
+  );
+
+  const itemsKeep = buildLiteraryFidelityChecklist({
+    description: DESC,
+    characterNames: ["沈母", "沈清瓷"],
+    bgPolicy: "keep",
+  });
+  ok(
+    "no background_readable under keep",
+    !itemsKeep.some((i) => i.id === "identity:background_readable"),
+  );
+
+  const itemsDemote = buildLiteraryFidelityChecklist({
+    description: "中景。沈清漪弯腰捡书。烛火侧光。",
+    characterNames: ["沈清漪"],
+    bgPolicy: "demote",
+  });
+  ok(
+    "background_readable under demote",
+    itemsDemote.some((i) => i.id === "identity:background_readable" && /灰棚/.test(i.vlmQuestion)),
+  );
+  ok(
+    "atmosphere under demote when in VD",
+    itemsDemote.some((i) => i.id === "atmosphere:烛火" || i.id === "atmosphere:侧光"),
+  );
 }
 
 // --- repair route ---

@@ -76,9 +76,10 @@ T2 档位：从 G1 + script 提取角色，产出 L0–L6 结构化描述，对�
 - 剧本出场主角/反派均有 CHAR-CODE（canonical `CHAR-NNN`，见 `docs/ASSET_CODE_CONTRACT.md`）
 - **凡 `preDesignPack.shots[].charCodes` 或 imagePrompt `--cref` 出现的码，必须写入 `characterDesign.assets` 与 `visualLockTable.characterAssets`**（禁止只引用不收录，如 CHAR-005）
 - **DC-16 / DG-CD-COVERAGE**：对白 `speaker` ∪ B6.characters ∪ 上镜码必须入 CD；禁止仅 `L0.stub` 过闸；最小骨架为 `code` + `name` + `L0.identity`（一句身份关系）。L1–L3 视觉可后置由资产 AI 补全，但导出前不得缺人设壳
+- **两类 stub**：真说话人缺册的 speaker stub 仍 BLOCK（须补 identity）；`CHAR-ORPH-*` / 描写动词粘连假名由 ingest 剥离，**禁止**为假名建角色
 - **反例**：B6 含「侍女」但 `characterDesign.assets` 无对应项 → BLOCK；导入 stub **仍** BLOCK
 - **正例**：`{ "code": "CHAR-SHINV", "name": "侍女", "L0": { "identity": "沈府贴身侍女，报信出场" } }`
-- 修复话术：按 exportGate `chatRepairText` 中 RH-DC-16 补真实 CD → **再点预览/exportGate** 直至 `exportAllowed`
+- 修复话术：按 exportGate `chatRepairText` 中 RH-DC-16 补真实 CD → **再点预览/exportGate** 直至 `exportAllowed`；若清单仅 CHAR-ORPH/动词粘连假名 → 勿建角色、勿整集重设计
 - 码别名（`CHAR005` / `CHAR 005`）导出前归一为 `CHAR-005`
 - L0–L3 必填（设计完整态）；L5 主角必填；键名用短键 `L0`…`L6`（勿只输出 `L0_identity` 长键）
 - 与 G1 说话风格/记忆点一致

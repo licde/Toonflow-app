@@ -79,7 +79,8 @@ rulePackVersion: "2.1.0"
 - B6 与 script 角色场景一致
 - B5 每条：`payoffEp` 仅未来集号（number）；本集收/当集兑现用 `payoffLabel: "本集收"`，**禁止**把语义串写进 `payoffEp`
 - **DEX-B12-BEATS-NUM**：扫描 `designBrief.B12[]`；任一 `beats` 非 number → **不得导出**
-
+- **质量同核（与 SB）**：`runDesignExitGate(designBrief)` 挂 DEX-QP-02 / CAST-ON-DESC / **EMPTY-SHOT** / **EXPR-SPEAK**；不得提前出站绕开 SB 硬闸
+- DEX-SFX-BRIDGE：有爆点/钩子意图才要求 sfxIntent；禁逼造假音效意图（交付见 `sfx_unbacked`）
 ## 下游
 
 通过 → corridor_GB（scriptPlan 分场）。

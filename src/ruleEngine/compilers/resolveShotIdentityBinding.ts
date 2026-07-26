@@ -1,7 +1,10 @@
 /**
  * Shot identity binding SSOT — spatial standing → ordered CHAR codes / cref / ref sort.
  * Still compose + video referenceList must share the same order.
+ * HIGH/LOW cues = stillIntentPolicy POWER_* (seating_power same kernel).
  */
+import { POWER_HIGH_RE, POWER_LOW_RE, peelFramingText } from "./stillIntentPolicy";
+
 export interface IdentityCharHint {
   code?: string;
   name?: string;
@@ -18,8 +21,8 @@ export interface ShotIdentityBinding {
   lowRole?: { code?: string; name?: string };
 }
 
-const HIGH_RE = /(?:端坐|太师椅|高位|上座|主位|坐于高|坐在高|高座)/;
-const LOW_RE = /(?:跪[在地地]?|蒲团|低位|下跪|跪地|跪于|坐于低|坐在低)/;
+const HIGH_RE = POWER_HIGH_RE;
+const LOW_RE = POWER_LOW_RE;
 const CLAUSE_SPLIT = /[。；;！!？?\n，,、]/;
 
 function charLabel(c: IdentityCharHint): string {
@@ -30,21 +33,37 @@ function roleKey(c?: IdentityCharHint | null): string {
   return (c?.code || c?.name || "").toUpperCase();
 }
 
-/** Longest-name-first alias match: 沈母 ⊂ 沈母周氏, 阿母 ↔ 沈母. */
+/**
+ * Safe name↔clause match — NEVER stem-slice peers (沈清瓷 ↛ 沈清漪 via「沈清」).
+ * Allowed: exact; 母/氏 family shortening (沈母 ⊂ 沈母周氏); maternal soft alias.
+ */
 export function labelMatches(haystack: string, name: string): boolean {
   const h = String(haystack ?? "");
   const n = String(name ?? "").trim();
   if (!n || n.length < 2) return false;
   if (h.includes(n)) return true;
-  // Asset name longer than text form: 沈母周氏 matches clause with 沈母
-  if (/^[\u4e00-\u9fff]{2,8}$/.test(n)) {
-    for (let len = Math.min(n.length, 4); len >= 2; len--) {
-      if (h.includes(n.slice(0, len))) return true;
+  // Only 母/氏 family may shorten (沈母周氏 ↔ 沈母). Peer sisters must be exact.
+  if (/[母氏]/.test(n) && /^[\u4e00-\u9fff]{2,12}$/.test(n)) {
+    for (let len = n.length - 1; len >= 2; len--) {
+      const stem = n.slice(0, len);
+      if (!/[母氏]$/.test(stem)) continue;
+      if (h.includes(stem)) return true;
     }
   }
-  // Maternal soft alias
-  if (/母$/.test(n) && /(?:沈母|阿母|家母)/.test(h)) return true;
+  if (/母/.test(n) && /(?:沈母|阿母|家母)/.test(h)) return true;
   return false;
+}
+
+/** True when a/b are the same person via proper-prefix (沈母↔沈母周氏), not peer sisters. */
+export function namesAreProperPrefixAlias(a?: string | null, b?: string | null): boolean {
+  const x = String(a ?? "").trim();
+  const y = String(b ?? "").trim();
+  if (!x || !y || x === y) return x === y && x.length >= 2;
+  const [shorter, longer] = x.length <= y.length ? [x, y] : [y, x];
+  if (!longer.startsWith(shorter) || shorter.length < 2) return false;
+  // Require 母/氏 family or shorter is almost-full (≥ longer-1) — blocks 沈清* peers
+  if (/[母氏]$/.test(shorter)) return true;
+  return shorter.length >= longer.length - 1;
 }
 
 /** Prefer longest character name that matches the clause. */
@@ -65,12 +84,14 @@ function nameIndexInClause(clause: string, c: IdentityCharHint): number {
   const label = charLabel(c);
   if (!label) return -1;
   if (clause.includes(label)) return clause.indexOf(label);
-  // Alias: find shortest matching stem
-  for (let len = Math.min(label.length, 4); len >= 2; len--) {
-    const stem = label.slice(0, len);
-    if (clause.includes(stem)) return clause.indexOf(stem);
+  if (/[母氏]/.test(label) && /^[\u4e00-\u9fff]{2,12}$/.test(label)) {
+    for (let len = label.length - 1; len >= 2; len--) {
+      const stem = label.slice(0, len);
+      if (!/[母氏]$/.test(stem)) continue;
+      if (clause.includes(stem)) return clause.indexOf(stem);
+    }
   }
-  if (/母$/.test(label)) {
+  if (/母/.test(label)) {
     for (const a of ["沈母", "阿母", "家母"]) {
       if (clause.includes(a)) return clause.indexOf(a);
     }
@@ -122,9 +143,12 @@ export function resolveShotIdentityBinding(input: {
   characters?: IdentityCharHint[] | null;
   /** Fallback asset codes when no spatial cue */
   assetCodes?: string[] | null;
+  /** Only seating-hard may emit 站位绑定（端坐/跪） */
+  seatingHard?: boolean;
 }): ShotIdentityBinding {
   const chars = (input.characters ?? []).filter((c) => c.code || c.name);
-  const desc = String(input.description ?? "");
+  // Peel continuity so neighbor「扳指特写」does not scramble spatial bind
+  const desc = peelFramingText(String(input.description ?? ""));
 
   let high = findRoleInClauses(desc, chars, HIGH_RE);
   let low = findRoleInClauses(desc, chars, LOW_RE, high ? roleKey(high) : undefined);
@@ -164,32 +188,69 @@ export function resolveShotIdentityBinding(input: {
     pushUnique(low);
     for (const c of chars) pushUnique(c);
   } else {
+    // Prefer first exact mention in VD (沈清漪 before unused 沈清瓷) — blocks similar-name 图1 swap
+    const byMention = [...chars].sort((a, b) => {
+      const ia = nameIndexInClause(desc, a);
+      const ib = nameIndexInClause(desc, b);
+      const aHit = ia >= 0 ? ia : 1e9;
+      const bHit = ib >= 0 ? ib : 1e9;
+      if (aHit !== bHit) return aHit - bHit;
+      return charLabel(a).length - charLabel(b).length;
+    });
     const codeOrder = (input.assetCodes ?? []).map((c) => c.toUpperCase()).filter((c) => /^CHAR-/i.test(c));
     if (codeOrder.length) {
-      for (const code of codeOrder) {
+      // Intersect: mentioned-first among codes, then remaining codes, then rest
+      const mentionedCodes = byMention
+        .map((c) => (c.code || "").toUpperCase())
+        .filter((c) => codeOrder.includes(c));
+      for (const code of [...mentionedCodes, ...codeOrder]) {
         const hit = chars.find((c) => (c.code || "").toUpperCase() === code);
         pushUnique(hit ?? { code });
       }
-      for (const c of chars) pushUnique(c);
+      for (const c of byMention) pushUnique(c);
     } else {
-      for (const c of chars) pushUnique(c);
+      for (const c of byMention) pushUnique(c);
     }
   }
 
-  const orderedCodes = ordered.map((c) => (c.code || "").toUpperCase()).filter((c) => /^CHAR-/i.test(c));
-  const orderedNames = ordered.map((c) => charLabel(c)).filter(Boolean);
+  const orderedCodes = ordered
+    .filter((c) => {
+      const code = (c.code || "").toUpperCase();
+      if (!/^CHAR-/i.test(code)) return false;
+      return c.hasImage === true;
+    })
+    .map((c) => (c.code || "").toUpperCase());
+  // 图1/图2 仅角色裸名（有 CHAR- code）；禁止道具名占身份槽
+  const orderedCharNames = ordered
+    .filter((c) => /^CHAR-/i.test(String(c.code || "")))
+    .map((c) => charLabel(c))
+    .filter((n) => n.length >= 2 && !isPropLikeIdentityLabel(n));
+  const orderedNames = orderedCharNames.length
+    ? orderedCharNames
+    : ordered.map((c) => charLabel(c)).filter((n) => n.length >= 2 && !isPropLikeIdentityLabel(n));
 
   let bindingLine: string | undefined;
-  // ONLY write 站位绑定 when two distinct roles
-  if (distinct && high && low) {
+  const seatingHard = input.seatingHard === true;
+  // ONLY write 站位绑定 when seating-hard + two distinct CHAR roles
+  if (
+    seatingHard &&
+    distinct &&
+    high &&
+    low &&
+    /^CHAR-/i.test(String(high.code || "")) &&
+    /^CHAR-/i.test(String(low.code || ""))
+  ) {
     const highL = charLabel(high);
     const lowL = charLabel(low);
     bindingLine = `站位绑定：${highL}=高位/图1（端坐或主位），${lowL}=低位/图2（跪或侧位）；禁止互换脸与站位`;
-  } else if (orderedNames.length >= 2) {
+  } else if (orderedNames.length >= 2 && orderedCodes.length >= 2) {
     bindingLine = `身份顺序：图1=${orderedNames[0]}，图2=${orderedNames[1]}；不同脸，禁止融成同一张脸`;
+  } else if (orderedNames.length >= 2 && orderedCodes.length < 2) {
+    // Dual names without dual imaged CHAR — names only, no 图2 prop fiction
+    bindingLine = undefined;
   }
 
-  // Single --cref HIGH LOW — never comma dual segments
+  // Single --cref HIGH LOW — never comma dual segments; never fake cref without image
   const crefTail = orderedCodes.length ? `--cref ${orderedCodes.join(" ")}` : undefined;
 
   return {
@@ -197,10 +258,21 @@ export function resolveShotIdentityBinding(input: {
     orderedNames,
     bindingLine,
     crefTail,
-    refSortKey: orderedCodes.length ? orderedCodes : orderedNames.map((n) => n.toUpperCase()),
+    refSortKey: orderedCodes.length
+      ? orderedCodes
+      : orderedNames.map((n) => n.toUpperCase()),
     highRole: high ? { code: high.code, name: high.name } : undefined,
     lowRole: low ? { code: low.code, name: low.name } : undefined,
   };
+}
+
+/** Prop / object labels must not occupy 图1/图2 identity slots. */
+export function isPropLikeIdentityLabel(name: string): boolean {
+  const n = String(name ?? "").trim();
+  if (!n) return true;
+  if (/^(?:银簪|簪尖|簪|匕首|刀|剑|帕|手帕|血珠|皮肉|锁骨|梳妆台|铜镜|烛火|太师椅|蒲团)/.test(n)) return true;
+  if (/尖端|冷光|表面|下方/.test(n) && n.length <= 6) return true;
+  return false;
 }
 
 /** Slim entity anchors: drop verb-object bloat; keep names + key props. */

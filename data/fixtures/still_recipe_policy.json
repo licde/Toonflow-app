@@ -5,7 +5,7 @@
     "selectBy": "charCodeCount",
     "neverUseReferenceUrlCountForMulti": true,
     "single": "锁定角色定妆参考脸型，禁止重塑五官身份",
-    "multiChar": "严格锁定多参考身份：脸型来自角色定妆参考，环境来自场景参考，禁止把脸融进背景",
+    "multiChar": "锁定定妆脸型与身份，禁止按参考图拼贴成多格/拼图",
     "seatingIdentity": "身份锁定：脸型来自角色定妆参考；姿态与家具以描写为准，场景参考只补背景木作/匾额，不得替换太师椅或蒲团",
     "seatingSeatLock": "座次锁：场景参考仅作环境纹理，禁止把香案/供桌/站立礼佛仪式升为主构图；太师椅与蒲团必须按描写出现"
   },
@@ -41,6 +41,18 @@
       "id": "phantom_dual_face",
       "when": "charCodeCount<2",
       "re": "[\\u4e00-\\u9fff（）()A-Za-z\\s]{2,48}(?:与[\\u4e00-\\u9fff（）()A-Za-z\\s]{2,24}){1,4}不同脸[^。；;\\n]*[。；;]?",
+      "replaceWith": ""
+    },
+    {
+      "id": "identity_order_single_cref",
+      "when": "charCodeCount<2",
+      "re": "身份顺序：图1=[^，,；;\\n]+，图2=[^。；;\\n]+[。；;]?",
+      "replaceWith": ""
+    },
+    {
+      "id": "different_face_alone",
+      "when": "charCodeCount<2",
+      "re": "不同脸，禁止融成同一张脸[。；;]?",
       "replaceWith": ""
     },
     {

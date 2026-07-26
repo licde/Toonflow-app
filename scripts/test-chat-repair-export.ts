@@ -22,7 +22,10 @@ const text = buildAggregatedChatRepairText(
   "缺失字段 1 项：\n- 场1 → shots[].generation.fxPrompt",
   [{ id: "MOD-02", message: "场1 缺 fxPrompt 散文", field: "generation.fxPrompt" }],
 );
-ok("has BLOCK 明细", text.includes("【BLOCK 明细】") && text.includes("MOD-02"));
+ok(
+  "has BLOCK 明细",
+  (text.includes("【须手改 · Chat 契约】") || text.includes("【BLOCK 明细】")) && text.includes("MOD-02"),
+);
 ok("has missing summary", text.includes("缺失字段"));
 ok("has RH template", text.includes("RH-MOD-02"));
 ok("has preserveMedia tip", text.includes("preserveMedia"));

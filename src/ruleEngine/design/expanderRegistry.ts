@@ -1,9 +1,11 @@
 /**
- * Unified shot expander registry — weapon → visual_multi → dialogue_cluster.
+ * Unified shot expander registry — weapon → still_onebeat → visual_multi → dialogue_cluster.
  */
 import { expandWeaponToShots } from "../genre/expandWeaponToShots";
 import { expandDialogueClusters, type ClusterShot } from "./expandDialogueClusters";
 import { expandVisualBeats } from "./expandVisualBeats";
+import { expandStillOneBeat } from "./expandStillOneBeat";
+import { expandStillCuCast } from "./expandStillCuCast";
 import { rebindLedgerAfterExpand } from "./visBeatLedgerRebind";
 
 export type ExpanderLog = { expanderId: string; expanded: boolean; count: number; detail?: string };
@@ -14,6 +16,10 @@ export function runShotExpanders(
     profileId?: string;
     meta?: Record<string, unknown> | null;
     applyClusters?: boolean;
+    applyStillOneBeat?: boolean;
+    applyCuCast?: boolean;
+    chatStrict?: boolean;
+    forceExpand?: boolean;
     maxVisualExpand?: number;
     literaryMode?: "structure_only" | "slice_description_confirm";
   },
@@ -39,7 +45,35 @@ export function runShotExpanders(
   next = afterWeapon;
   log.push({ expanderId: "weapon", expanded: weaponCount > 0, count: weaponCount });
 
-  // 2) visual multi (skipped when weapon already expanded that parent)
+  // 1b) still one-beat (before VisBeat; skips already-split)
+  if (opts?.applyStillOneBeat !== false) {
+    const ob = expandStillOneBeat(next, { maxExpand: opts?.maxVisualExpand });
+    next = ob.shots;
+    log.push({
+      expanderId: "still_onebeat",
+      expanded: ob.expandedCount > 0,
+      count: ob.expandedCount,
+      detail: ob.log.join("|") + (ob.refused ? `;refused=${ob.refused}` : ""),
+    });
+  }
+
+  // 1c) face CU × multi-cast → reaction CU + ensemble mid
+  if (opts?.applyCuCast !== false) {
+    const cu = expandStillCuCast(next, {
+      maxExpand: opts?.maxVisualExpand,
+      chatStrict: opts?.chatStrict,
+      forceExpand: opts?.forceExpand,
+    });
+    next = cu.shots;
+    log.push({
+      expanderId: "still_cu_cast",
+      expanded: cu.expandedCount > 0 || cu.slicedCount > 0,
+      count: cu.expandedCount + cu.slicedCount,
+      detail: cu.log.join("|") + (cu.confirmRequired ? ";confirmRequired" : "") + (cu.slicedCount ? `;sliced=${cu.slicedCount}` : ""),
+    });
+  }
+
+  // 2) visual multi (skipped when weapon/still_onebeat already expanded that parent)
   const vis = expandVisualBeats(next, { meta: opts?.meta, maxExpand: opts?.maxVisualExpand });
   next = vis.shots;
   log.push({
@@ -59,6 +93,26 @@ export function runShotExpanders(
   const rebound = rebindLedgerAfterExpand(next, { literaryMode: opts?.literaryMode ?? "structure_only" });
   next = rebound.shots;
   if (rebound.rebound) log.push({ expanderId: "ledger_rebind", expanded: true, count: rebound.rebound });
+
+  // Homology with IRD/orchestrator: slice child fields + rebind audio after any expand
+  try {
+    const { sliceFieldsAfterIrdSplit } =
+      require("./sliceFieldsAfterIrdSplit") as typeof import("./sliceFieldsAfterIrdSplit");
+    const sliced = sliceFieldsAfterIrdSplit(next);
+    next = sliced.shots;
+    if (sliced.sliced > 0) log.push({ expanderId: "field_slice", expanded: true, count: sliced.sliced });
+  } catch {
+    /* optional */
+  }
+  try {
+    const { rebindAudioVoiceAfterSplit } =
+      require("./audioVoiceRebind") as typeof import("./audioVoiceRebind");
+    const reb = rebindAudioVoiceAfterSplit(next);
+    next = reb.shots;
+    if (reb.rebound > 0) log.push({ expanderId: "audio_rebind", expanded: true, count: reb.rebound });
+  } catch {
+    /* optional */
+  }
 
   return { shots: next, log };
 }

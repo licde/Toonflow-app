@@ -34,6 +34,32 @@ export function buildStillErrorEnvelope(input: {
     };
   }
 
+  if (code === "DEX-DIRTY-STILL-PROMPT" || /裸 --cref|裸 --sref|手部特写与眼神/i.test(msg)) {
+    const primary = buildPrimaryBlock("chat_repair", {
+      stage: "prompt",
+      userMessageOverride: msg || "文学体脏静帧（手+眼同帧或裸 cref/sref 码）；请回 SB 改 VD 或绑真图",
+    });
+    return {
+      code: "DEX-DIRTY-STILL-PROMPT",
+      primaryNextStep: primary.primaryNextStep,
+      userMessage: primary.userMessage,
+      ctaLabel: primary.ctaLabel,
+    };
+  }
+
+  if (code === "DEX-ASSET-CREF" || code === "IMG-CREF-CHAR") {
+    const primary = buildPrimaryBlock("batch_still", {
+      stage: "prompt",
+      userMessageOverride: msg || "出脸镜缺定妆真图；请回 AS 补图后再生成",
+    });
+    return {
+      code: code || "DEX-ASSET-CREF",
+      primaryNextStep: primary.primaryNextStep,
+      userMessage: primary.userMessage,
+      ctaLabel: primary.ctaLabel,
+    };
+  }
+
   if (code === "QP-02" || /可拍画面|画面描述|visual body|qp-02/i.test(msg)) {
     const primary = buildPrimaryBlock("chat_repair", {
       stage: "prompt",

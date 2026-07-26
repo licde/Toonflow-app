@@ -39,6 +39,7 @@
     "scene": { "rePushTarget": "SB" },
     "camera": { "rePushTarget": "EN" },
     "story": { "rePushTarget": "W3" },
+    "continuity": { "rePushTarget": "W3" },
     "av": { "rePushTarget": "GB" },
     "adaptation": { "rePushTarget": "W2" },
     "adaptation_deep": { "rePushTarget": "P03" },

@@ -8,11 +8,26 @@ function linesToText(shot: PreDesignShot): string {
 }
 
 export function preDesignShotsToStoryboardTable(shots: PreDesignShot[]): string {
-  const rows = ["| 镜 | 类型 | 场景 | 台词 | 时长 |", "| --- | --- | --- | --- | --- |"];
+  const rows = [
+    "| 镜 | 类型 | 场景 | 画面描写 | 景别 | 表演 | 台词 | 时长 |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+  ];
   shots.forEach((s, i) => {
     const idx = s.shotIndex ?? i + 1;
     const line = linesToText(s).replace(/\|/g, "\\|");
-    rows.push(`| ${idx} | ${s.type ?? "CHAR-SCENE"} | ${s.sceneName ?? ""} | ${line} | ${s.duration ?? 3}s |`);
+    const vd = String(s.visualDescription ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+    const size = String(s.shotSize ?? (s.narrative as { shotSize?: string } | undefined)?.shotSize ?? "").replace(
+      /\|/g,
+      "\\|",
+    );
+    const sd = s.shotDesign as
+      | { performance?: { microExpression?: { eyes?: string; mouthDetail?: string } }; lipSyncPolicy?: string }
+      | undefined;
+    const micro = sd?.performance?.microExpression;
+    const perf = [micro?.eyes, micro?.mouthDetail, sd?.lipSyncPolicy].filter(Boolean).join("；").replace(/\|/g, "\\|");
+    rows.push(
+      `| ${idx} | ${s.type ?? "CHAR-SCENE"} | ${s.sceneName ?? ""} | ${vd} | ${size} | ${perf} | ${line} | ${s.duration ?? 3}s |`,
+    );
   });
   return rows.join("\n");
 }
@@ -51,8 +66,19 @@ export function preDesignShotsToPanels(
     }
     const rawFx = gen?.fxPrompt?.trim();
     const fxPrompt = rawFx && !/^F[0-5]$/i.test(rawFx) ? rawFx : undefined;
+    const stableClientId = String(
+      (shot as { clientId?: string }).clientId ??
+        (shot as { _stillBeatSplitId?: string })._stillBeatSplitId ??
+        (shot as { _visualSplitId?: string })._visualSplitId ??
+        `sb-${idx}`,
+    );
+    const burnParentForbidden = Boolean(
+      (shot as { burnParentForbidden?: boolean }).burnParentForbidden ||
+        (shot as { _stillBeatSplitId?: string })._stillBeatSplitId ||
+        (shot as { _visualSplitId?: string })._visualSplitId,
+    );
     return {
-      clientId: `sb-${idx}`,
+      clientId: stableClientId,
       duration: shot.duration ?? 3,
       prompt: imagePrompt || [chars, shot.sceneName, sceneCode, desc].filter(Boolean).join("，").slice(0, 2000),
       videoDesc:
@@ -63,6 +89,9 @@ export function preDesignShotsToPanels(
       shouldGenerateImage: 1,
       associateAssetsIds: [...new Set(associateAssetsIds)],
       track: String(idx),
+      burnParentForbidden,
+      _stillBeatSplitId: (shot as { _stillBeatSplitId?: string })._stillBeatSplitId,
+      _visualSplitId: (shot as { _visualSplitId?: string })._visualSplitId,
       state: "未生成",
       index: idx - 1,
     };

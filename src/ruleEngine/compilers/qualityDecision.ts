@@ -148,10 +148,11 @@ export function decideVideoQuality(input: QualityDecisionInput): QualityDecision
         {
           id: "IMG-STILL-QA",
           message: "分镜静照质量不足（须高质量构图首帧）",
+          // Alias of still_firstframe_weak — DepthPolicy / reverse_route_table SSOT
           reverseTrigger: "img_still_weak",
         },
       ],
-      { reasons: ["img_still_qa"], nextStep: "regen_storyboard_hq" },
+      { reasons: ["img_still_qa"], nextStep: "batch_still" },
       input.batchMode,
     );
   }
@@ -205,11 +206,14 @@ export function decideVideoQuality(input: QualityDecisionInput): QualityDecision
   }
 
   // L3.4: forbid burning unsplittable / expanded-away parent (multi-row handoff)
+  // Children after speak/react split may carry burnParentForbidden (=don't burn parent); they themselves are burnable.
   if (
     input.shot &&
     ((input.shot as { visBeatUnsplittable?: boolean }).visBeatUnsplittable ||
       (input.shot as { visBeatExpandedAway?: boolean }).visBeatExpandedAway ||
-      (input.shot as { burnParentForbidden?: boolean }).burnParentForbidden)
+      ((input.shot as { burnParentForbidden?: boolean }).burnParentForbidden &&
+        !(input.shot as { _stillBeatSplitId?: string })._stillBeatSplitId &&
+        !(input.shot as { _visualSplitId?: string })._visualSplitId))
   ) {
     return wrap(
       "split_shot",
@@ -227,6 +231,88 @@ export function decideVideoQuality(input: QualityDecisionInput): QualityDecision
     );
   }
 
+  // L3.45: still multi-beat unresolved — forbid burn (Must)
+  if (input.shot && !(input.shot as { visBeatOverride?: unknown }).visBeatOverride) {
+    const vd = String(
+      (input.shot as { visualDescription?: string }).visualDescription ??
+        (input.shot as { picture?: string }).picture ??
+        "",
+    ).trim();
+    try {
+      const { shouldWarnOneBeat } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+      if (vd && shouldWarnOneBeat(vd)) {
+        return wrap(
+          "split_shot",
+          false,
+          [
+            ...baseBlocks,
+            {
+              id: "DEX-STILL-ONEBEAT",
+              message: "一镜多拍不可烧；请智能拆镜或改单拍描写",
+              reverseTrigger: "still_onebeat_multi",
+            },
+          ],
+          { reasons: ["still_onebeat"], nextStep: "split_shot", splitHint: "still_onebeat" },
+          input.batchMode,
+        );
+      }
+      try {
+        const { detectCuCastConflict, sliceShotCastToPrimary } =
+          require("../design/detectCuCastConflict") as typeof import("../design/detectCuCastConflict");
+        const shot = input.shot as Record<string, unknown> | undefined;
+        const cu = detectCuCastConflict({
+          shotSize: String(
+            shot?.shotSize ?? (shot?.narrative as { shotSize?: string } | undefined)?.shotSize ?? "",
+          ),
+          charCodes: Array.isArray(shot?.charCodes) ? (shot!.charCodes as string[]) : [],
+          characterNames: Array.isArray(shot?.characterNames) ? (shot!.characterNames as string[]) : [],
+          visualDescription: vd,
+          alreadySplit: Boolean(shot?._cuCastSplitId || shot?._stillBeatSplitId || shot?._cuCastSliced),
+        });
+        if (cu.conflict && cu.healMode === "slice_cast" && cu.primaryName && shot) {
+          // 文学单人特写：降出场人数，禁止打开拆镜确认
+          sliceShotCastToPrimary(shot, cu.primaryName);
+        } else if (cu.conflict) {
+          const loop = checkReverseLoop(cu.reverseTrigger, String(shot?.shotIndex ?? "x"));
+          if (!loop.allow) {
+            return wrap(
+              "rePush_design",
+              false,
+              [
+                ...baseBlocks,
+                {
+                  id: cu.ruleId,
+                  message: `${cu.message}（拆镜循环达上限，请 Confirm 或手改景别/人数）`,
+                  reverseTrigger: cu.reverseTrigger,
+                },
+              ],
+              { reasons: ["still_cu_cast_loop"], nextStep: "chat_repair", splitHint: "still_cu_cast" },
+              input.batchMode,
+            );
+          }
+          return wrap(
+            "split_shot",
+            false,
+            [
+              ...baseBlocks,
+              {
+                id: cu.ruleId,
+                message: cu.message,
+                reverseTrigger: cu.reverseTrigger,
+              },
+            ],
+            { reasons: ["still_cu_cast"], nextStep: "split_shot", splitHint: "still_cu_cast" },
+            input.batchMode,
+          );
+        }
+      } catch {
+        /* optional */
+      }
+    } catch {
+      /* optional */
+    }
+  }
+
   // L3.5: VisBeat multi-beat unresolved (enforce only)
   if (input.shot && !(input.shot as { visBeatOverride?: unknown }).visBeatOverride) {
     const shot = input.shot as PreDesignShot & {
@@ -240,7 +326,15 @@ export function decideVideoQuality(input: QualityDecisionInput): QualityDecision
       shotSize: shot.shotSize ?? (shot.narrative as { shotSize?: string } | undefined)?.shotSize,
       picture: shot.visualDescription,
       weaponId: shot.weaponId,
-      meta: input.visBeatMeta ?? { pillarsVisBeatV2: "shadow" },
+      // Enforce when tags present or caller sets enforce — avoid shadow假绿 at burn
+      meta:
+        input.visBeatMeta ??
+        ({
+          pillarsVisBeatV2:
+            Boolean(shot.visualBeatTags) || Boolean((shot as { chatStrict?: boolean }).chatStrict)
+              ? "enforce"
+              : "shadow",
+        } as Record<string, unknown>),
     });
     if (ev.action === "must_split" && !ev.ok) {
       const loop = checkReverseLoop("visual_multi_beat", String(shot.shotIndex ?? "x"));

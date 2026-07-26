@@ -45,7 +45,7 @@ export interface StillVisualFidelityLoopConfig {
   l0MaxInjectRounds?: number;
   failClosedOnVlmError?: boolean;
   unknownDoesNotConverge?: boolean;
-  /** After VLM infra fail: one literary Edit from checklist healInject (never hq_ok). */
+  /** After VLM infra fail: one thin anti-collage Edit (never literary soup / hq_ok). */
   vlmInfraEditBypassOnce?: boolean;
 }
 
@@ -93,8 +93,22 @@ export function degradeHqWithoutVisualPass(meta: {
   stillQuality?: string | null;
   visualPassAt?: string | null;
   visualPass?: boolean | null;
+  pendingHumanRejudge?: boolean | null;
+  infraEditBypassUsed?: boolean | null;
+  fidelityStopReason?: string | null;
+  vlmError?: string | null;
 } | null): "hq_ok" | "weak" | "missing" | null {
   if (!meta) return null;
+  // VLM infra gap: still file may be usable — do not forever-block burn as "weak"
+  if (
+    meta.pendingHumanRejudge === true ||
+    meta.infraEditBypassUsed === true ||
+    meta.fidelityStopReason === "vlm_error" ||
+    meta.fidelityStopReason === "disabled" ||
+    /VLM_API_KEY_MISSING|缺少可用的视觉评审/i.test(String(meta.vlmError ?? ""))
+  ) {
+    return null;
+  }
   if (meta.stillQuality === "missing") return "missing";
   if (meta.stillQuality !== "hq_ok") return (meta.stillQuality as "weak") ?? "weak";
   if (!stillHqRequiresVisualPass()) return "hq_ok";
@@ -127,6 +141,8 @@ export interface StillVisualGenerateRoundArgs {
   candidateIndex?: number;
   /** Smart repair: preserve composition via layout_preserve Edit */
   layoutPreserve?: boolean;
+  /** When true, refuse layout_preserve (sheet / cast overcrowd) */
+  forbidLayoutPreserve?: boolean;
   /** Smart repair: swap to alternate layout template on Stage A */
   swapLayoutTemplate?: boolean;
   excludeLayoutTemplateId?: string;
@@ -167,28 +183,39 @@ export interface StillVisualFidelityLoopResult {
   sceneRefsDropped?: number;
   stageCost?: number;
   settingsDeepLink?: string;
+  /** VLM single_frame / collage fail — persist for burn gate */
+  sheetLeak?: boolean;
 }
+
+export { detectSheetLeakFromVlmItems } from "../compilers/stillFirstFrameLiterarySsot";
+import { detectSheetLeakFromVlmItems } from "../compilers/stillFirstFrameLiterarySsot";
 
 function passCount(items: VlmItemResult[]): number {
   return items.filter((i) => i.pass && !i.unknown).length;
 }
 
-function healInjectHints(checklist: StillFidelityItem[], max = 6): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const c of checklist) {
-    const h = String(c.healInject ?? "").trim();
-    if (!h || seen.has(h)) continue;
-    seen.add(h);
-    out.push(h.slice(0, 48));
-    if (out.length >= max) break;
+function healInjectHints(checklist: StillFidelityItem[], max = 8): string[] {
+  try {
+    const { sortHealInjects } =
+      require("../compilers/stillLiteraryIntentSsot") as typeof import("../compilers/stillLiteraryIntentSsot");
+    return sortHealInjects(checklist, max);
+  } catch {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const c of checklist) {
+      const h = String(c.healInject ?? "").trim();
+      if (!h || seen.has(h)) continue;
+      seen.add(h);
+      out.push(h.slice(0, 80));
+      if (out.length >= max) break;
+    }
+    return out;
   }
-  return out;
 }
 
 /**
- * On VLM infra failure: optionally one literary Edit with checklist healInject, then stop weak.
- * Never marks hq_ok / visualPass.
+ * On VLM infra failure: at most one thin Edit with single-frame anti-collage lock.
+ * Never re-pours cast_cardinality / seating literary soup; never marks hq_ok / visualPass.
  */
 async function finishOnVlmInfra(input: {
   hitOnce: StillVisualGenerateOnceResult;
@@ -212,23 +239,39 @@ async function finishOnVlmInfra(input: {
     !input.bypassAlreadyUsed &&
     canRegenRetry(budget);
 
+  const settingsDeepLink = "/settings/vendor?focus=volcengine&field=apiKey";
+
   if (allowBypass) {
-    const hints = healInjectHints(input.checklist);
-    fixHintsUsed = hints;
-    const patch = strengthenFromMissing(input.checklist.filter((c) => c.healInject));
-    strengthen = mergeStrengthenMonotonic(strengthen, patch);
+    // Thin dual lock: anti-collage + sheet-as-identity — no literary healInject soup
+    let singleLock = "单镜头成片画幅，禁止四视图、定妆拼版、多宫格、拼图";
+    let sheetLock = "角色参考若为四视图仅借身份，严禁复刻多格拼版";
+    try {
+      const { STILL_SINGLE_FRAME_LOCK_ZH, STILL_SHEET_AS_IDENTITY_ONLY_ZH } =
+        require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
+      singleLock = STILL_SINGLE_FRAME_LOCK_ZH;
+      sheetLock = STILL_SHEET_AS_IDENTITY_ONLY_ZH;
+    } catch {
+      /* keep short */
+    }
+    const basePrompt = String(hitOnce.promptUsed ?? "");
+    const hints: string[] = [];
+    if (!/单镜头成片|禁止四视图|禁止.*拼图/.test(basePrompt)) hints.push(singleLock);
+    if (!/仅借脸型|严禁复刻多格/.test(basePrompt)) hints.push(sheetLock);
+    fixHintsUsed = hints.length ? hints : [singleLock, sheetLock];
     emitHealObs("still_fidelity_vlm_infra_edit_bypass", {
       round: input.round,
-      fixHints: hints.length,
+      fixHints: fixHintsUsed.length,
+      thin: true,
     });
     try {
       const edited = await input.generateOnce({
         round: input.round + 1,
         strengthen: {},
         mode: "edit",
-        fixHints: hints,
+        fixHints: fixHintsUsed,
         failedImageBase64: hitOnce.imageBase64,
         candidateIndex: 0,
+        forbidLayoutPreserve: true,
       });
       hitOnce = edited;
       budget = consumeRegenRetry(budget);
@@ -263,6 +306,8 @@ async function finishOnVlmInfra(input: {
     infraEditBypassUsed,
     fixHintsUsed: fixHintsUsed.length ? fixHintsUsed : undefined,
     editStrategy: infraEditBypassUsed ? hitOnce.strategy : undefined,
+    settingsDeepLink,
+    sheetLeak: detectSheetLeakFromVlmItems(input.judgedItems),
   };
 }
 
@@ -313,6 +358,8 @@ export async function runStillVisualFidelityLoop(input: {
   forceSkipVlm?: boolean;
   db?: import("knex").Knex;
   bgPolicy?: "drop" | "demote" | "keep" | null;
+  shotSize?: string | null;
+  castNames?: string[] | null;
 }): Promise<StillVisualFidelityLoopResult> {
   const cfg = loadStillVisualFidelityLoopConfig();
   const editCfg = loadStillImageEditConfig();
@@ -352,6 +399,7 @@ export async function runStillVisualFidelityLoop(input: {
         input.checklist.map((c) => ({ id: c.id, pass: !once.fidelityMissing.includes(c.id) })),
       ),
       parallelM: 1,
+      sheetLeak: false,
     };
   }
 
@@ -428,6 +476,7 @@ export async function runStillVisualFidelityLoop(input: {
           input.checklist.map((c) => ({ id: c.id, pass: !once.fidelityMissing.includes(c.id) })),
         ),
         parallelM: candCount,
+        sheetLeak: false,
       };
     }
 
@@ -521,6 +570,7 @@ export async function runStillVisualFidelityLoop(input: {
         editStrategy: picked.once.strategy,
         fixHintsUsed: lastFixHints,
         parallelM: candCount,
+        sheetLeak: false,
       };
     }
 
@@ -533,22 +583,43 @@ export async function runStillVisualFidelityLoop(input: {
     // Smart repair route: layout swap vs layout_preserve Edit
     try {
       const { routeStillRepair } = await import("./stillRepairRoute");
+      const sheetLeak = detectSheetLeakFromVlmItems(picked.items);
       const decision = routeStillRepair({
         itemResults: picked.items,
         checklist: input.checklist,
         bgPolicy: input.bgPolicy,
+        sheetLeak,
+        literaryPrompt: input.description,
+        shotSize: input.shotSize,
+        castNames: input.castNames,
       });
       lastRepairRoute = decision.route;
       lastSettingsDeepLink = decision.settingsDeepLink;
-      if (decision.swapLayoutTemplate) {
+      if (decision.swapLayoutTemplate || sheetLeak) {
         nextSwapLayout = true;
         excludeLayoutId = picked.once.layoutTemplateId;
         usedEdit = false;
-        autoHealed.push("repair_swap_layout");
+        nextLayoutPreserve = false;
+        autoHealed.push(sheetLeak ? "repair_swap_layout_sheet_leak" : "repair_swap_layout");
       } else if (decision.layoutPreserveEdit) {
-        nextLayoutPreserve = true;
-        usedEdit = true;
-        autoHealed.push("repair_layout_preserve_edit");
+        const { shouldForbidLayoutPreserve } = await import("@/ruleEngine/compilers/stillRefSlotContract");
+        const forbid =
+          sheetLeak ||
+          shouldForbidLayoutPreserve({
+            failedItemIds: picked.items.filter((i) => !i.pass).map((i) => i.id),
+            fixHints: lastFixHints,
+          });
+        if (forbid) {
+          nextSwapLayout = true;
+          excludeLayoutId = picked.once.layoutTemplateId;
+          usedEdit = false;
+          nextLayoutPreserve = false;
+          autoHealed.push("repair_swap_layout_cast_overcrowd");
+        } else {
+          nextLayoutPreserve = true;
+          usedEdit = true;
+          autoHealed.push("repair_layout_preserve_edit");
+        }
       }
       emitHealObs("still_fidelity_repair_route", {
         round,
@@ -585,6 +656,7 @@ export async function runStillVisualFidelityLoop(input: {
           bestPassCount: keep.passCount,
           fixHintsUsed: lastFixHints,
           parallelM: candCount,
+          sheetLeak: detectSheetLeakFromVlmItems(keep.items),
         };
       }
     }
@@ -613,6 +685,7 @@ export async function runStillVisualFidelityLoop(input: {
         bestPassCount: keep.passCount,
         fixHintsUsed: lastFixHints,
         parallelM: candCount,
+        sheetLeak: detectSheetLeakFromVlmItems(keep.items),
       };
     }
 
@@ -653,5 +726,6 @@ export async function runStillVisualFidelityLoop(input: {
     sceneRefsDropped: keep.once.sceneRefsDropped,
     stageCost: keep.once.stageCost,
     settingsDeepLink: lastSettingsDeepLink,
+    sheetLeak: detectSheetLeakFromVlmItems(keep.items),
   };
 }

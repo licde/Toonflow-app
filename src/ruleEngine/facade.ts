@@ -221,12 +221,29 @@ export function getCompiledPromptForStoryboard(
 ): string | null {
   const shot = pkg.shots.find((s) => s.storyboardId === storyboardId);
   if (!shot) return null;
+  let text: string | null = null;
   if (!shot.generation.compiled) {
-    if (modality === "video") return shot.generation.videoDesc ?? shot.generation.videoPrompt ?? null;
-    if (modality === "audio") return shot.generation.audioPrompt ?? null;
-    return shot.generation.imagePrompt ?? null;
+    if (modality === "video") text = shot.generation.videoDesc ?? shot.generation.videoPrompt ?? null;
+    else if (modality === "audio") text = shot.generation.audioPrompt ?? null;
+    else text = shot.generation.imagePrompt ?? null;
+  } else {
+    text = shot.generation.compiled[modality] ?? null;
   }
-  return shot.generation.compiled[modality] ?? null;
+  // Refuse stub / thin compiled.video — force callers to rebuild via spine
+  if (modality === "video" && text) {
+    try {
+      const { isVideoPromptStub } = require("./compilers/sanitizeVideoPrompt") as typeof import("./compilers/sanitizeVideoPrompt");
+      const { isVideoPromptThinShell } = require("./compilers/assertVideoPromptReady") as typeof import("./compilers/assertVideoPromptReady");
+      if (isVideoPromptStub(text) || isVideoPromptThinShell(text)) return null;
+      // Comma-soup / non five-section package IR is not spine output
+      if (!/\[Visual\]/i.test(text) && !/\[Audio\]/i.test(text) && /motion-from-frame|medium shot static|lipSync off/i.test(text)) {
+        return null;
+      }
+    } catch {
+      /* keep text */
+    }
+  }
+  return text;
 }
 
 export { applyAutoFix, stableHash };

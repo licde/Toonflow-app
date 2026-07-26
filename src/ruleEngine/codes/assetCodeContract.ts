@@ -114,7 +114,8 @@ export function isShortLKey(key: string): boolean {
 /** Language policy SSOT: AUD = source language; VID motion shell = EN */
 export const LANGUAGE_POLICY = {
   audioPayload: "source_language" as const,
-  videoMotionShell: "en" as const,
+  /** Must: product egress prefers zh; EN motion tokens may map at vendor adapter */
+  videoMotionShell: "zh" as const,
   forbidLineTranslationInVideo: true,
 };
 

@@ -124,6 +124,7 @@ async function main() {
         { code: "CHAR-SHENQINGCI", name: "沈清瓷" },
         { code: "CHAR-SHENMU", name: "沈母" },
       ],
+      seatingHard: true,
     });
     ok("high is 沈母 first", bind.orderedCodes[0] === "CHAR-SHENMU", bind.orderedCodes.join(","));
     ok("low is 清瓷 second", bind.orderedCodes[1] === "CHAR-SHENQINGCI", bind.orderedCodes.join(","));

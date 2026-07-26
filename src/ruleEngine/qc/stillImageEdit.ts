@@ -23,7 +23,28 @@ export interface StillImageEditInput {
   strategy?: StillEditStrategy;
   /** When true, strip SCENE-like refs and keep failed_still as layout anchor */
   layoutPreserve?: boolean;
+  /**
+   * Cast names in the SAME order as crefOrderedRefs (identity bind high→low).
+   * Never pass unsorted storyboard character list.
+   */
+  castNames?: string[];
+  highName?: string | null;
+  lowName?: string | null;
+  /** When true, refuse layout_preserve (cast overcrowd on failed still) */
+  forbidLayoutPreserve?: boolean;
+  /** Design framing — 智能适配同核 */
+  shotSize?: string | null;
+  visualDescription?: string | null;
+  /** Only seating-hard may remap to 站位绑定 / 座次【布局锁】 */
+  seatingHard?: boolean;
 }
+
+export type StillEditStructuralBlock = {
+  block: boolean;
+  trigger: string;
+  nextStep: "split_shot" | "";
+  message: string;
+};
 
 export interface StillImageEditResult {
   imageBase64: string;
@@ -65,7 +86,7 @@ const FALLBACK: StillImageEditConfig = {
     maxCrefRefs: 4,
     includeFailedStill: true,
   },
-  maxFixHints: 6,
+  maxFixHints: 8,
   disableStrengthenStackOnEdit: true,
   vendorRoutes: {
     agnes: "agnes_i2i",
@@ -160,16 +181,65 @@ export function buildEditFocusPrompt(input: {
   fixHints: string[];
   config?: StillImageEditConfig;
   layoutPreserve?: boolean;
+  visualDescription?: string | null;
 }): string {
   const cfg = input.config ?? loadStillImageEditConfig();
-  const max = Math.max(1, cfg.maxFixHints ?? 6);
-  let lit = String(input.literaryPrompt ?? "").trim().slice(0, 1200);
-  // Strip duplicate focus lines if literary already included one (SSOT)
+  const max = Math.max(1, cfg.maxFixHints ?? 8);
+  let lit = String(input.literaryPrompt ?? "").trim();
   lit = lit.replace(/\n?【Edit焦点】[^\n]*/g, "").trim();
-  const hints = (input.fixHints ?? [])
-    .map((h) => String(h ?? "").trim())
+  try {
+    const { preserveLiteraryCoreForEdit } =
+      require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
+    lit = preserveLiteraryCoreForEdit({
+      literaryPrompt: lit,
+      visualDescription: input.visualDescription,
+    });
+  } catch {
+    /* optional */
+  }
+  const hardMatch = lit.match(/场面硬约束[：:][^。\n]{0,500}/);
+  const hard = hardMatch?.[0] ?? "";
+  if (lit.length > 1800) {
+    const vdCore = lit.split(/场面硬约束/)[0]?.trim() ?? lit.slice(0, 800);
+    lit = [vdCore, hard].filter(Boolean).join("。").replace(/。。+/g, "。").trim();
+    if (lit.length > 2000) lit = lit.slice(0, 2000);
+  }
+  const seen = new Set<string>();
+  const hints: string[] = (input.fixHints ?? [])
+    .map((h) =>
+      String(h ?? "")
+        .trim()
+        .replace(/抄书书/g, "抄书")
+        .replace(/必须必须/g, "必须"),
+    )
     .filter(Boolean)
+    // Drop full hard-constraint dumps already in literary base
+    .filter((h) => {
+      if (/^场面硬约束/.test(h) && /场面硬约束/.test(lit)) return false;
+      if (hard && h.includes(hard.slice(0, 16))) return false;
+      // Do not re-pour cast cardinality when already present
+      if (/出镜人数|仅\d+人|禁止第\d+人/.test(h) && /出镜人数|仅\d+人/.test(lit)) return false;
+      const key = h.replace(/\s+/g, "").slice(0, 48);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      // Skip if already verbatim in literary body
+      if (h.length >= 8 && lit.includes(h.slice(0, Math.min(24, h.length)))) return false;
+      return true;
+    })
     .slice(0, max);
+  // Always keep anti-collage + sheet-as-identity on Edit (append if missing)
+  const needSingle = !/单镜头成片|禁止四视图|禁止.*拼图/.test(lit) && !hints.some((h) => /单镜头|四视图|拼图/.test(h));
+  const needSheet =
+    !/仅借脸型|严禁复刻多格|四视图\/定妆拼版/.test(lit) && !hints.some((h) => /仅借脸型|严禁复刻多格/.test(h));
+  try {
+    const { STILL_SINGLE_FRAME_LOCK_ZH, STILL_SHEET_AS_IDENTITY_ONLY_ZH } =
+      require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
+    if (needSingle) hints.push(STILL_SINGLE_FRAME_LOCK_ZH);
+    if (needSheet) hints.push(STILL_SHEET_AS_IDENTITY_ONLY_ZH);
+  } catch {
+    if (needSingle) hints.push("单镜头成片，禁止四视图/多宫格/拼图");
+    if (needSheet) hints.push("参考四视图仅借身份，严禁复刻多格拼版");
+  }
   const focus = input.layoutPreserve
     ? hints.length
       ? `【Edit焦点】保构图，仅修正：${hints.join("；")}。禁止改座次/站位；勿重写未点名情节。`
@@ -192,51 +262,173 @@ export function prepareStillImageEdit(input: StillImageEditInput): {
   modelUsed: string;
   promptUsed: string;
   referenceList: StillImageEditRef[];
+  structuralBlock?: StillEditStructuralBlock;
 } {
   const cfg = loadStillImageEditConfig();
-  const layoutPreserve = Boolean(input.layoutPreserve) || input.strategy === "layout_preserve";
-  const strategy = layoutPreserve
-    ? "layout_preserve"
-    : resolveEditStrategy({
-        vendorHint: input.vendorHint,
-        model: input.model,
-        explicit: input.strategy,
-        config: cfg,
-      });
-  const promptUsed = buildEditFocusPrompt({
-    literaryPrompt: input.literaryPrompt,
-    fixHints: input.fixHints,
-    config: cfg,
-    layoutPreserve,
-  });
+  let layoutPreserve = Boolean(input.layoutPreserve) || input.strategy === "layout_preserve";
+  if (input.forbidLayoutPreserve && layoutPreserve) {
+    layoutPreserve = false;
+  }
+
+  // 智能适配：CU×多人 / 人数契约泄漏 → 禁文学 Edit 洗绿，反推 split_shot
+  let structuralBlock: StillEditStructuralBlock | undefined;
+  try {
+    const { diagnoseStructuralStillEditBlock } =
+      require("../design/detectCuCastConflict") as typeof import("../design/detectCuCastConflict");
+    const d = diagnoseStructuralStillEditBlock({
+      literaryPrompt: input.literaryPrompt,
+      shotSize: input.shotSize,
+      castNames: input.castNames,
+    });
+    if (d.block) {
+      structuralBlock = {
+        block: true,
+        trigger: d.trigger || "still_cu_cast",
+        nextStep: "split_shot",
+        message: d.message,
+      };
+    }
+  } catch {
+    /* optional */
+  }
+
+  const strategy: StillEditStrategy = structuralBlock
+    ? "focus_regen"
+    : layoutPreserve
+      ? "layout_preserve"
+      : input.forbidLayoutPreserve && input.strategy === "layout_preserve"
+        ? "focus_regen"
+        : resolveEditStrategy({
+            vendorHint: input.vendorHint,
+            model: input.model,
+            explicit: input.strategy === "layout_preserve" && input.forbidLayoutPreserve ? "focus_regen" : input.strategy,
+            config: cfg,
+          });
+
+  let literaryBase = String(input.literaryPrompt ?? "").trim();
+  let castNames = (input.castNames ?? []).filter(Boolean);
+  let crefRefs = [...(input.crefOrderedRefs ?? [])];
+  let highName = input.highName ?? null;
+  let lowName = input.lowName ?? null;
+
+  // 引用资产按设计意图裁切（反应特写只绑主角 cref）
+  try {
+    const { adaptCrefsToFaceCuIntent, stripCastCardinalityLeakForFaceCu } =
+      require("../compilers/stillRefSlotContract") as typeof import("../compilers/stillRefSlotContract");
+    const crefsOnly = crefRefs.filter((r) => r.role === "cref" || !r.role);
+    const adapted = adaptCrefsToFaceCuIntent({
+      crefs: crefsOnly.map((r) => ({ base64: r.base64, name: (r as { name?: string }).name })),
+      castNames,
+      shotSize: input.shotSize,
+      visualDescription: input.visualDescription || literaryBase,
+      literaryPrompt: literaryBase,
+    });
+    if (adapted.adapted) {
+      const keep = new Set(adapted.crefs.map((c) => c.base64));
+      crefRefs = crefRefs.filter((r) => (r.role && r.role !== "cref" ? true : keep.has(r.base64)));
+      // re-attach adapted cref order
+      const adaptedCrefs = adapted.crefs.map((c) => ({
+        type: "image" as const,
+        base64: c.base64,
+        role: "cref" as const,
+      }));
+      const nonCref = crefRefs.filter((r) => r.role && r.role !== "cref");
+      crefRefs = [...nonCref, ...adaptedCrefs];
+      castNames = adapted.castNames;
+      highName = adapted.primaryName || highName;
+      lowName = null;
+      literaryBase = stripCastCardinalityLeakForFaceCu(literaryBase);
+    }
+  } catch {
+    /* optional */
+  }
+
+  let promptUsed: string;
+  if (structuralBlock) {
+    // 不写【Edit焦点】文学清单；点名结构冲突 → 智能拆
+    const cleaned = literaryBase.replace(/\n?【Edit焦点】[^\n]*/g, "").trim();
+    promptUsed = `${cleaned}\n【结构冲突·须智能拆】${structuralBlock.message}`.trim();
+  } else {
+    promptUsed = buildEditFocusPrompt({
+      literaryPrompt: literaryBase,
+      fixHints: input.fixHints,
+      config: cfg,
+      layoutPreserve: strategy === "layout_preserve",
+      visualDescription: input.visualDescription,
+    });
+  }
   let modelUsed = input.model;
   let referenceList: StillImageEditRef[];
 
   if (strategy === "focus_regen") {
     referenceList = mergeEditReferenceList({
-      crefOrderedRefs: input.crefOrderedRefs,
+      crefOrderedRefs: crefRefs,
       failedImageBase64: null,
       config: cfg,
     });
   } else if (strategy === "atlas_native") {
     modelUsed = mapAtlasEditModel(input.model, cfg);
     referenceList = mergeEditReferenceList({
-      crefOrderedRefs: input.crefOrderedRefs,
+      crefOrderedRefs: crefRefs,
       failedImageBase64: input.failedImageBase64,
       config: cfg,
-      layoutPreserve,
+      layoutPreserve: strategy === "layout_preserve",
     });
   } else {
     // agnes_i2i or layout_preserve — cref + failed still (layout_preserve puts failed first)
     referenceList = mergeEditReferenceList({
-      crefOrderedRefs: input.crefOrderedRefs,
+      crefOrderedRefs: crefRefs,
       failedImageBase64: input.failedImageBase64,
       config: cfg,
-      layoutPreserve,
+      layoutPreserve: strategy === "layout_preserve",
     });
   }
 
-  return { strategy, modelUsed, promptUsed, referenceList };
+  // Remap ONLY when layout/failed is the composition anchor (ordinal 0).
+  // Default Agnes (failed last) must NOT renumber 图1 away from first cref.
+  const layoutAnchor = referenceList.find((r) => r.role === "layout");
+  const failedFirst =
+    strategy === "layout_preserve" && referenceList[0]?.role === "failed_still"
+      ? referenceList[0]
+      : undefined;
+  if (layoutAnchor || failedFirst) {
+    try {
+      const {
+        buildPhysicalSlots,
+        remapPromptToPhysicalRefs,
+        alignCrefMetaToBindOrder,
+      } = require("../compilers/stillRefSlotContract") as typeof import("../compilers/stillRefSlotContract");
+      const bindOrderedNames = castNames.filter(Boolean);
+      const crefsRaw = referenceList.filter((r) => r.role === "cref");
+      const crefsAligned = alignCrefMetaToBindOrder({
+        crefs: crefsRaw.map((r) => ({ base64: r.base64 })),
+        orderedNames: bindOrderedNames,
+        highName,
+        lowName,
+      });
+      // Drop unnamed extras from both prompt map and physical refs (prevents 图4=角色4)
+      const keepCrefs = new Set(crefsAligned.map((c) => c.base64));
+      referenceList = referenceList.filter(
+        (r) => r.role !== "cref" || keepCrefs.has(r.base64),
+      );
+      const slots = buildPhysicalSlots({
+        layoutBase64: layoutAnchor?.base64,
+        failedStillBase64: failedFirst?.base64,
+        preferLayout: Boolean(layoutAnchor?.base64),
+        crefOrdered: crefsAligned,
+      });
+      promptUsed = remapPromptToPhysicalRefs(promptUsed, slots, {
+        highName: highName ?? bindOrderedNames[0],
+        lowName: lowName ?? bindOrderedNames[1],
+        castNames: bindOrderedNames,
+        seatingHard: input.seatingHard === true,
+      });
+    } catch {
+      /* remap optional */
+    }
+  }
+
+  return { strategy, modelUsed, promptUsed, referenceList, structuralBlock };
 }
 
 /**

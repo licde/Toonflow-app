@@ -23,9 +23,10 @@ import { auditScriptViralGaps } from "../bundle/scriptViralAudit";
 import { auditRetentionGaps } from "../bundle/retentionAudit";
 import { auditNarrativeDriveGaps } from "../bundle/narrativeDriveAudit";
 import { runPrValidator } from "../validators/prValidator";
-import { dialogueCoverageReport } from "../design/dialogueCoverage";
+import { dialogueCoverageReport, formatDialogueCoverageMessage } from "../design/dialogueCoverage";
 import { readFixtureJson } from "../utils/fixturesPath";
-import { needsNar14Split } from "../nar14ClauseSplit";
+import { collectNar14Nar15Fails, type Nar14LineLike } from "../nar14ClauseSplit";
+import { isClearedSpeakSplitChild } from "../design/splitChildVisual";
 
 export type QualityStage = "export" | "preflight" | "promptGen" | "burn" | "post" | "design";
 
@@ -299,14 +300,101 @@ export function qualityGate(bundle: ScriptBundle, opts: QualityGateOptions): Qua
     });
     if (!report.ok) {
       push({
-        id: "DC-01",
+        id: report.extraCount > 0 && report.missingCount === 0 ? "DC-01-EXTRA" : "DC-01",
         severity: "BLOCK",
-        message: `分镜台词与剧本对不上：还缺 ${report.missingCount} 条${
-          report.missingKeys[0] ? `（如「${String(report.missingKeys[0]).slice(0, 40)}」）` : ""
-        }`,
-        evidence: { missingKeys: report.missingKeys.slice(0, 10), missingCount: report.missingCount, repairReasons: ["unique_missing_line"] },
-        softPatch: true,
+        message: formatDialogueCoverageMessage(report),
+        evidence: {
+          missingKeys: report.missingKeys.slice(0, 10),
+          missingCount: report.missingCount,
+          extraKeys: report.extraKeys.slice(0, 10),
+          extraCount: report.extraCount,
+          repairReasons: report.missingCount === 1 ? ["unique_missing_line"] : [],
+        },
+        softPatch: report.missingCount > 0 && report.extraCount === 0,
       });
+    }
+  }
+
+  // Dirty still / literary intent fail → block video burn/preflight (inherit)
+  if (stage === "preflight" || stage === "export" || stage === "burn") {
+    try {
+      const { auditShotDirtyStillPrompt } =
+        require("../design/dirtyStillPromptGate") as typeof import("../design/dirtyStillPromptGate");
+      const { buildMustSurvive, stripCollidingRecipeLayers, hasSeatingOrPowerSignals } =
+        require("../compilers/stillLiteraryIntentSsot") as typeof import("../compilers/stillLiteraryIntentSsot");
+      for (const s of shots) {
+        const findings = auditShotDirtyStillPrompt(s as Record<string, unknown>);
+        for (const f of findings) {
+          if (f.id === "DEX-DIRTY-STILL-PROMPT" || f.id === "DEX-HAND-LIP") {
+            push({
+              id: "VID-INHERIT-DIRTY-STILL",
+              severity: "BLOCK",
+              message: `${f.message}；禁止带病烧视频，深链 SB/AS`,
+              shotIndex: f.shotIndex,
+              softPatch: false,
+            });
+          }
+        }
+        const vd = String((s as { visualDescription?: string }).visualDescription ?? "");
+        const ip =
+          String(
+            ((s as { generation?: { imagePrompt?: string } }).generation?.imagePrompt ??
+              (s as { prompt?: string }).prompt ??
+              "") as string,
+          ) || "";
+        if (vd && ip && hasSeatingOrPowerSignals(vd)) {
+          const coll = stripCollidingRecipeLayers(ip, { hasSeating: true });
+          const surv = buildMustSurvive({
+            visualDescription: vd,
+            prompt: coll.cleaned || ip,
+            characterNames: ((s as { characters?: { name?: string }[] }).characters ?? [])
+              .map((c) => c.name)
+              .filter(Boolean) as string[],
+          });
+          const badAtoms = surv.missing.filter((m) =>
+            /seating|role:|prop:太师椅|prop:蒲团|抄书/.test(m.id),
+          );
+          if (coll.stripped.length || badAtoms.length) {
+            push({
+              id: "VID-INHERIT-DIRTY-STILL",
+              severity: "BLOCK",
+              message: `静帧文学意图未存活或含手CU冲突配方（${badAtoms
+                .slice(0, 3)
+                .map((m) => m.id)
+                .join(",") || "collision"}）；禁止带病烧视频，回 SB/重 compose`,
+              shotIndex: Number((s as { shotIndex?: number }).shotIndex) || undefined,
+              softPatch: false,
+            });
+          }
+          // Composition / cast cardinality survive
+          const castMissing = surv.missing.filter((m) => m.kind === "cast_cardinality" || m.id.includes("cast_cardinality"));
+          if (castMissing.length || (!/出镜人数/.test(ip) && /端坐|跪|对峙/.test(vd))) {
+            const names = ((s as { characters?: { name?: string }[] }).characters ?? [])
+              .map((c) => c.name)
+              .filter(Boolean) as string[];
+            if (names.length >= 2 && !/出镜人数|仅\d+人/.test(ip)) {
+              push({
+                id: "VID-INHERIT-COMPOSITION",
+                severity: "BLOCK",
+                message: "静帧缺少出镜人数契约或构图未闭合；禁止带病烧视频，回 MD-IMG 重烧",
+                shotIndex: Number((s as { shotIndex?: number }).shotIndex) || undefined,
+                softPatch: false,
+              });
+            }
+          }
+          if (/太师椅|蒲团/.test(vd) && ip && !/太师椅|蒲团|端坐|跪/.test(ip)) {
+            push({
+              id: "VID-INHERIT-COMPOSITION",
+              severity: "BLOCK",
+              message: "静帧家具/座次锚未进入成图提示；禁止带病烧视频",
+              shotIndex: Number((s as { shotIndex?: number }).shotIndex) || undefined,
+              softPatch: false,
+            });
+          }
+        }
+      }
+    } catch {
+      /* optional */
     }
   }
 
@@ -412,7 +500,7 @@ export function qualityGate(bundle: ScriptBundle, opts: QualityGateOptions): Qua
       }
     }
 
-    // NAR-14/15：导出 + 烧片 BLOCK（分句超预算无 splitHint / emotion_hit 无 reaction）
+    // NAR-14/15：SSOT（plan 优先 lineId；speak 已拆子镜豁免 NAR-15）— 禁逐镜裸扫假阳
     const narSeen = new Set<string>();
     for (const g of auditNarrativeDriveGaps(bundle)) {
       if (g.id === "NAR-14" || g.id === "NAR-15") {
@@ -427,39 +515,26 @@ export function qualityGate(bundle: ScriptBundle, opts: QualityGateOptions): Qua
         });
       }
     }
-    for (const s of shots) {
-      const idx = s.shotIndex as number | undefined;
-      for (const line of (s.narrative as { dialogue?: { lines?: { text?: string; splitHint?: string; functions?: string[]; reactionAction?: string; lineId?: string }[] } })
-        ?.dialogue?.lines ?? []) {
-        const text = String(line.text ?? "").trim();
-        if (needsNar14Split(text, { splitHint: line.splitHint })) {
-          const msg = `镜 ${idx ?? "?"} 长台词缺 splitHint，须标点拆句或拆镜后重导出`;
-          const k = `NAR-14:${line.lineId ?? ""}:${msg}`;
-          if (!narSeen.has(k) && !narSeen.has(`NAR-14:${msg}`)) {
-            narSeen.add(k);
-            push({
-              id: "NAR-14",
-              severity: "BLOCK",
-              message: msg,
-              shotIndex: idx,
-              evidence: { textPreview: text.slice(0, 24), lineId: line.lineId },
-            });
-          }
-        }
-        if (line.functions?.includes("emotion_hit") && !String(line.reactionAction ?? "").trim()) {
-          const msg = `镜 ${idx ?? "?"} emotion_hit 缺 reactionAction`;
-          const k = `NAR-15:${line.lineId ?? ""}:${msg}`;
-          if (!narSeen.has(k)) {
-            narSeen.add(k);
-            push({
-              id: "NAR-15",
-              severity: "BLOCK",
-              message: msg,
-              shotIndex: idx,
-            });
-          }
-        }
-      }
+    const planLines =
+      ((bundle.planData as { dialoguePlan?: { lines?: Nar14LineLike[] } } | undefined)?.dialoguePlan?.lines ??
+        []) as Nar14LineLike[];
+    const shotLines = shots.map((s) => ({
+      shotIndex: s.shotIndex as number | undefined,
+      lines: ((s.narrative as { dialogue?: { lines?: Nar14LineLike[] } } | undefined)?.dialogue?.lines ??
+        []) as Nar14LineLike[],
+      skipNar15: isClearedSpeakSplitChild(s as Record<string, unknown>),
+    }));
+    for (const f of collectNar14Nar15Fails(planLines, shotLines)) {
+      const k = `${f.id}:${f.lineId ?? ""}:${f.message}`;
+      if (narSeen.has(k) || narSeen.has(`${f.id}:${f.message}`)) continue;
+      narSeen.add(k);
+      push({
+        id: f.id,
+        severity: "BLOCK",
+        message: f.message,
+        shotIndex: f.shotIndex,
+        evidence: { lineId: f.lineId, field: f.field },
+      });
     }
   }
 

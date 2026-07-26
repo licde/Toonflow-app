@@ -1,9 +1,11 @@
 /**
  * Mode-agnostic five-section video prompt sanitizer.
  * Resolves No-dialogue∩lines, multi duration/shotSize/motion, Narrative bloat.
+ * Also strips XML-ask stubs, EN QF shells, cross-shot viral sidecar PEAKs.
  */
-import { softPatchQfExpr } from "./qfExprGate";
+import { softPatchQfExpr, stripEnQfShells } from "./qfExprGate";
 import { applyAudioStrengthenToPrompt } from "./audioLiteraryFidelityChecklist";
+import { stripCrossShotViralSidecar } from "../design/bindViralSidecarForCompile";
 
 export interface SanitizeVideoPromptInput {
   prompt: string;
@@ -138,7 +140,7 @@ function sanitizeFiveBody(
               .split(/\n+/)
               .map((t) => (t.startsWith('"') || t.startsWith("“") ? t : `"${t}"`))
               .join("\n");
-        audio.body = `${linesBlock}\nlip-sync active.`.trim();
+        audio.body = `${linesBlock}\n口型同步开启。`.trim();
         changes.push("audio_restore_source_lines");
       } else {
         // Strip silence scaffold; keep existing dialogue / lip-sync clauses
@@ -150,13 +152,18 @@ function sanitizeFiveBody(
           .replace(/,\s*,/g, ",")
           .replace(/\s+/g, " ")
           .trim();
-        if (!/lip-sync\s*active/i.test(audio.body)) audio.body = `${audio.body}\nlip-sync active.`.trim();
+        if (!/lip-sync\s*active|口型同步开启/i.test(audio.body)) audio.body = `${audio.body}\n口型同步开启。`.trim();
         changes.push("audio_strip_silence_keep_dialogue");
       }
     } else if (hasDial && !/[\u4e00-\u9fff]/.test(audio.body) && /dialogue|voiceover|monologue/i.test(audio.body)) {
       conflicts.push("VP-CONFLICT_AUDIO_EN");
-      audio.body = `${dialogue}\nlip-sync active.`;
+      audio.body = `${dialogue}\n口型同步开启。`;
       changes.push("audio_replace_en_with_source");
+    } else if (!hasDial && bodyHasDial) {
+      // M3: no design dialogue but prompt still has speech / lip → strip (AUD-ORPHAN)
+      conflicts.push("AUD-ORPHAN-SPEECH");
+      audio.body = "无对白。仅环境音效。";
+      changes.push("audio_strip_orphan_speech");
     }
   }
 
@@ -164,19 +171,25 @@ function sanitizeFiveBody(
   const camera = byName("Camera");
   if (camera) {
     let cam = camera.body;
-    const durations = [...cam.matchAll(/duration\s*(\d+(?:\.\d+)?)s?/gi)].map((m) => m[1]);
+    const durationsEn = [...cam.matchAll(/duration\s*(\d+(?:\.\d+)?)s?/gi)].map((m) => m[1]);
+    const durationsZh = [...cam.matchAll(/时长\s*(\d+(?:\.\d+)?)\s*s?/gi)].map((m) => m[1]);
+    const durations = [...durationsEn, ...durationsZh];
     if (durations.length > 1 || (input.durationSec != null && durations.length)) {
       conflicts.push("VP-CONFLICT_DURATION");
       const d =
         input.durationSec != null && Number.isFinite(input.durationSec)
           ? Math.max(1, Math.min(30, Math.round(input.durationSec)))
           : Math.round(Number(durations[0]));
-      cam = cam.replace(/duration\s*\d+(?:\.\d+)?s?/gi, "").replace(/,?\s*,/g, ",").trim();
-      cam = `${cam.replace(/,\s*$/, "")}${cam ? ", " : ""}duration ${d}s`.replace(/\s+/g, " ").trim();
+      cam = cam
+        .replace(/duration\s*\d+(?:\.\d+)?s?/gi, "")
+        .replace(/时长\s*\d+(?:\.\d+)?\s*s?/gi, "")
+        .replace(/,?\s*,/g, ",")
+        .trim();
+      cam = `${cam.replace(/[，,]\s*$/, "")}${cam ? "，" : ""}时长 ${d}s`.replace(/\s+/g, " ").trim();
       changes.push(`camera_duration_${d}`);
-    } else if (input.durationSec != null && Number.isFinite(input.durationSec) && !/duration\s*\d/i.test(cam)) {
+    } else if (input.durationSec != null && Number.isFinite(input.durationSec) && !/(?:时长|duration)\s*\d/i.test(cam)) {
       const d = Math.max(1, Math.min(30, Math.round(input.durationSec)));
-      cam = `${cam}${cam ? ", " : ""}duration ${d}s`;
+      cam = `${cam}${cam ? "，" : ""}时长 ${d}s`;
       changes.push(`camera_duration_inject_${d}`);
     }
 
@@ -193,14 +206,18 @@ function sanitizeFiveBody(
       changes.push("camera_single_shot_size");
     }
 
+    // CAM-SPEAK: clamp dangerous motions always (homology with hydrate/import)
+    if (/whip.?pan|crash.?zoom|dutch|handheld.?shake|速切|甩镜/i.test(cam)) {
+      conflicts.push("VP-CONFLICT_CAM_SPEAK");
+      cam = cam
+        .replace(/whip.?pan|crash.?zoom|dutch.?extreme|handheld.?shake|速切|甩镜/gi, "static")
+        .replace(/\s+/g, " ")
+        .trim();
+      changes.push("camera_clamp_dangerous");
+    }
     if (hasDial && (input.preferStaticOnDialogue !== false)) {
-      if (/whip.?pan|crash.?zoom|dutch|handheld.?shake|速切|甩镜/i.test(cam)) {
-        conflicts.push("VP-CONFLICT_CAM_SPEAK");
-        cam = cam
-          .replace(/whip.?pan|crash.?zoom|dutch.?extreme|handheld.?shake|速切|甩镜/gi, "static")
-          .replace(/\s+/g, " ")
-          .trim();
-        changes.push("camera_static_for_dialogue");
+      if (/gentle\s*push|slow\s*pan|轻推|横移/i.test(cam) && !/static|静止/.test(cam)) {
+        /* dialogue prefers static — keep existing dialogue static path for extreme already done */
       }
     }
 
@@ -281,14 +298,68 @@ function sanitizeFiveBody(
  * Sanitize a video prompt. For multi-parameter shells, sanitize Instruction inner
  * and leave References untouched; also sanitize five-section bodies when present.
  */
+/**
+ * LLM / scaffold asks for storyboard XML — never burn as vendor body.
+ * Covers real samples:「请提供具体的分镜信息（XML格式…）」/「请提供具体的分镜 XML 数据（含 videoDesc…）」
+ */
+const XML_ASK_RE =
+  /请提供[^。；;\n]{0,80}分镜[^。；;\n]{0,120}(?:XML|xml|文本描述|videoDesc|associateAssetsIds)[^。；;\n]{0,80}(?:以便[^。；;\n]{0,40})?[。.]?/gi;
+const XML_ASK_RE_EN =
+  /please\s+provide\s+(?:a\s+|the\s+|full\s+)?storyboard[^.。；;\n]{0,80}/gi;
+const XML_ASK_RE_SHORT =
+  /请提供(?:完整的?)?分镜\s*XML|请发送(?:完整)?分镜/gi;
+
+export function stripXmlAskStub(prompt: string): { prompt: string; stripped: boolean } {
+  let t = String(prompt ?? "");
+  const before = t;
+  t = t.replace(XML_ASK_RE, " ");
+  t = t.replace(XML_ASK_RE_EN, " ");
+  t = t.replace(XML_ASK_RE_SHORT, " ");
+  t = t.replace(/^\s*```xml[\s\S]*?```/gim, " ");
+  // Broken micro-expression residue from softPatch
+  t = t.replace(/锁定脸型上的细微微表情（禁止\/）/g, "锁定脸型上的细微微表情（禁止改面容身份）");
+  t = t.replace(/锁定脸型上的细微微表情（禁止改脸\/换脸）/g, "锁定脸型上的细微微表情（禁止改面容身份）");
+  t = t.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  return { prompt: t, stripped: t !== before.trim() };
+}
+
 export function sanitizeVideoPrompt(input: SanitizeVideoPromptInput): SanitizeVideoPromptResult {
   const changes: string[] = [];
   const conflicts: string[] = [];
-  const qf = softPatchQfExpr(String(input.prompt ?? ""));
+  let seed = String(input.prompt ?? "");
+  const cross = stripCrossShotViralSidecar(seed);
+  if (cross.stripped) {
+    seed = cross.prompt;
+    changes.push("strip_cross_shot_sidecar");
+    conflicts.push("VP-CROSS-SHOT-SIDECAR");
+  }
+  const xml = stripXmlAskStub(seed);
+  if (xml.stripped) {
+    seed = xml.prompt;
+    changes.push("strip_xml_ask_stub");
+    conflicts.push("VP-XML-ASK-STUB");
+  }
+  // Scaffold Ns / empty motion dash
+  const beforeNs = seed;
+  seed = seed
+    .replace(/时长\s*Ns/gi, "")
+    .replace(/duration\s*Ns\b/gi, "")
+    .replace(/\[Motion\]\s*\n?\s*-:\s*可读动作拍点。?/gi, "[Motion]\nmotion-from-frame");
+  if (seed !== beforeNs) {
+    changes.push("strip_duration_ns_scaffold");
+    conflicts.push("VP-DURATION-NS");
+  }
+  const enShell = stripEnQfShells(seed);
+  if (enShell.stripped) {
+    seed = enShell.prompt;
+    changes.push("strip_en_qf_shell");
+  }
+  const qf = softPatchQfExpr(seed);
   if (qf.patched) {
-    input = { ...input, prompt: qf.prompt };
+    seed = qf.prompt;
     changes.push("qf_expr_strip");
   }
+  input = { ...input, prompt: seed };
   let prompt = (input.prompt ?? "").trim();
   if (!prompt) return { prompt: "", changes, conflicts };
 
@@ -336,12 +407,28 @@ export function sanitizeVideoPrompt(input: SanitizeVideoPromptInput): SanitizeVi
 export function isVideoPromptStub(prompt?: string | null): boolean {
   const t = String(prompt ?? "").trim();
   if (!t) return true;
+  // LLM asked for storyboard XML / 分镜数据 instead of writing the shot
+  if (
+    /请提供[^。；;\n]{0,80}分镜[^。；;\n]{0,40}(?:XML|xml|文本描述|videoDesc)/i.test(t) ||
+    /please\s+provide\s+(?:a\s+|the\s+|full\s+)?storyboard/i.test(t)
+  ) {
+    return true;
+  }
   // Scaffold placeholders even inside five-section = dirty stub
   if (
     /\(dialogue\s*\/\s*SFX\s*filled from design when present\)/i.test(t) ||
     /0s-Ns\s*:/i.test(t) ||
     /duration\s*Ns\b/i.test(t) ||
+    /时长\s*Ns\b/i.test(t) ||
+    /\[Motion\]\s*\n?-:\s*/i.test(t) ||
     /["']---["']\s*\(dialogue\)/i.test(t)
+  ) {
+    return true;
+  }
+  // Empty Visual + ask / only 禁止夸张 shell
+  if (
+    /\[Visual\]\s*\n?\s*,?\s*禁止夸张/i.test(t) &&
+    (/请提供/.test(t) || /可读动作拍点/.test(t))
   ) {
     return true;
   }
@@ -349,9 +436,14 @@ export function isVideoPromptStub(prompt?: string | null): boolean {
     // Five-section with only placeholder audio still stub
     const audio = t.match(/\[Audio\]([\s\S]*?)(?=\[Narrative\]|$)/i)?.[1] ?? "";
     if (/\(dialogue\s*\/\s*SFX\s*filled/i.test(audio) || !audio.trim()) return true;
+    // Visual body is only ask/stub clauses
+    const visual = t.match(/\[Visual\]([\s\S]*?)(?=\[Motion\]|$)/i)?.[1] ?? "";
+    if (/请提供/.test(visual) && !/[\u4e00-\u9fff]{12,}/.test(visual.replace(/请提供[^。]{0,120}/g, ""))) {
+      return true;
+    }
     return false;
   }
-  if (t.length > 120 && /[\u4e00-\u9fff]{8,}/.test(t)) return false;
+  if (t.length > 120 && /[\u4e00-\u9fff]{8,}/.test(t) && !/请提供[^。]{0,40}分镜/.test(t)) return false;
   if (t.length < 100 && /duration\s*\d/i.test(t) && /(static|中景|近景|特写|medium|close)/i.test(t)) return true;
   if (/^(中景|近景|特写|全景|medium shot|close-?up).{0,50}(static|duration)/i.test(t)) return true;
   return false;

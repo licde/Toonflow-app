@@ -1,6 +1,6 @@
 import type { EpisodePackage, ValidationIssue } from "../types";
 import type { ScriptBundle } from "../bundle/types";
-import { dialogueCoverageReport } from "../design/dialogueCoverage";
+import { dialogueCoverageReport, formatDialogueCoverageMessage } from "../design/dialogueCoverage";
 
 export function dialogueFidelityGate(
   pkg: EpisodePackage,
@@ -24,7 +24,7 @@ export function dialogueFidelityGate(
         tier: 0,
         severity: "BLOCK",
         fieldPath: "narrative.dialogue.lines",
-        message: `台词覆盖不足：缺 ${report.missingCount} 条`,
+        message: formatDialogueCoverageMessage(report),
         rollbackLayer: "SB",
       },
       {

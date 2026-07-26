@@ -102,8 +102,36 @@ function siblingExists(shots: ClusterShot[], parentKey: string, role: string): b
 
 function cloneAsRole(speak: ClusterShot, role: ClusterRole, parentKey: string, idx: number): ClusterShot {
   const durRange = role.durationSec ?? [1, 1.5];
-  const duration = (durRange[0] + durRange[1]) / 2;
-  const motion = role.motionIntent.replace(/_/g, " ");
+  const duration = Math.max(2, (durRange[0] + durRange[1]) / 2);
+  const parentVd = String(speak.visualDescription ?? "").trim();
+  const { differentiateSemanticChild, planSpeakReactChildren } =
+    require("./splitChildVisual") as typeof import("./splitChildVisual");
+  const parentPic = String(
+    (speak.shotDesignIntent as { picture?: string } | undefined)?.picture ??
+      (speak as { intentPicture?: string }).intentPicture ??
+      "",
+  ).trim();
+  let childPlan = differentiateSemanticChild({
+    parentVd,
+    role: role.beatRole,
+    lineIndex: idx,
+    picture: parentPic || undefined,
+  });
+  // Prefer speak/react clause split when parent has multi-beat prose
+  if (/reaction|listen|听|insert/i.test(role.beatRole)) {
+    const pr = planSpeakReactChildren(parentVd, { picture: parentPic || undefined });
+    const react = pr.children.find((c) => /reaction|listen/i.test(c.role));
+    if (react && !pr.refuse) {
+      childPlan = {
+        ...childPlan,
+        visualDescription: react.visualDescription,
+        ok: true,
+        refuse: false,
+      };
+    }
+  }
+  const shotSize = role.shotSize || childPlan.shotSize;
+  const motion = role.motionIntent.replace(/_/g, " ") || childPlan.motion;
   const base: ClusterShot = {
     ...speak,
     shotIndex: undefined,
@@ -111,12 +139,20 @@ function cloneAsRole(speak: ClusterShot, role: ClusterRole, parentKey: string, i
     beatRole: role.beatRole,
     clusterParentId: parentKey,
     clusterLineId: parentKey,
+    _stillBeatSplitId: String(speak.clientId ?? parentKey),
+    _parentVisualDescription: parentVd || String(speak._parentVisualDescription ?? ""),
+    visualSplitRole: role.beatRole,
+    visualDescription: childPlan.visualDescription || parentVd,
     duration,
     motion,
-    videoDesc: `${role.shotSize} ${motion}, ${duration}s`,
+    videoDesc: `${shotSize} ${motion}, ${duration}s`,
+    shotDesignIntent: {
+      ...((speak.shotDesignIntent as object) ?? {}),
+      picture: childPlan.picture,
+    },
     narrative: {
       ...(speak.narrative ?? {}),
-      shotSize: role.shotSize,
+      shotSize,
       dialogue: role.hasDialogue ? speak.narrative?.dialogue : { lines: [] },
       emotionIntensity: speak.narrative?.emotionIntensity,
     },

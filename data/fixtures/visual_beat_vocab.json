@@ -61,6 +61,19 @@
         { "role": "insert", "shotSize": "近景", "hasDialogue": false, "tags": ["prop_insert", "reveal"] },
         { "role": "reaction", "shotSize": "特写", "hasDialogue": true, "tags": ["reaction", "face_cu"] }
       ]
+    },
+    "prop_insert_reaction_reveal": {
+      "beats": [
+        { "role": "insert", "shotSize": "大特写", "hasDialogue": false, "tags": ["prop_insert", "reveal"] },
+        { "role": "reaction", "shotSize": "特写", "hasDialogue": false, "tags": ["reaction", "face_cu"] },
+        { "role": "reveal", "shotSize": "近景", "hasDialogue": false, "tags": ["reveal", "prop_insert"] }
+      ]
+    },
+    "reaction_reveal": {
+      "beats": [
+        { "role": "reaction", "shotSize": "特写", "hasDialogue": false, "tags": ["reaction", "face_cu"] },
+        { "role": "reveal", "shotSize": "近景", "hasDialogue": false, "tags": ["reveal", "prop_insert"] }
+      ]
     }
   },
   "compat": {

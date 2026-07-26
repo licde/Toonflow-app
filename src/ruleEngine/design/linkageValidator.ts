@@ -1,5 +1,5 @@
 import type { ScriptBundle } from "../bundle/types";
-import { dialogueCoverageReport } from "./dialogueCoverage";
+import { dialogueCoverageReport, formatDialogueCoverageMessage } from "./dialogueCoverage";
 import { readFixtureJson } from "../utils/fixturesPath";
 import type { PrecheckScope } from "../precheckLoop/types";
 
@@ -46,24 +46,28 @@ function validateChainById(
           chainId,
           broken: false,
           softBroken: true,
-          message: `台词覆盖（局部触达未计入 BLOCK）：缺 ${report.missingCount} 条`,
+          message: formatDialogueCoverageMessage(report, { filtered: true }),
           detail: {
             shotScope: "filtered",
             missingCount: report.missingCount,
             missingKeys: report.missingKeys.slice(0, 10),
+            extraCount: report.extraCount,
+            extraKeys: report.extraKeys.slice(0, 10),
           },
         };
       }
       return {
         chainId,
         broken: !report.ok,
-        message: report.ok ? "dialogue OK" : `台词覆盖不足：缺 ${report.missingCount} 条`,
+        message: report.ok ? "dialogue OK" : formatDialogueCoverageMessage(report),
         detail: report.ok
           ? undefined
           : {
               shotScope: "full",
               missingCount: report.missingCount,
               missingKeys: report.missingKeys.slice(0, 10),
+              extraCount: report.extraCount,
+              extraKeys: report.extraKeys.slice(0, 10),
             },
       };
     }

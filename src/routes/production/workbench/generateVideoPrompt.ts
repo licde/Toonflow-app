@@ -12,7 +12,6 @@ import { bridgeShotToVendor, applyTextHardening } from "@/ruleEngine/compilers/s
 import { classifyGenerationFailure } from "@/ruleEngine/bundle/generationFailureHelper";
 import { buildRePushPlan } from "@/ruleEngine/design/reverseRouteEngine";
 import { preflightGenerationMedia } from "@/ruleEngine/compilers/resolveGenerationModeRules";
-import { isRuleEngineEnabled } from "@/ruleEngine/featureFlag";
 import { loadEpisodePackage } from "@/ruleEngine/storage/episodePackageStore";
 import { normalizeAssetCode } from "@/ruleEngine/codes/assetCodeContract";
 
@@ -43,14 +42,42 @@ export default router.post(
       const modelPromptData = await u.db("o_modelPrompt").where("vendorId", vendorId).where("model", modelData).first();
       const projectData = await u.db("o_project").select("*").where({ id: projectId }).first();
       const hydrated = await hydrateCompileInputs(u.db, projectId, info);
-      const storyboardId = hydrated.storyboard?.[0]?.id;
+      // SSOT: bind storyboard to THIS track — never hydrated.storyboard[0] across tracks
+      const {
+        resolveStoryboardForTrack,
+        pickHydratedStoryboardById,
+        bestLiteraryDescFromPanels,
+        preferLiteraryVisualDesc,
+      } = await import("@/ruleEngine/compilers/resolveTrackStoryboard");
+      const infoSbIds = (info as { id: number; sources: string }[])
+        .filter((i) => i.sources === "storyboard")
+        .map((i) => Number(i.id));
+      const trackBind = await resolveStoryboardForTrack(u.db, trackId, infoSbIds);
+      const storyboardId =
+        trackBind?.storyboardId ??
+        (infoSbIds[0] != null ? Number(infoSbIds[0]) : undefined) ??
+        pickHydratedStoryboardById(hydrated.storyboard, infoSbIds[0])?.id ??
+        undefined;
 
-      let pkg = null;
-      const ruleOn = await isRuleEngineEnabled(u.db, projectId);
-      if (ruleOn) {
-        const track = await u.db("o_videoTrack").where({ id: trackId }).select("scriptId").first();
-        const scriptId = bodyScriptId ?? track?.scriptId;
-        if (scriptId) pkg = await loadEpisodePackage(u.db, projectId, scriptId);
+      // Always load package for literary VD/dialogue — rule flag must not hide design material
+      const trackRowForPkg = await u.db("o_videoTrack").where({ id: trackId }).select("scriptId").first();
+      const scriptId = bodyScriptId ?? trackRowForPkg?.scriptId;
+      let pkg = scriptId ? await loadEpisodePackage(u.db, projectId, scriptId) : null;
+
+      // Orphan track + no info storyboard → cannot invent design; tell user to refresh (not「缺画面」)
+      if (!trackBind && !storyboardId) {
+        await u.db("o_videoTrack").where({ id: trackId }).update({
+          state: "生成失败",
+          reason: "VP-TRACK-UNBOUND:本轨未绑定分镜",
+        });
+        return res.status(400).send(
+          error("本轨未绑定分镜（多为旧轨道残留），请刷新工作台后对已绑定分镜的轨道重试", {
+            code: "VP-TRACK-UNBOUND",
+            primaryNextStep: "refresh_workbench",
+            reverseTrigger: "video_prompt_stub",
+            reasons: ["track_unbound_orphan"],
+          }),
+        );
       }
 
       const artStyle = projectData?.artStyle || "无";
@@ -62,8 +89,40 @@ export default router.post(
         return m ? normalizeAssetCode(m[1]) ?? m[1].toUpperCase() : undefined;
       };
 
-      const shotMeta =
+      // Package shot for THIS storyboard only
+      let shotMeta =
         storyboardId != null ? pkg?.shots?.find((s) => s.storyboardId === storyboardId) : undefined;
+      // Fallback: match by track panel index when storyboardId link missing on package
+      if (!shotMeta && trackBind?.row?.index != null && pkg?.shots?.length) {
+        const idx = Number(trackBind.row.index);
+        shotMeta =
+          pkg.shots.find((s) => Number((s as { shotIndex?: number }).shotIndex) === idx) ??
+          pkg.shots.find((s) => Number((s as { index?: number }).index) === idx);
+      }
+
+      // Resolve 本镜 index — keep 0 (falsy) valid; never default to 1 for all tracks
+      const idxCandidates = [
+        (shotMeta as { shotIndex?: number } | undefined)?.shotIndex,
+        (shotMeta as { index?: number } | undefined)?.index,
+        trackBind?.row?.index,
+      ];
+      let shotIndexNum: number | undefined;
+      for (const c of idxCandidates) {
+        if (c != null && Number.isFinite(Number(c))) {
+          shotIndexNum = Number(c);
+          break;
+        }
+      }
+      if ((shotIndexNum == null || !Number.isFinite(shotIndexNum)) && storyboardId != null) {
+        try {
+          const sbIdx = await u.db("o_storyboard").where({ id: storyboardId }).select("index").first();
+          if (sbIdx?.index != null && Number.isFinite(Number(sbIdx.index))) {
+            shotIndexNum = Number(sbIdx.index);
+          }
+        } catch {
+          /* optional */
+        }
+      }
 
       const hydratedBound = (hydrated.assets ?? []).map(
         (a: { id: number; code?: string; name?: string; filePath?: string | null; remark?: string }) => {
@@ -82,7 +141,9 @@ export default router.post(
         projectId,
         storyboardId,
         shot: shotMeta,
-        extraPrompt: hydrated.storyboard?.[0]?.prompt,
+        extraPrompt:
+          String(trackBind?.row?.prompt ?? trackBind?.row?.videoDesc ?? "").trim() ||
+          hydrated.storyboard?.find((s) => Number(s.id) === Number(storyboardId))?.prompt,
         boundAssets: hydratedBound,
         failClosedBound: true,
       });
@@ -102,18 +163,9 @@ export default router.post(
             .join("/")
         : null;
 
-      const debutBeat =
-        shotMeta?.narrative?.debutBeat ??
-        (bp.debutIntroPack as { items?: { copyHint?: string }[] } | undefined)?.items?.[0]?.copyHint ??
-        (pkg as { debutIntroPack?: { items?: { copyHint?: string }[] } } | null)?.debutIntroPack?.items?.[0]
-          ?.copyHint ??
-        undefined;
-      const endHook =
-        shotMeta?.narrative?.endHook ??
-        (pkg as { designBrief?: { B5?: { type?: string; desc?: string }[] } } | null)?.designBrief?.B5?.find(
-          (b) => /钩子|hook/i.test(String(b.type ?? "")),
-        )?.desc ??
-        undefined;
+      // Only本镜 narrative.debutBeat — never package debutIntroPack (禁镜1文学灌镜2)
+      const debutBeat = shotMeta?.narrative?.debutBeat ?? undefined;
+      const endHook = shotMeta?.narrative?.endHook ?? undefined;
 
       const identity = buildIdentitySlots({
         charCodes: charCodes.length ? charCodes : undefined,
@@ -131,7 +183,10 @@ export default router.post(
           modality: "video",
           mode,
           episodeShot: shotMeta ?? undefined,
-          storyboard: hydrated.storyboard?.[0],
+          storyboard:
+            (storyboardId != null
+              ? hydrated.storyboard?.find((s) => Number(s.id) === Number(storyboardId))
+              : undefined) ?? trackBind?.row ?? undefined,
           charCodes,
           debutBeat: debutBeat ?? null,
           endHook: endHook ?? null,
@@ -139,57 +194,263 @@ export default router.post(
         }),
       );
 
+      const { mergeWorkbenchCompileSources, hydrateShotCompileContextSync, isTrueDesignGap } = await import(
+        "@/ruleEngine/compilers/hydrateShotCompileContext"
+      );
+      // This track's storyboard only — never storyboard[0] from another track
+      const sbThis =
+        pickHydratedStoryboardById(hydrated.storyboard, storyboardId) ??
+        (trackBind?.row
+          ? {
+              id: trackBind.storyboardId,
+              videoDesc: trackBind.row.videoDesc,
+              prompt: trackBind.row.prompt,
+              duration: trackBind.row.duration,
+              audioPrompt: trackBind.row.audioPrompt,
+              fxPrompt: trackBind.row.fxPrompt,
+            }
+          : null);
+      // Package literary VD wins over storyboard motion-template videoDesc
+      const trackLiteraryVd = preferLiteraryVisualDesc(
+        (shotMeta as { visualDescription?: string } | undefined)?.visualDescription,
+        bestLiteraryDescFromPanels(trackBind?.panels) || String(sbThis?.videoDesc ?? "").trim(),
+      );
+      const mergedSources = mergeWorkbenchCompileSources({
+        designShot: shotMeta
+          ? ({
+              ...shotMeta,
+              shotIndex: shotIndexNum,
+              visualDescription:
+                (shotMeta as { visualDescription?: string }).visualDescription ||
+                trackLiteraryVd ||
+                undefined,
+              duration:
+                (shotMeta as { duration?: number }).duration ??
+                (sbThis?.duration != null ? Number(sbThis.duration) : undefined),
+              generation: {
+                ...((shotMeta as { generation?: object }).generation ?? {}),
+                audioPrompt:
+                  (shotMeta as { generation?: { audioPrompt?: string } }).generation?.audioPrompt ??
+                  sbThis?.audioPrompt ??
+                  undefined,
+                fxPrompt:
+                  (shotMeta as { generation?: { fxPrompt?: string } }).generation?.fxPrompt ??
+                  sbThis?.fxPrompt ??
+                  undefined,
+              },
+            } as never)
+          : trackLiteraryVd
+            ? ({
+                shotIndex: shotIndexNum,
+                visualDescription: trackLiteraryVd,
+                duration: sbThis?.duration != null ? Number(sbThis.duration) : undefined,
+                generation: {
+                  audioPrompt: sbThis?.audioPrompt,
+                  fxPrompt: sbThis?.fxPrompt,
+                },
+              } as never)
+            : null,
+        shotMeta: {
+          ...(shotMeta as Record<string, unknown> | undefined),
+          shotIndex: shotIndexNum,
+          visualDescription:
+            (shotMeta as { visualDescription?: string } | undefined)?.visualDescription ||
+            trackLiteraryVd ||
+            undefined,
+          videoDesc: trackLiteraryVd || sbThis?.videoDesc,
+          duration:
+            (shotMeta as { duration?: number } | undefined)?.duration ??
+            (sbThis?.duration != null ? Number(sbThis.duration) : undefined),
+          audioPrompt: sbThis?.audioPrompt,
+          fxPrompt: sbThis?.fxPrompt,
+        },
+        storyboard: sbThis
+          ? {
+              videoDesc: trackLiteraryVd || sbThis.videoDesc,
+              prompt: sbThis.prompt,
+              duration: sbThis.duration,
+              shotSize: (sbThis as { shotSize?: string }).shotSize,
+              visualDescription: trackLiteraryVd || (sbThis as { visualDescription?: string }).visualDescription,
+              narrative: (sbThis as { narrative?: Record<string, unknown> }).narrative,
+              dialogue: (sbThis as { dialogue?: { lines?: { speaker?: string; text?: string }[] } }).dialogue,
+              audioPrompt: sbThis.audioPrompt,
+              fxPrompt: sbThis.fxPrompt,
+            }
+          : null,
+      });
+
+      // Prefer package dialogue; if empty keep merged
+      const dialFromPkg = (shotMeta as { narrative?: { dialogue?: { lines?: unknown } } } | undefined)?.narrative
+        ?.dialogue?.lines;
+
       const result = await compileOrGenerate({
         modality: "video",
         mode,
         modelName: modelData,
         projectVideoRatio: projectData?.videoRatio ?? hydrated.videoRatio,
         slots: hydrated.slots,
-        storyboard: hydrated.storyboard,
+        // Pass ONLY this shot's storyboard to compile — avoid [0] bleed
+        storyboard: sbThis ? [sbThis as never] : hydrated.storyboard?.filter((s) => Number(s.id) === Number(storyboardId)),
         assets: hydrated.assets,
         pkg,
         storyboardId,
         modelPromptRoot: u.getPath(["modelPrompt"]),
         boundModelPromptPath: modelPromptData?.path ?? null,
         artStyleManual: visualManual,
-        preferCompile: Boolean(pkg && storyboardId),
+        preferCompile: true,
         charCodes,
         sceneCode,
         propCodes,
         designFields,
-        invokeLlm: async ({ system, user, assistant }) => {
-          const { text } = await u.Ai.Text("universalAi").invoke({
-            system,
-            messages: [
-              ...(assistant ? [{ role: "assistant" as const, content: assistant }] : []),
-              { role: "user" as const, content: user },
-            ],
-          });
-          return text;
-        },
+        designShot: mergedSources.designShot,
+        shotIndex: shotIndexNum ?? null,
+        dialogueLines: undefined,
+        invokeLlm: undefined,
       });
+      void dialFromPkg;
+
+      // Sidecar inside spine with full merged bag — heal-first, never BLOCK when material exists
+      try {
+        const workRow = await u.db("o_agentWorkData").where({ projectId, key: "scriptAgent" }).first();
+        if (workRow?.data && shotIndexNum != null) {
+          const { compileVideoPromptSpine } = await import("@/ruleEngine/compilers/compileVideoPromptSpine");
+          const agentPlan = JSON.parse(String(workRow.data)) as Record<string, unknown>;
+          const ctx = hydrateShotCompileContextSync({
+            designShot: mergedSources.designShot,
+            shotMeta: mergedSources.shotMeta,
+            seedPrompt: result.prompt,
+            shotIndex: shotIndexNum,
+            vendorId: "agnesai",
+          });
+          const spine = compileVideoPromptSpine({
+            ctx,
+            agentPlan,
+            forceRebuild: ctx.canAuthorFromDesign,
+            includeSidecar: true,
+            modeId: mode,
+            vendorId: "agnesai",
+          });
+          if (spine.prompt && (spine.ready || ctx.canAuthorFromDesign)) {
+            result.prompt = spine.prompt;
+          }
+          if (spine.durationSec) {
+            (result as { generationWriteback?: { durationSec?: number } }).generationWriteback = {
+              ...result.generationWriteback,
+              durationSec: spine.durationSec,
+            };
+          }
+          // Hard BLOCK only on true design gap
+          if (!spine.ready && isTrueDesignGap(ctx)) {
+            await u.db("o_videoTrack").where({ id: trackId }).update({
+              state: "生成失败",
+              reason: `VP-THIN-SHELL:真缺画面描写与对白`,
+            });
+            return res.status(400).send(
+              error("本镜缺少画面描写与对白，无法编译视频词；请补设计后重编译", {
+                code: "VP-THIN-SHELL",
+                primaryNextStep: "chat_repair",
+                reverseTrigger: "video_prompt_stub",
+                reasons: ["true_design_gap", ...spine.readyReasons],
+              }),
+            );
+          }
+        }
+      } catch {
+        /* sidecar/spine best-effort */
+      }
 
       const { finalizeFiveSectionPrompt } = await import("@/ruleEngine/compilers/finalizeFiveSectionPrompt");
       const { flattenDialogueText } = await import("@/ruleEngine/design/dialogueCoverage");
+      const { hasOnCameraDialogue } = await import("@/ruleEngine/design/onCameraDialogue");
+      const { resolveLipSyncPolicyFromShot } = await import("@/ruleEngine/quality/resolveLipSyncPolicy");
       const { resolveLipDuration } = await import("@/ruleEngine/compilers/promptIR");
-      const dialLines = flattenDialogueText(shotMeta?.narrative?.dialogue?.lines)
+      const { resolveRequiredDuration } = await import("@/ruleEngine/compilers/resolveRequiredDuration");
+      const dialLinesRaw =
+        shotMeta?.narrative?.dialogue?.lines ??
+        (mergedSources.shotMeta.narrative as { dialogue?: { lines?: unknown } } | undefined)?.dialogue?.lines;
+      const dialLines = flattenDialogueText(dialLinesRaw)
         .split(/\n+/)
         .map((s) => s.trim())
         .filter(Boolean);
-      const lip = shotMeta ? resolveLipDuration(shotMeta as never) : null;
+      const onCamDialogue = hasOnCameraDialogue(dialLinesRaw);
+      const lipShot = {
+        ...(shotMeta as object),
+        duration:
+          (shotMeta as { duration?: number } | undefined)?.duration ??
+          (mergedSources.shotMeta.duration as number | undefined),
+        narrative: {
+          ...((shotMeta as { narrative?: object } | undefined)?.narrative ?? {}),
+          dialogue: { lines: dialLines.map((t) => ({ text: t })) },
+        },
+        visualDescription:
+          (shotMeta as { visualDescription?: string } | undefined)?.visualDescription ||
+          String(mergedSources.shotMeta.visualDescription ?? ""),
+      };
+      const lip = resolveLipDuration(lipShot as never);
+      const reqDur = resolveRequiredDuration(lipShot as never, { vendorId: "agnesai", pillarsDurationV2: true });
       const bridge = bridgeShotToVendor({
-        designFields,
-        request: { mode },
-        lipMin: lip?.lipMin,
+        designFields: {
+          ...designFields,
+          duration: reqDur.required || designFields.duration,
+        },
+        request: { mode, duration: reqDur.required || undefined },
+        lipMin: lip?.lipMin ?? reqDur.lipMin,
       });
       const hardened = applyTextHardening(result.prompt, bridge.textHardening);
-      const durationSec = Math.max(bridge.params.duration, lip?.durationSec ?? 0) || bridge.params.duration;
+      const durationSec =
+        Math.max(
+          bridge.params.duration,
+          lip?.durationSec ?? 0,
+          reqDur.required || 0,
+          result.generationWriteback?.durationSec ?? 0,
+        ) || bridge.params.duration;
       result.prompt = finalizeFiveSectionPrompt({
         prompt: hardened,
         dialogueLines: dialLines,
         durationSec,
         preferStaticOnDialogue: dialLines.length > 0,
       }).prompt;
+      {
+        const { resolveLipDurationSingleSource } = await import("@/ruleEngine/quality/resolveLipDuration");
+        const lipPol = resolveLipSyncPolicyFromShot(shotMeta as Record<string, unknown> | undefined);
+        const ss = resolveLipDurationSingleSource({
+          prompt: result.prompt,
+          lipSyncPolicy: lipPol,
+          hasDialogue: onCamDialogue,
+          durationSec,
+          hardBlockNoLipOnDialogue: true,
+        });
+        if (ss.blocked) {
+          await u.db("o_videoTrack").where({ id: trackId }).update({
+            state: "生成失败",
+            reason: ss.blockMessage ?? "NO-LIP-DIALOGUE",
+          });
+          return res.status(400).send(
+            error(ss.blockMessage || "no lip on dialogue", {
+              code: ss.blockCode ?? "NO-LIP-DIALOGUE",
+              primaryNextStep: "chat_repair",
+              reverseTrigger: "no_lip_dialogue",
+            }),
+          );
+        }
+        result.prompt = ss.prompt;
+      }
+      {
+        const { injectMirrorAntiWarp } = await import("@/ruleEngine/qc/mirrorAntiWarp");
+        const vd = String((shotMeta as { visualDescription?: string })?.visualDescription ?? "");
+        result.prompt = injectMirrorAntiWarp(result.prompt, vd).prompt;
+      }
+      // emotionHold / reaction readable when duration raised
+      try {
+        const req = resolveRequiredDuration(lipShot as never, { pillarsDurationV2: true, vendorId: "agnesai" });
+        if (req.emotionFloor > 0 && req.required > (Number((lipShot as { duration?: number }).duration) || 0)) {
+          if (!/emotionHold|反应停顿|hold\s*\d/i.test(result.prompt)) {
+            result.prompt = `${result.prompt.trim()}\n[Camera] emotionHold ${req.emotionFloor}s (required ${req.required}s)`;
+          }
+        }
+      } catch {
+        /* optional */
+      }
 
       // Quality decision → silent soft patches → re-decide (HealRegistry SSOT)
       const { decideVideoQuality, serializeQualityDecision } = await import(
@@ -205,23 +466,43 @@ export default router.post(
       );
       let workingShot = shotMeta as Record<string, unknown> | null | undefined;
       let workingPrompt = result.prompt;
-      try {
-        const { appendViralSidecarToPrompt } = await import("@/ruleEngine/design/bindViralSidecarForCompile");
-        const workRow = await u.db("o_agentWorkData").where({ projectId, key: "scriptAgent" }).first();
-        if (workRow?.data) {
-          const agentPlan = JSON.parse(String(workRow.data)) as Record<string, unknown>;
-          workingPrompt = appendViralSidecarToPrompt(workingPrompt, agentPlan);
-          result.prompt = workingPrompt;
-        }
-      } catch {
-        /* sidecar bind best-effort */
-      }
+      // Viral sidecar already in spine (before assert) — do NOT append again here
       let qd = decideVideoQuality({
         videoPrompt: workingPrompt,
         shot: workingShot as never,
         vendorId: "agnesai",
         fxGrade: fxGradeStr,
       });
+      // Design/import lip stamp: workbench is not the split station — force burn block + CTA
+      {
+        const meta = (pkg as { meta?: { lipConfirmRequired?: boolean; importOkNotExitPass?: boolean } } | null)?.meta;
+        const shotStale = String((workingShot as { promptState?: string } | null | undefined)?.promptState ?? "") === "stale";
+        if (meta?.lipConfirmRequired || meta?.importOkNotExitPass || shotStale) {
+          if (qd.burnAllowed || qd.decision === "auto") {
+            qd = {
+              ...qd,
+              decision: "split_shot",
+              burnAllowed: false,
+              nextStep: "split_shot",
+              reasons: [
+                ...qd.reasons,
+                ...(meta?.lipConfirmRequired ? ["lipConfirmRequired"] : []),
+                ...(meta?.importOkNotExitPass ? ["importOkNotExitPass"] : []),
+                ...(shotStale ? ["promptState_stale"] : []),
+              ],
+              splitHint: qd.splitHint ?? "reaction_shot",
+            };
+          }
+          if (qd.envelope) {
+            qd.envelope = {
+              ...qd.envelope,
+              userMessage:
+                "设计/导入拆镜未闭合（lipConfirm 或 prompt 已 stale），请回 SB Confirm 智能拆或重导后再烧；本台不执行拆镜。",
+              primaryNextStep: "split_shot",
+            };
+          }
+        }
+      }
       const heal = await applySilentSoftPatches({
         db: u.db,
         projectId,
@@ -252,6 +533,7 @@ export default router.post(
         const { qualityGate } = await import("@/ruleEngine/qualityGate");
         const { buildBurnGateEnvelope } = await import("@/ruleEngine/compilers/burnGateEnvelope");
         const dial = flattenDialogueText(shotMeta?.narrative?.dialogue?.lines);
+        const qGateShotIndex = shotIndexNum ?? 0;
         const qg = qualityGate(
           {
             bundleType: "script",
@@ -260,7 +542,7 @@ export default router.post(
               scriptPlan: "",
               shots: [
                 {
-                  shotIndex: 1,
+                  shotIndex: qGateShotIndex,
                   narrative: { dialogue: shotMeta?.narrative?.dialogue, transitionType: shotMeta?.narrative?.transitionType },
                   videoPrompt: result.prompt,
                   generation: { videoPrompt: result.prompt },
@@ -270,7 +552,7 @@ export default router.post(
           } as never,
           {
             stage: "promptGen",
-            promptOverride: { videoPrompt: result.prompt, dialogueLines: dial, shotIndex: 1 },
+            promptOverride: { videoPrompt: result.prompt, dialogueLines: dial, shotIndex: qGateShotIndex },
           },
         );
         if (qg.blocked) {
@@ -340,7 +622,135 @@ export default router.post(
         );
       }
 
-      await u.db("o_videoTrack").where({ id: trackId }).update({ state: "已完成", prompt: result.prompt });
+      // Scrub + heal-first persist: thin shells NEVER persist; force track literary spine
+      {
+        const { sanitizeVideoPrompt } = await import("@/ruleEngine/compilers/sanitizeVideoPrompt");
+        const { assertVideoPromptReady, visualLiteraryBody } = await import(
+          "@/ruleEngine/compilers/assertVideoPromptReady"
+        );
+        const { compileVideoPromptSpine } = await import("@/ruleEngine/compilers/compileVideoPromptSpine");
+        const scrubbed = sanitizeVideoPrompt({
+          prompt: result.prompt,
+          dialogueLines: dialLines,
+          durationSec,
+          preferStaticOnDialogue: dialLines.length > 0,
+        });
+        result.prompt = scrubbed.prompt;
+        const trackVd =
+          preferLiteraryVisualDesc(
+            String(mergedSources.shotMeta.visualDescription ?? "").trim(),
+            bestLiteraryDescFromPanels(trackBind?.panels),
+          ) || String(mergedSources.shotMeta.visualDescription ?? "").trim();
+        const ctx = hydrateShotCompileContextSync({
+          designShot: mergedSources.designShot ?? (trackVd
+            ? ({
+                shotIndex: shotIndexNum,
+                visualDescription: trackVd,
+                duration: durationSec,
+                narrative: { dialogue: { lines: dialLines.map((t) => ({ text: t })) } },
+              } as never)
+            : null),
+          shotMeta: {
+            ...mergedSources.shotMeta,
+            visualDescription: trackVd || mergedSources.shotMeta.visualDescription,
+            narrative: {
+              ...((mergedSources.shotMeta.narrative as object) ?? {}),
+              dialogue: {
+                lines: dialLines.map((t) => ({ text: t })),
+              },
+            },
+          },
+          seedPrompt: result.prompt,
+          shotIndex: shotIndexNum ?? null,
+          trackId,
+          storyboardId: storyboardId ?? null,
+          vendorId: "agnesai",
+        });
+        let ready = assertVideoPromptReady(result.prompt, ctx);
+        const missingFive = !/\[Motion\]/i.test(result.prompt) || !/\[Camera\]/i.test(result.prompt);
+        const visualThin = (visualLiteraryBody(result.prompt).match(/[\u4e00-\u9fff]/g) ?? []).length < 8;
+        if ((!ready.ok || missingFive || visualThin) && (ctx.canAuthorFromDesign || trackVd || dialLines.length)) {
+          const spine = compileVideoPromptSpine({
+            ctx: {
+              ...ctx,
+              visualDescription: ctx.visualDescription || trackVd,
+              dialogueLines: ctx.dialogueLines.length ? ctx.dialogueLines : dialLines,
+              canAuthorFromDesign: true,
+              durationSec: Math.max(ctx.durationSec, durationSec),
+            },
+            forceRebuild: true,
+            includeSidecar: false,
+            modeId: mode,
+            vendorId: "agnesai",
+          });
+          if (spine.prompt) result.prompt = spine.prompt;
+          if (spine.durationSec) {
+            (result as { generationWriteback?: { durationSec?: number } }).generationWriteback = {
+              ...result.generationWriteback,
+              durationSec: spine.durationSec,
+            };
+          }
+          ready = assertVideoPromptReady(result.prompt, {
+            ...ctx,
+            durationSec: spine.durationSec || ctx.durationSec,
+            visualDescription: ctx.visualDescription || trackVd,
+            dialogueLines: ctx.dialogueLines.length ? ctx.dialogueLines : dialLines,
+          });
+        }
+        const stillThin =
+          !ready.ok ||
+          !/\[Motion\]/i.test(result.prompt) ||
+          !/\[Camera\]/i.test(result.prompt) ||
+          (visualLiteraryBody(result.prompt).match(/[\u4e00-\u9fff]/g) ?? []).length < 8;
+        if (stillThin && isTrueDesignGap(ctx) && !trackVd && !dialLines.length) {
+          await u.db("o_videoTrack").where({ id: trackId }).update({
+            state: "生成失败",
+            reason: `VP-THIN-SHELL:真缺画面描写与对白`,
+          });
+          return res.status(400).send(
+            error("本镜缺少画面描写与对白，无法编译视频词；请补设计后重编译", {
+              code: "VP-THIN-SHELL",
+              primaryNextStep: "chat_repair",
+              reverseTrigger: "video_prompt_stub",
+              reasons: ["true_design_gap", ...ready.reasons],
+            }),
+          );
+        }
+        if (stillThin) {
+          // Material claimed but still shell — refuse lock-face-only / Audio-first scraps
+          await u.db("o_videoTrack").where({ id: trackId }).update({
+            state: "生成失败",
+            reason: `VP-THIN-SHELL:治愈后仍无文学五段 reasons=${ready.reasons.join(",")}`,
+          });
+          return res.status(400).send(
+            error("视频词仍为锁脸/无对白空壳，已拒绝落库；请确认本镜画面描写已写入分镜后重编译", {
+              code: "VP-THIN-SHELL",
+              primaryNextStep: "chat_repair",
+              reverseTrigger: "video_prompt_stub",
+              reasons: ready.reasons,
+              trackLiteraryVd: trackVd?.slice(0, 80),
+              dialCount: dialLines.length,
+            }),
+          );
+        }
+      }
+
+      await u.db("o_videoTrack").where({ id: trackId }).update({
+        state: qd.burnAllowed ? "已完成" : "需完善",
+        prompt: result.prompt,
+        ...(qd.burnAllowed
+          ? {}
+          : {
+              reason: JSON.stringify({
+                burnAllowed: false,
+                decision: qd.decision,
+                nextStep: qd.nextStep,
+                reasons: qd.reasons,
+                ctaLabel: qd.envelope?.ctaLabel ?? "完善后重编译",
+                userMessage: qd.envelope?.userMessage ?? "提示词已落库但不可烧片",
+              }),
+            }),
+      });
       const qdSerialized = serializeQualityDecision(qd, {
         autoHealed,
         duration: healedDuration,
@@ -355,7 +765,7 @@ export default router.post(
             "",
             ...(qd.envelope?.repairHints ?? []).map((h) => `[${h.id}] ${h.chatTemplate ?? ""}`).filter(Boolean),
             "",
-            "提示词已落库供对照；请按清单改 SB/W3 后重导再烧。",
+            "提示词已落库供对照（轨道状态=需完善，非已完成）；请按清单改 SB/W3 后重导再烧。",
           ]
             .filter((l) => l !== undefined && l !== "")
             .join("\n")

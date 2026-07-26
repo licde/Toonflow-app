@@ -89,6 +89,27 @@ export default router.post(
       });
 
       const limit = pLimit(concurrentCount ?? 5);
+      // Design/import incomplete: refuse batch prompt when lip Confirm still open
+      try {
+        const { loadEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
+        const firstTrack = await u.db("o_videoTrack").where("id", trackData[0]?.trackId).select("scriptId").first();
+        const sid = Number(scriptId ?? firstTrack?.scriptId ?? 0);
+        if (sid) {
+          const pkg = await loadEpisodePackage(u.db, projectId, sid);
+          const meta = (pkg as { meta?: { lipConfirmRequired?: boolean } } | null)?.meta;
+          if (meta?.lipConfirmRequired) {
+            return res.status(400).send(
+              error("设计/导入口型拆镜未闭合（lipConfirmRequired），请回 SB Confirm 或重导后再批量生成提示词", {
+                code: "LIP_CONFIRM_REQUIRED",
+                primaryNextStep: "split_shot",
+              }),
+            );
+          }
+        }
+      } catch {
+        /* optional */
+      }
+
       const tasks = trackData.map((track: { trackId: number; info: { id: number; sources: string; role?: string }[] }) =>
         limit(async () => {
           if (modeRules.mediaContract.minRefs > 0 && track.info.length < modeRules.mediaContract.minRefs) {

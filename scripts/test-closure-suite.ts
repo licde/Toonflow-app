@@ -53,6 +53,7 @@ const cmds = [
   "test:image-mode-template-wire",
   "test:asset-still-runner",
   "test:still-visual-fidelity",
+  "test:still-quality-closed-loop",
   "test:full-runtime-matrix",
 ];
 

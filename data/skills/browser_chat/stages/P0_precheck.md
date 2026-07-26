@@ -20,6 +20,8 @@ Browser Chat 改编路径**第一步**。六维度评分 + **可选爆款模板*
 
 **步骤 0（强制）**：调用 `viralFormulaPicker`（可带 `sourceHint`）→ 展示推荐公式 + catalog **允许改选** → `setViralFormula`；读返回的 `viralWritingContext.stageBrief`（含时长规范）。
 
+**换公式**：返回 `redesignRequired` 时 → **按新规范重设计**（推荐）；或显式 `acknowledgeKeepLegacy` 保留旧稿补洞。勿只改旧 NAR/DC 字段假闭环。
+
 **步骤 0b（强制）**：对源材料调用 `extractPeakHook`（`persist:true`）→ 产出 `peakLedger` + `hookPlan`；向用户展示**爆点卡/钩子卡**（可改）；拒绝假爆点（别墅写景/开会交代等）。
 
 1. 通读源材料，标注情绪高点、反转节点、冲突维度（与 peakLedger 对齐，勿把写景当高点）

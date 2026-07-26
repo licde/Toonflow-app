@@ -60,6 +60,9 @@ export function runForwardReentryAfterRepair(input: {
   shots: Record<string, unknown>[];
   meta?: Record<string, unknown> | null;
   applyClauseSplit?: boolean;
+  applyVisBeatExpanders?: boolean;
+  /** false：autoHeal/diagnose-only — 只 mirror，不语义扩镜 */
+  applySemanticSplit?: boolean;
 }): {
   planData: Record<string, unknown>;
   shots: Record<string, unknown>[];
@@ -71,7 +74,8 @@ export function runForwardReentryAfterRepair(input: {
     shots: input.shots,
     meta: input.meta,
     applyClauseSplit: input.applyClauseSplit !== false,
-    applyVisBeatExpanders: true,
+    applyVisBeatExpanders: input.applyVisBeatExpanders !== false && input.applySemanticSplit !== false,
+    applySemanticSplit: input.applySemanticSplit !== false,
   });
   const reentry = planForwardReentry(orch.shots);
   for (const s of orch.shots) {
@@ -81,8 +85,31 @@ export function runForwardReentryAfterRepair(input: {
       s.composeHash = undefined;
     }
   }
-  recordDesignSplitTelemetry("forward_reentry", `stale=${reentry.staleClientIds.length}`);
-  return { planData: orch.planData, shots: orch.shots, reentry, log: orch.log };
+  const { cascadeForwardStale } = require("../quality/forwardStaleCascade") as typeof import("../quality/forwardStaleCascade");
+  const cascaded = cascadeForwardStale({
+    shots: orch.shots,
+    forwardStages: ["SB", "MD-IMG", "EN", "MD-VID"],
+    staleClientIds: reentry.staleClientIds.length ? reentry.staleClientIds : undefined,
+  });
+  // Confirm/reentry 后三表必须同核重绑（fx/preview/retention）
+  try {
+    const { reindexDerivedTables } =
+      require("../bundle/reindexDerivedTables") as typeof import("../bundle/reindexDerivedTables");
+    const pd = orch.planData;
+    const pack = {
+      ...((pd.preDesignPack as object) ?? {}),
+      shots: cascaded.shots,
+    };
+    pd.preDesignPack = pack;
+    reindexDerivedTables({
+      planData: pd,
+      preDesignPack: pack,
+    } as never);
+  } catch {
+    /* optional */
+  }
+  recordDesignSplitTelemetry("forward_reentry", `stale=${reentry.staleClientIds.length};videoCleared=${cascaded.clearedVideoPass}`);
+  return { planData: orch.planData, shots: cascaded.shots, reentry, log: orch.log };
 }
 
 /** Dual-track: auto/silent may heal without RH; must-edit always RH. */

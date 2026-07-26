@@ -97,24 +97,32 @@ const STRATEGY: Record<QcHit, Omit<QcRepairAction, "primary" | "findingId">> = {
 };
 
 /** Burn-time short_video_quality_scorecard (≠ design adaptScorecard). */
-export function evaluateBurnScorecard(flags: {
-  identityOk?: boolean;
-  emotionOk?: boolean;
-  lipOk?: boolean;
-  camVarietyOk?: boolean;
-  audioOk?: boolean;
-  retentionOk?: boolean;
-  packagingOk?: boolean;
-  motionOk?: boolean;
-}): { svq: SvqResult; finding?: QcFinding } {
-  const svq = scoreShortVideo({ flags });
+export function evaluateBurnScorecard(
+  flags: {
+    identityOk?: boolean;
+    emotionOk?: boolean;
+    lipOk?: boolean;
+    camVarietyOk?: boolean;
+    audioOk?: boolean;
+    retentionOk?: boolean;
+    packagingOk?: boolean;
+    motionOk?: boolean;
+    visBeatOk?: boolean;
+  },
+  opts?: { unknownDims?: string[]; skippedDims?: string[] },
+): { svq: SvqResult; finding?: QcFinding } {
+  const svq = scoreShortVideo({
+    flags,
+    unknownDims: opts?.unknownDims,
+    skippedDims: opts?.skippedDims,
+  });
   if (svq.pass) return { svq };
   return {
     svq,
     finding: {
       id: "QC-SVQ",
-      severity: "WARN",
-      message: `成片记分未过：${svq.failDims.map((d) => d.id).join(",")}`,
+      severity: "BLOCK",
+      message: `成片记分未过：${[...svq.failDims.map((d) => d.id), ...svq.unknownDims].join(",")}`,
     },
   };
 }

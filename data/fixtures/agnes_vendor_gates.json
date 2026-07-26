@@ -7,7 +7,7 @@
     { "id": "AG-GATE-03", "rule": "duration 1-30s", "severity": "BLOCK", "rePushTarget": "SB" },
     { "id": "AG-GATE-04", "rule": "剥离 @图N / negative 通道", "severity": "WARN", "rePushTarget": "MD" }
   ],
-  "motionWhitelist": ["static", "slow pan", "slow zoom", "gentle push", "subtle drift"],
+  "motionWhitelist": ["静止", "缓慢横移", "缓慢变焦", "轻推", "微漂移", "static", "slow pan", "slow zoom", "gentle push", "subtle drift"],
   "motionForbidden": ["rapid zoom", "face morph", "expression change", "camera roll"],
   "qfExpr": {
     "QF-EXPR-01": { "maxIntensityForMicro": 5, "forbiddenWords": ["怒吼", "狰狞", "扭曲"] },

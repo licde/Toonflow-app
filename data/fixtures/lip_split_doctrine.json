@@ -1,13 +1,25 @@
 {
-  "version": "1.0.0",
-  "description": "Lip / multi-line / vendor split doctrine — same predicates as burn decideVideoQuality L3",
+  "version": "2.0.0",
+  "description": "Lip / multi-line / vendor split doctrine — design ≡ import same-kernel SplitOrchestrator; burn is backstop only",
   "freeze": {
     "neverSilentInvent": ["splitHint", "reactionAction"],
     "neverPersistHintOnBurnBlock": true,
     "neverFallbackReactionActionAsSplitHint": true,
+    "neverDumpMissingLinesOntoFirstDialogueShot": true,
+    "neverSameVdCloneSplit": true,
     "noNewTodosWithoutSample": true
   },
   "canonicalSplitHints": ["reaction_shot", "speak_react", "reveal_then_reaction", "clause_split"],
+  "confidence": {
+    "autoMin": 0.7,
+    "confirmBelow": 0.7,
+    "aliases": {
+      "ird": 0.7,
+      "camFit": 0.7,
+      "precheck": 0.8,
+      "svq": 0.72
+    }
+  },
   "predicates": {
     "needsSplit": "texts.length>=2 && (lipMin>8 || authorDuration<lipMin)",
     "overVendorMax": "required > vendorMax",
@@ -15,13 +27,35 @@
     "canSilentRaise": "!needsSplit && !overVendorMax && authorDuration < required <= vendorMax"
   },
   "forward": {
-    "designExit": ["needsSplit", "lipOver", "overVendorMax"],
-    "import": ["cluster_speak_react_or_hard_Confirm", "SH-DURATION-ALIGN_respect_vendor_and_needsSplit"],
+    "designExit": [
+      "needsSplit",
+      "lipOver",
+      "overVendorMax",
+      "canSilentRaise_must_be_cleared_before_exit",
+      "smart_split_or_confirm"
+    ],
+    "designExitNote": "有压力→同核智能拆（高置信 auto / 低置信 Confirm）；抬净 canSilentRaise；禁 diagnose_only 假绿出站。",
+    "import": [
+      "same_kernel_runSplitOrchestrator",
+      "raise_duration_fallback",
+      "strip_or_rebinding_misbound_dialogue",
+      "auto_when_confidence_ge_autoMin",
+      "confirm_queue_when_below",
+      "SH-DURATION-ALIGN_respect_vendor_and_needsSplit",
+      "stamp_lipConfirmRequired_only_on_residual"
+    ],
+    "importNote": "导入与设计同能力语义拆；非仅抬时兜底；禁静默同文克隆；低置信才 stamp。",
     "burn": "L3_split_shot_backstop_only"
   },
+  "matching": {
+    "routeBy": ["lineId", "beatRole", "sceneRef", "speakerToChar", "prop_cu_forbid_multi_lip", "os_vo_off_lip"],
+    "dc01PlacementNotPresenceOnly": true
+  },
   "chatRepair": {
-    "must": ["needsSplit", "lipOver", "overVendorMax", "fx_f3_split"],
-    "auto": ["canSilentRaise"]
+    "must": ["needsSplit", "lipOver", "overVendorMax", "fx_f3_split", "misbound_dialogue", "confirm_queue_open"],
+    "auto": ["import_duration_residual_only", "auto_semantic_split_when_eligible"],
+    "perShot": true,
+    "forbidPackLevelAnyMustMislabel": true
   },
   "reasonLabels": {
     "needsSplit": "multi_line_one_shot",

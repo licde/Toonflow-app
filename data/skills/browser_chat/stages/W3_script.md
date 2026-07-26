@@ -25,6 +25,9 @@ rulePackVersion: "2.0.1"
 - 单句 ≤20 字，单次 ≤50 字；超预算按**决策树**：标点→A 物理拆行；**残句无标点仍超预算→must 重设计或 Confirm B**（非可不手改）；VisBeat→C；`emotion_hit` **必须**同写 `reactionAction`
 - 设计拆分 Confirm：`designSplitOps` / tools `confirm_design_split`；反推修好后 `design_split_forward_reentry`
 - **契约不符＝重设计**：禁止只改 `narrativeSelfcheck.passed`；残句深链 `nar14_residual` → W3
+- 假绿禁：`narrativeSelfcheck.passed=true` 不得代替 `runDesignExitGate(W3)`；缺 `reactionAction` → NAR-15 BLOCK；服务器可补占位 RA，但 CAM/双镜与其它硬闸仍须同轮修完再 `setStepStatus`
+- **W3 权威=plan**：本步验 `dialoguePlan` 的 NAR-14/15；无 shots 时 **跳过** DC-01-EXTRA（非 UNIMPLEMENTED）。镜覆盖/乱入在 SB 拦
+- **DEX-SHOT-INTENT**：sidecar `shotDesignIntent[]` **必须非空**（含 `picture`/`durationSec`；钩子/爆点须 `peakId|hookId`）。可与 `peakLedger` 一一对应；**禁止空数组 + passed**。服务器可从 peak 高置信派生，无 peak 时须手写
 
 ### W12 冲突驱动
 

@@ -32,17 +32,50 @@ rulePackVersion: "2.1.0"
 | narrative.spatialRelation | **站位 string**（由 B13 压串；禁止贴 `{axis,anchors}` 对象） | PR-06, PR-14 · DEX-SPATIAL-STR |
 | retentionTier | ep1: 0-2s / 2-5s / 5-30s / body / endHook | RET |
 | shotDesign | T2+ 构图/表演/锚点（高情绪≥4 必填 performance） | GEN |
+| shotDesign.performance.microExpression | **仅** `{eyes, mouthDetail}`；多角色用 `byName`，**禁止**名键根对象（如 `{"沈父":{…}}`） | DEX-EXPR / SH-MICRO-EXPR |
 | lines[].lineId/functions/causedByActionId | 台词功能链，对齐 dialoguePlan；**plan 全部 lineId 须落 shots（DC-01）** | NAR, DC-01 |
-| lines[].reactionAction | emotion_hit 必填；与 plan 镜像 | NAR-15 |
+| lines[].reactionAction | emotion_hit 必填写在 **dialoguePlan**；**禁止**单镜同时 onCam 对白+reactionAction — 须已拆双镜 | NAR-15, DEX-CAM-FIT |
 | speaker 裸名 | 禁 OS/VO 后缀；禁 APP/UI 作 speaker | DEX-SPEAKER-BARE |
+
+## 形状契约（防 SCHEMA/假绿）
+
+- `microExpression`：**禁止** `{"角色名":{eyes,mouthDetail}}` 名键根；权威形 `{eyes,mouthDetail}` 或 `{eyes,mouthDetail,byName:{…}}`
+- `sceneAvTags` / `sceneMeta[].sceneAvTags`：必须是 **string[]**，禁止逗号散文串
+- `planData.narrativeBrief.seriesContinuity`：必须是 **record** `{ep1Summary, carryInfoIds?}`，禁止整段散文 string
+- **DEX-CAM-FIT 硬约束（Chat 必须写对）**：
+  - `dialoguePlan.lines[].reactionAction` **可以且应当**存在（NAR-15）
+  - **禁止**单条 `shots[]` 同时具备：出镜对白 + `lines[].reactionAction`（或 VD 含「开口/说道…反应/愣/侧目」）
+  - 权威形 = **两镜**：speak（口播、**无** reactionAction）+ reaction（无口播或仅 OS；VD≥minChars）
+  - **禁止**占位 VD「听者反应特写」
+  - **反例**：一镜 `dialogue.lines[{text, reactionAction}]` + VD「开口道完，听者反应」→ 不合规
+  - **正例**：镜A 说话近景（仅 text）；镜B 听者反应特写（无 onCam 台词）；plan 行仍可有 reactionAction
 
 ## 出站硬闸（SB）
 
-- `runDesignExitGate(SB)`：NAR-14/15（plan+shots 同核）、DC-01、DEX-DC-ALIGN、DEX-SPEAKER-BARE、DC-16 预检
-- **残句**：A 拆后仍 NAR-14 → 须重设计/显式 splitHint/`Confirm B`；导入 ingest 可 auto B（有真实反应镜才绑 hint）
+- `runDesignExitGate(SB)`：**必须**过闸再 `setStepStatus` 完成；禁止自检假绿跳过
+- **setStepStatus ≡ exportGate**：默认 **diagnose-only**（写 `meta.expandProvenance.mode=diagnose_only`）；仅显式 `forceExpand:true` 才 apply IRD/cam/oneBeat；高置信 auto-close 含 **可抬短镜抬时**（LIP/DFW 同靶+vendor snap），**不**静默同文唇拆；超 vendor/多句须 Confirm 语义拆后重跑 designExit
+- 失败时：服务器会先高置信 auto-close（**LIP 抬时** / NAR-15 占位 RA / DC-01 mirror / 噪声 EXTRA / peak→shotDesignIntent / 唯一名→charCodes；有定妆图写 assetCrefPlan，无图则 stub+deferredStill）；仍红则按失败清单 **同轮重写 shots/JSON**，禁止只改 `passed`/自报绿
+- **LIP**：可抬→设计退出前抬净；导入 raise 仅兜底；禁 DFW「导入可愈」与超限 LIP 互斥谎称；`importOk≠designExitPass`
+- 不发明定妆 URL / 假 `--cref`；**无定妆图**时可设计期 **stub+assetCrefPlan 延期**（配角后期 AS 智能补图）；生成/compose 仍须真图
+- 出脸镜须 `charCodes` 或可派生 speaker 入册；`DEX-ASSET-CREF` 在 SB 认 stub 绑，AS 要 imaged
+- **导入**：已有 `preDesignPack.shots` 时默认 **diagnose-only**（禁 IRD/cam/oneBeat 静默再拆 16→170）；`forceExpand` 才 apply；dryRun 须展示 **postHeal 镜数**（作者→愈后）与**非法同文占比**
+- **一镜一画面（语义强制）**：连续≥3 归一化同文 VD（**有对白也算**）→ `DEX-DUP-VD` BLOCK；禁止「同文口型复用」当设计；超 vendor/多句 → Confirm 语义拆（子镜须景别/运镜/`intent.picture` 相对父镜可区分）或改短，**禁止**指望导入静默拆成同文 N 镜
+- **DEX-DUP-VD / DEX-DIRTY-STILL-PROMPT / DEX-HAND-LIP**：同文连镜、手+眼同帧、文学体裸 `--cref CHAR`/`--sref SCENE`、手镜 lip≠none → BLOCK；composed prompt **尾** IR 码除外
+- **配方智能适配（≠改设计）**：分镜 VD/景别/intent 是 SSOT；compose 按镜型适配（手 CU **仅**显式手部特写；座次/中景/权力反差 **压过** 摩挲扳指动作，禁手CU禁出脸对撞）；**特写×出镜≥2**：VD 只点名一人 → **降出场人数+裁主角 cref**（禁拆镜 Confirm）；VD 多人同框意图 → `still_cu_cast` 智能拆；成稿泄漏「仅N人」同核；禁【Edit焦点】文学洗绿；文学意图原子（端坐太师椅/抄书等）须在 compose/首烧/Edit 存活；**禁止**把配方句回写 `visualDescription`。真脏手+脸 → Chat BLOCK + VisBeat Confirm 拆；导入与设计 **同核智能拆/降人数**（非仅软过）；残留才 `importOk≠designExitPass` / Confirm，禁静默同文拆手脸
+- **PROMPT-FIDELITY / 文学存活**：HQ 座次镜缺抄书/太师椅等 → 不过绿；Edit 焦点只追加，禁掏空文学基底
+- **`importOk≠designExitPass`**：导入可进仓 ≠ 设计闭合；禁止只改 `modalityPromptAudit` / `narrativeSelfcheck.passed`
+- composeStillPromptPreview `persist:true` 写库用 `result.composeMode`（禁裸变量 `mode` → `mode is not defined`）
+- VLM 缺 Key：图已出、HQ 未过（≠ preview HTTP 400）
+- DC-01（缺覆盖）、**DC-01-EXTRA（乱入）**；时长噪点如「：3s」属伪台词，导入会剥离，勿当文学台词修
+- **RA×CAM 双轨**：`emotion_hit` 的 RA 写在 **dialoguePlan**；镜侧权威=说话镜+反应镜；禁单镜 onCam+RA
+- **质量同核（BLOCK）**：DEX-QP-02、DEX-CAST-ON-DESC、DEX-EMPTY-SHOT-CONSISTENCY、DEX-EXPR-SPEAK、**DEX-ASSET-CREF**、**DEX-SHOT-INTENT**
+- 出站前 L2 `healShotQuality`（CAST/EMPTY 可置信则愈）；愈后 `cascadeForwardStale`；chatStrict 仅 propose
+- **残句**：A 拆后仍 NAR-14 → 须重设计/显式 splitHint/`Confirm B`；导入 ingest **禁**静默 residual B / 同文唇拆（标 `lipConfirmRequired`）
 - 拆行后须 `confirm_design_split` / Orchestrator（mirror+补缺 lineId），禁止只写 hint
 - VisBeat 与 Orchestrator：先 expanders，再 clause-split，再残句 B（禁双拆打架）
-- 修后强制 `forwardReentry`（防二次 DC-01/时长）
+- 修后强制 `forwardReentry`（防二次 DC-01/时长/NAR-15）
+- 空镜描写禁止再叠正脸/权力位（compose egress 同核）；有脸须 CHAR + assetCrefPlan/定妆
+- 分镜表列：镜/类型/场景/**画面描写/景别/表演**/台词/时长（parser 往返保留描写）
 | clip30sCandidate / rhythm31545 | 投流与 3-15-45 标注 | VIR |
 | audioCue | W3 sceneMeta.avCausality.audioBeat（**string**；禁止 `{beat,type}` object） |
 | visualEffect / fxLevel | W3 fxIntent（**visualEffect 为 string** `"F1: 描述"`；fxLevel 可选 `"F1"`） |
@@ -77,23 +110,48 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 2. **100% 覆盖**：可合并多句入一镜，**禁止删改字词、禁止丢句**
 3. OS/VO/系统音单独标注 `type`（`os` / `vo`）— **禁止** `speaker: "沈清漪（OS）"`；speaker 只写本名，画外用 type
 4. **禁止** `--cref SCENE-*`：角色用 `--cref CHAR-*`，场景用 `--sref SCENE-*`
-5. **CastingSheet**：身份以 CD/`charCodes`/`--cref` 为准；`visualDescription` **禁止当作造名源**（见 `docs/PRODUCTION_PILLARS.md`）
-6. **静帧 Identity（DEX-STILL-*）**：一镜一可静帧拍；人名裸名禁`（OS）`；禁「对白瞬间神态」填料；多拍须拆镜或 VisBeat Confirm
+5. **CastingSheet**：身份以 CD/`charCodes`/`--cref` 为准；描写点名**智能绑定**既有 CD/资产（唯一命中补码；歧义拒绑；无资产 stub+保留名）。**禁剥名**；`visualDescription` **禁止当作自由 NER 造名源**（见 `docs/PRODUCTION_PILLARS.md`）
+6. **静帧 Identity（DEX-STILL-*）**：一镜一可静帧拍；人名裸名禁`（OS）`；禁「对白瞬间神态」填料；多拍 → **DEX-STILL-ONEBEAT BLOCK**（智能拆或 Confirm）；**特写×多人 → DEX-STILL-CU-CAST BLOCK**（反应特写+场面镜；导入不硬拦）
 7. 出口前人工核对台词数 ≥ 剧本可枚举句数
+8. **口型闸**：仅出镜对白强制 lip；`type:os|vo` 可 no lip；空 `lipSyncPolicy` ≠ silent 假阳
 
 ### speaker 正反例（DEX-SPEAKER-BARE）
 
 - **正例**：`{ "speaker": "沈清漪", "type": "os", "text": "……" }`
 - **反例（禁止）**：`{ "speaker": "沈清漪（OS）", "text": "……" }` — 导入会剥 OS，但 Chat 不得依赖 salvage；生产闸会把「名（OS）」当第二张脸
 
-### visualDescription 正反例（DEX-STILL-* · WARN；DEX-QP-02 / QP-02 · BLOCK）
+### visualDescription 正反例（DEX-STILL-ONEBEAT · **BLOCK**；DEX-QP-02 / QP-02 · BLOCK）
 
-- **正例**：`{ "visualDescription": "中景。沈清漪咬帕止血，眉心微蹙。" }`（单拍、裸名、可拍≥minChars）
-- **反例**：一镜堆刺入+咬帕+包扎+露出匕首+笑（多拍）→ `DEX-STILL-ONEBEAT`
+- **正例（一镜一拍）**：`{ "visualDescription": "中景。沈清漪咬帕止血，眉心微蹙。" }`（单拍、裸名、可拍≥minChars）
+- **反例（多拍）**：一镜堆刺入+包扎+露出匕首+浅笑 → `DEX-STILL-ONEBEAT`（**BLOCK**）
+- **正例（簪刺标准三镜 · 契约金样）**：
+  1. `大特写。银簪尖端刺入锁骨下方皮肉，暗红色血珠自簪尖渗出。` · tags `prop_insert,reveal`
+  2. `特写。沈清漪唇边勾起一抹浅笑，眼神决绝。` · tags `reaction,face_cu`
+  3. `近景。梳妆台下方露出一柄匕首的冷光。` · tags `reveal,prop_insert`
+  - VO/画外音进 AUD，**不**进 visualDescription
+  - 金样：`data/fixtures/golden/still-onebeat-zan-ci.json`；高置信 exit **auto apply** splitPlan；低置信 Confirm
+- **正例（跪地拔剑 · 题材扩样）**：①`特写。少年跪地落泪，目光决绝。` ②`近景。少年拔剑起身，剑尖指向对方。` · 金样 `still-onebeat-kneel-sword.json`
 - **反例**：`沈清漪（OS）对白瞬间神态` → `DEX-STILL-OS-NAME` + `DEX-STILL-FILLER`
 - **反例**：7 字空壳 / 纯「很美很有氛围」→ `DEX-QP-02` / `QP-02`（minChars 仅防空壳；正式标准=可拍物象）
-- 首帧脏反推：`still_firstframe_dirty` → **先改 SB 描写** → stale → 再 MD-IMG 重出；**禁止只 regen**
+- **反例**：`空镜无人物。沈清漪正脸特写` → `DEX-EMPTY-SHOT-CONSISTENCY`
+- **反例**：描写写「沈清漪」但 `charCodes: []` → `DEX-CAST-ON-DESC`（唯一 CD 可智能绑；歧义拒绑保留名）
+- **正例（无图）**：点名保留「沈清漪」进 characters；**禁假 --cref**；有定妆图再挂 cref
+- **反例**：有脸/CHAR 无本镜绑且无法 stub 入册 → `DEX-ASSET-CREF`（深链 AS）；仅 stub 无真图时 **AS/compose** 仍 BLOCK
+- 首帧反推分流：
+  - `still_firstframe_dirty` → 假双脸/多拍：**智能拆镜**（优先）或改单拍描写 → stale → MD-IMG；**禁止只 regen**
+  - `still_firstframe_stale` → 描写已变：改 VD 后重出 HQ
+  - `still_firstframe_weak` → 弱静照/缺 visualPass：`batch_still` 重出（勿先逼改 VD）
+  - `dirty_still_prompt` → 真手+脸同帧：改 VD / VisBeat 拆；非 seating+扳指动作误脏
+  - 视频污染壳（XML 索要 / 跨镜 PEAK / EN QF）→ sanitize 后重编译本镜
 - 描写过短反推：`qp02_visual_short` → SB 重写 `visualDescription`；导入不发明占位
+
+### 智能拆 · Chat/exit 矩阵
+
+| 模式 | Chat | 服务器 |
+|------|------|--------|
+| auto+高置信 | 展示已拆 N 镜；可 undo/override | exit apply still_onebeat + sync |
+| auto+低置信 | RH 出 splitPlan，须 Confirm | 不 auto |
+| chatStrict | 仅 propose；完成步前 Confirm | 未 apply → BLOCK |
 
 ## 每镜必填 visualDescription
 
@@ -109,7 +167,8 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 4. 为每镜填 **visualDescription**（必填）
 5. 标 shotSize + emotionIntensity + duration + rhythmZone
 6. 为信息镜填 markers；标 **string** spatialRelation（按上式从 B13 压串）
-7. 写入 preDesignPack.shots[]
+7. 写入 **Bundle 根** `preDesignPack.shots[]`（禁止只写 `planData.preDesignPack`）
+8. 导出前自检：JSON 可 parse、根 `}` 闭合、顶层 shots≥1；script↔dialoguePlan↔shot `lineId`/原文同文（标点差 → DC-01 / RH-QP-03）
 
 ## BLOCK 闸门
 

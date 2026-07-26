@@ -125,20 +125,55 @@ export function healLipMultiLineWithB(input: {
       expandedShots.push(s);
       continue;
     }
-    // One speak shot per line so cluster can attach reaction siblings
-    for (const line of lines) {
-      expandedShots.push({
+    // One speak shot per line — Confirm path must differentiate VD/景别/picture（禁同文克隆）
+    const parentVd = String(s.visualDescription ?? "").trim();
+    const { differentiateSemanticChild } =
+      require("./splitChildVisual") as typeof import("./splitChildVisual");
+    const parentPic = String(
+      (s.shotDesignIntent as { picture?: string } | undefined)?.picture ?? "",
+    ).trim();
+    let refused = 0;
+    const children: Record<string, unknown>[] = [];
+    lines.forEach((line, li) => {
+      const sem = differentiateSemanticChild({
+        parentVd,
+        role: "speak",
+        lineText: String(line.text ?? ""),
+        lineIndex: li,
+        lineCount: lines.length,
+        picture: parentPic || undefined,
+      });
+      // M6: same-VD refuse = heal failure (keep parent pressure; no silent clone)
+      if (sem.refuse || (!sem.ok && !sem.visualDescription)) {
+        refused++;
+        return;
+      }
+      children.push({
         ...s,
-        clientId: `${String(s.clientId ?? s.shotIndex ?? "s")}-lip-${line.lineId ?? lines.indexOf(line)}`,
+        clientId: `${String(s.clientId ?? s.shotIndex ?? "s")}-lip-${line.lineId ?? li}`,
         _lipMultiSplit: true,
+        _parentVisualDescription: parentVd || String(s._parentVisualDescription ?? ""),
+        _stillBeatSplitId: String(s.clientId ?? s.shotIndex ?? "s"),
+        visualDescription: sem.visualDescription || parentVd,
+        motion: sem.motion,
+        shotDesignIntent: {
+          ...((s.shotDesignIntent as object) ?? {}),
+          picture: sem.picture,
+        },
         narrative: {
           ...n,
+          shotSize: sem.shotSize,
           dialogue: { lines: [line] },
           emotionIntensity: Math.max(Number((n as { emotionIntensity?: number }).emotionIntensity ?? 5), 7),
         },
       });
+    });
+    if (refused > 0 && children.length < 2) {
+      expandedShots.push({ ...s, _lipSplitRefuse: true, healFailed: "same_vd_refuse" });
+      continue;
     }
-    healedShotIndexes.push(Number(s.shotIndex ?? i + 1));
+    expandedShots.push(...(children.length ? children : [s]));
+    if (children.length) healedShotIndexes.push(Number(s.shotIndex ?? i + 1));
   }
 
   const clustered = expandDialogueClusters(expandedShots as ClusterShot[], {
@@ -186,21 +221,61 @@ export function healLipMultiLineWithB(input: {
   };
 }
 
-/** Chat-repair: must when needsSplit/lipOver/overVendor; auto only canSilentRaise. */
+export type LipChatRepairClass = "must" | "auto" | "none";
+
+export type LipChatRepairBreakdown = {
+  /** Pack-level: must if any mustConfirm; else auto if only raiseable; else none/must from blocks. */
+  pack: LipChatRepairClass;
+  mustShotIndexes: number[];
+  raiseShotIndexes: number[];
+  /** True when pack mixes Confirm shots and raiseable shorts (逐镜分层 required). */
+  mixed: boolean;
+};
+
+/** Per-shot + pack lip class for Chat repair (禁包级 anyMust 把可抬镜打成须手改). */
+export function classifyLipForChatRepairDetailed(input: {
+  shots?: Record<string, unknown>[];
+  blockHasLip01?: boolean;
+  vendorId?: string | null;
+}): LipChatRepairBreakdown {
+  const shots = input.shots ?? [];
+  const mustShotIndexes: number[] = [];
+  const raiseShotIndexes: number[] = [];
+  for (const s of shots) {
+    const p = detectLipSplitPressure(s, { vendorId: input.vendorId });
+    const idx = Number(s.shotIndex ?? 0);
+    if (p.mustConfirm) mustShotIndexes.push(idx);
+    else if (p.canSilentRaise) raiseShotIndexes.push(idx);
+  }
+  const mixed = mustShotIndexes.length > 0 && raiseShotIndexes.length > 0;
+  let pack: LipChatRepairClass = "none";
+  if (mustShotIndexes.length) pack = "must";
+  else if (raiseShotIndexes.length || (input.blockHasLip01 && raiseShotIndexes.length === 0 && !mustShotIndexes.length)) {
+    // Remaining LIP after raise should be mustConfirm; pure raise → auto (设计应已抬；残留=兜底)
+    if (raiseShotIndexes.length) pack = "auto";
+    else if (input.blockHasLip01) pack = "must";
+  }
+  return { pack, mustShotIndexes, raiseShotIndexes, mixed };
+}
+
+/** Chat-repair pack class: must when any mustConfirm; auto only when raiseable and no Confirm. */
 export function classifyLipForChatRepair(input: {
   shots?: Record<string, unknown>[];
   blockHasLip01?: boolean;
-}): "must" | "auto" | "none" {
-  const shots = input.shots ?? [];
-  let anyMust = false;
-  let anyRaise = false;
-  for (const s of shots) {
-    const p = detectLipSplitPressure(s);
-    if (p.mustConfirm) anyMust = true;
-    if (p.canSilentRaise) anyRaise = true;
+  vendorId?: string | null;
+}): LipChatRepairClass {
+  return classifyLipForChatRepairDetailed(input).pack;
+}
+
+/** Whether a shot index is under lip mustConfirm pressure. */
+export function shotIndexHasLipMustConfirm(
+  shots: Record<string, unknown>[] | undefined,
+  shotIndex: number,
+  vendorId?: string | null,
+): boolean {
+  for (const s of shots ?? []) {
+    if (Number(s.shotIndex ?? 0) !== shotIndex) continue;
+    return detectLipSplitPressure(s, { vendorId }).mustConfirm;
   }
-  if (anyMust) return "must";
-  if (input.blockHasLip01 && anyRaise) return "auto";
-  if (input.blockHasLip01) return "must";
-  return "none";
+  return false;
 }

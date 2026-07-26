@@ -1,6 +1,10 @@
 import { touchPromptForVendor, resolveAspectRatio } from "./vendorPromptAdapter";
 import { finalizeFiveSectionPrompt } from "./finalizeFiveSectionPrompt";
 import { isVideoPromptStub as isStubShared } from "./sanitizeVideoPrompt";
+import { resolveLipDurationSingleSource } from "../quality/resolveLipDuration";
+import { hasOnCameraDialogue, hasAnyDialogueLine } from "../design/onCameraDialogue";
+import { compileVideoPromptSpine } from "./compileVideoPromptSpine";
+import { assertVideoPromptReady } from "./assertVideoPromptReady";
 
 export interface VideoNativeCompileInput {
   prompt?: string;
@@ -22,19 +26,19 @@ export interface VideoNativeCompileInput {
   continuityFrom?: string;
   emotion?: number | string;
   camera?: string;
+  shotIndex?: number;
+  stillIntentClass?: string;
+  vendorId?: string;
 }
 
 export interface VideoNativeCompileResult {
   vendorPrompt: string;
   generateAudio: boolean;
   aspectRatio?: string;
-}
-
-function dialogueBlock(lines: { speaker?: string; text?: string }[]): string {
-  return lines
-    .filter((l) => l.text?.trim())
-    .map((l) => (l.speaker ? `${l.speaker}: ${l.text}` : l.text))
-    .join("; ");
+  promptHash?: string;
+  intentClass?: string;
+  ready?: boolean;
+  readyCode?: string;
 }
 
 /** Thin stub like "特写 static, duration 2s" / "中景 static, duration 2s" */
@@ -42,6 +46,10 @@ export function isVideoPromptStub(text: string): boolean {
   return isStubShared(text);
 }
 
+/**
+ * Adapter only — five-section body from compileVideoPromptSpine when design fields present.
+ * Never invents comma-soup as sole author.
+ */
 export function compileVideoNativePrompt(
   input: VideoNativeCompileInput,
   projectRatio?: string,
@@ -49,7 +57,67 @@ export function compileVideoNativePrompt(
   let base = (input.videoDesc ?? input.videoPrompt ?? input.prompt ?? "").trim();
   const lines = input.dialogueLines ?? [];
   const lineTexts = lines.map((l) => l.text ?? "").filter(Boolean);
+  const onCam = hasOnCameraDialogue(lines);
+  const anyDial = hasAnyDialogueLine(lines) || lineTexts.length > 0;
   const dur = input.duration;
+  const vd = String(input.visualDescription ?? "").trim();
+
+  // Spine when we have design material or base is stub/thin/non-five-section
+  const needsSpine =
+    Boolean(vd || lineTexts.length) &&
+    (!base ||
+      isStubShared(base) ||
+      !/\[Visual\]/i.test(base) ||
+      assertVideoPromptReady(base, {
+        dialogueLines: lineTexts,
+        durationSec: dur ?? 0,
+        gaps: {
+          missingVisualDescription: !vd,
+          missingShotSize: !input.shotSize,
+          missingDuration: dur == null,
+          missingDialogueWhenExpected: false,
+        },
+      } as never).ok === false);
+
+  if (needsSpine) {
+    const spine = compileVideoPromptSpine({
+      designShot: {
+        shotIndex: input.shotIndex,
+        visualDescription: vd || undefined,
+        shotSize: input.shotSize,
+        duration: dur,
+        sceneName: input.sceneName,
+        narrative: {
+          dialogue: { lines },
+        },
+        generation: {
+          videoPrompt: base || undefined,
+          stillIntentClass: input.stillIntentClass,
+        },
+      },
+      seedPrompt: base || undefined,
+      forceRebuild: true,
+      includeSidecar: false,
+      vendorId: input.vendorId,
+    });
+    base = spine.prompt;
+    const lip = resolveLipDurationSingleSource({
+      prompt: base,
+      lipSyncPolicy: input.lipSyncPolicy,
+      hasDialogue: onCam,
+      durationSec: spine.durationSec || dur,
+    });
+    const touched = touchPromptForVendor(lip.prompt, projectRatio);
+    return {
+      vendorPrompt: touched.vendorPrompt,
+      generateAudio: anyDial || Boolean(input.audioPrompt?.trim()),
+      aspectRatio: resolveAspectRatio(projectRatio, touched.aspectRatio),
+      promptHash: spine.promptHash,
+      intentClass: spine.intentClass,
+      ready: spine.ready,
+      readyCode: spine.readyCode,
+    };
+  }
 
   // Five-section: finalize in place — do not append comma soup
   if (/\[Visual\]|\[Audio\]|\[Camera\]/i.test(base)) {
@@ -57,70 +125,63 @@ export function compileVideoNativePrompt(
       prompt: base,
       dialogueLines: lineTexts,
       durationSec: dur,
-      preferStaticOnDialogue: lineTexts.length > 0,
+      preferStaticOnDialogue: anyDial,
       narrativePeak: input.visualDescription?.slice(0, 80),
     });
-    const touched = touchPromptForVendor(fin.prompt, projectRatio);
+    const lip = resolveLipDurationSingleSource({
+      prompt: fin.prompt,
+      lipSyncPolicy: input.lipSyncPolicy,
+      hasDialogue: onCam,
+      durationSec: dur,
+    });
+    const touched = touchPromptForVendor(lip.prompt, projectRatio);
     return {
       vendorPrompt: touched.vendorPrompt,
-      generateAudio: lineTexts.length > 0 || Boolean(input.audioPrompt?.trim()),
+      generateAudio: anyDial || Boolean(input.audioPrompt?.trim()),
       aspectRatio: resolveAspectRatio(projectRatio, touched.aspectRatio),
     };
   }
 
+  // Last resort: visual description only — never medium-shot static soup
   const parts: string[] = [];
-
-  if (base && isVideoPromptStub(base) && input.visualDescription?.trim()) {
-    parts.push(input.visualDescription.trim().slice(0, 280));
-    parts.push(base);
-  } else if (base) {
-    parts.push(base);
-  } else if (input.visualDescription?.trim()) {
-    parts.push(input.visualDescription.trim().slice(0, 280));
-  }
-
+  if (vd) parts.push(vd.slice(0, 280));
+  else if (base && !isStubShared(base)) parts.push(base);
   if (input.shotSize) parts.push(input.shotSize);
-  if (input.colorTone) parts.push(input.colorTone);
-  if (input.sceneName) parts.push(input.sceneName);
   if (input.duration) parts.push(`duration ${input.duration}s`);
-  if (input.camera) parts.push(input.camera);
-  if (input.emotion != null && input.emotion !== "") parts.push(`emotion:${input.emotion}`);
-
-  if (input.foreground?.trim()) parts.push(`fg:${input.foreground.trim()}`);
-  if (input.background?.trim()) parts.push(`bg:${input.background.trim()}`);
-  if (input.bgBlur) parts.push("shallow depth of field, soft background");
-  if (input.exprCue?.trim()) parts.push(`micro-expression:${input.exprCue.trim()}`);
-  if (input.continuityFrom?.trim()) {
-    parts.push(`continuity: continues from ${input.continuityFrom.trim().slice(0, 80)}`);
+  if (lineTexts.length) {
+    parts.push(...lineTexts.map((t) => `"${t}"`));
+    parts.push("口型同步开启");
   }
 
-  const dialogueText = dialogueBlock(lines);
-  if (dialogueText) {
-    parts.push(`dialogue: ${dialogueText}`);
-    const policy = String(input.lipSyncPolicy ?? "").toLowerCase().replace(/-/g, "_");
-    if (
-      policy === "dialogue_native" ||
-      policy === "natural" ||
-      policy === "natural_emphasized" ||
-      policy.includes("natural")
-    ) {
-      parts.push("natural mouth movement for dialogue, lip sync");
-    } else if (policy === "subtle_natural" || policy === "subtle" || policy.includes("subtle")) {
-      parts.push("subtle lip sync, natural mouth movement");
-    } else if (policy && policy !== "none" && policy !== "silent") {
-      parts.push("subtle lip sync, natural mouth movement");
-    }
+  const soup = parts.filter(Boolean).join(", ");
+  // If we still have material, try spine one more time with soup as seed
+  if (vd || lineTexts.length) {
+    const spine = compileVideoPromptSpine({
+      designShot: {
+        visualDescription: vd,
+        shotSize: input.shotSize,
+        duration: dur,
+        sceneName: input.sceneName,
+        narrative: { dialogue: { lines } },
+      },
+      forceRebuild: true,
+      includeSidecar: false,
+    });
+    const touched = touchPromptForVendor(spine.prompt, projectRatio);
+    return {
+      vendorPrompt: touched.vendorPrompt,
+      generateAudio: anyDial || Boolean(input.audioPrompt?.trim()),
+      aspectRatio: resolveAspectRatio(projectRatio, touched.aspectRatio),
+      promptHash: spine.promptHash,
+      intentClass: spine.intentClass,
+      ready: spine.ready,
+    };
   }
-  if (input.audioPrompt?.trim()) parts.push(`audio: ${input.audioPrompt.trim()}`);
-  if (input.fxPrompt?.trim()) parts.push(`fx: ${input.fxPrompt.trim()}`);
 
-  const raw = parts.join(", ");
-  const touched = touchPromptForVendor(raw, projectRatio);
-  const generateAudio = lines.length > 0 || Boolean(input.audioPrompt?.trim());
-
+  const touched = touchPromptForVendor(soup, projectRatio);
   return {
     vendorPrompt: touched.vendorPrompt,
-    generateAudio,
+    generateAudio: anyDial || Boolean(input.audioPrompt?.trim()),
     aspectRatio: resolveAspectRatio(projectRatio, touched.aspectRatio),
   };
 }

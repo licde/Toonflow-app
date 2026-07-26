@@ -38,8 +38,7 @@ const FALLBACK: StillRecipePolicy = {
     selectBy: "charCodeCount",
     neverUseReferenceUrlCountForMulti: true,
     single: "锁定角色定妆参考脸型，禁止重塑五官身份",
-    multiChar:
-      "严格锁定多参考身份：脸型来自角色定妆参考，环境来自场景参考，禁止把脸融进背景",
+    multiChar: "锁定定妆脸型与身份，禁止按参考图拼贴成多格/拼图",
     seatingIdentity:
       "身份锁定：脸型来自角色定妆参考；姿态与家具以描写为准，场景参考只补背景木作/匾额，不得替换太师椅或蒲团",
     seatingSeatLock:
@@ -242,6 +241,18 @@ export function healStillRecipePolicy(
     if (dedupNar !== next) {
       next = dedupNar;
       healed.push("narrative_clause_dedupe");
+    }
+  } catch {
+    /* optional */
+  }
+
+  try {
+    const { sanitizeFirstFrameEgressSoup } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    const cleaned = sanitizeFirstFrameEgressSoup(next);
+    if (cleaned !== next) {
+      next = cleaned;
+      healed.push("first_frame_soup_sanitize");
     }
   } catch {
     /* optional */

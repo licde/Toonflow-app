@@ -542,8 +542,10 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
           const { blocks = 0, warns = 0 } = summary.exportGate.coverage ?? {};
           const salvageN = shapeSalvageLog.value.length;
           window.$message.info(
-            `预览更新完成 · ${summary.tier ?? summary.preImport?.tier ?? "T2"} · ${summary.exportGate.exportAllowed ? "可导入" : "阻断"} · ${(summary.exportGate.closureSnapshot?.blockIds ?? []).length ? `规则 ${(summary.exportGate.closureSnapshot?.blockIds ?? []).slice(0, 8).join(",")}` : `BLOCK ${blocks} / WARN ${warns}`}${salvageN ? ` · 已自动修复 ${salvageN}` : ""}`
-          );
+            summary.exportGate.previewStatusLine ||
+            summary.previewStatusLine ||
+            `预览更新完成 · ${summary.tier ?? summary.preImport?.tier ?? "T2"} · ${summary.exportGate.exportAllowed ? "可导入" : (summary.exportGate.designExitIncomplete ? "设计未闭合" : "阻断")} · ${(summary.exportGate.closureSnapshot?.blockIds ?? []).length ? `规则 ${(summary.exportGate.closureSnapshot?.blockIds ?? []).slice(0, 8).join(",")}` : `BLOCK ${blocks} / WARN ${warns}`}${!summary.exportGate.exportAllowed ? "（形态适配≠契约已修）" : (salvageN ? ` · 形态已适配 ${salvageN}` : "")}`
+          )
         }
       } catch (e) {
         const err = e;

@@ -52,13 +52,13 @@ export function applyLookCreditsForChars<T extends StillIdentityChar>(
   return chars.map((c) => {
     if (c.hasImage) return c;
     const code = (c.code || "").toUpperCase();
-    if (code && crefSet.has(code)) {
-      return { ...c, hasImage: true };
-    }
+    // Do NOT credit hasImage from prompt cref tokens alone (no imageId → fake green)
     if (remainingRole > 0) {
       remainingRole -= 1;
       return { ...c, hasImage: true };
     }
+    void code;
+    void crefSet;
     return c;
   });
 }

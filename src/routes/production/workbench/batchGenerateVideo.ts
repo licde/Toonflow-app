@@ -295,6 +295,116 @@ export default router.post(
           continue;
         }
 
+        const storyboardId = uploadData.find((item) => item.sources === "storyboard")?.id;
+
+        // Homology with generateVideo: still first-frame / sheetLeak / weak must block batch burn
+        if (storyboardId) {
+          try {
+            const sbRow = await u.db("o_storyboard").where({ id: storyboardId }).first();
+            const { parseStillMetaFromReason, inferStillQuality } =
+              await import("@/ruleEngine/compilers/stillQuality");
+            const { assertStillDetectForBurn } = await import("@/ruleEngine/qc/stillDetectRepair");
+            const { assertStillFirstFrameContract } = await import("@/ruleEngine/qc/stillFirstFrameGate");
+            const stillMeta = parseStillMetaFromReason(sbRow?.reason);
+            let sheetLeak = Boolean(stillMeta?.sheetLeak);
+            const stillPrompt = String(sbRow?.prompt ?? "");
+            try {
+              const { promptImpliesSheetCollageLeak } =
+                await import("@/ruleEngine/compilers/stillFirstFrameLiterarySsot");
+              sheetLeak = sheetLeak || promptImpliesSheetCollageLeak(stillPrompt);
+            } catch {
+              /* optional */
+            }
+            let stillQuality = inferStillQuality({
+              filePath: sbRow?.filePath,
+              meta: stillMeta,
+              requireVisualPass: true,
+            });
+            if (sheetLeak) stillQuality = "weak";
+            const literaryDesc = String(
+              (shotTasks.find((s) => s.trackId === trackId) as { visualDescription?: string } | undefined)
+                ?.visualDescription ??
+                pkg?.shots?.find((s) => s.storyboardId === storyboardId)?.visualDescription ??
+                "",
+            );
+            const detect = assertStillDetectForBurn({
+              stillPrompt,
+              stillFilePath: sbRow?.filePath,
+              literaryDesc,
+              literaryDescHashAtCompose: stillMeta?.literaryDescHash,
+              stillMeta: stillMeta as never,
+              stillQuality,
+              sheetLeak,
+            });
+            const ff = assertStillFirstFrameContract({
+              stillPrompt,
+              stillFilePath: sbRow?.filePath,
+              requireStill: true,
+              literaryDesc,
+              literaryDescHashAtCompose: stillMeta?.literaryDescHash,
+              stillQuality,
+              sheetLeak,
+            });
+            if (!detect.ok || (!ff.ok && ff.severity === "BLOCK")) {
+              const msg = detect.message || ff.message || "静照首帧未过，批量烧片已跳过";
+              const code = detect.code ?? ff.code ?? "STILL-FIRSTFRAME-WEAK";
+              const videoPath = `/${projectId}/video/${uuidv4()}.mp4`;
+              const [videoId] = await u.db("o_video").insert({
+                filePath: videoPath,
+                time: Date.now(),
+                state: "生成失败",
+                scriptId,
+                projectId,
+                videoTrackId: trackId,
+                errorReason: JSON.stringify({
+                  message: msg,
+                  code,
+                  primaryNextStep: detect.primaryNextStep ?? ff.primaryNextStep ?? "batch_still",
+                  userMessage: msg,
+                }),
+              });
+              tasks.push({
+                videoId,
+                videoPath,
+                prompt: shotOverride?.prompt ?? prompt,
+                duration: shotOverride?.duration ?? duration,
+                images,
+                trackId,
+                storyboardId,
+                skipReason: code,
+              });
+              continue;
+            }
+          } catch (gateErr) {
+            const msg = u.error(gateErr).message || "静照首帧校验异常";
+            const videoPath = `/${projectId}/video/${uuidv4()}.mp4`;
+            const [videoId] = await u.db("o_video").insert({
+              filePath: videoPath,
+              time: Date.now(),
+              state: "生成失败",
+              scriptId,
+              projectId,
+              videoTrackId: trackId,
+              errorReason: JSON.stringify({
+                message: msg,
+                code: "STILL-FIRSTFRAME-GATE-ERROR",
+                primaryNextStep: "chat_repair",
+              }),
+            });
+            tasks.push({
+              videoId,
+              videoPath,
+              prompt: shotOverride?.prompt ?? prompt,
+              duration: shotOverride?.duration ?? duration,
+              images,
+              trackId,
+              storyboardId,
+              skipReason: "STILL-FIRSTFRAME-GATE-ERROR",
+            });
+            continue;
+          }
+        }
+
         const videoPath = `/${projectId}/video/${uuidv4()}.mp4`;
         const [videoId] = await u.db("o_video").insert({
           filePath: videoPath,
@@ -305,7 +415,6 @@ export default router.post(
           videoTrackId: trackId,
         });
 
-        const storyboardId = uploadData.find((item) => item.sources === "storyboard")?.id;
         await generationJobQueue.enqueue({
           id: `vid-${videoId}`,
           shotId: String(storyboardId ?? trackId),
@@ -346,12 +455,13 @@ export default router.post(
       }
     }
 
-    // Batch defers full single-shot audio L0/voice/postBurn; mark on payload (array stays FE-compatible)
+    // Batch runs still first-frame gate per track (homology with generateVideo); audio L0 still deferred on async burn
     const payload = tasks.map((t) => ({
       videoId: t.videoId,
       trackId: t.trackId,
       skipped: Boolean(t.skipReason),
       skipReason: t.skipReason,
+      stillGateApplied: true as const,
       audioGateDeferred: true as const,
     }));
     res.status(200).send(success(payload));

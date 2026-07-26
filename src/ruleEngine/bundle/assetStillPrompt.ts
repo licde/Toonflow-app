@@ -10,7 +10,7 @@ export type AssetStillAspect = "3:1" | "4:1" | "1:1" | "16:9" | "9:16";
 
 export function resolveAssetStillAspect(
   type: AssetStillType,
-  promptMode: AssetStillPromptMode = "turnaround_sheet",
+  promptMode: AssetStillPromptMode = "identity_plate",
 ): AssetStillAspect {
   if (type === "tool") return "1:1";
   if (type === "scene") return "16:9";
@@ -48,7 +48,7 @@ export interface AssetStillPromptConfig {
 
 export function assetStillTypeConfig(
   type: AssetStillType,
-  promptMode: AssetStillPromptMode = "turnaround_sheet",
+  promptMode: AssetStillPromptMode = "identity_plate",
 ): AssetStillPromptConfig {
   if (type === "scene") {
     return {
@@ -91,7 +91,7 @@ export function buildAssetStillPrompt(
   artStyle: string,
   name: string,
   prompt: string,
-  promptMode: AssetStillPromptMode = "turnaround_sheet",
+  promptMode: AssetStillPromptMode = "identity_plate",
 ): string {
   if (promptAlreadySheetShaped(prompt) && promptMode === "identity_plate") {
     // Already a full sheet prompt — avoid double-wrapping with identity title

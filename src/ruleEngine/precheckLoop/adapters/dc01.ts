@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import {
   collectExpectedDialogue,
   dialogueCoverageReport,
+  formatDialogueCoverageMessage,
   normalizeDialogueKey,
 } from "../../design/dialogueCoverage";
 import { readFixtureJson } from "../../utils/fixturesPath";
@@ -103,6 +104,7 @@ export const dc01Adapter: CheckAdapter = {
       script: ctx.bundle.script ?? "",
       shots,
       planData: ctx.bundle.planData,
+      shotScope: isFiltered ? "filtered" : "full",
     });
     const source = expectedSourceOf(ctx.bundle);
     const mode = matchModeOf(ctx.bundle, shots);
@@ -129,15 +131,13 @@ export const dc01Adapter: CheckAdapter = {
     // Filtered scope: never BLOCK generate on full-episode expected vs partial shots
     let severity: DiagnosisFinding["severity"] = "BLOCK";
     let passed = report.ok;
-    let message = report.ok
-      ? "R2 coverage OK"
-      : `台词覆盖不足：缺 ${report.missingCount} 条${samples.length ? `；样例「${samples[0]}」` : ""}`;
+    let message = formatDialogueCoverageMessage(report);
 
     // Filtered scope: never BLOCK; also do not hang reverse trigger →SB on soft-pass
     if (isFiltered && !report.ok) {
       severity = "WARN";
       passed = true; // do not block touch; evidence still surfaces miss for operators
-      message = `台词覆盖（局部触达未按全集 BLOCK）：缺 ${report.missingCount} 条；shotScope=filtered`;
+      message = formatDialogueCoverageMessage(report, { filtered: true });
       repairReasons.push("filtered_scope");
     }
 

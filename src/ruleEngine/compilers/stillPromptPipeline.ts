@@ -33,6 +33,8 @@ export interface StillPromptPipelineInput {
   aspectRatioFallback?: string;
   modality?: "image" | "video";
   mode?: string;
+  /** Face CU skips exact cast cardinality in checklist */
+  shotSize?: string | null;
   /** Prebuilt checklist; else built from description */
   checklist?: StillFidelityItem[];
 }
@@ -82,7 +84,7 @@ function appendSafeDesignTail(prompt: string, fields: DesignFields | undefined, 
   if (!literaryOk || !fields) return prompt;
   const cfg = loadStillPromptPipelineConfig().imageDesignTail;
   const tailFields: DesignFields = {
-    fxPrompt: cfg?.allowFxOneLine === false ? null : fields.fxPrompt,
+    fxPrompt: null, // still never eats video FX prose (peel-before-pour)
     exprGuard: cfg?.exprGuard === "append_only_if_literary_ok" ? true : fields.exprGuard,
     negativeAV: cfg?.negativeAV === "append_only_if_literary_ok" ? true : fields.negativeAV,
   };
@@ -137,6 +139,7 @@ export function runStillPromptPipeline(input: StillPromptPipelineInput): StillPr
       description,
       characterNames: names,
       requireDualIdentity: names.length >= 2,
+      shotSize: input.shotSize,
     });
 
   const touched = touchPromptForVendor(input.composed.prompt, input.aspectRatioFallback);

@@ -11,7 +11,16 @@ import {
   resolveGenerationModeRules,
 } from "@/ruleEngine/compilers/resolveGenerationModeRules";
 import { buildRePushPlan } from "@/ruleEngine/design/reverseRouteEngine";
-import { composeStillPrompt, computeComposeHash, isDirtyStillPrompt, resolveComposeMode, scrubStillPromptNoise, shouldDefaultFidelityCompose, stripIdentityTokens, type ComposeMode } from "@/ruleEngine/compilers/composeStillPrompt";
+import {
+  buildStillPreviousIngress,
+  composeStillPrompt,
+  computeComposeHash,
+  isDirtyStillPrompt,
+  scrubStillPromptNoise,
+  shouldDefaultFidelityCompose,
+  stripIdentityTokens,
+  type ComposeMode,
+} from "@/ruleEngine/compilers/composeStillPrompt";
 import {
   hydrateComposeStillContext,
   orderReferenceUrls,
@@ -69,6 +78,8 @@ export interface GenerateFlowImageDeps {
   urlToBase64?: (url: string) => Promise<string>;
   /** Inject for tests — skip live Vision */
   vlmJudgeFn?: VlmJudgeFn;
+  /** Optional StageA cast count gate; on fail skip layout lock */
+  stageACastChecker?: (stageABase64: string, expectedCount: number) => Promise<{ ok: boolean; count?: number }>;
 }
 
 export async function defaultUrlToBase64(imageUrl: string): Promise<string> {
@@ -143,30 +154,41 @@ export async function runGenerateFlowImageCore(
   // Prefer request ratio for contract
   composeCtx.videoRatio = ratio || composeCtx.videoRatio;
 
-  let prevMeta: ReturnType<typeof parseStillMetaFromReason> = null;
+  let sbReason: unknown;
+  let sbPrompt: string | undefined;
   if (storyboardId) {
     const sbRow = await db("o_storyboard").where({ id: storyboardId }).select("reason", "prompt").first();
-    prevMeta = parseStillMetaFromReason(sbRow?.reason);
-    const prevBody = scrubStillPromptNoise(
-      stripIdentityTokens(String(prevMeta?.promptUsed ?? sbRow?.prompt ?? prompt)).body,
-    ).cleaned;
-    if (prevBody) composeCtx.previousVisualBody = prevBody;
+    sbReason = sbRow?.reason;
+    sbPrompt = sbRow?.prompt != null ? String(sbRow.prompt) : undefined;
   }
-
-  const composeMode = resolveComposeMode({
-    requested: body.composeMode,
-    existingPrompt: prompt,
-    promptState: prevMeta?.promptState,
-    composeHash: prevMeta?.composeHash,
+  const ingress = buildStillPreviousIngress({
+    reason: sbReason,
+    storedPrompt: sbPrompt,
+    requestPrompt: prompt,
+    requestedMode: body.composeMode,
     currentHash: computeComposeHash(composeCtx),
     preferFidelity: shouldDefaultFidelityCompose(composeCtx),
+    loadPrevious: Boolean(storyboardId),
   });
-  // Dirty / empty / weak shells always force design synthesis
-  const forceFull = isDirtyStillPrompt(prompt) || !String(prompt ?? "").trim();
-  const composed = composeStillPrompt(composeCtx, { mode: forceFull && !body.composeMode ? "full" : composeMode });
+  composeCtx.previousVisualBody = ingress.previousVisualBody;
+  const composeMode = ingress.composeMode;
+  const composed = composeStillPrompt(composeCtx, { mode: ingress.effectiveMode });
   if (!composed.ok) {
+    const br = String(composed.blockReason ?? "");
+    const code =
+      composed.missingLeadAsset || br === "DEX-ASSET-CREF" || br === "IMG-CREF"
+        ? composed.missingLeadAsset
+          ? "IMG-CREF"
+          : br || "IMG-CREF"
+        : br === "DEX-DIRTY-STILL-PROMPT"
+          ? "DEX-DIRTY-STILL-PROMPT"
+          : br === "DEX-STILL-ONEBEAT" || br === "DEX-STILL-OS-NAME" || br === "DEX-STILL-FILLER"
+            ? br
+            : br === "DEX-QP-02" || composed.qp02Blocked
+              ? "QP-02"
+              : br || "QP-02";
     const env = buildStillErrorEnvelope({
-      code: composed.missingLeadAsset ? "IMG-CREF" : "QP-02",
+      code,
       errMsg: composed.userMessage || composed.blockReason,
     });
     throw Object.assign(new Error(composed.userMessage || composed.blockReason || env.userMessage), {
@@ -357,16 +379,48 @@ export async function runGenerateFlowImageCore(
   const literaryDesc = descSsot.description || composeCtx.visualDescription || composed.visualBody;
   const { resolveStillBgPolicy } = await import("@/ruleEngine/compilers/stillBgPolicy");
   const { extractDescPredicates } = await import("@/ruleEngine/compilers/extractDescPredicates");
-  const { preflightSeatingCref } = await import("@/ruleEngine/qc/stillCrefPreflight");
+  const { preflightFamilyCref } = await import("@/ruleEngine/qc/stillCrefPreflight");
+  const { selectLayoutFamily } = await import("@/ruleEngine/qc/stillCompositionSpec");
+  const { classifyStillIntent } = await import("@/ruleEngine/compilers/stillIntentPolicy");
   const bgPol = resolveStillBgPolicy({
     description: literaryDesc,
     characterNames: charNames,
     shotSize: composeCtx.shotSize,
+    sceneEstablishingHint:
+      Boolean((composeCtx as { sceneEstablishing?: boolean }).sceneEstablishing) ||
+      /建立镜头|establishing|空镜建立|全景建立/i.test(String(literaryDesc ?? "")),
   });
   const seatingPack = bgPol.pack;
-  const crefGate = preflightSeatingCref({
-    seatingHard: seatingPack.hasSeatingOrKneel,
+  const intent = classifyStillIntent({
+    visualDescription: literaryDesc,
+    shotSize: composeCtx.shotSize,
+    hasSeatingOrKneel: seatingPack.hasSeatingOrKneel,
+    characterCount: charNames.length,
+    characterNames: charNames,
+    episodeVisualDescriptions: composeCtx.episodeVisualDescriptions,
+  });
+  const recipeMode = intent.recipeMode;
+  const seatingHard = seatingPack.hasSeatingOrKneel || intent.seating;
+  const layoutFamily = selectLayoutFamily({
+    visualDescription: literaryDesc,
+    shotSize: composeCtx.shotSize,
+    characterCount: charNames.length,
+    hasSeatingOrKneel: seatingHard,
+    recipeMode,
+    intentSeating: intent.seating,
+    intentRecipeMode: intent.recipeMode,
+    characterNames: charNames,
+  });
+  const familyMinCref = Math.max(
+    0,
+    layoutFamily.family.minCast ?? (seatingHard ? 2 : 0),
+  );
+  const crefGate = preflightFamilyCref({
+    required: Boolean(layoutFamily.family.twoStage) && familyMinCref >= 1,
     characters: composeCtx.characters,
+    minImaged: familyMinCref || 1,
+    label: `构图母型 ${layoutFamily.familyId}`,
+    code: seatingHard ? "CREF_MISSING_FOR_SEATING" : "CREF_MISSING_FOR_FAMILY",
   });
   if (crefGate && qualityMode === "hq_update") {
     const primary = buildPrimaryBlock(crefGate.primaryNextStep, {
@@ -387,6 +441,7 @@ export async function runGenerateFlowImageCore(
     characterNames: charNames,
     requireDualIdentity: charNames.length >= 2,
     bgPolicy: bgPol.policy,
+    shotSize: composeCtx.shotSize,
   });
 
   const touched = touchPromptForVendor(composed.prompt, ratio);
@@ -394,7 +449,9 @@ export async function runGenerateFlowImageCore(
   const toB64 = deps.urlToBase64 ?? defaultUrlToBase64;
   const { runStillVisualFidelityLoop } = await import("@/ruleEngine/qc/stillVisualFidelityLoop");
   const { resolveShotIdentityBinding } = await import("@/ruleEngine/compilers/resolveShotIdentityBinding");
-  const { resolveLayoutForShot } = await import("@/ruleEngine/qc/stillLayoutControl");
+  const { resolveLayoutForShot, applyLayoutAnchorToBurn } = await import("@/ruleEngine/qc/stillLayoutControl");
+  const { expandStageAPrompt } = await import("@/ruleEngine/compilers/stillRefSlotContract");
+  const { shouldForbidLayoutPreserve } = await import("@/ruleEngine/compilers/stillRefSlotContract");
   void extractDescPredicates; // used via bgPol.pack
 
   let feedback: Awaited<ReturnType<typeof classifyGenerationFailure>> | undefined;
@@ -430,6 +487,7 @@ export async function runGenerateFlowImageCore(
         fixHints,
         failedImageBase64,
         layoutPreserve,
+        forbidLayoutPreserve: roundForbidLayoutPreserve,
         swapLayoutTemplate,
         excludeLayoutTemplateId,
       }) => {
@@ -442,8 +500,15 @@ export async function runGenerateFlowImageCore(
           mode: useEdit || Object.keys(strengthen).length ? "fidelity" : composeMode,
         });
         if (!lastComposed.ok) {
+          const br = String(lastComposed.blockReason ?? "");
+          const code =
+            lastComposed.missingLeadAsset || br === "DEX-ASSET-CREF" || br === "IMG-CREF"
+              ? "IMG-CREF"
+              : br === "DEX-DIRTY-STILL-PROMPT"
+                ? "DEX-DIRTY-STILL-PROMPT"
+                : br || "QP-02";
           throw Object.assign(new Error(lastComposed.userMessage || "compose failed"), {
-            code: "QP-02",
+            code,
           });
         }
         // Rebind cref order each round (prevent ref drift)
@@ -479,6 +544,7 @@ export async function runGenerateFlowImageCore(
 
         let referenceList: { type: "image"; base64: string }[] = [];
         let sceneRefsDropped = 0;
+        let turnaroundCrefUsed = false;
         if (storyboardId) {
           const built = await buildReferenceListForStoryboard(
             db,
@@ -491,17 +557,42 @@ export async function runGenerateFlowImageCore(
           );
           referenceList = built.referenceList;
           sceneRefsDropped = built.sceneRefsDropped ?? 0;
+          turnaroundCrefUsed = Boolean(built.turnaroundCrefUsed);
         }
-        for (const url of references) {
-          if (!url) continue;
-          referenceList.push({ type: "image" as const, base64: await toB64(url) });
+        // FE often re-sends full 四视图 URLs. If DB already built cropped crefs, skip
+        // to avoid injecting uncropped sheets that force collage layouts. Otherwise
+        // crop every FE ref as assumeSheet before use.
+        if (references?.length && !referenceList.length) {
+          const { cropTurnaroundSheetToIdentityPlate } = await import(
+            "@/ruleEngine/compilers/cropTurnaroundToIdentityPlate"
+          );
+          for (const url of references) {
+            if (!url) continue;
+            let base64 = await toB64(url);
+            const cropped = await cropTurnaroundSheetToIdentityPlate(base64, { assumeSheet: true });
+            if (cropped.base64) base64 = cropped.base64;
+            if (cropped.cropped) turnaroundCrefUsed = true;
+            referenceList.push({ type: "image" as const, base64 });
+          }
+        } else if (references?.length && referenceList.length) {
+          // Defensive: never append raw FE sheets on top of storyboard crefs
+          turnaroundCrefUsed = true;
         }
 
         let editStrategy: string | undefined;
         let layoutTemplateId: string | undefined;
         let layoutSkipped: string | undefined;
         let stageCost = 1;
-        const useLayoutPreserve = Boolean(layoutPreserve) || (useEdit && seatingPack.hasSeatingOrKneel);
+        const useLayoutPreserve = Boolean(layoutPreserve) || (useEdit && Boolean(layoutFamily.family.twoStage));
+        const forbidPreserve =
+          Boolean(roundForbidLayoutPreserve) ||
+          turnaroundCrefUsed ||
+          shouldForbidLayoutPreserve({
+            castOvercrowd: Boolean((fixHints ?? []).some((h) => /出镜人数|第三人|超员|群像|拼版|四视|单镜头/.test(h))),
+            seatMissing: Boolean((fixHints ?? []).some((h) => /太师椅|蒲团|无座|端坐|跪/.test(h))),
+            fixHints: fixHints ?? [],
+            turnaroundCrefUsed,
+          });
 
         if (useEdit) {
           const { prepareStillImageEdit } = await import("@/ruleEngine/qc/stillImageEdit");
@@ -510,6 +601,7 @@ export async function runGenerateFlowImageCore(
             fullPrompt: vendorPrompt,
             description: literaryDesc,
             fixHints: fixHints ?? [],
+            characterNames: charNames,
           });
           const prep = prepareStillImageEdit({
             failedImageBase64: failedImageBase64 || "",
@@ -522,23 +614,35 @@ export async function runGenerateFlowImageCore(
             })),
             model: String(model),
             vendorHint: String(model).split(":")[0],
-            layoutPreserve: useLayoutPreserve,
-            strategy: useLayoutPreserve ? "layout_preserve" : undefined,
+            layoutPreserve: useLayoutPreserve && !forbidPreserve,
+            strategy: useLayoutPreserve && !forbidPreserve ? "layout_preserve" : undefined,
+            castNames: bind.orderedNames.length ? bind.orderedNames : charNames,
+            highName: bind.highRole?.name ?? bind.orderedNames[0],
+            lowName: bind.lowRole?.name ?? bind.orderedNames[1],
+            forbidLayoutPreserve: forbidPreserve,
+            shotSize: composeCtx.shotSize,
+            visualDescription: literaryDesc,
+            seatingHard: seatingHard,
           });
           vendorPrompt = prep.promptUsed;
           referenceList = prep.referenceList.map((r) => ({ type: "image" as const, base64: r.base64 }));
           editStrategy = prep.strategy;
-        } else if (seatingPack.hasSeatingOrKneel) {
+        } else if (layoutFamily.family.twoStage !== false && layoutFamily.family.templateId) {
           const layout = await resolveLayoutForShot({
             pack: seatingPack,
             characterCount: charNames.length,
             qualityMode,
             excludeId: swapLayoutTemplate ? excludeLayoutTemplateId : undefined,
+            familyTemplateId: layoutFamily.family.templateId,
+            forceTwoStage: layoutFamily.family.twoStage !== false,
           });
           layoutTemplateId = layout.template?.id;
           layoutSkipped = layout.layoutSkipped;
           if (layout.twoStage && layout.layoutBase64 && layout.template) {
-            const stageAPrompt = layout.template.stageAPrompt;
+            const stageAPrompt = expandStageAPrompt(
+              layout.template.stageAPrompt,
+              Math.max(layoutFamily.family.minCast ?? 1, charNames.length),
+            );
             const stageARefs = [{ type: "image" as const, base64: layout.layoutBase64 }];
             let stageAB64 = "";
             if (deps.imageRunner) {
@@ -566,8 +670,12 @@ export async function runGenerateFlowImageCore(
                 },
                 {
                   taskClass: "工作流图片生成",
-                  describe: `still StageA layout template=${layout.template.id}`,
-                  relatedObjects: JSON.stringify({ stage: "layout", templateId: layout.template.id }),
+                  describe: `still StageA layout family=${layoutFamily.familyId} template=${layout.template.id}`,
+                  relatedObjects: JSON.stringify({
+                    stage: "layout",
+                    templateId: layout.template.id,
+                    layoutFamilyId: layoutFamily.familyId,
+                  }),
                   projectId,
                 },
               );
@@ -577,16 +685,39 @@ export async function runGenerateFlowImageCore(
               stageAB64 = await toB64(tmpUrl);
             }
             if (stageAB64) {
-              stageCost = 2;
-              referenceList = [
-                { type: "image" as const, base64: stageAB64.replace(/^data:image\/\w+;base64,/, "") },
-                ...referenceList,
-              ];
-              vendorPrompt = `${vendorPrompt} 【布局锁】以上一方图为座次构图锚，保持高坐低跪相对位置，贴脸与服装来自角色定妆。`;
+              const castN = Math.max(layoutFamily.family.minCast ?? 1, charNames.length);
+              let stageAOk = true;
+              if (deps.stageACastChecker) {
+                try {
+                  const gate = await deps.stageACastChecker(stageAB64, castN);
+                  stageAOk = gate.ok !== false;
+                } catch {
+                  stageAOk = true;
+                }
+              }
+              if (!stageAOk) {
+                layoutSkipped = "stageA_cast_mismatch";
+              } else {
+                stageCost = 2;
+                const applied = applyLayoutAnchorToBurn({
+                  vendorPrompt,
+                  referenceList,
+                  layoutBase64: stageAB64,
+                  castNames: bind.orderedNames.length ? bind.orderedNames : charNames,
+                  highName: bind.highRole?.name ?? bind.orderedNames[0],
+                  lowName: bind.lowRole?.name ?? bind.orderedNames[1],
+                  orderedCrefCodes: bind.orderedCodes,
+                  seatingHard: true,
+                });
+                vendorPrompt = applied.vendorPrompt;
+                referenceList = applied.referenceList;
+              }
             } else {
               layoutSkipped = layoutSkipped ?? "no_file";
             }
           }
+        } else {
+          layoutSkipped = layoutSkipped ?? "family_skip";
         }
         referenceCount = referenceList.length;
 
@@ -645,6 +776,7 @@ export async function runGenerateFlowImageCore(
           strategy: (editStrategy as "agnes_i2i" | "atlas_native" | "focus_regen" | "layout_preserve" | "generate") ?? "generate",
           layoutTemplateId,
           layoutSkipped,
+          layoutFamilyId: layoutFamily.familyId,
           bgPolicy: lastComposed.bgPolicy ?? bgPol.policy,
           sceneRefsDropped,
           stageCost,
@@ -691,6 +823,7 @@ export async function runGenerateFlowImageCore(
       sceneRefsDropped: (loopOut as { sceneRefsDropped?: number }).sceneRefsDropped,
       stageCost: (loopOut as { stageCost?: number }).stageCost,
       settingsDeepLink: (loopOut as { settingsDeepLink?: string }).settingsDeepLink,
+      sheetLeak: Boolean(loopOut.sheetLeak),
     });
   } catch (e) {
     const errMsg = u.error(e).message;
@@ -762,6 +895,7 @@ async function finalizeSuccess(
     vlmError?: string;
     pendingHumanRejudge?: boolean;
     infraEditBypassUsed?: boolean;
+    sheetLeak?: boolean;
   },
 ) {
   // Literary + visual gate: hq_ok only when L1 visualPass (or L0 when VLM skipped/disabled)
@@ -769,7 +903,17 @@ async function finalizeSuccess(
   const vlmSkipped =
     input.fidelityStopReason === "skipped_draft" || input.fidelityStopReason === "disabled";
   const literaryGate = vlmSkipped ? input.allowHqOk === true : input.visualPass === true;
-  const hq = input.qualityMode === "hq_update" && coverageOk && literaryGate && !input.collapsed;
+  const sheetLeak =
+    input.sheetLeak === true ||
+    (input.fidelityItems ?? []).some(
+      (i) => !i.pass && /single_frame|拼版|四视|turnaround|四宫格/i.test(`${i.id}${i.fixHint ?? ""}`),
+    );
+  const hq =
+    input.qualityMode === "hq_update" &&
+    coverageOk &&
+    literaryGate &&
+    !input.collapsed &&
+    !sheetLeak;
   let stillQuality: "missing" | "weak" | "hq_ok" = hq ? "hq_ok" : "weak";
   const keyMissing = /VLM_API_KEY_MISSING|api\s*key/i.test(String(input.vlmError ?? ""));
   // vlm_error: do NOT nudge regen_hq (would empty-loop while critic is down) — chat_repair / human rejudge
@@ -779,9 +923,11 @@ async function finalizeSuccess(
       stage: "burn",
       userMessageOverride:
         input.fidelityStopReason === "vlm_error"
-          ? `成图评审服务不可用${input.infraEditBypassUsed ? "（已按硬约束尝试 1 次文学 Edit）" : "（未空烧修正）"}；未标高质量。请配置/修复 VLM 模型后重试，或人审通过。${
-              input.vlmError ? `（${input.vlmError.slice(0, 80)}）` : ""
-            }`
+          ? keyMissing
+            ? `图已出，但未过高质量：视觉评审缺少火山引擎 API Key，无法验拼图/多格。请到设置配置 Key 后重抽或人审；当前弱图不可作视频首帧。`
+            : `图已出，但未过高质量：视觉评审不可用${input.infraEditBypassUsed ? "（已尝试 1 次禁拼图 Edit）" : ""}。请修复评审配置后人审或重抽；当前弱图不可作视频首帧。${
+                input.vlmError ? `（${input.vlmError.slice(0, 60)}）` : ""
+              }`
           : undefined,
     },
   );
@@ -800,13 +946,13 @@ async function finalizeSuccess(
     : input.fidelityStopReason === "vlm_error"
       ? primary.userMessage
       : input.fidelityStopReason === "converged"
-        ? "成图文学保真项反复未过，已收敛停机；未标高质量"
+        ? "成图文学保真项反复未过，已收敛停机；弱图不可作视频首帧"
         : input.fidelityStopReason === "budget"
-          ? "成图文学保真自动重试次数已用尽；未标高质量"
+          ? "成图文学保真自动重试次数已用尽；弱图不可作视频首帧"
           : input.collapsed
-            ? "静照提示词文学主体塌缩，已回退合成正文；未标高质量"
+            ? "静照提示词文学主体塌缩，已回退合成正文；弱图不可作视频首帧"
             : !coverageOk
-              ? `描写动作未覆盖完整（缺 ${input.composed.descCoverageMissing?.join("、") || "硬约束"}），未标高质量`
+              ? `描写动作未覆盖完整（缺 ${input.composed.descCoverageMissing?.join("、") || "硬约束"}），弱图不可作视频首帧`
               : primary.userMessage;
 
   if (input.persistToStoryboard && input.storyboardId) {
@@ -829,6 +975,7 @@ async function finalizeSuccess(
       vlmError: input.vlmError,
       bgPolicy: input.bgPolicy,
       layoutTemplateId: input.layoutTemplateId,
+      layoutFamilyId: (input as { layoutFamilyId?: string }).layoutFamilyId,
       repairRoute: input.repairRoute,
       sceneRefsDropped: input.sceneRefsDropped,
       stageCost: input.stageCost,
@@ -894,6 +1041,8 @@ async function finalizeSuccess(
       healLogTail: `compose:${input.composed.sources.join("|")}${input.autoHealed?.length ? `|heal:${input.autoHealed.join(",")}` : ""}`,
       pendingHumanRejudge: input.pendingHumanRejudge,
       infraEditBypassUsed: input.infraEditBypassUsed,
+      sheetLeak,
+      videoStale: true,
       ...(input.policy.hasSensitiveTerms ? { policyWarnings: input.policy.warnings } : {}),
     });
     // Persist vendor egress (pipeline SSOT) — same string sent to vendor
@@ -908,6 +1057,29 @@ async function finalizeSuccess(
       reason,
       ...(promptWrite ? { prompt: promptWrite } : {}),
     });
+    // Video-only stale for this shot — do not wipe neighbor still hq_ok
+    try {
+      const tracks = await db("o_videoTrack").where({ storyboardId: input.storyboardId }).select("id", "reason");
+      for (const tr of tracks as { id: number; reason?: string }[]) {
+        let prev: Record<string, unknown> = {};
+        try {
+          prev = tr.reason ? JSON.parse(String(tr.reason)) : {};
+        } catch {
+          prev = {};
+        }
+        await db("o_videoTrack")
+          .where({ id: tr.id })
+          .update({
+            reason: JSON.stringify({
+              ...prev,
+              videoStale: true,
+              stillRegenAt: new Date().toISOString(),
+            }),
+          });
+      }
+    } catch {
+      /* optional */
+    }
     stillQuality = hqMeta.stillQuality;
   }
 

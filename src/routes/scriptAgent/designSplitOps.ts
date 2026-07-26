@@ -16,9 +16,8 @@ import {
   runForwardReentryAfterRepair,
 } from "@/ruleEngine/design/designSplitLifecycle";
 import { diagnoseNar, diagnoseDc01 } from "@/ruleEngine/design/gateDiagnose";
-import { preDesignShotsToPanels } from "@/ruleEngine/bundle/preDesignPackAdapter";
-import { syncStoryboardToDb } from "@/ruleEngine/bundle/storyboardSync";
-import type { PreDesignShot } from "@/ruleEngine/bundle/types";
+import { persistSplitTripleAtomic } from "@/ruleEngine/design/splitWritebackAtomic";
+import { migrateStockLipPackage } from "@/ruleEngine/design/stockLipMigrate";
 
 const router = express.Router();
 
@@ -59,6 +58,7 @@ export default router.post(
       "undo",
       "forwardReentry",
       "decideLine",
+      "stockMigrate",
     ]),
     lineId: z.string().optional(),
     text: z.string().optional(),
@@ -67,6 +67,8 @@ export default router.post(
     syncStoryboard: z.boolean().optional(),
     applyClauseSplit: z.boolean().optional(),
     applyVisBeatExpanders: z.boolean().optional(),
+    /** forwardReentry：默认禁语义扩；Confirm 后再拆传 true */
+    forceExpand: z.boolean().optional(),
   }),
   async (req, res) => {
     const {
@@ -79,6 +81,7 @@ export default router.post(
       syncStoryboard,
       applyClauseSplit,
       applyVisBeatExpanders,
+      forceExpand,
     } = req.body as {
       projectId: number;
       action: string;
@@ -89,6 +92,7 @@ export default router.post(
       syncStoryboard?: boolean;
       applyClauseSplit?: boolean;
       applyVisBeatExpanders?: boolean;
+      forceExpand?: boolean;
     };
 
     if (!checkDesignSplitRateLimit(projectId, action)) {
@@ -119,6 +123,34 @@ export default router.post(
       return res.json(success({ decision, a11yLabel: `建议动作：${decision.action}` }));
     }
 
+    if (action === "stockMigrate") {
+      if (!scriptId) {
+        return res.status(400).json({ message: "stockMigrate requires scriptId for triple writeback" });
+      }
+      const mig = migrateStockLipPackage(plan);
+      Object.assign(pd, (plan.planData as object) ?? {});
+      pack.shots = ((plan.planData as { preDesignPack?: { shots?: typeof pack.shots } })?.preDesignPack?.shots ??
+        pack.shots) as typeof pack.shots;
+      pd.preDesignPack = pack;
+      const wb = await persistSplitTripleAtomic({
+        db: u.db,
+        projectId,
+        scriptId,
+        plan,
+        shots: pack.shots as Record<string, unknown>[],
+        saveAgentWork: async (p) => savePlan(projectId, row, p),
+        syncStoryboard: syncStoryboard !== false,
+      });
+      if (!wb.ok) {
+        return res.status(500).json({
+          message: wb.healFailed ?? "stock migrate writeback failed",
+          code: wb.code,
+          ...mig,
+        });
+      }
+      return res.json(success({ ...mig, writeback: wb, a11yAnnounce: "存量口型债已迁移重拆" }));
+    }
+
     if (action === "dryRun") {
       recordDesignSplitTelemetry("dry_run");
       const dry = dryRunSplitOrchestrator({ planData: pd, shots, meta });
@@ -127,7 +159,9 @@ export default router.post(
         success({
           ...dry,
           proposals,
-          a11ySummary: `预估台词行 ${dry.predictedPlanLineCount}，镜数 ${dry.predictedShotCount}，NAR 残留 ${dry.predictedNarFails.length}`,
+          confidence: dry.confidence,
+          autoEligible: dry.autoEligible,
+          a11ySummary: `预估台词行 ${dry.predictedPlanLineCount}，镜数 ${dry.predictedShotCount}，NAR 残留 ${dry.predictedNarFails.length}，置信 ${dry.confidence}`,
         }),
       );
     }
@@ -184,23 +218,87 @@ export default router.post(
       Object.assign(pd, orch.planData);
       pack.shots = orch.shots;
       pd.preDesignPack = pack;
-      let syncResult: unknown;
-      if (syncStoryboard && scriptId) {
-        const panels = preDesignShotsToPanels(orch.shots as PreDesignShot[], { enrichFromDesign: true });
-        syncResult = await syncStoryboardToDb(u.db, projectId, scriptId, panels, { preserveMedia: true });
+      try {
+        const { reindexDerivedTables } =
+          require("@/ruleEngine/bundle/reindexDerivedTables") as typeof import("@/ruleEngine/bundle/reindexDerivedTables");
+        reindexDerivedTables({
+          ...plan,
+          planData: pd,
+          preDesignPack: pack,
+        } as never);
+      } catch {
+        /* optional */
       }
-      await savePlan(projectId, row, plan);
+      // Confirm 后强制 designExit 重检（抬时已在 orchestrator；超限残留须继续 Confirm）
+      let designExitGate: unknown;
+      let designExitOk = true;
+      try {
+        const { runDesignAutoClose } =
+          require("@/ruleEngine/design/designAutoClose") as typeof import("@/ruleEngine/design/designAutoClose");
+        const ac = runDesignAutoClose(plan, { stageId: "SB", maxRounds: 1, forceExpand: false });
+        Object.assign(pd, (ac.plan.planData as object) ?? {});
+        const nested = (ac.plan.planData as { preDesignPack?: { shots?: unknown[] } } | undefined)?.preDesignPack;
+        if (nested?.shots?.length) {
+          pack.shots = nested.shots as typeof pack.shots;
+          pd.preDesignPack = pack;
+        }
+        designExitGate = ac.exitGate;
+        designExitOk = Boolean(ac.exitGate?.ok);
+        (pd.meta as Record<string, unknown>) = {
+          ...((pd.meta as object) ?? {}),
+          designExitRequiredAfterIrd: !designExitOk,
+        };
+      } catch {
+        try {
+          const { runDesignExitGate } =
+            require("@/ruleEngine/design/designExitGate") as typeof import("@/ruleEngine/design/designExitGate");
+          const exit = runDesignExitGate("SB", plan, { forceExpand: false });
+          designExitGate = exit;
+          designExitOk = exit.ok;
+        } catch {
+          /* optional */
+        }
+      }
+      let syncResult: unknown;
+      const mustSync = Boolean(scriptId) && (syncStoryboard !== false);
+      if (mustSync && scriptId) {
+        const wb = await persistSplitTripleAtomic({
+          db: u.db,
+          projectId,
+          scriptId,
+          plan,
+          shots: (pack.shots ?? orch.shots) as Record<string, unknown>[],
+          saveAgentWork: async (p) => savePlan(projectId, row, p),
+          syncStoryboard: true,
+        });
+        if (!wb.ok) {
+          return res.status(500).json({
+            message: `IMPORT-SPLIT-SYNC: ${wb.healFailed}`,
+            code: wb.code ?? "IMPORT-SPLIT-SYNC",
+          });
+        }
+        syncResult = wb.syncResult;
+        pack.shots = ((plan.planData as { preDesignPack?: { shots?: typeof pack.shots } })?.preDesignPack
+          ?.shots ?? pack.shots) as typeof pack.shots;
+      } else {
+        await savePlan(projectId, row, plan);
+      }
       recordDesignSplitTelemetry("confirm", `appended nar=${orch.narFails.length}`);
       return res.json(
         success({
           action,
-          shotCount: orch.shots.length,
-          packageVersion: peekPackageVersion(orch.shots),
+          shotCount: (pack.shots as unknown[])?.length ?? orch.shots.length,
+          packageVersion: peekPackageVersion((pack.shots as Record<string, unknown>[]) ?? orch.shots),
           log: orch.log,
           narFails: orch.narFails,
           dc01: dc,
           syncResult,
-          a11yAnnounce: `已确认拆分，共 ${orch.shots.length} 镜；请 forwardReentry`,
+          designExitGate,
+          designExitOk,
+          designExitRequired: !designExitOk,
+          a11yAnnounce: designExitOk
+            ? `已确认拆分，共 ${(pack.shots as unknown[])?.length ?? orch.shots.length} 镜；designExit 已过`
+            : `已确认拆分；designExit 未过，请按失败清单继续修后 forwardReentry`,
           forwardReentryRequired: true,
         }),
       );
@@ -227,17 +325,50 @@ export default router.post(
     }
 
     if (action === "forwardReentry") {
-      const re = runForwardReentryAfterRepair({ planData: pd, shots, meta });
+      // 默认 mirror-only；forceExpand 才 residual B / lip / VisBeat（与 setStepStatus 同核）
+      const allowSemantic = Boolean(forceExpand) || applyVisBeatExpanders === true;
+      const re = runForwardReentryAfterRepair({
+        planData: pd,
+        shots,
+        meta,
+        applyClauseSplit: applyClauseSplit !== false,
+        applyVisBeatExpanders: allowSemantic,
+        applySemanticSplit: allowSemantic,
+      });
       Object.assign(pd, re.planData);
       pack.shots = re.shots;
       pd.preDesignPack = pack;
       let syncResult: unknown;
-      if (syncStoryboard && scriptId) {
-        const panels = preDesignShotsToPanels(re.shots as PreDesignShot[], { enrichFromDesign: true });
-        syncResult = await syncStoryboardToDb(u.db, projectId, scriptId, panels, { preserveMedia: true });
+      const mustSync = Boolean(scriptId) && (syncStoryboard !== false);
+      if (mustSync && scriptId) {
+        const wb = await persistSplitTripleAtomic({
+          db: u.db,
+          projectId,
+          scriptId,
+          plan,
+          shots: re.shots as Record<string, unknown>[],
+          saveAgentWork: async (p) => savePlan(projectId, row, p),
+          syncStoryboard: true,
+        });
+        if (!wb.ok) {
+          return res.status(500).json({
+            message: `IMPORT-SPLIT-SYNC: ${wb.healFailed}`,
+            code: wb.code ?? "IMPORT-SPLIT-SYNC",
+          });
+        }
+        syncResult = wb.syncResult;
+      } else {
+        await savePlan(projectId, row, plan);
       }
-      await savePlan(projectId, row, plan);
-      return res.json(success({ ...re.reentry, log: re.log, syncResult, narFails: diagnoseNar({ planData: pd, shots: re.shots }) }));
+      return res.json(
+        success({
+          ...re.reentry,
+          log: re.log,
+          syncResult,
+          semanticExpand: allowSemantic,
+          narFails: diagnoseNar({ planData: pd, shots: re.shots }),
+        }),
+      );
     }
 
     return res.status(400).json({ message: `unknown action ${action}` });

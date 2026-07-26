@@ -98,7 +98,15 @@ export function hydratePackageFromPreDesign(
 ): EpisodePackage {
   if (!preShots?.length) return pkg;
   const shots: EpisodeShot[] = pkg.shots.map((es, i) => {
-    const raw = (preShots[i] ?? preShots.find((p) => (p.shotIndex ?? 0) === i + 1)) as RichShot | undefined;
+    const esAny = es as { clientId?: string; storyboardId?: number; shotIndex?: number };
+    const raw = (preShots.find(
+      (p) =>
+        (esAny.clientId && String((p as { clientId?: string }).clientId ?? "") === String(esAny.clientId)) ||
+        (esAny.storyboardId != null &&
+          Number((p as { storyboardId?: number }).storyboardId) === Number(esAny.storyboardId)),
+    ) ??
+      preShots.find((p) => (p.shotIndex ?? 0) === (esAny.shotIndex ?? i + 1)) ??
+      preShots[i]) as RichShot | undefined;
     if (!raw) return es;
     const sceneCode = raw.sceneCode ?? es.narrative.sceneCode;
     const charCodes = (raw.charCodes ?? [])

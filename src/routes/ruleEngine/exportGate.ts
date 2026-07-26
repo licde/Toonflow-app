@@ -11,17 +11,20 @@ export default router.post(
   validateFields({
     bundle: z.any(),
     tier: z.enum(["T1", "T2", "T3"]).optional(),
+    acknowledgeKeepLegacy: z.boolean().optional(),
   }),
   async (req, res) => {
     try {
-      const { bundle, tier } = req.body;
-      const result = runExportGate(bundle, { tier });
-      const chatRepairText = buildAggregatedChatRepairText(
-        result.repairHints,
-        result.closureSnapshot.blockIds,
-        result.missingFieldSummary,
-        result.blocks,
-      );
+      const { bundle, tier, acknowledgeKeepLegacy } = req.body;
+      const result = runExportGate(bundle, { tier, acknowledgeKeepLegacy });
+      const chatRepairText =
+        result.chatRepairText ||
+        buildAggregatedChatRepairText(
+          result.repairHints,
+          result.closureSnapshot.blockIds,
+          result.missingFieldSummary,
+          result.blocks,
+        );
       return res.status(200).send(
         success({
           exportAllowed: result.exportAllowed,
@@ -39,6 +42,8 @@ export default router.post(
           fieldWalkGaps: result.fieldWalkGaps,
           shapeSalvageLog: result.shapeSalvageLog,
           shapeSalvageSummary: result.shapeSalvageSummary,
+          designExitIncomplete: result.designExitIncomplete,
+          previewStatusLine: result.previewStatusLine,
           endpoint: "exportGate",
         }),
       );

@@ -110,16 +110,34 @@ export default router.post(
 
       let appliedToDb = false;
       const mutated = capture.getBundle();
+      // M13: apply by clientId/storyboardId (禁纯 index 灌台词)；写回前 Mirror SSOT
       if (apply && result.ok && mutated?.preDesignPack?.shots && pkg && projectId != null) {
-        const shotByIndex = new Map(
-          (mutated.preDesignPack.shots as { shotIndex?: number; narrative?: { dialogue?: unknown } }[]).map(
-            (s, i) => [s.shotIndex ?? i + 1, s],
-          ),
-        );
+        try {
+          const { mirrorDialoguePlanToShots } =
+            require("@/ruleEngine/bundle/normalizePreDesignPack") as typeof import("@/ruleEngine/bundle/normalizePreDesignPack");
+          mirrorDialoguePlanToShots(mutated);
+        } catch {
+          /* optional */
+        }
+        const mutShots = mutated.preDesignPack.shots as {
+          shotIndex?: number;
+          clientId?: string;
+          storyboardId?: number;
+          narrative?: { dialogue?: unknown };
+        }[];
         pkg = {
           ...pkg,
           shots: pkg.shots.map((s, i) => {
-            const src = shotByIndex.get(i + 1);
+            const sAny = s as { clientId?: string; storyboardId?: number; shotIndex?: number };
+            const src =
+              mutShots.find(
+                (m) =>
+                  (sAny.clientId && m.clientId && String(m.clientId) === String(sAny.clientId)) ||
+                  (sAny.storyboardId != null &&
+                    m.storyboardId != null &&
+                    Number(m.storyboardId) === Number(sAny.storyboardId)),
+              ) ??
+              mutShots.find((m) => (m.shotIndex ?? 0) === (sAny.shotIndex ?? i + 1));
             if (!src?.narrative?.dialogue) return s;
             return {
               ...s,

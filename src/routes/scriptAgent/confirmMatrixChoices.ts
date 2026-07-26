@@ -109,7 +109,21 @@ export default router.post(
     };
     const mapped =
       (v05 && v05Map[v05]) || mapMatrixEmotionLogicToProfile(locked) || getGenreTemplateFromPlan(plan).packId;
-    setGenreTemplateOnPlan(plan, { packId: mapped, provisional: false, markStale: false });
+    const prev = getGenreTemplateFromPlan(plan);
+    const packChanged = prev.packId !== mapped;
+    // Commit provisional → if pack changed or leaving provisional, enter redesign debt
+    const wasProvisional = Boolean(prev.provisional);
+    setGenreTemplateOnPlan(plan, {
+      packId: mapped,
+      provisional: false,
+      markStale: packChanged || wasProvisional,
+      literaryStale: packChanged || wasProvisional || prev.literaryStale,
+    });
+    if (packChanged || (wasProvisional && getGenreTemplateFromPlan(plan).literaryStale)) {
+      const { cascadeAfterStoryRecon } =
+        require("@/ruleEngine/design/viralDoctrine") as typeof import("@/ruleEngine/design/viralDoctrine");
+      cascadeAfterStoryRecon(plan, `matrix_confirm:${prev.packId}->${mapped}`);
+    }
 
     if (row) {
       await u.db("o_agentWorkData").where({ projectId, key: "scriptAgent" }).update({ data: JSON.stringify(plan) });

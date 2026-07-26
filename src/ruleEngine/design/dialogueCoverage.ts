@@ -9,6 +9,7 @@ export type DialogueLineObject = {
   speaker?: string;
   text?: string;
   lineId?: string;
+  type?: string;
   splitHint?: string;
   reactionAction?: string;
   functions?: string[];
@@ -54,6 +55,30 @@ export function normalizeDialogueKey(raw: string): string {
     .toLowerCase();
 }
 
+/** Duration / timing metadata mistaken as dialogue (e.g. ：3s / 时长：3s). */
+export function isNonLiteraryDialogueKey(raw: string): boolean {
+  const k = normalizeDialogueKey(raw);
+  if (!k) return true;
+  if (!/[\u4e00-\u9fffA-Za-z0-9]/.test(k) || /^[-:：\s.]+$/.test(k)) return true;
+  if (/^[:：]?\d+(\.\d+)?\s*s$/.test(k)) return true;
+  if (/^\d+(\.\d+)?秒$/.test(k)) return true;
+  if (/^时长/.test(k)) return true;
+  if (/^\d+\s*[-–—~～]\s*\d+\s*s$/.test(k)) return true;
+  if (/^[:：]\d/.test(k) && /s$|秒$/.test(k)) return true;
+  return false;
+}
+
+/** Drop duration-only dialogue rows from shot lines (mutates copies). */
+export function stripDurationOnlyDialogueLines(lines: unknown): DialogueLineObject[] {
+  return asDialogueLineObjects(lines).filter((l) => {
+    const text = String(l.text ?? "").trim();
+    const blob = `${l.speaker ?? ""}${text}`;
+    if (isNonLiteraryDialogueKey(text) || isNonLiteraryDialogueKey(blob)) return false;
+    if (/^时长\s*[:：]/.test(text) || /^[:：]?\d+(\.\d+)?\s*s$/i.test(text)) return false;
+    return Boolean(text) || Boolean(l.lineId);
+  });
+}
+
 /** Flatten structured or string dialogue into plain text (V10 / PR-09 / PR-10). */
 export function flattenDialogueText(lines: unknown): string {
   if (lines == null) return "";
@@ -92,7 +117,7 @@ export function expandShotDialogueLines(shots: unknown[]): { keys: string[]; lin
       for (const part of lines.split(/\n+/)) {
         const m = part.match(/^([^：:]{1,20})[：:]\s*(.*)$/);
         const text = normalizeDialogueKey(m?.[2] ?? part);
-        if (text) keys.push(text);
+        if (text && !isNonLiteraryDialogueKey(text)) keys.push(text);
       }
       continue;
     }
@@ -100,15 +125,15 @@ export function expandShotDialogueLines(shots: unknown[]): { keys: string[]; lin
       for (const l of lines) {
         if (typeof l === "string") {
           const text = normalizeDialogueKey(l);
-          if (text) keys.push(text);
+          if (text && !isNonLiteraryDialogueKey(text)) keys.push(text);
           continue;
         }
         if (l?.lineId) lineIds.push(String(l.lineId));
         const text = normalizeDialogueKey(l?.text ?? "");
-        if (text) keys.push(text);
+        if (text && !isNonLiteraryDialogueKey(text)) keys.push(text);
         else if (l?.speaker) {
           const blob = normalizeDialogueKey(`${l.speaker}${l.text ?? ""}`);
-          if (blob) keys.push(blob);
+          if (blob && !isNonLiteraryDialogueKey(blob)) keys.push(blob);
         }
       }
       continue;
@@ -117,7 +142,7 @@ export function expandShotDialogueLines(shots: unknown[]): { keys: string[]; lin
       for (const part of narr.lines.split(/\n+/)) {
         const m = part.match(/^([^：:]{1,20})[：:]\s*(.*)$/);
         const text = normalizeDialogueKey(m?.[2] ?? part);
-        if (text) keys.push(text);
+        if (text && !isNonLiteraryDialogueKey(text)) keys.push(text);
       }
     }
   }
@@ -143,6 +168,9 @@ export interface DialogueCoverageReport {
   ok: boolean;
   missingCount: number;
   missingKeys: string[];
+  /** Shot lines not in script∪plan (intrusion). */
+  extraCount: number;
+  extraKeys: string[];
   expectedKeys: string[];
   actualKeys: string[];
   expectedHash: string;
@@ -160,17 +188,22 @@ export function dialogueCoverageReport(input: {
   script: string;
   shots: unknown[];
   planData?: DialoguePlanData | ScriptBundle["planData"];
+  /** filtered: ok ignores full-plan missing; only extras on touched shots can fail ok */
+  shotScope?: "full" | "filtered";
 }): DialogueCoverageReport {
   const expected = collectExpectedDialogue(input);
   const actual = expandShotDialogueLines(input.shots);
   const expectedHash = stableHash(expected.keys.join("|"));
   const actualHash = stableHash(actual.keys.join("|"));
+  const filtered = input.shotScope === "filtered";
 
   if (!expected.keys.length && !expected.lineIds.length) {
     return {
       ok: true,
       missingCount: 0,
       missingKeys: [],
+      extraCount: 0,
+      extraKeys: [],
       expectedKeys: expected.keys,
       actualKeys: actual.keys,
       expectedHash,
@@ -181,13 +214,14 @@ export function dialogueCoverageReport(input: {
 
   const actualKeySet = new Set(actual.keys);
   const actualIdSet = new Set(actual.lineIds);
+  const expectedKeySet = new Set(expected.keys.filter(Boolean));
   const missingKeys: string[] = [];
+  const extraKeys: string[] = [];
 
   if (expected.lineIds.length && actualIdSet.size > 0) {
     for (let i = 0; i < expected.lineIds.length; i++) {
       const id = expected.lineIds[i];
       if (!actualIdSet.has(id)) {
-        // Prefer stable lineId so soft_patch re-attaches lineId+原文
         const miss = id || expected.keys[i] || "";
         if (miss) missingKeys.push(miss);
       }
@@ -199,20 +233,73 @@ export function dialogueCoverageReport(input: {
     }
   }
 
+  // Extra / intrusion: shot keys not covered by expected (script∪plan)
+  // Skip empty/placeholder noise (--- / : : / blank reaction)
+  if (expectedKeySet.size > 0) {
+    for (const key of actual.keys) {
+      if (!key) continue;
+      if (isNonLiteraryDialogueKey(key)) continue;
+      if (!/[\u4e00-\u9fffA-Za-z0-9]/.test(key) || /^[-:：\s.]+$/.test(key)) continue;
+      if (!keyCovered(key, expectedKeySet)) extraKeys.push(key);
+    }
+  }
+
   const missingCount = missingKeys.length;
-  const ok = missingCount === 0;
-  const orderMismatch = ok && expected.keys.length > 0 && expectedHash !== actualHash;
+  const extraCount = extraKeys.length;
+  // Filtered touch: do not fail ok on full-episode missing
+  const ok = filtered ? extraCount === 0 : missingCount === 0 && extraCount === 0;
+  const orderMismatch =
+    missingCount === 0 && extraCount === 0 && expected.keys.length > 0 && expectedHash !== actualHash;
 
   return {
     ok,
     missingCount,
     missingKeys,
+    extraCount,
+    extraKeys,
     expectedKeys: expected.keys,
     actualKeys: actual.keys,
     expectedHash,
     actualHash,
     orderMismatch,
   };
+}
+
+/** Human DC-01 message — never「缺 0 条」when failure is extras. */
+export function formatDialogueCoverageMessage(
+  report: Pick<DialogueCoverageReport, "ok" | "missingCount" | "missingKeys" | "extraCount" | "extraKeys">,
+  opts?: { filtered?: boolean },
+): string {
+  if (report.ok && !opts?.filtered) return "R2 coverage OK";
+  const missSample = report.missingKeys[0] ? String(report.missingKeys[0]).slice(0, 40) : "";
+  const extraSample = (report.extraKeys ?? [])
+    .find((k) => /[\u4e00-\u9fffA-Za-z0-9]/.test(String(k)))
+    ?.toString()
+    .slice(0, 40);
+  const parts: string[] = [];
+
+  if (opts?.filtered) {
+    if (report.extraCount > 0) {
+      parts.push(`局部触达乱入：多 ${report.extraCount} 条不在 script∪plan${extraSample ? `（如「${extraSample}」）` : ""}`);
+    } else if (report.missingCount > 0) {
+      parts.push(`局部触达未覆盖全集：缺 ${report.missingCount} 条${missSample ? `（如「${missSample}」）` : ""}— 不按全集 BLOCK`);
+    } else {
+      parts.push("局部触达台词覆盖 OK");
+    }
+    return `台词覆盖（局部触达未按全集 BLOCK）：${parts.join("；")}；shotScope=filtered`;
+  }
+
+  if (report.ok) return "R2 coverage OK";
+  if (report.missingCount > 0) {
+    parts.push(`台词覆盖不足：缺 ${report.missingCount} 条${missSample ? `（如「${missSample}」）` : ""}`);
+  }
+  if (report.extraCount > 0) {
+    parts.push(`台词乱入：多 ${report.extraCount} 条不在 script∪plan${extraSample ? `（如「${extraSample}」）` : ""}`);
+  }
+  if (!parts.length) {
+    parts.push("台词覆盖失败（哈希/顺序不一致）");
+  }
+  return parts.join("；");
 }
 
 /** DC-01 / linkage: true when coverage fails. */

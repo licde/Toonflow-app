@@ -4,12 +4,17 @@ import { z } from "zod";
 import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { writeJudgeCorpusEntry } from "@/ruleEngine/qc/judgeSelfImprove";
-import { mergeReasonMeta, parseStillMetaFromReason } from "@/ruleEngine/compilers/stillQuality";
+import {
+  mergeReasonMeta,
+  parseStillMetaFromReason,
+  resolveStillHumanRejudgeOutcome,
+} from "@/ruleEngine/compilers/stillQuality";
 
 const router = express.Router();
 
 /**
  * Human rejudge CTA — write corpus + optional expected overrides onto storyboard reason.
+ * Hard pixel fails (single_frame / cast_cardinality / background_readable) never forge hq_ok.
  */
 export default router.post(
   "/",
@@ -47,27 +52,54 @@ export default router.post(
         source: "human_rejudge",
         modality: modality ?? "still",
       });
-      const allPass = items.every((i: { pass: boolean }) => i.pass);
+      const outcome = resolveStillHumanRejudgeOutcome({
+        items,
+        prev,
+        modality: modality ?? "still",
+      });
+      const isAudio = modality === "audio";
+      const primaryNextStep = outcome.burnOk
+        ? "burn"
+        : outcome.sheetLeak || items.some((i: { id: string; pass: boolean }) => /single_frame/i.test(i.id) && !i.pass)
+          ? "regen_storyboard_hq"
+          : "regen_storyboard_hq";
       await u.db("o_storyboard").where({ id: storyboardId }).update({
         reason: mergeReasonMeta(row.reason, {
           fidelityItems: items,
-          visualPass: modality !== "audio" ? allPass : prev?.visualPass,
-          visualPassAt: modality !== "audio" && allPass ? new Date().toISOString() : prev?.visualPassAt,
-          audioPass: modality === "audio" ? allPass : prev?.audioPass,
-          audioPassAt: modality === "audio" && allPass ? new Date().toISOString() : prev?.audioPassAt,
-          stillQuality: modality !== "audio" && allPass ? "hq_ok" : allPass ? prev?.stillQuality : "weak",
+          visualPass: isAudio ? prev?.visualPass : outcome.visualPass,
+          visualPassAt:
+            !isAudio && outcome.burnOk ? new Date().toISOString() : isAudio ? prev?.visualPassAt : undefined,
+          audioPass: isAudio ? outcome.allPass : prev?.audioPass,
+          audioPassAt: isAudio && outcome.allPass ? new Date().toISOString() : prev?.audioPassAt,
+          stillQuality: isAudio
+            ? outcome.allPass
+              ? prev?.stillQuality
+              : "weak"
+            : outcome.stillQuality,
+          sheetLeak: isAudio ? prev?.sheetLeak : outcome.sheetLeak,
           humanRejudgeCorpusId: id,
           humanRejudgeFile: file,
+          pendingHumanRejudge: false,
+          humanOverride: outcome.humanOverride,
+          humanOverrideAt: outcome.burnOk || (isAudio && outcome.allPass) ? new Date().toISOString() : undefined,
+          primaryNextStep: isAudio ? undefined : primaryNextStep,
+          ctaLabel: outcome.ctaLabel,
+          userMessage: outcome.userMessage,
+          burnReady: isAudio ? outcome.allPass : outcome.burnOk,
         }),
       });
       return res.status(200).send(
         success({
           corpusId: id,
           file,
-          visualPass: modality !== "audio" ? allPass : undefined,
-          audioPass: modality === "audio" ? allPass : undefined,
-          userMessage: "人工改判已写入语料",
-          ctaLabel: allPass ? "可燃片" : "继续修复",
+          visualPass: isAudio ? undefined : outcome.visualPass,
+          audioPass: isAudio ? outcome.allPass : undefined,
+          stillQuality: isAudio ? undefined : outcome.stillQuality,
+          burnReady: isAudio ? outcome.allPass : outcome.burnOk,
+          primaryNextStep: isAudio ? undefined : primaryNextStep,
+          humanOverride: outcome.humanOverride,
+          userMessage: outcome.userMessage,
+          ctaLabel: outcome.ctaLabel,
         }),
       );
     } catch (e) {

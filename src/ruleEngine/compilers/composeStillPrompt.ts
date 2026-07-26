@@ -9,6 +9,8 @@ import { detectAndStripQfExpr } from "./qfExprGate";
 import {
   STILL_HQ_COMPOSITION_CONTRACT,
   STILL_HQ_FIRST_FRAME_RECIPE_ZH_EN,
+  parseStillMetaFromReason,
+  type StillQualityMeta,
 } from "./stillQuality";
 import type { BurnNextStep } from "./burnGateEnvelope";
 import { buildPrimaryBlock } from "./primaryBlock";
@@ -26,9 +28,17 @@ import {
   loadStillRecipePolicy,
   pickIdentityLockLines,
 } from "./stillRecipePolicy";
+import {
+  HAND_CU_HQ_RECIPE,
+  HAND_CU_IDENTITY_LOCK,
+  PROP_CU_HQ_RECIPE,
+  resolveStillRecipeAdapt,
+  type StillRecipeAdapt,
+} from "./stillShotRecipeAdapt";
 
+/** IR tails may follow ASCII space OR CJK punctuation (。，；) — both must strip. */
 const IDENTITY_TOKEN_RE =
-  /(?:^|\s)--(?:cref|sref)\s+[^\n]*?(?=(?:\s--(?:cref|sref|ar)\b)|$)|(?:^|\s)--ar\s+\S+/gi;
+  /(?:^|[\s,，。；;：:\u3000]+)--(?:cref|sref)\s+[^\n]*?(?=(?:[\s,，。；;：:\u3000]+--(?:cref|sref|ar)\b)|$)|(?:^|[\s,，。；;：:\u3000]+)--ar\s+\S+/gi;
 
 const MOTION_ONLY_RE =
   /(?:\b(?:slow\s*pan|dolly(?:\s*in)?|track\s*in|track\s*out|push\s*in|pull\s*out|zoom\s*in|zoom\s*out|handheld|orbit|crane|whip\s*pan|camera\s*moves?)\b|镜头推进|镜头拉远|缓推|缓拉|跟拍|摇镜|运镜)/gi;
@@ -85,6 +95,8 @@ export interface ComposeStillContext {
   referenceUrlCount?: number;
   /** Prior composed body for refine (without recipe/tokens) */
   previousVisualBody?: string | null;
+  /** Sibling / episode VDs for action lexicon harvest (declare-only on current shot) */
+  episodeVisualDescriptions?: string[] | null;
 }
 
 export interface ComposeStillOptions {
@@ -295,28 +307,94 @@ export function extractEntityAnchors(text: string, extraNames: string[] = []): s
 }
 
 function pickPrimaryDescription(ctx: ComposeStillContext): { text: string; source: string; trimmed?: boolean } | null {
-  const { trimToOneBeat } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+  const { shouldWarnOneBeat } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+  const rejectMulti = (text: string): boolean => shouldWarnOneBeat(text);
   const vd = String(ctx.visualDescription ?? "").trim();
   if (vd) {
-    const t = trimToOneBeat(vd);
-    return { text: t.text, source: "shot.visualDescription", trimmed: t.trimmed };
+    if (rejectMulti(vd)) return null;
+    return { text: vd, source: "shot.visualDescription", trimmed: false };
   }
   const compiled = scrubStillPromptNoise(stripIdentityTokens(String(ctx.compiledImagePrompt ?? "")).body).cleaned;
   if (compiled && measureVisualBody(compiled).ok) {
-    const t = trimToOneBeat(compiled.slice(0, 360));
-    return { text: t.text, source: "shot.compiledImagePrompt", trimmed: t.trimmed };
+    if (rejectMulti(compiled)) return null;
+    return { text: compiled.slice(0, 360), source: "shot.compiledImagePrompt", trimmed: false };
   }
-  const vdesc = stripMotionOnlyForStill(String(ctx.videoDesc ?? ""));
-  if (vdesc && measureVisualBody(vdesc).ok) {
-    const t = trimToOneBeat(vdesc.slice(0, 300));
-    return { text: t.text, source: "shot.videoDesc", trimmed: t.trimmed };
-  }
+  // Do NOT fall back to motion-template videoDesc as literary still body (VD SSOT)
   const sb = scrubStillPromptNoise(stripIdentityTokens(String(ctx.promptFromStoryboard ?? "")).body).cleaned;
   if (sb && measureVisualBody(sb).ok) {
-    const t = trimToOneBeat(sb.slice(0, 300));
-    return { text: t.text, source: "storyboard.prompt", trimmed: t.trimmed };
+    if (rejectMulti(sb)) return null;
+    return { text: sb.slice(0, 300), source: "storyboard.prompt", trimmed: false };
   }
   return null;
+}
+
+function oneBeatBlockResult(
+  warnings: string[],
+  sources: string[],
+  scrubbed: boolean,
+  dirtyInput: boolean,
+  mode: ComposeMode,
+  overrideMsg?: string,
+): ComposeStillResult {
+  const primaryBlock = buildPrimaryBlock("split_shot", {
+    stage: "prompt",
+    userMessageOverride: overrideMsg ?? "画面描写多拍，须智能拆镜后再 compose，禁止 trim/旧 prompt 假绿",
+  });
+  return {
+    ok: false,
+    prompt: "",
+    visualBody: "",
+    didSynthesize: false,
+    scrubbed,
+    composeMode: mode,
+    sources,
+    warnings: [...warnings, "DEX-STILL-ONEBEAT"],
+    entityAnchors: [],
+    blockReason: "DEX-STILL-ONEBEAT",
+    primaryNextStep: primaryBlock.primaryNextStep,
+    userMessage: primaryBlock.userMessage,
+    ctaLabel: primaryBlock.ctaLabel,
+    compositionContractApplied: false,
+    complianceHit: false,
+    qp02Blocked: false,
+    missingLeadAsset: false,
+    dirtyInput,
+  };
+}
+
+/** Leak-net: CU×cast → split_shot reverse (no HTTP batch death; no silent single_hero green). */
+function cuCastBlockResult(
+  warnings: string[],
+  sources: string[],
+  scrubbed: boolean,
+  dirtyInput: boolean,
+  mode: ComposeMode,
+  message: string,
+): ComposeStillResult {
+  const primaryBlock = buildPrimaryBlock("split_shot", {
+    stage: "prompt",
+    userMessageOverride: message,
+  });
+  return {
+    ok: false,
+    prompt: "",
+    visualBody: "",
+    didSynthesize: false,
+    scrubbed,
+    composeMode: mode,
+    sources: [...sources, "identity.cuCastConflict"],
+    warnings: [...warnings, "DEX-STILL-CU-CAST"],
+    entityAnchors: [],
+    blockReason: "DEX-STILL-CU-CAST",
+    primaryNextStep: primaryBlock.primaryNextStep,
+    userMessage: primaryBlock.userMessage,
+    ctaLabel: primaryBlock.ctaLabel || "确认智能拆镜",
+    compositionContractApplied: false,
+    complianceHit: false,
+    qp02Blocked: false,
+    missingLeadAsset: false,
+    dirtyInput,
+  };
 }
 
 function layerShootableExtras(ctx: ComposeStillContext, parts: string[], sources: string[], mode: ComposeMode): void {
@@ -335,17 +413,19 @@ function layerShootableExtras(ctx: ComposeStillContext, parts: string[], sources
     parts.push(`空间关系：${ctx.spatialRelation}`);
     sources.push("shot.spatialRelation");
   }
-  if (ctx.dialogueBeat) {
-    parts.push(ctx.dialogueBeat);
-    sources.push("dialogue.beat");
-  }
-  if (mode === "fidelity") {
+  // Still first-frame: narrative over reference collage (hq_update + fidelity)
+  if (mode === "fidelity" || ctx.qualityMode === "hq_update") {
     parts.push("叙事场面优先于参考图拼贴，画面必须体现上述描写中的动作与物件");
     sources.push("fidelity.narrativeFirst");
   }
 }
 
-function layerSkeletonScene(ctx: ComposeStillContext, parts: string[], sources: string[]): boolean {
+function layerSkeletonScene(
+  ctx: ComposeStillContext,
+  parts: string[],
+  sources: string[],
+  adapt?: StillRecipeAdapt,
+): boolean {
   const chars = (ctx.characters ?? []).filter((c) => c.kind !== "scene");
   const names = chars
     .map((c) => c.name || c.code)
@@ -357,6 +437,17 @@ function layerSkeletonScene(ctx: ComposeStillContext, parts: string[], sources: 
   const who = names.length ? names.join("与") : "角色";
   const where = scene ? `在${scene}` : "在场景中";
   const mood = emo ? `，情绪强度${emo}` : "";
+  if (adapt?.omitFaceSkeleton) {
+    const handSafe =
+      adapt.mode === "hand_cu"
+        ? `${who}${where}的手部/道具叙事首帧：主体细节清晰，浅景深，环境可辨${mood}，静止可拍画面`
+        : adapt.mode === "prop_cu" || adapt.mode === "empty"
+          ? `${where}的物件/环境叙事首帧：主体清晰，环境可辨${mood}，静止可拍画面`
+          : `${who}${where}的叙事首帧：场面可辨${mood}，静止可拍画面（禁硬加正脸）`;
+    parts.push(handSafe);
+    sources.push("skeleton.declare.recipeAdapt");
+    return true;
+  }
   parts.push(`${who}${where}的叙事首帧：人物关系与站位清晰，正脸可见，环境可辨${mood}，静止可拍画面`);
   sources.push("skeleton.declare");
   return true;
@@ -368,7 +459,7 @@ function layerCharacterPerf(
   sources: string[],
   warnings: string[],
   mode: ComposeMode,
-  opts?: { omitPersonality?: boolean },
+  opts?: { omitPersonality?: boolean; adapt?: StillRecipeAdapt },
 ): boolean {
   let missingLead = false;
   const chars = (ctx.characters ?? []).filter((c) => c.kind !== "scene");
@@ -396,9 +487,11 @@ function layerCharacterPerf(
     }
   }
   const micro = String(ctx.microExpression ?? "").trim();
-  if (micro) {
+  if (micro && !opts?.adapt?.omitFaceMicroExpression) {
     parts.push(`微表情：${micro.slice(0, 80)}`);
     sources.push("shotDesign.performance.microExpression");
+  } else if (micro && opts?.adapt?.omitFaceMicroExpression) {
+    sources.push("shotDesign.performance.microExpression.omittedByRecipeAdapt");
   }
   if (ctx.emotion != null && String(ctx.emotion).trim() && !sources.includes("shot.emotion")) {
     parts.push(`情绪：${String(ctx.emotion).slice(0, 40)}`);
@@ -413,11 +506,21 @@ function layerBeatBlocking(
   parts: string[],
   sources: string[],
   bindHighName?: string,
+  adapt?: StillRecipeAdapt,
+  opts?: { hasSeatingOrKneel?: boolean; visualDescription?: string | null },
 ): void {
   const split = String(ctx.splitHint ?? "").trim();
   const reaction = String(ctx.reactionAction ?? "").trim();
   const shot = String(ctx.shotSize ?? "").toLowerCase();
   const isEcu = /ecu|extreme|大特|特写/.test(shot);
+  if (adapt?.omitFacePowerBlocking) {
+    sources.push("beat.power.omittedByRecipeAdapt");
+    if (reaction || /reaction|反应/i.test(split)) {
+      parts.push("反应镜：偏听者/过肩构图，非双人对峙抢戏");
+      sources.push("beat.reaction");
+    }
+    return;
+  }
   if (reaction || /reaction|反应/i.test(split)) {
     parts.push("反应镜：偏听者/过肩构图，非双人对峙抢戏");
     sources.push("beat.reaction");
@@ -425,8 +528,66 @@ function layerBeatBlocking(
     // ECU: skip power-blocking recipe
     sources.push("beat.ecu.skipPower");
   } else if (bindHighName) {
-    parts.push(`权力位：${bindHighName}（高位）靠近视觉重心，正脸清晰`);
-    sources.push("beat.power.named");
+    const castNames = (ctx.characters ?? [])
+      .filter((c) => c.kind !== "scene")
+      .map((c) => c.name || "")
+      .filter(Boolean);
+    const vdText = opts?.visualDescription ?? ctx.visualDescription;
+    let demote = false;
+    let vdPrimary = "";
+    let actionPrimary = false;
+    try {
+      const {
+        shouldDemotePowerBlockingForVd,
+        shouldUseActionPrimaryBeat,
+      } = require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      const d = shouldDemotePowerBlockingForVd({
+        visualDescription: vdText,
+        bindHighName,
+        castNames,
+        hasSeatingOrKneel: opts?.hasSeatingOrKneel,
+      });
+      demote = d.demote;
+      vdPrimary = d.vdPrimary;
+      const ap = shouldUseActionPrimaryBeat({
+        visualDescription: vdText,
+        hasSeatingOrKneel: opts?.hasSeatingOrKneel,
+        castNames,
+      });
+      actionPrimary = ap.use;
+      if (!vdPrimary && ap.vdPrimary) vdPrimary = ap.vdPrimary;
+    } catch {
+      /* optional */
+    }
+    // Non-seating action beat: always 动作主体, never 「权力位…（高位）」throne soup
+    if (!opts?.hasSeatingOrKneel && (demote || actionPrimary) && vdPrimary) {
+      const softOther = castNames.find((n) => n !== vdPrimary && !vdPrimary.includes(n) && !n.includes(vdPrimary));
+      const softClause = softOther
+        ? `${softOther}虚化在背景浅景深、禁止与主体抢戏`
+        : "";
+      parts.push(
+        softClause
+          ? `动作主体：${vdPrimary}靠近视觉重心并完成描写动作；${softClause}，禁止拼图多格、禁止第三人`
+          : `动作主体：${vdPrimary}靠近视觉重心并完成描写动作，禁止拼图多格、禁止第三人`,
+      );
+      sources.push(demote ? "beat.power.vdPrimaryOverride" : "beat.power.actionPrimary");
+    } else if (demote && vdPrimary) {
+      parts.push(
+        `动作主体：${vdPrimary}靠近视觉重心并完成描写动作；${bindHighName}虚化在背景浅景深、禁止与主体抢戏，禁止拼图多格、禁止第三人`,
+      );
+      sources.push("beat.power.vdPrimaryOverride");
+    } else if (opts?.hasSeatingOrKneel) {
+      const dualCast = castNames.length >= 2;
+      parts.push(
+        dualCast
+          ? `权力位：${bindHighName}（高位）靠近视觉重心，主脸清晰；低位面部可辨；禁止超员路人`
+          : `权力位：${bindHighName}（高位）靠近视觉重心，正脸清晰`,
+      );
+      sources.push("beat.power.named");
+    } else if (vdPrimary) {
+      parts.push(`动作主体：${vdPrimary}靠近视觉重心并完成描写动作，禁止拼图多格`);
+      sources.push("beat.power.actionPrimary");
+    }
   } else if (ctx.dialogueDominantSpeaker) {
     parts.push(`权力位：${String(ctx.dialogueDominantSpeaker)}靠近画面中心，正脸清晰`);
     sources.push("beat.power");
@@ -440,8 +601,14 @@ function layerRefIdentityLock(
   ctx: ComposeStillContext,
   parts: string[],
   sources: string[],
-  opts?: { seatingHard?: boolean },
+  opts?: { seatingHard?: boolean; adapt?: StillRecipeAdapt },
 ): void {
+  const adapt = opts?.adapt;
+  if (adapt?.useNonFaceIdentityLock) {
+    parts.push(adapt.mode === "prop_cu" ? "锁定道具材质与纹样参考，禁止重塑物件身份细节。" : HAND_CU_IDENTITY_LOCK);
+    sources.push("refs.identityLock.recipeAdapt");
+    return;
+  }
   const policy = loadStillRecipePolicy();
   const { canEmitMultiFace, uniqueBareCastingNames } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
   const chars = (ctx.characters ?? []).filter((c) => c.kind !== "scene");
@@ -488,7 +655,16 @@ function layerNeighborWarn(ctx: ComposeStillContext, warnings: string[]): void {
   if (extreme) warnings.push("邻镜景别跳变较大，建议核对 saliency 节奏");
 }
 
-function layerMouthLipGuard(ctx: ComposeStillContext, parts: string[], sources: string[]): void {
+function layerMouthLipGuard(
+  ctx: ComposeStillContext,
+  parts: string[],
+  sources: string[],
+  adapt?: StillRecipeAdapt,
+): void {
+  if (adapt?.omitMouthLipGuard) {
+    sources.push("qc.lipMouth.omittedByRecipeAdapt");
+    return;
+  }
   const lip = ctx.strengthen?.lipSyncPolicy || ctx.strengthen?.mouth;
   const body = parts.join(" ");
   if (/大张嘴|夸张张嘴|mouth\s*wide\s*open/i.test(body) || lip) {
@@ -537,8 +713,16 @@ function layerQcStrengthen(ctx: ComposeStillContext, parts: string[], sources: s
 export function stripStaleBindingFromPrevious(body: string): string {
   let next = String(body ?? "")
     .replace(/站位绑定：[^。；;\n]*/g, " ")
+    .replace(/【布局锁】[^。；;\n]*/g, " ")
     .replace(/身份顺序：[^。；;\n]*/g, " ")
     .replace(/权力位：[^。；;\n]*/g, " ")
+    .replace(/动作主体：[^。；;\n]*/g, " ")
+    .replace(/continuity:\s*[^。；;\n]*/gi, " ")
+    .replace(/continues?\s+from\s+[^。；;\n]*/gi, " ")
+    .replace(/锁定定妆脸型与身份[^。；;\n]*/g, " ")
+    .replace(/单镜头成片画幅[^。；;\n]*/g, " ")
+    .replace(/角色参考若为四视图[^。；;\n]*/g, " ")
+    .replace(/叙事场面优先于参考图拼贴[^。；;\n]*/g, " ")
     .replace(/(?:^|\s)--(?:cref|sref)\s+[^\n]*?(?=(?:\s--(?:cref|sref|ar)\b)|$)/gi, " ")
     .replace(/(?:^|\s)--ar\s+\S+/gi, " ");
   const prefixes = loadStillRecipePolicy().recipeLayerPrefixes ?? [
@@ -612,30 +796,212 @@ export function composeStillPrompt(
   let didSynthesize = false;
   let entityAnchors: string[] = [];
 
-  // Refine/fidelity: keep previous literary body but drop stale 站位绑定/--cref (re-bound below)
+  const { shouldWarnOneBeat } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+  const { peelOsFromVisual } = require("../design/expandStillOneBeat") as typeof import("../design/expandStillOneBeat");
+
+  // Refine/fidelity: keep previous only if one-beat AND mustSurvive atoms still present
+  let effectiveMode: ComposeMode = mode;
   if ((mode === "refine" || mode === "fidelity") && ctx.previousVisualBody?.trim()) {
     const prev = stripStaleBindingFromPrevious(scrubStillPromptNoise(ctx.previousVisualBody).cleaned);
-    if (prev) {
-      descParts.push(prev);
-      sources.push("previous.composed");
+    if (prev && shouldWarnOneBeat(prev)) {
+      warnings.push("DEX-STILL-ONEBEAT:drop_dirty_previous");
+      sources.push("previous.dropped_multibeat");
+      effectiveMode = "full";
+      ctx.previousVisualBody = undefined;
+    } else if (prev) {
+      try {
+        const { buildMustSurvive } =
+          require("./stillLiteraryIntentSsot") as typeof import("./stillLiteraryIntentSsot");
+        const names = (ctx.characters ?? [])
+          .filter((c) => c.kind !== "scene")
+          .map((c) => c.name || "")
+          .filter(Boolean);
+        const surv = buildMustSurvive({
+          visualDescription: ctx.visualDescription,
+          prompt: prev,
+          characterNames: names,
+        });
+        if (surv.items.length && !surv.ok) {
+          warnings.push("mustSurvive:drop_previous_missing_atoms");
+          sources.push("previous.dropped_mustSurvive");
+          effectiveMode = "full";
+          ctx.previousVisualBody = undefined;
+        } else {
+          descParts.push(prev);
+          sources.push("previous.composed");
+        }
+      } catch {
+        descParts.push(prev);
+        sources.push("previous.composed");
+      }
+    }
+  }
+
+  let vdRaw = String(ctx.visualDescription ?? "").trim();
+  {
+    const { isHandEyeMultiBeat, hasBareCrefCode, hasBareSrefCode, stripBareCrefSref } =
+      require("../design/dirtyStillPromptGate") as typeof import("../design/dirtyStillPromptGate");
+    const peelLit = (s: string) => {
+      const { peelContinuityNoise } = require("../design/dirtyStillPromptGate") as typeof import("../design/dirtyStillPromptGate");
+      return peelContinuityNoise(stripBareCrefSref(stripIdentityTokens(String(s ?? "")).body));
+    };
+    const vdLit = peelLit(vdRaw);
+    const compiledLit = peelLit(String(ctx.compiledImagePrompt ?? ""));
+    const rawLit = peelLit(String(ctx.rawPrompt ?? ""));
+    const literaryBlob = [vdLit, compiledLit, rawLit].join("\n");
+
+    if (vdRaw && (hasBareCrefCode(vdRaw) || hasBareSrefCode(vdRaw))) {
+      if (vdLit && !hasBareCrefCode(vdLit) && !hasBareSrefCode(vdLit)) {
+        warnings.push("stripped bare cref/sref from visualDescription");
+        sources.push("dirtyStillPrompt.stripBareVd");
+        vdRaw = vdLit;
+        ctx.visualDescription = vdLit;
+      }
+    }
+    // Stale IR in old prompt/compiled: peel in-memory so primary/pick won't re-ingest codes
+    if (String(ctx.compiledImagePrompt ?? "") && compiledLit !== String(ctx.compiledImagePrompt ?? "").trim()) {
+      ctx.compiledImagePrompt = compiledLit;
+      sources.push("dirtyStillPrompt.stripBareCompiled");
+    }
+    if (String(ctx.rawPrompt ?? "") && rawLit !== String(ctx.rawPrompt ?? "").trim()) {
+      ctx.rawPrompt = rawLit;
+      sources.push("dirtyStillPrompt.stripBareRaw");
+    }
+
+    if (isHandEyeMultiBeat(literaryBlob)) {
+      const primaryBlock = buildPrimaryBlock("chat_repair", {
+        stage: "prompt",
+        userMessageOverride: "手部特写与眼神/正脸同帧（一镜多拍）；请回 SB 拆镜或改 VD 后再 compose",
+      });
+      return {
+        ok: false,
+        prompt: "",
+        visualBody: "",
+        didSynthesize: false,
+        scrubbed: scrubRaw.scrubbed || dirtyInput,
+        composeMode: effectiveMode,
+        sources: [...sources, "dirtyStillPrompt.block"],
+        warnings: [...warnings, "DEX-DIRTY-STILL-PROMPT"],
+        entityAnchors: [],
+        blockReason: "DEX-DIRTY-STILL-PROMPT",
+        primaryNextStep: primaryBlock.primaryNextStep,
+        userMessage: primaryBlock.userMessage,
+        ctaLabel: primaryBlock.ctaLabel,
+        compositionContractApplied: false,
+        complianceHit: false,
+        qp02Blocked: false,
+        missingLeadAsset: false,
+        dirtyInput: true,
+      };
+    }
+    // Seating VD + prior compose tail with 正脸：not hand+eye dirty (isHandEyeMultiBeat already seating-aware)
+    // Only BLOCK when VD still has bare codes after peel (cannot salvage)
+    if (hasBareCrefCode(vdLit) || hasBareSrefCode(vdLit)) {
+      const primaryBlock = buildPrimaryBlock("chat_repair", {
+        stage: "prompt",
+        userMessageOverride:
+          "画面描写仍含裸 --cref/--sref 码（非定妆 URL）。请从 visualDescription 删除码，改用 charCodes/定妆槽；生成时由 compose 在 prompt 尾自动挂 IR。勿把 CHAR-*/SCENE-* 写进文学体。",
+      });
+      return {
+        ok: false,
+        prompt: "",
+        visualBody: "",
+        didSynthesize: false,
+        scrubbed: scrubRaw.scrubbed || dirtyInput,
+        composeMode: effectiveMode,
+        sources: [...sources, "dirtyStillPrompt.block"],
+        warnings: [...warnings, "DEX-DIRTY-STILL-PROMPT"],
+        entityAnchors: [],
+        blockReason: "DEX-DIRTY-STILL-PROMPT",
+        primaryNextStep: primaryBlock.primaryNextStep,
+        userMessage: primaryBlock.userMessage,
+        ctaLabel: primaryBlock.ctaLabel,
+        compositionContractApplied: false,
+        complianceHit: false,
+        qp02Blocked: false,
+        missingLeadAsset: false,
+        dirtyInput: true,
+      };
     }
   }
 
   const primary = pickPrimaryDescription(ctx);
+  let recipeAdapt = resolveStillRecipeAdapt({
+    visualDescription: vdRaw || primary?.text,
+    shotSize: ctx.shotSize,
+    picture: (ctx as { picture?: string }).picture,
+    videoDesc: ctx.videoDesc,
+  });
+  if (recipeAdapt.mode !== "face_or_scene") {
+    sources.push(`recipeAdapt.${recipeAdapt.mode}`);
+  }
+  if (vdRaw && shouldWarnOneBeat(vdRaw)) {
+    return oneBeatBlockResult(warnings, sources, scrubRaw.scrubbed || dirtyInput, dirtyInput, effectiveMode);
+  }
+  let didCuCastSlice = false;
+  {
+    const { detectCuCastConflict } =
+      require("../design/detectCuCastConflict") as typeof import("../design/detectCuCastConflict");
+    const castChars = (ctx.characters ?? []).filter((c) => c.kind !== "scene");
+    const cu = detectCuCastConflict({
+      shotSize: ctx.shotSize,
+      charCodes: castChars.map((c) => c.code).filter(Boolean) as string[],
+      characterNames: castChars.map((c) => c.name || "").filter(Boolean),
+      visualDescription: vdRaw || primary?.text,
+      prompt: [vdRaw, primary?.text, rawBody].filter(Boolean).join("。"),
+    });
+    if (cu.conflict && cu.healMode === "slice_cast" && cu.primaryName) {
+      // 配方智能适配：按文学意图降出场人数（≠改 VD，≠拆镜）
+      const p = cu.primaryName;
+      const match = (label: string) => {
+        const a = String(label ?? "").trim();
+        return a && (a === p || a.includes(p) || p.includes(a));
+      };
+      const kept = castChars.filter((c) => match(c.name || "") || match(String(c.code || "").replace(/^CHAR-/i, "")));
+      const scenes = (ctx.characters ?? []).filter((c) => c.kind === "scene");
+      ctx.characters = kept.length ? [...kept, ...scenes] : [{ name: p, kind: "character" as const }, ...scenes];
+      sources.push("recipeAdapt.cuCastSlice");
+      warnings.push(`cu_cast_sliced:${p}`);
+      didCuCastSlice = true;
+    } else if (cu.conflict) {
+      return cuCastBlockResult(
+        warnings,
+        sources,
+        scrubRaw.scrubbed || dirtyInput,
+        dirtyInput,
+        effectiveMode,
+        cu.message,
+      );
+    }
+  }
+  if (
+    !primary &&
+    (shouldWarnOneBeat(String(ctx.compiledImagePrompt ?? "")) ||
+      shouldWarnOneBeat(String(ctx.promptFromStoryboard ?? "")) ||
+      shouldWarnOneBeat(String(ctx.previousVisualBody ?? "")))
+  ) {
+    return oneBeatBlockResult(
+      warnings,
+      sources,
+      scrubRaw.scrubbed || dirtyInput,
+      dirtyInput,
+      effectiveMode,
+      "无可用单拍画面描写（旧 prompt/compiled 多拍已丢弃），须拆镜后重编",
+    );
+  }
   if (primary) {
     if (primary.trimmed) {
       warnings.push("still_multi_beat_trim");
       sources.push("policy.oneBeat.trim");
     }
-    // full/fidelity: description must lead; refine: reinforce if missing
-    if (mode === "full" || mode === "fidelity" || !descParts.length) {
-      if (mode === "full") descParts.length = 0;
+    if (effectiveMode === "full" || effectiveMode === "fidelity" || !descParts.length) {
+      if (effectiveMode === "full") descParts.length = 0;
       if (!descParts.some((p) => p.includes(primary.text.slice(0, 12)))) {
         descParts.unshift(primary.text);
       }
       sources.push(primary.source);
       didSynthesize = true;
-    } else if (mode === "refine" && !descParts.join("").includes(primary.text.slice(0, 8))) {
+    } else if (effectiveMode === "refine" && !descParts.join("").includes(primary.text.slice(0, 8))) {
       descParts.unshift(primary.text);
       sources.push(primary.source);
       didSynthesize = true;
@@ -647,6 +1013,45 @@ export function composeStillPrompt(
     entityAnchors = slimEntityAnchors(extractEntityAnchors(primary.text, charNames));
   }
 
+  for (let i = 0; i < descParts.length; i++) {
+    const peeled = peelOsFromVisual(descParts[i]!);
+    if (peeled.visual !== descParts[i]) {
+      descParts[i] = peeled.visual;
+      sources.push("still.peelOs");
+    }
+  }
+  // Face CU / 已 slice：禁止人数契约行残留进 vendor（截图 400 根因）
+  if (didCuCastSlice || sources.includes("recipeAdapt.cuCastSlice")) {
+    try {
+      const { stripCastCardinalityLeakForFaceCu } =
+        require("./stillRefSlotContract") as typeof import("./stillRefSlotContract");
+      for (let i = 0; i < descParts.length; i++) {
+        descParts[i] = stripCastCardinalityLeakForFaceCu(descParts[i]!);
+      }
+      for (let i = 0; i < supportParts.length; i++) {
+        if (/出镜人数/.test(supportParts[i]!)) {
+          supportParts[i] = stripCastCardinalityLeakForFaceCu(supportParts[i]!);
+        }
+      }
+      if (primary?.text && /出镜人数/.test(primary.text)) {
+        primary.text = stripCastCardinalityLeakForFaceCu(primary.text);
+      }
+    } catch {
+      /* optional */
+    }
+  }
+  const mergedDesc = descParts.join("。");
+  if (mergedDesc && shouldWarnOneBeat(mergedDesc)) {
+    return oneBeatBlockResult(
+      warnings,
+      sources,
+      scrubRaw.scrubbed || dirtyInput,
+      dirtyInput,
+      effectiveMode,
+      "合稿画面多拍，须智能拆镜后再 compose",
+    );
+  }
+
   const charNamesForBind = (ctx.characters ?? [])
     .filter((c) => c.kind !== "scene")
     .map((c) => c.name || c.code || "")
@@ -656,11 +1061,26 @@ export function composeStillPrompt(
     description: primary?.text ?? ctx.visualDescription ?? "",
     characterNames: charNamesForBind,
   });
+  // Seating / mid-wide content contract forces non-hand recipe (re-resolve)
+  recipeAdapt = resolveStillRecipeAdapt({
+    visualDescription: vdRaw || primary?.text,
+    shotSize: ctx.shotSize,
+    picture: (ctx as { picture?: string }).picture,
+    videoDesc: ctx.videoDesc,
+    hasSeatingOrKneel: predPack.hasSeatingOrKneel,
+  });
+  if (predPack.hasSeatingOrKneel && recipeAdapt.mode === "face_or_scene") {
+    sources.push("recipeAdapt.seatingOverride");
+  }
   const bgPolicyResult = resolveStillBgPolicy({
     description: primary?.text ?? ctx.visualDescription ?? "",
     characterNames: charNamesForBind,
     shotSize: ctx.shotSize,
     pack: predPack,
+    // seatingHard always wins inside resolveStillBgPolicy (checked before hint)
+    sceneEstablishingHint:
+      Boolean((ctx as { sceneEstablishing?: boolean }).sceneEstablishing) ||
+      /建立镜头|establishing|空镜建立|全景建立/i.test(String(primary?.text ?? ctx.visualDescription ?? "")),
   });
   if (bgPolicyResult.bgGuidance) {
     supportParts.push(bgPolicyResult.bgGuidance);
@@ -685,6 +1105,7 @@ export function composeStillPrompt(
     description: primary?.text ?? ctx.visualDescription ?? "",
     characters: (ctx.characters ?? []).filter((c) => c.kind !== "scene"),
     assetCodes: (ctx.characters ?? []).map((c) => c.code || "").filter(Boolean),
+    seatingHard: predPack.hasSeatingOrKneel,
   });
   if (identityBind.bindingLine) {
     // Guard: never emit same-name dual 站位绑定
@@ -695,11 +1116,64 @@ export function composeStillPrompt(
         const m2 = identityBind.bindingLine!.match(/，(.+?)=低位/);
         return m1 && m2 && m1[1] === m2[1];
       })();
-    if (!sameDual) {
+    const isSeatBind = /^站位绑定：/.test(identityBind.bindingLine);
+    // HQ non-seating: omit「身份顺序」soup; never pour 站位绑定 without seatingHard
+    const isIdOrder = /^身份顺序：/.test(identityBind.bindingLine);
+    const skipIdOrderSoup = qualityMode === "hq_update" && !predPack.hasSeatingOrKneel && isIdOrder;
+    const skipSeatBind = !predPack.hasSeatingOrKneel && isSeatBind;
+    if (!sameDual && !skipIdOrderSoup && !skipSeatBind) {
       supportParts.push(identityBind.bindingLine);
       sources.push("identity.binding");
+    } else if (skipSeatBind) {
+      sources.push("identity.binding.omitSeatBindNonSeating");
+    } else if (skipIdOrderSoup) {
+      sources.push("identity.binding.omitIdOrderHq");
     } else {
       warnings.push("skipped same-person dual binding line");
+    }
+  }
+
+  // Exact cast cardinality — mustSurvive content contract
+  {
+    const castForCard =
+      identityBind.orderedNames.filter(Boolean).length >= 1
+        ? identityBind.orderedNames.filter(Boolean)
+        : charNamesForBind.filter(Boolean);
+    // Face CU: do not force full-cast「仅N人」line (景别/VD 同核；场面镜再写人数契约)
+    let skipCastCard = false;
+    try {
+      const { resolveFaceCuFraming } =
+        require("../design/detectCuCastConflict") as typeof import("../design/detectCuCastConflict");
+      const fr = resolveFaceCuFraming({
+        shotSize: ctx.shotSize,
+        visualDescription: vdRaw || primary?.text,
+        prompt: rawBody,
+      });
+      skipCastCard = fr.faceCu || recipeAdapt.mode === "ecu_face";
+    } catch {
+      try {
+        const { isCuShotSize } =
+          require("./stillLiteraryIntentSsot") as typeof import("./stillLiteraryIntentSsot");
+        skipCastCard = isCuShotSize(ctx.shotSize) || recipeAdapt.mode === "ecu_face";
+      } catch {
+        /* optional */
+      }
+    }
+    if (
+      !skipCastCard &&
+      castForCard.length >= 1 &&
+      (predPack.hasSeatingOrKneel || castForCard.length >= 2)
+    ) {
+      try {
+        const { buildCastCardinalityLine } = require("./stillRefSlotContract") as typeof import("./stillRefSlotContract");
+        const cardLine = buildCastCardinalityLine(castForCard);
+        if (cardLine && !supportParts.some((p) => /出镜人数/.test(p)) && !descParts.some((p) => /出镜人数/.test(p))) {
+          supportParts.push(cardLine);
+          sources.push("identity.castCardinality");
+        }
+      } catch {
+        /* optional */
+      }
     }
   }
 
@@ -709,10 +1183,10 @@ export function composeStillPrompt(
     sources.push("project.artStyle");
   }
 
-  layerShootableExtras(ctx, supportParts, sources, mode);
+  layerShootableExtras(ctx, supportParts, sources, effectiveMode);
 
   if (!measureVisualBody(descParts.join(" ")).ok) {
-    if (layerSkeletonScene(ctx, descParts, sources)) didSynthesize = true;
+    if (layerSkeletonScene(ctx, descParts, sources, recipeAdapt)) didSynthesize = true;
   }
 
   const userPatch = preserveUserPatches(rawBody, primary?.text ?? "");
@@ -726,33 +1200,121 @@ export function composeStillPrompt(
   }
 
   if (entityAnchors.length) {
-    const line = `必须出现：${entityAnchors.join("、")}`;
+    let anchors = entityAnchors;
+    let vdPrimary = "";
+    try {
+      const { pickVdLiteraryPrimary, orderAnchorsByVdPrimary } =
+        require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      vdPrimary = pickVdLiteraryPrimary(
+        primary?.text ?? ctx.visualDescription,
+        (ctx.characters ?? []).map((c) => c.name || "").filter(Boolean),
+      );
+      if (vdPrimary) anchors = orderAnchorsByVdPrimary(anchors, vdPrimary);
+    } catch {
+      /* optional */
+    }
+    if (recipeAdapt.limitMustAppearToPrimary && !predPack.hasSeatingOrKneel) {
+      const primaryName =
+        vdPrimary ||
+        identityBind.orderedNames[0] ||
+        (ctx.characters ?? []).find((c) => c.kind !== "scene")?.name ||
+        "";
+      const propish = anchors.filter((a) => /扳指|玉|刀|剑|杯|盏|烛|信|书|戒指|道具|袖|手|休书/.test(a));
+      const nameHit = primaryName ? anchors.filter((a) => a.includes(primaryName) || primaryName.includes(a)) : [];
+      anchors = slimEntityAnchors([...nameHit, ...propish].slice(0, 3));
+      if (!anchors.length && primaryName) anchors = [primaryName];
+      sources.push("entity.anchors.recipeAdaptLimited");
+    } else if (predPack.hasSeatingOrKneel) {
+      // Seating: keep all cast names from identity bind + props
+      const castNames = identityBind.orderedNames.filter(Boolean);
+      anchors = slimEntityAnchors([...castNames, ...anchors]);
+      sources.push("entity.anchors.seatingFullCast");
+    } else if (vdPrimary && qualityMode === "hq_update") {
+      // Short shell: primary + prop only (no dual-name 必须出现展板)
+      const propish = anchors.filter((a) => /扳指|玉|刀|剑|杯|盏|烛|信|书|戒指|道具|袖|手|休书/.test(a));
+      anchors = slimEntityAnchors([vdPrimary, ...propish].slice(0, 2));
+      sources.push("entity.anchors.vdPrimaryFirst");
+    }
+    const line = `必须出现：${anchors.join("、")}`;
+    // HQ non-seating: skip 必须出现 when VD already names cast (short shell)
+    const skipMustAppear =
+      qualityMode === "hq_update" &&
+      !predPack.hasSeatingOrKneel &&
+      mode !== "fidelity" &&
+      Boolean(vdPrimary);
     if (mode === "fidelity") {
       descParts.push(line);
-      descParts.push(`再次强调场面：${primary?.text?.slice(0, 120) ?? entityAnchors.join("、")}`);
+      descParts.push(`再次强调场面：${primary?.text?.slice(0, 120) ?? anchors.join("、")}`);
       sources.push("fidelity.entityReplay");
-    } else {
+    } else if (!skipMustAppear) {
       supportParts.push(line);
       sources.push("entity.anchors");
+    } else {
+      sources.push("entity.anchors.omitMustAppearHq");
     }
+    entityAnchors = anchors;
   }
 
-  const missingLeadAsset = layerCharacterPerf(ctx, supportParts, sources, warnings, mode, {
+  const missingLeadAsset = layerCharacterPerf(ctx, supportParts, sources, warnings, effectiveMode, {
     omitPersonality: predPack.hasSeatingOrKneel,
+    adapt: recipeAdapt,
   });
-  layerBeatBlocking(ctx, supportParts, sources, identityBind.highRole?.name || identityBind.orderedNames[0]);
-  layerRefIdentityLock(ctx, supportParts, sources, { seatingHard: predPack.hasSeatingOrKneel });
+  layerBeatBlocking(
+    ctx,
+    supportParts,
+    sources,
+    identityBind.highRole?.name || identityBind.orderedNames[0],
+    recipeAdapt,
+    {
+      hasSeatingOrKneel: predPack.hasSeatingOrKneel,
+      visualDescription: primary?.text ?? ctx.visualDescription,
+    },
+  );
+  layerRefIdentityLock(ctx, supportParts, sources, {
+    seatingHard: predPack.hasSeatingOrKneel,
+    adapt: recipeAdapt,
+  });
   layerNeighborWarn(ctx, warnings);
   if (ctx.continuityInject?.trim()) {
-    const cont = applyContinuityPolicy(ctx.continuityInject, ctx.shotSize);
-    if (cont.text) {
-      supportParts.push(cont.text);
-      sources.push(cont.truncated ? "cross.continuity.truncated" : "cross.continuity");
-    } else if (cont.omitted) {
+    let contText: string | null = null;
+    let contOmitted = false;
+    let contTrunc = false;
+    try {
+      const { softenContinuityForFirstFrame } =
+        require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      const soft = softenContinuityForFirstFrame({
+        continuity: ctx.continuityInject,
+        visualDescription: primary?.text ?? ctx.visualDescription,
+        maxChars: 36,
+        castNames: (ctx.characters ?? [])
+          .filter((c) => c.kind !== "scene")
+          .map((c) => c.name || "")
+          .filter(Boolean),
+      });
+      contText = soft.text;
+      contTrunc = soft.truncated;
+      if (soft.strippedContamination) sources.push("cross.continuity.stripContamination");
+      if (soft.omittedOffCast) sources.push("cross.continuity.stripOffCast");
+      if (!soft.text && soft.strippedContamination) sources.push("cross.continuity.omitEmpty");
+    } catch {
+      const cont = applyContinuityPolicy(ctx.continuityInject, ctx.shotSize);
+      contText = cont.text;
+      contOmitted = cont.omitted;
+      contTrunc = cont.truncated;
+    }
+    if (contText) {
+      const hard = predPack.hardConstraintLine;
+      supportParts.push(contText.startsWith("continuity:") ? contText : `continuity: ${contText}`);
+      if (hard && !supportParts.some((p) => p.includes("场面硬约束")) && !descParts.some((p) => p.includes("场面硬约束"))) {
+        descParts.push(hard);
+        sources.push("desc.hardConstraint.reassertAfterContinuity");
+      }
+      sources.push(contTrunc ? "cross.continuity.truncated" : "cross.continuity");
+    } else if (contOmitted) {
       sources.push("cross.continuity.ecuOmit");
     }
   }
-  layerMouthLipGuard(ctx, supportParts, sources);
+  layerMouthLipGuard(ctx, supportParts, sources, recipeAdapt);
   layerQcStrengthen(ctx, supportParts, sources);
 
   // Declare composition line only when literary description already signals seating/power
@@ -776,7 +1338,7 @@ export function composeStillPrompt(
     warnings.push("stripped face-rewrite phrases");
   }
 
-  if (!measureVisualBody(visualBody).ok && layerSkeletonScene(ctx, descParts, sources)) {
+  if (!measureVisualBody(visualBody).ok && layerSkeletonScene(ctx, descParts, sources, recipeAdapt)) {
     didSynthesize = true;
     visualBody = [...descParts, ...supportParts].filter(Boolean).join("。").replace(/。。+/g, "。").trim();
   }
@@ -785,7 +1347,7 @@ export function composeStillPrompt(
   if (qp02?.severity === "WARN") warnings.push(qp02.message);
   if (qp02 && qp02.severity === "BLOCK") {
     if (hasAnyAnchor(ctx)) {
-      if (layerSkeletonScene(ctx, descParts, sources)) {
+      if (layerSkeletonScene(ctx, descParts, sources, recipeAdapt)) {
         didSynthesize = true;
         visualBody = [...descParts, ...supportParts].filter(Boolean).join("。").replace(/。。+/g, "。").trim();
       }
@@ -846,11 +1408,58 @@ export function composeStillPrompt(
   let compositionContractApplied = false;
   let recipeTail = "";
   if (qualityMode === "hq_update") {
-    recipeTail = predPack.hasSeatingOrKneel
-      ? "竖屏9:16安全区构图，权力位站位清晰，正脸朝向镜头且主体不裁切，高细节视频首帧；微表情落在锁定脸型上，禁止重塑五官身份。"
-      : STILL_HQ_FIRST_FRAME_RECIPE_ZH_EN;
+    if (recipeAdapt.useNonFaceHqRecipe && !predPack.hasSeatingOrKneel) {
+      recipeTail =
+        recipeAdapt.mode === "prop_cu" || recipeAdapt.mode === "empty"
+          ? PROP_CU_HQ_RECIPE
+          : HAND_CU_HQ_RECIPE;
+      sources.push("compositionContract.recipeAdapt");
+    } else {
+      recipeTail = predPack.hasSeatingOrKneel
+        ? "竖屏9:16安全区构图，权力位站位清晰，正脸朝向镜头且主体不裁切，高细节视频首帧；微表情落在锁定脸型上，禁止重塑五官身份。"
+        : STILL_HQ_FIRST_FRAME_RECIPE_ZH_EN;
+      sources.push("compositionContract");
+    }
     compositionContractApplied = true;
-    sources.push("compositionContract");
+    // Anti-collage lock (视频首帧硬约束) — works without VLM; 四视图资产可沿用
+    try {
+      const {
+        STILL_SINGLE_FRAME_LOCK_ZH,
+        STILL_SHEET_AS_IDENTITY_ONLY_ZH,
+      } = require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      if (!descParts.some((p) => /单镜头成片|禁止四视图/.test(p)) && !supportParts.some((p) => /单镜头成片|禁止四视图/.test(p))) {
+        supportParts.push(STILL_SINGLE_FRAME_LOCK_ZH);
+        sources.push("identity.singleFrameLock");
+      }
+      // Always on hq with cast: sheet cref is common; tell model identity-only even without Key
+      const hasCast = (ctx.characters ?? []).some((c) => c.kind !== "scene");
+      if (
+        hasCast &&
+        !supportParts.some((p) => /仅借脸型|四视图作身份|严禁复刻多格/.test(p))
+      ) {
+        supportParts.push(STILL_SHEET_AS_IDENTITY_ONLY_ZH);
+        sources.push("identity.sheetAsIdentityOnly");
+      }
+    } catch {
+      /* optional */
+    }
+  }
+
+  // Collision guard: never emit hand-cu forbid-face tails on seating mid-shots
+  if (predPack.hasSeatingOrKneel) {
+    const { stripCollidingRecipeLayers } =
+      require("./stillLiteraryIntentSsot") as typeof import("./stillLiteraryIntentSsot");
+    const stripped = stripCollidingRecipeLayers(visualBody, { hasSeating: true });
+    if (stripped.stripped.length) {
+      visualBody = stripped.cleaned;
+      sources.push("collision.stripHandCuOnSeating");
+    }
+    if (/本镜只出手|人像头面部抢戏|手部\/袖口/.test(recipeTail)) {
+      recipeTail = predPack.hasSeatingOrKneel
+        ? "竖屏9:16安全区构图，权力位站位清晰，正脸朝向镜头且主体不裁切，高细节视频首帧；微表情落在锁定脸型上，禁止重塑五官身份。"
+        : recipeTail;
+      sources.push("collision.replaceRecipeTail");
+    }
   }
 
   const policy = precheckContentPolicy(visualBody);
@@ -862,24 +1471,105 @@ export function composeStillPrompt(
   }
 
   // Strip mid-body --cref/--sref; emit ordered cref only at tail
+  let emptyShotMode = false;
+  try {
+    const { hasEmptyShotMark } = require("../quality/shotQualityPredicates") as typeof import("../quality/shotQualityPredicates");
+    emptyShotMode =
+      hasEmptyShotMark(primary?.text ?? ctx.visualDescription ?? "") ||
+      hasEmptyShotMark(descParts.join(" "));
+  } catch {
+    /* optional */
+  }
   const strippedBody = stripIdentityTokens(visualBody);
   visualBody = strippedBody.body;
+  let orderedCodes = emptyShotMode ? [] : identityBind.orderedCodes.slice();
+  if (!emptyShotMode && !orderedCodes.length) {
+    const namedImaged = (ctx.characters ?? []).filter(
+      (c) => c.kind !== "scene" && c.code && /^CHAR-/i.test(String(c.code)) && c.hasImage === true,
+    );
+    if (namedImaged.length) {
+      orderedCodes = namedImaged.map((c) => String(c.code));
+      sources.push("identity.nameToChar");
+    }
+  }
+  if (!emptyShotMode && !orderedCodes.length) {
+    try {
+      const { hasFaceCue } = require("../quality/shotQualityPredicates") as typeof import("../quality/shotQualityPredicates");
+      const chars = (ctx.characters ?? []).filter((c) => c.kind !== "scene");
+      const hasNamed = chars.some((c) => c.name || c.code);
+      const face =
+        hasFaceCue(visualBody) || hasFaceCue(String(ctx.visualDescription ?? "")) || hasNamed;
+      if (face) {
+        const namedNoImage = chars.some((c) => (c.name || c.code) && c.hasImage === false);
+        const primaryBlock = buildPrimaryBlock("chat_repair", {
+          stage: "prompt",
+          userMessageOverride: namedNoImage
+            ? "出脸角色缺定妆图，请回 CD/AS 补定妆后再生成（禁止无 cref 假绿）"
+            : "出脸描写缺 CHAR/--cref，请回 SB 补 charCodes 或重设计绑定后再生成",
+        });
+        return {
+          ok: false,
+          prompt: "",
+          visualBody,
+          didSynthesize,
+          scrubbed: scrubRaw.scrubbed || dirtyInput,
+          composeMode: effectiveMode,
+          sources: [...sources, "identity.crefMissingBlock"],
+          warnings: [...warnings, "DEX-ASSET-CREF"],
+          entityAnchors,
+          blockReason: "DEX-ASSET-CREF",
+          primaryNextStep: primaryBlock.primaryNextStep,
+          userMessage: primaryBlock.userMessage,
+          ctaLabel: primaryBlock.ctaLabel,
+          compositionContractApplied: false,
+          complianceHit,
+          qp02Blocked: false,
+          missingLeadAsset: namedNoImage,
+          dirtyInput,
+        };
+      }
+    } catch {
+      /* optional */
+    }
+  }
   const orderedTokens = cleanTokenTail(
-    [rawTokens, strippedBody.tokenTail, identityBind.crefTail ?? ""].filter(Boolean).join(" "),
-    identityBind.orderedCodes,
+    [rawTokens, strippedBody.tokenTail, emptyShotMode ? "" : identityBind.crefTail ?? ""].filter(Boolean).join(" "),
+    orderedCodes,
     { omitSref: bgPolicyResult.omitSrefToken },
   );
-  if (identityBind.orderedCodes.length) sources.push("identity.crefOrder");
+  if (orderedCodes.length) sources.push("identity.crefOrder");
   if (bgPolicyResult.omitSrefToken) sources.push("bgPolicy.omitSref");
 
   const promptRaw = [visualBody, recipeTail, orderedTokens].filter(Boolean).join(" ").replace(/\s{2,}/g, " ").trim();
   const recipeHeal = healStillRecipePolicy(promptRaw, {
-    charCodeCount: identityBind.orderedCodes.filter((c) => /^CHAR-/i.test(c)).length,
+    charCodeCount: orderedCodes.filter((c) => /^CHAR-/i.test(c)).length,
   });
-  const prompt = recipeHeal.prompt;
+  let prompt = recipeHeal.prompt;
   if (recipeHeal.changed) {
     sources.push("recipe.heal");
     for (const id of recipeHeal.healed) sources.push(`recipe.heal.${id}`);
+  }
+  try {
+    const { sanitizeFirstFrameEgressSoup, healStillLiteraryEgress } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    const cleaned = sanitizeFirstFrameEgressSoup(prompt);
+    if (cleaned !== prompt) {
+      prompt = cleaned;
+      sources.push("identity.sanitizeFirstFrameSoup");
+    }
+    const healed = healStillLiteraryEgress({
+      prompt,
+      visualDescription: primary?.text ?? ctx.visualDescription,
+      hasSeatingOrKneel: predPack.hasSeatingOrKneel,
+      castNames: charNamesForBind,
+    });
+    if (healed.prompt !== prompt) {
+      prompt = healed.prompt;
+      sources.push("identity.healLiteraryEgress");
+    }
+    for (const iss of healed.issues) sources.push(`identity.egress.${iss}`);
+  } catch {
+    /* optional */
   }
 
   const coverage = assertStillDescCoverage({
@@ -890,6 +1580,42 @@ export function composeStillPrompt(
   });
   if (!coverage.ok) {
     warnings.push(`descCoverage missing: ${coverage.missing.join(",")}`);
+  }
+  // HQ seating: missing content-contract atoms → not ok (no false green)
+  if (qualityMode === "hq_update" && predPack.hasSeatingOrKneel && !coverage.ok) {
+    const seatingMissing = coverage.missing.filter(
+      (id) => /seating|role:|prop:|composition:|场面硬约束|抄书|端坐|跪|太师椅|蒲团/.test(id),
+    );
+    if (seatingMissing.length) {
+      const primaryBlock = buildPrimaryBlock("chat_repair", {
+        stage: "prompt",
+        userMessageOverride: `文学意图原子未进提示词（${seatingMissing.slice(0, 4).join("、")}）；请回 SB 检查 VD 或重 compose，禁止缺抄书/座次假绿`,
+      });
+      return {
+        ok: false,
+        prompt,
+        visualBody,
+        didSynthesize,
+        scrubbed: scrubRaw.scrubbed || dirtyInput,
+        composeMode: effectiveMode,
+        sources: [...sources, "mustSurvive.hqBlock"],
+        warnings: [...warnings, "PROMPT-FIDELITY"],
+        entityAnchors,
+        blockReason: "PROMPT-FIDELITY",
+        primaryNextStep: primaryBlock.primaryNextStep,
+        userMessage: primaryBlock.userMessage,
+        ctaLabel: primaryBlock.ctaLabel,
+        compositionContractApplied,
+        complianceHit,
+        qp02Blocked: false,
+        missingLeadAsset: false,
+        dirtyInput,
+        descCoverageOk: false,
+        descCoverageMissing: coverage.missing,
+        orderedCrefCodes: orderedCodes,
+        recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
+      };
+    }
   }
 
   if (!measureVisualBody(visualBody).ok) {
@@ -918,7 +1644,7 @@ export function composeStillPrompt(
       dirtyInput,
       descCoverageOk: coverage.ok,
       descCoverageMissing: coverage.missing,
-      orderedCrefCodes: identityBind.orderedCodes,
+      orderedCrefCodes: orderedCodes,
       recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
     };
   }
@@ -1003,4 +1729,72 @@ export function resolveComposeMode(input: {
   if (input.preferFidelity) return "fidelity";
   if (state === "composed" || state === "refined" || state === "fidelity" || state === "hq_ok") return "refine";
   return "full";
+}
+
+/**
+ * Shared burn/preview/persist ingress: parse reason meta → previous body → forceFull drop.
+ * Call sites must use this so prevMeta is always declared before use.
+ */
+export type StillPreviousIngress = {
+  prevMeta: Partial<StillQualityMeta> | null;
+  prevBody: string;
+  composeMode: ComposeMode;
+  forceFull: boolean;
+  /** Assign to ctx.previousVisualBody (undefined when forceFull / empty). */
+  previousVisualBody: string | undefined;
+  /** Mode for composeStillPrompt after forceFull policy (explicit requestedMode wins). */
+  effectiveMode: ComposeMode;
+};
+
+export function buildStillPreviousIngress(input: {
+  reason?: unknown;
+  storedPrompt?: string | null;
+  requestPrompt?: string | null;
+  requestedMode?: ComposeMode | null;
+  currentHash?: string | null;
+  preferFidelity?: boolean;
+  /** When false (no storyboard), skip previous/meta load. Default true. */
+  loadPrevious?: boolean;
+}): StillPreviousIngress {
+  const loadPrevious = input.loadPrevious !== false;
+  const requestPrompt = String(input.requestPrompt ?? "");
+  const prevMeta = loadPrevious ? parseStillMetaFromReason(input.reason) : null;
+
+  let prevBody = "";
+  if (loadPrevious) {
+    const raw = scrubStillPromptNoise(
+      stripIdentityTokens(String(prevMeta?.promptUsed ?? input.storedPrompt ?? requestPrompt)).body,
+    ).cleaned;
+    prevBody = raw ? stripStaleBindingFromPrevious(raw) : "";
+  }
+
+  const composeMode = resolveComposeMode({
+    requested: input.requestedMode,
+    existingPrompt: requestPrompt || String(input.storedPrompt ?? ""),
+    promptState: prevMeta?.promptState,
+    composeHash: prevMeta?.composeHash,
+    currentHash: input.currentHash,
+    preferFidelity: input.preferFidelity,
+  });
+
+  let forceFull =
+    isDirtyStillPrompt(requestPrompt) ||
+    !requestPrompt.trim() ||
+    prevMeta?.promptState === "stale";
+  try {
+    const { shouldWarnOneBeat } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+    if (prevBody && shouldWarnOneBeat(prevBody)) forceFull = true;
+  } catch {
+    /* optional */
+  }
+
+  const effectiveMode = forceFull && !input.requestedMode ? "full" : composeMode;
+  return {
+    prevMeta,
+    prevBody,
+    composeMode,
+    forceFull,
+    previousVisualBody: forceFull || !prevBody ? undefined : prevBody,
+    effectiveMode,
+  };
 }

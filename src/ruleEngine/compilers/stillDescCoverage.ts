@@ -37,6 +37,8 @@ export function assertStillDescCoverage(input: {
     description: input.description,
     characterNames: names,
     requireDualIdentity: false,
+    // VD-declared atmosphere is content contract (烛火等) — keep even when SCENE demoted
+    bgPolicy: "keep",
   });
   // Prefer checklist; fall back to classic mustAppear when checklist empty
   if (items.length) {

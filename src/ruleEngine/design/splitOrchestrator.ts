@@ -12,85 +12,13 @@ import { rebindLedgerAfterExpand } from "./visBeatLedgerRebind";
 import { healNar14ResidualWithB } from "./nar14Residual";
 import { healLipMultiLineWithB } from "./lipSplit";
 import { diagnoseDc01 } from "./gateDiagnose";
-import { resolveRequiredDuration } from "../compilers/resolveRequiredDuration";
+import { resolveRequiredDuration, DEFAULT_EPISODE_DURATION_CAP } from "../compilers/resolveRequiredDuration";
+import { mirrorAndSyncPlanToShots } from "./dialogueMirrorSsot";
 
 export type OrchestratorLog = { step: string; detail?: string; count?: number };
 
-/**
- * Mirror plan line fields onto shots by lineId; also push missing plan lines into first speak shot.
- */
-export function mirrorAndSyncPlanToShots(
-  planLines: Nar14LineLike[],
-  shots: Record<string, unknown>[],
-): { shots: Record<string, unknown>[]; mirrored: number; appended: number } {
-  const byId = new Map<string, Nar14LineLike>();
-  for (const pl of planLines) {
-    if (pl.lineId) byId.set(String(pl.lineId), pl);
-  }
-  let mirrored = 0;
-  let appended = 0;
-  const present = new Set<string>();
-
-  const nextShots = shots.map((s) => {
-    const n = { ...((s.narrative as object) ?? {}) } as {
-      dialogue?: { lines?: Nar14LineLike[] };
-      shotSize?: string;
-    };
-    const lines = [...(n.dialogue?.lines ?? [])] as Nar14LineLike[];
-    for (let i = 0; i < lines.length; i++) {
-      const lid = lines[i]?.lineId ? String(lines[i]!.lineId) : "";
-      if (lid) present.add(lid);
-      const src = lid ? byId.get(lid) : undefined;
-      if (!src) continue;
-      const cur = { ...lines[i]! };
-      if (src.splitHint && !cur.splitHint) {
-        cur.splitHint = src.splitHint;
-        mirrored++;
-      }
-      if (src.reactionAction && !cur.reactionAction) {
-        cur.reactionAction = src.reactionAction;
-        mirrored++;
-      }
-      if (src.functions?.length && !cur.functions?.length) {
-        cur.functions = [...src.functions];
-        mirrored++;
-      }
-      if (src.text && cur.text !== src.text && lid) {
-        /* keep shot text if already set; plan wins only for metadata */
-      }
-      lines[i] = cur;
-    }
-    n.dialogue = { lines };
-    return { ...s, narrative: n };
-  });
-
-  const missing = planLines.filter((p) => p.lineId && !present.has(String(p.lineId)));
-  if (missing.length && nextShots.length) {
-    // Distribute missing lines: one new speak shot per line (never dump all onto one dialogue shot → multi_line).
-    for (const m of missing) {
-      const template =
-        nextShots.find((s) => {
-          const lines = (s.narrative as { dialogue?: { lines?: unknown[] } })?.dialogue?.lines ?? [];
-          return lines.length > 0;
-        }) ?? nextShots[0]!;
-      const n = { ...((template.narrative as object) ?? {}) } as { dialogue?: { lines?: Nar14LineLike[] } };
-      nextShots.push({
-        ...template,
-        clientId: `${String(template.clientId ?? template.shotIndex ?? "s")}-sync-${m.lineId}`,
-        shotIndex: undefined,
-        _mirrorAppend: true,
-        narrative: { ...n, dialogue: { lines: [{ ...m }] } },
-      });
-      appended++;
-    }
-    nextShots.forEach((s, i) => {
-      s.shotIndex = i + 1;
-      s.index = i;
-    });
-  }
-
-  return { shots: nextShots, mirrored, appended };
-}
+/** @deprecated use dialogueMirrorSsot — re-export for callers */
+export { mirrorAndSyncPlanToShots } from "./dialogueMirrorSsot";
 
 export function runSplitOrchestrator(
   input: {
@@ -99,6 +27,8 @@ export function runSplitOrchestrator(
     meta?: Record<string, unknown> | null;
     applyClauseSplit?: boolean;
     applyVisBeatExpanders?: boolean;
+    /** false：仅 mirror/时长；禁 residual B / 同文唇拆（autoHeal diagnose-only） */
+    applySemanticSplit?: boolean;
     profileId?: string;
   },
 ): {
@@ -111,18 +41,22 @@ export function runSplitOrchestrator(
   const log: OrchestratorLog[] = [];
   const planData = { ...(input.planData ?? {}) } as Record<string, unknown>;
   let shots = [...input.shots];
+  const allowSemantic = input.applySemanticSplit !== false;
 
   // 1) VisBeat / weapon / cluster expanders first (compat)
-  if (input.applyVisBeatExpanders !== false) {
+  if (allowSemantic && input.applyVisBeatExpanders !== false) {
     const exp = runShotExpanders(shots, {
       meta: input.meta,
       profileId: input.profileId,
       applyClusters: true,
+      applyStillOneBeat: true,
     });
     shots = exp.shots;
     for (const l of exp.log) {
       if (l.expanded) log.push({ step: `expander:${l.expanderId}`, count: l.count, detail: l.detail });
     }
+  } else if (!allowSemantic) {
+    log.push({ step: "semantic_split_skipped", detail: "diagnose_only" });
   }
 
   // 2) Clause split on plan + shots
@@ -151,47 +85,219 @@ export function runSplitOrchestrator(
   shots = sync.shots;
   log.push({ step: "mirror_sync", count: sync.mirrored, detail: `appended=${sync.appended}` });
 
-  // 3b) Residual NAR-14 → B cluster + truthful bind + re-sync
-  const residualHeal = healNar14ResidualWithB({ planLines, shots, profileId: input.profileId });
-  if (residualHeal.expandedCount || residualHeal.bound) {
-    planData.dialoguePlan = {
-      ...((planData.dialoguePlan as object) ?? {}),
-      lines: residualHeal.planLines,
-    };
-    planLines = residualHeal.planLines;
-    shots = residualHeal.shots;
-    log.push({
-      step: "nar14_residual_B",
-      count: residualHeal.expandedCount,
-      detail: `bound=${residualHeal.bound};remain=${residualHeal.remainingResiduals.length}`,
-    });
-  }
-
-  // 3c) Multi-line lip pressure → cluster split (same SSOT as burn needsSplit)
-  const lipHeal = healLipMultiLineWithB({ shots, profileId: input.profileId });
-  if (lipHeal.expandedCount || lipHeal.healedShotIndexes.length) {
-    shots = lipHeal.shots;
-    log.push({
-      step: "lip_multi_B",
-      count: lipHeal.expandedCount,
-      detail: `healed=${lipHeal.healedShotIndexes.join(",")};remain=${lipHeal.remainingPressure}`,
-    });
-  }
-
-  // 3d) Re-align durations after split (respect vendor; never raise into needsSplit)
-  shots = shots.map((s) => {
-    const req = resolveRequiredDuration(s);
-    if (req.needsSplit || req.overVendorMax) return s;
-    if (req.canSilentRaise && req.required > req.authorDuration) {
-      return { ...s, duration: req.required };
+  // 3a) Placement heal + OS peel (M8) before semantic expand
+  try {
+    const { healMisboundDialoguePlacement, matchDialogueLinesToShots } =
+      require("./dialoguePlacementMatch") as typeof import("./dialoguePlacementMatch");
+    const place = healMisboundDialoguePlacement(shots);
+    shots = place.shots;
+    if (place.stripped || place.peeledToAudio) {
+      log.push({
+        step: "placement_heal",
+        count: place.stripped + place.peeledToAudio,
+        detail: `remain=${place.remainingPressure}`,
+      });
     }
-    return s;
-  });
+    const match = matchDialogueLinesToShots({ planLines, shots });
+    if (match.confirmCount) {
+      log.push({ step: "placement_match_confirm", count: match.confirmCount });
+    }
+  } catch {
+    /* optional */
+  }
+  try {
+    const { syncOsPeelToDialoguePlan } =
+      require("./osPeelToDialoguePlan") as typeof import("./osPeelToDialoguePlan");
+    const fake = { preDesignPack: { shots }, planData } as import("../bundle/types").ScriptBundle;
+    const os = syncOsPeelToDialoguePlan(fake, { stripOsLip: true });
+    shots = (fake.preDesignPack?.shots ?? shots) as Record<string, unknown>[];
+    planData.dialoguePlan = (fake.planData as { dialoguePlan?: unknown })?.dialoguePlan ?? planData.dialoguePlan;
+    planLines =
+      ((planData.dialoguePlan as { lines?: Nar14LineLike[] } | undefined)?.lines ?? []) as Nar14LineLike[];
+    if (os.added || os.lipStripped) {
+      log.push({ step: "os_peel", count: os.added + os.lipStripped, detail: `added=${os.added};lipStrip=${os.lipStripped}` });
+    }
+  } catch {
+    /* optional */
+  }
+
+  // 3b) Residual NAR-14 → B cluster（仅 Confirm/forceExpand 语义轨）
+  if (allowSemantic) {
+    const residualHeal = healNar14ResidualWithB({ planLines, shots, profileId: input.profileId });
+    if (residualHeal.expandedCount || residualHeal.bound) {
+      planData.dialoguePlan = {
+        ...((planData.dialoguePlan as object) ?? {}),
+        lines: residualHeal.planLines,
+      };
+      planLines = residualHeal.planLines;
+      shots = residualHeal.shots;
+      log.push({
+        step: "nar14_residual_B",
+        count: residualHeal.expandedCount,
+        detail: `bound=${residualHeal.bound};remain=${residualHeal.remainingResiduals.length}`,
+      });
+    }
+
+    // 3c) Multi-line lip pressure → cluster split (Confirm 语义子镜；禁 autoHeal 静默同文)
+    const lipHeal = healLipMultiLineWithB({ shots, profileId: input.profileId });
+    if (lipHeal.expandedCount || lipHeal.healedShotIndexes.length) {
+      shots = lipHeal.shots;
+      log.push({
+        step: "lip_multi_B",
+        count: lipHeal.expandedCount,
+        detail: `healed=${lipHeal.healedShotIndexes.join(",")};remain=${lipHeal.remainingPressure}`,
+      });
+    }
+  }
+
+  // 3d) Re-align durations after split (same kernel: LIP/DFW + snap + episodeCap)
+  {
+    try {
+      const { raiseDurationHygieneOnly } =
+        require("../export/durationHygiene") as typeof import("../export/durationHygiene");
+      const fake = { preDesignPack: { shots }, planData, meta: input.meta } as import("../bundle/types").ScriptBundle;
+      const hy = raiseDurationHygieneOnly(fake, {
+        vendorId: (input.meta as { vendorId?: string } | undefined)?.vendorId ?? null,
+        episodeCap: DEFAULT_EPISODE_DURATION_CAP,
+      });
+      shots = (fake.preDesignPack?.shots ?? shots) as Record<string, unknown>[];
+      log.push({
+        step: "duration_raise_capped",
+        count: hy.raised,
+        detail: `episodeCap=${DEFAULT_EPISODE_DURATION_CAP};raised=${hy.raised};skip_split=${hy.skippedNeedsSplit};cap=${hy.skippedCap}`,
+      });
+    } catch {
+      let used = shots.reduce((a, s) => a + Math.max(0, Number(s.duration ?? 0)), 0);
+      shots = shots.map((s) => {
+        const remaining = Math.max(0, DEFAULT_EPISODE_DURATION_CAP - used + Math.max(0, Number(s.duration ?? 0)));
+        const req = resolveRequiredDuration(s, { episodeCapRemaining: remaining });
+        if (req.needsSplit || req.overVendorMax) return s;
+        if (req.canSilentRaise && req.required > req.authorDuration) {
+          used = used - Math.max(0, Number(s.duration ?? 0)) + req.required;
+          return { ...s, duration: req.required };
+        }
+        return s;
+      });
+      log.push({
+        step: "duration_raise_capped",
+        detail: `episodeCap=${DEFAULT_EPISODE_DURATION_CAP};used≈${Math.round(used)}`,
+      });
+    }
+  }
 
   // 4) Ledger rebind
   const reb = rebindLedgerAfterExpand(shots);
   shots = reb.shots;
   if (reb.rebound) log.push({ step: "ledger_rebind", count: reb.rebound });
+
+  // 4b) Orchestrator tail: recompose + camFit + audio linkage (design ≡ import)
+  if (allowSemantic) {
+    try {
+      const { recomposeChildrenAfterSplit } =
+        require("./recomposeAfterSplit") as typeof import("./recomposeAfterSplit");
+      const rc = recomposeChildrenAfterSplit(shots);
+      if (rc?.shots?.length) {
+        shots = rc.shots;
+        log.push({ step: "recompose_children", count: rc.recomposed ?? rc.shots.length });
+      }
+    } catch {
+      /* optional */
+    }
+    try {
+      const { runCamFitUntilClear } =
+        require("../export/camFitHygiene") as typeof import("../export/camFitHygiene");
+      const fake = { preDesignPack: { shots }, planData, meta: input.meta } as import("../bundle/types").ScriptBundle;
+      const cam = runCamFitUntilClear(fake, { chatStrict: false, maxRounds: 2 });
+      shots = (fake.preDesignPack?.shots ?? shots) as Record<string, unknown>[];
+      log.push({
+        step: "cam_fit_tail",
+        detail: `confirm=${cam.confirmRequired};remain=${cam.remainingMustSplit}`,
+      });
+    } catch {
+      /* optional */
+    }
+    try {
+      const { resolveAudioShotLinkage } =
+        require("../quality/audioShotLinkage") as typeof import("../quality/audioShotLinkage");
+      let mustAudio = 0;
+      for (const s of shots) {
+        const link = resolveAudioShotLinkage(s as never);
+        if (link?.role === "must_split_speak_reaction") mustAudio++;
+      }
+      if (mustAudio) log.push({ step: "audio_shot_linkage", count: mustAudio, detail: "must_split_remain" });
+    } catch {
+      /* optional */
+    }
+    try {
+      const { rebindAudioVoiceAfterSplit } =
+        require("./audioVoiceRebind") as typeof import("./audioVoiceRebind");
+      const reb = rebindAudioVoiceAfterSplit(shots);
+      shots = reb.shots;
+      if (reb.rebound || reb.clearedOrphanLip) {
+        log.push({
+          step: "audio_voice_rebind",
+          count: reb.rebound + reb.clearedOrphanLip,
+          detail: `rebound=${reb.rebound};orphanLipCleared=${reb.clearedOrphanLip}`,
+        });
+      }
+    } catch {
+      /* optional */
+    }
+    try {
+      const { sliceChildrenAfterSplit } =
+        require("./orchestratorTailSlice") as typeof import("./orchestratorTailSlice");
+      const sl = sliceChildrenAfterSplit(shots);
+      shots = sl.shots;
+      log.push({
+        step: "tail_slice",
+        count: sl.microSliced + sl.durationSliced,
+        detail: `chainBeatBlocks=${sl.chainBeatBlocks};micro=${sl.microSliced};dur=${sl.durationSliced}`,
+      });
+    } catch {
+      /* optional */
+    }
+    try {
+      // speaker→CHAR: bind codes from dialogue speakers when casting table present
+      const casting =
+        (planData.castingSheet as { characters?: { name?: string; code?: string }[] } | undefined)
+          ?.characters ??
+        (planData.characterDesign as { characters?: { name?: string; code?: string }[] } | undefined)
+          ?.characters ??
+        [];
+      if (casting.length) {
+        let charHealed = 0;
+        const nameToCode = new Map(
+          casting
+            .filter((c) => c.name && c.code)
+            .map((c) => [String(c.name).replace(/（OS）|\(OS\)/g, "").trim(), String(c.code)]),
+        );
+        shots = shots.map((s) => {
+          const lines = (
+            (s.narrative as { dialogue?: { lines?: { speaker?: string }[] } } | undefined)?.dialogue
+              ?.lines ?? []
+          );
+          const codes = new Set<string>(Array.isArray(s.charCodes) ? (s.charCodes as string[]) : []);
+          let hit = false;
+          for (const l of lines) {
+            const sp = String(l.speaker ?? "")
+              .replace(/（OS）|\(OS\)/g, "")
+              .trim();
+            const code = nameToCode.get(sp);
+            if (code && !codes.has(code)) {
+              codes.add(code);
+              hit = true;
+            }
+          }
+          if (!hit) return s;
+          charHealed++;
+          return { ...s, charCodes: [...codes] };
+        });
+        if (charHealed) log.push({ step: "speaker_char_heal", count: charHealed });
+      }
+    } catch {
+      /* optional */
+    }
+  }
 
   // 5) packageVersion bump
   shots = shots.map((s) => ({
@@ -217,6 +323,10 @@ export function dryRunSplitOrchestrator(input: {
   predictedShotCount: number;
   predictedNarFails: ReturnType<typeof diagnoseNar>;
   log: OrchestratorLog[];
+  confidence: number;
+  autoEligible: boolean;
+  autoMin: number;
+  pressureShots: number;
 } {
   const r = runSplitOrchestrator({
     ...input,
@@ -225,10 +335,23 @@ export function dryRunSplitOrchestrator(input: {
   });
   const planLines =
     ((r.planData.dialoguePlan as { lines?: unknown[] } | undefined)?.lines ?? []).length;
+  const { detectLipSplitPressure } = require("./lipSplit") as typeof import("./lipSplit");
+  const { scoreSplitConfidence, loadSplitAutoMin } =
+    require("./splitConfidenceSsot") as typeof import("./splitConfidenceSsot");
+  const pressureShots = input.shots.filter((s) => detectLipSplitPressure(s).mustConfirm).length;
+  const conf = scoreSplitConfidence({
+    lineCount: pressureShots,
+    hasDifferentiatedVd: true,
+    propCuConflict: pressureShots > 0 && r.log.some((l) => /placement|prop/i.test(l.step)),
+  });
   return {
     predictedPlanLineCount: planLines,
     predictedShotCount: r.shots.length,
     predictedNarFails: r.narFails,
     log: r.log,
+    confidence: conf.confidence,
+    autoEligible: conf.autoEligible,
+    autoMin: loadSplitAutoMin(),
+    pressureShots,
   };
 }

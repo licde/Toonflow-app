@@ -41,15 +41,241 @@
       "repairPriority": "P1"
     },
     {
+      "trigger": "still_onebeat_multi",
+      "ruleIds": ["DEX-STILL-ONEBEAT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["智能拆镜", "改画面描写为一镜一拍"],
+      "defaultAction": "confirmClusterSplit",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "正推 DEX-STILL-ONEBEAT ↔ 反推同核 expandStillOneBeat/splitPlan；高置信 auto；低置信 Confirm；禁 soft_patch 顶拆"
+    },
+    {
+      "trigger": "still_cu_cast",
+      "ruleIds": ["DEX-STILL-CU-CAST"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["按文学意图降出场人数（单人特写）", "智能拆：反应特写+场面镜", "改景别为中景同框", "Confirm"],
+      "defaultAction": "sliceCastOrConfirmSplit",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": [
+        "preDesignPack.shots[].visualDescription",
+        "preDesignPack.shots[].shotSize",
+        "preDesignPack.shots[].charCodes"
+      ],
+      "note": "特写×出镜≥2：VD只点名一人→slice_cast降人数（禁拆镜Confirm）；多人同框意图→auto split；歧义 Confirm；chatStrict 禁静默拆；导入 demote；禁只 regen"
+    },
+    {
+      "trigger": "img_still_weak",
+      "ruleIds": ["IMG-STILL-QA"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["hq_update 重出静照"],
+      "defaultAction": "batchStillHq",
+      "forbidRegenWithoutDescFix": false,
+      "authoritativeFields": ["preDesignPack.shots[].generation.imagePrompt"],
+      "note": "Alias of still_firstframe_weak — DepthPolicy 须命中本行，禁止落 INFRA；CTA=batch_still"
+    },
+    {
+      "trigger": "series_continuity_shape",
+      "ruleIds": ["SH-SERIES-CONT", "SCHEMA_SHAPE", "SCHEMA_SHAPE_BLOCK", "SH-BRIEF-STRING", "SH-SCENE-AV-TAGS", "SH-MICRO-EXPR"],
+      "reverseTarget": "AS",
+      "forwardStages": ["AS", "SB"],
+      "repairPriority": "P0",
+      "presentationFork": ["改 seriesContinuity 为 record", "改 sceneAvTags 为数组", "microExpression 用 eyes/mouthDetail"],
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": [
+        "planData.narrativeBrief.seriesContinuity",
+        "planData.sceneMeta[].sceneAvTags",
+        "preDesignPack.shots[].shotDesign.performance.microExpression"
+      ],
+      "note": "霜兰令导入：形状 salvage 解锁后仍须写权威形；禁只 regen 静帧"
+    },
+    {
+      "trigger": "design_loss",
+      "ruleIds": ["DESIGN-LOSS", "DESIGN-LOSS-DURATION"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["强补可拍描写", "设定可信时长"],
+      "forbidRegenWithoutDescFix": true,
+      "note": "设计遗失：正式源 salvage 后仍缺 → SB 手补；禁发明正文/默认1s"
+    },
+    {
+      "trigger": "prompt_fidelity",
+      "ruleIds": ["PROMPT-FIDELITY"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "forbidRegenWithoutDescFix": true,
+      "note": "提示词须覆盖 VD 锚点；禁 freeform 跳过 Shot List"
+    },
+    {
+      "trigger": "dur_desync",
+      "ruleIds": ["DUR-DESYNC"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0",
+      "note": "时长只升不降；对齐 shot.duration"
+    },
+    {
+      "trigger": "cam_fit",
+      "ruleIds": ["DEX-CAM-FIT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["服务端智能拆（untilClear）", "残留→IRD-CONFIRM"],
+      "defaultAction": "runCamFitUntilClear",
+      "forbidHandRewriteShotIndex": true,
+      "note": "auto→智能拆；Confirm 仅 IRD-CONFIRM；勿诱手改镜号；Chat 下次写权威双镜"
+    },
+    {
+      "trigger": "dialogue_extra",
+      "ruleIds": ["DC-01-EXTRA"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB"],
+      "repairPriority": "P1",
+      "note": "台词乱入：删多余或对齐 plan；时长噪点（：3s）由 DC 过滤/删除，勿当台词"
+    },
+    {
+      "trigger": "vid_inherit_composition",
+      "ruleIds": ["VID-INHERIT-COMPOSITION"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "note": "静帧构图/人数/家具锚未闭合，禁绿继承视频"
+    },
+    {
+      "trigger": "chain_beat",
+      "ruleIds": ["CHAIN-BEAT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "note": "拆镜子镜须覆盖父文学锚点"
+    },
+    {
+      "trigger": "aud_orphan",
+      "ruleIds": ["AUD-ORPHAN-SPEECH"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P1",
+      "note": "无对白剥口播；OS 可压反应镜"
+    },
+    {
+      "trigger": "import_split_sync",
+      "ruleIds": ["IMPORT-SPLIT-SYNC"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB"],
+      "repairPriority": "P0",
+      "forbidRegenWithoutDescFix": true,
+      "note": "拆后写库失败=愈失败"
+    },
+    {
+      "trigger": "audio_missing",
+      "ruleIds": ["CHAT-AUD-01"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P1",
+      "note": "有词无声须 seed audioPrompt"
+    },
+    {
+      "trigger": "intent_pic",
+      "ruleIds": ["DEX-INTENT-PIC"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription", "shotDesignIntent[].picture"],
+      "note": "intent.picture↔VD 同核；修后须 designExit"
+    },
+    {
+      "trigger": "ird_confirm",
+      "ruleIds": ["IRD-CONFIRM"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "defaultAction": "confirmClusterSplit",
+      "forbidRegenWithoutDescFix": true,
+      "note": "低置信 IRD 待 Confirm；禁止假绿"
+    },
+    {
+      "trigger": "dirty_still_prompt",
+      "ruleIds": ["DEX-DIRTY-STILL-PROMPT", "DEX-DUP-VD", "DEX-HAND-LIP", "VID-INHERIT-DIRTY-STILL"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "AS", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["改 VD 为一镜一拍", "VisBeat Confirm 拆手/脸（禁同文脸镜）", "手镜 lip=none", "剥裸 cref/sref", "配方适配≠回写 VD"],
+      "defaultAction": "handEditVisualDescription",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": [
+        "preDesignPack.shots[].visualDescription",
+        "preDesignPack.shots[].generation.imagePrompt",
+        "preDesignPack.shots[].shotDesign.lipSyncPolicy"
+      ],
+      "note": "脏静帧契约：真手+脸 Chat BLOCK；导入 strip soft 不静默拆；compose 配方按镜型适配禁硬注正脸；深链勿走 INFRA chat_repair 空跳"
+    },
+    {
+      "trigger": "aud_speak_react",
+      "ruleIds": ["DEX-CAM-FIT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["服务端智能拆说话镜+反应镜", "残留→IRD-CONFIRM"],
+      "defaultAction": "runCamFitUntilClear",
+      "forbidHandRewriteShotIndex": true,
+      "forbidRegenWithoutDescFix": true,
+      "note": "口播+反应同镜：untilClear 自动拆；Confirm 仅低置信；禁手改镜号；修后 designExit"
+    },
+    {
       "trigger": "still_firstframe_dirty",
-      "ruleIds": ["STILL-FIRSTFRAME-DIRTY", "STILL-FIRSTFRAME-STALE", "IMG-CREF-CHAR", "DC-16", "DEX-STILL-ONEBEAT", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER"],
+      "ruleIds": ["STILL-FIRSTFRAME-DIRTY", "IMG-CREF-CHAR", "DC-16", "DEX-STILL-ONEBEAT", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER"],
       "reverseTarget": "SB",
       "forwardStages": ["SB", "AS", "MD-IMG", "EN"],
       "repairPriority": "P0",
-      "presentationFork": ["改画面描写", "重出静照"],
+      "presentationFork": ["智能拆镜", "改画面描写为一镜一拍", "重出静照"],
+      "defaultAction": "confirmClusterSplit",
       "forbidRegenWithoutDescFix": true,
       "authoritativeFields": ["preDesignPack.shots[].visualDescription", "characterDesign.assets[].name"],
-      "note": "身份脏主链 SB 改 visualDescription→stale→MD-IMG 重出；禁止只 regen"
+      "note": "假双脸/OS名/多拍：优先智能拆镜；禁止只 regen。真手+脸走 dirty_still_prompt；弱静照走 still_firstframe_weak；描写漂移走 still_firstframe_stale"
+    },
+    {
+      "trigger": "still_firstframe_stale",
+      "ruleIds": ["STILL-FIRSTFRAME-STALE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["确认/改 visualDescription", "stale 作废后重出 HQ"],
+      "defaultAction": "handEditVisualDescription",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "画面描写已变，旧静照作废；改 VD 后再 MD-IMG，禁止拿旧图烧视频"
+    },
+    {
+      "trigger": "still_firstframe_weak",
+      "ruleIds": ["STILL-FIRSTFRAME-WEAK", "STILL-FIRSTFRAME-MISSING"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["hq_update 重出静照"],
+      "defaultAction": "batchStillHq",
+      "forbidRegenWithoutDescFix": false,
+      "authoritativeFields": ["preDesignPack.shots[].generation.imagePrompt"],
+      "note": "弱静照/缺 visualPass/缺首帧：CTA=重出 HQ（batch_still），不要先逼用户改 VD；设计层缺口仍走 still_firstframe_dirty"
+    },
+    {
+      "trigger": "video_prompt_stub",
+      "ruleIds": ["VP-XML-ASK-STUB", "VP-CROSS-SHOT-SIDECAR", "VP-THIN-SHELL"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["sanitize 剥壳", "compileVideoPromptSpine 本镜重编"],
+      "defaultAction": "recompileVideoPrompt",
+      "forbidRegenWithoutDescFix": false,
+      "note": "薄壳/XML/跨镜PEAK：有 VD∥对白则 spine 治愈落库；仅真双空才 BLOCK。sidecar 仅本镜且在 assert 前"
     },
     {
       "trigger": "lip_duration_short",
@@ -63,10 +289,11 @@
     {
       "trigger": "still_mouth_handoff",
       "ruleIds": ["STILL-MOUTH-HANDOFF", "GEN-01"],
-      "reverseTarget": "EN",
-      "forwardStages": ["SB", "EN", "MD-VID"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG", "EN", "MD-VID"],
       "repairPriority": "P1",
-      "defaultAction": "soft_patch"
+      "defaultAction": "regen_storyboard_hq",
+      "note": "强口型闭口静照：先重出静照(MD-IMG)+EN lipSyncPolicy；禁止只 soft_patch 视频假绿；防口型死循环须双推"
     },
     {
       "trigger": "qp02_visual_short",
@@ -77,6 +304,106 @@
       "presentationFork": ["补可拍画面描写"],
       "authoritativeFields": ["preDesignPack.shots[].visualDescription", "shotDesign.picture"],
       "note": "minChars 为防空壳底线；正式标准为可拍物象。禁止只改 audit。"
+    },
+    {
+      "trigger": "cast_on_desc_missing",
+      "ruleIds": ["DEX-CAST-ON-DESC"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["补 charCodes", "改描写去名"],
+      "authoritativeFields": ["preDesignPack.shots[].charCodes", "preDesignPack.shots[].visualDescription"],
+      "forbidRegenWithoutDescFix": true
+    },
+    {
+      "trigger": "empty_shot_conflict",
+      "ruleIds": ["DEX-EMPTY-SHOT-CONSISTENCY"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["去掉空镜声明", "去掉人名/出脸"],
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription", "preDesignPack.shots[].charCodes"],
+      "forbidRegenWithoutDescFix": true
+    },
+    {
+      "trigger": "expr_speak_missing",
+      "ruleIds": ["DEX-EXPR-SPEAK", "GEN-01", "QF-EXPR-01"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["补 microExpression + lipSyncPolicy"],
+      "authoritativeFields": ["preDesignPack.shots[].shotDesign.performance", "preDesignPack.shots[].shotDesign.lipSyncPolicy"]
+    },
+    {
+      "trigger": "asset_cref",
+      "ruleIds": ["DEX-ASSET-CREF", "IMG-CREF", "QP-11", "QP-12"],
+      "reverseTarget": "AS",
+      "forwardStages": ["AS", "SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["补 assetCrefPlan / 定妆图", "烧图前绑定 --cref"],
+      "authoritativeFields": ["planData.assetCrefPlan", "characterDesign.assets", "preDesignPack.shots[].charCodes"],
+      "note": "设计侧 asset_cref；烧图缺 cref 仍可走 img_cref_missing"
+    },
+    {
+      "trigger": "shot_intent_decay",
+      "ruleIds": ["DEX-SHOT-INTENT"],
+      "reverseTarget": "W3",
+      "forwardStages": ["W3", "designBrief", "SB"],
+      "repairPriority": "P0",
+      "presentationFork": ["补 shotDesignIntent picture/durationSec/peakId|hookId", "可从 peakLedger 派生"],
+      "authoritativeFields": ["planData.shotDesignIntent", "planData.peakLedger", "planData.hookPlan"],
+      "note": "INTENT→W3 非 INFRA；服务端可高置信从 peak 自动补"
+    },
+    {
+      "trigger": "no_lip_dialogue",
+      "ruleIds": ["NO-LIP-DIALOGUE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["SB", "EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["去掉 no lip sync", "改 lipSyncPolicy 为 dialogue_native/subtle"],
+      "authoritativeFields": ["preDesignPack.shots[].shotDesign.lipSyncPolicy", "o_videoTrack.prompt"]
+    },
+    {
+      "trigger": "sfx_unbacked",
+      "ruleIds": ["SFX-UNBACKED", "audio_mood"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN", "MD-VID"],
+      "repairPriority": "P1",
+      "presentationFork": ["补可交付 audioCue/SFX adapter", "去掉假 sfx:<> 满分"],
+      "authoritativeFields": ["preDesignPack.shots[].audioCue", "shotDesignIntent[].sfxIntent"]
+    },
+    {
+      "trigger": "cut01_adjacent",
+      "ruleIds": ["DEX-CUT-01", "CUT-01"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB"],
+      "repairPriority": "P1",
+      "presentationFork": ["补转场", "对齐场景"]
+    },
+    {
+      "trigger": "cam_xshot",
+      "ruleIds": ["DEX-CAM-XSHOT", "CAM-XSHOT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P1",
+      "presentationFork": ["对齐运镜/转场"]
+    },
+    {
+      "trigger": "svq_motion_fail",
+      "ruleIds": ["motion_fidelity", "QC-SVQ"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P1",
+      "defaultAction": "strengthen",
+      "presentationFork": ["加强 motion 提示", "重试成片"]
+    },
+    {
+      "trigger": "svq_audio_fail",
+      "ruleIds": ["audio_mood"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P1",
+      "presentationFork": ["补 audioCue / ASR 覆盖"]
     },
     {
       "trigger": "runtime_type_error",
@@ -629,6 +956,20 @@
       "reverseTarget": "GB",
       "forwardStages": [
         "B",
+        "GB",
+        "SB"
+      ]
+    },
+    {
+      "trigger": "literary_stale",
+      "ruleIds": [
+        "DEX-LITERARY-STALE"
+      ],
+      "reverseTarget": "W1",
+      "forwardStages": [
+        "W1",
+        "W2",
+        "W3",
         "GB",
         "SB"
       ]

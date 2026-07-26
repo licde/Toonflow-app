@@ -79,11 +79,62 @@ jobs:
       - name: Still identity loop
         run: yarn test:still-identity-loop
 
+      - name: Bundle shape pipeline
+        run: yarn test:bundle-shape-pipeline
+
+      - name: JSON hoist / brace salvage
+        run: yarn test:json-hoist-brace
+
+      - name: DC-16 false orphan NER
+        run: yarn test:dc16-false-orphan
+
+      - name: Shot chain contract
+        run: yarn test:shot-chain-contract
+
+      - name: Still intent IRD
+        run: yarn test:still-intent-ird
+
+      - name: Frost import hardening
+        run: yarn test:frost-import-hardening
+
+      - name: Still compose triple
+        run: yarn test:still-compose-triple
+
+      - name: Design-exit NAR/DC same-kernel
+        run: yarn test:design-exit-nar-dc
+
+      - name: Redesign contract verify
+        run: yarn test:redesign-contract
+
+      - name: Design auto-close loop
+        run: yarn test:design-auto-close
+
+      - name: EP01 dual-track quality loop
+        run: yarn test:ep01-quality-loop
+
+      - name: Audit — skill/matrix/corridor dual-track
+        run: yarn audit:skill-matrix-sync
+
+      - name: Literary stale export
+        run: yarn test:literary-stale-export
+
+      - name: Still one-beat loop
+        run: yarn test:still-onebeat-loop
+
+      - name: Still quality closed loop (CU×cast / reverse SSOT / import demote)
+        run: yarn test:still-quality-closed-loop
+
       - name: QP-02 design loop
         run: yarn test:qp02-design-loop
 
+      - name: Still video quality loop
+        run: yarn test:still-video-quality-loop
+
       - name: Sync portable-kit
         run: yarn sync:portable-kit
+
+      - name: Portable-kit fixture hash gate
+        run: node -e "const m=require('./portable-kit/fixture-hashes.json'); if(!m['reverse_route_table.json']) process.exit(1); console.log('fixture-hashes ok', Object.keys(m).length)"
 
       - name: Portable-kit self-test
         run: node portable-kit/run.mjs

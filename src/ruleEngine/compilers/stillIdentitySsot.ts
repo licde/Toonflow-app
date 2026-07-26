@@ -12,6 +12,18 @@ export type StillIdentityDoctrine = {
     requireBareNamesAfterNormalize?: number;
     neverEmitWhenSingleCref?: boolean;
   };
+  refRoles?: {
+    layout?: { takesFace?: boolean; ordinalPolicy?: string };
+    failed_still?: { takesFace?: boolean; ordinalPolicy?: string };
+    cref?: { takesFace?: boolean };
+  };
+  castCardinalityPolicy?: {
+    emitExactCount?: boolean;
+    forbidExtras?: boolean;
+    mustSurvive?: boolean;
+    lineTemplate?: string;
+    stageAExactFigures?: boolean;
+  };
   oneBeat?: {
     beatVerbPattern?: string;
     maxStrongBeatsBeforeWarn?: number;

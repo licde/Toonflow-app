@@ -20,7 +20,7 @@ function ok(label: string, cond: boolean, detail = "") {
   }
 }
 
-ok("role default (sheet) aspect 4:1", resolveAssetStillAspect("role") === "4:1");
+ok("role default (identity_plate) aspect 3:1", resolveAssetStillAspect("role") === "3:1");
 ok("role identity aspect 3:1", resolveAssetStillAspect("role", "identity_plate") === "3:1");
 ok("role sheet aspect 4:1", resolveAssetStillAspect("role", "turnaround_sheet") === "4:1");
 ok("tool aspect 1:1", resolveAssetStillAspect("tool") === "1:1");
@@ -31,12 +31,12 @@ ok("derive scene aspect 16:9", resolveAssetDerivativeAspect("scene") === "16:9")
 ok("derive tool aspect 1:1", resolveAssetDerivativeAspect("tool") === "1:1");
 ok(
   "still vs derive role aspects diverge",
-  resolveAssetStillAspect("role") === "4:1" && resolveAssetDerivativeAspect("role") === "16:9",
+  resolveAssetStillAspect("role") === "3:1" && resolveAssetDerivativeAspect("role") === "16:9",
 );
 
 const defaultPrompt = buildAssetStillPrompt("role", "水墨", "沈清辞", "黑发白衣少女，全身正面");
-ok("default wrap uses 角色标准四视图", defaultPrompt.includes("角色标准四视图"));
-ok("default not 身份板 title", !defaultPrompt.includes("角色身份板"));
+ok("default wrap uses 身份板 (storyboard cref)", /身份板|cref|单人全身/.test(defaultPrompt));
+ok("default not 四视图 title", !defaultPrompt.includes("角色标准四视图"));
 
 const identityPrompt = buildAssetStillPrompt("role", "水墨", "沈清辞", "黑发白衣少女，全身正面", "identity_plate");
 ok("identity mode uses 身份板", /身份板|cref|单人全身/.test(identityPrompt));

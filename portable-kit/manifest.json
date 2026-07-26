@@ -1,7 +1,7 @@
 {
   "version": "2.0.1",
   "tier": "T1",
-  "syncedAt": "2026-07-13T08:51:41.501Z",
+  "syncedAt": "2026-07-25T21:38:37.203Z",
   "modules": [
     "portable",
     "closure",
@@ -11,8 +11,11 @@
     "validators",
     "parsers",
     "compilers",
+    "qc",
+    "quality",
+    "heal",
     "transform",
     "vendor-packs"
   ],
-  "fixtureCount": 19
+  "fixtureCount": 32
 }

@@ -59,7 +59,11 @@ export function formatDeeplinkSection(links: ChatRepairDeeplink[]): string {
   if (!links.length) return "";
   const lines = ["【深链·反推舞台】"];
   for (const l of links.slice(0, 12)) {
-    lines.push(`- ${l.blockId} → ${l.reverseTarget} (${l.trigger}) ${l.deeplink}`);
+    const camNote =
+      l.trigger === "cam_fit" || l.blockId === "DEX-CAM-FIT"
+        ? " — auto→服务端智能拆；Confirm 仅 IRD-CONFIRM；勿手改镜号"
+        : "";
+    lines.push(`- ${l.blockId} → ${l.reverseTarget} (${l.trigger}) ${l.deeplink}${camNote}`);
   }
   return lines.join("\n");
 }

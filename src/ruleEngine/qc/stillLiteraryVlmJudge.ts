@@ -123,11 +123,14 @@ function infraUnknownItems(
   items: StillFidelityItem[],
   evidence: string,
 ): VlmItemResult[] {
+  // Normalize to vlm_infra so callers never treat as literary pass:false
+  const ev =
+    evidence === "vlm_parse_fail" || evidence === "missing_id" ? evidence : "vlm_infra";
   return items.map((it) => ({
     id: it.id,
     pass: false,
     unknown: true,
-    evidence,
+    evidence: ev,
   }));
 }
 
@@ -300,7 +303,10 @@ export function isAllVlmInfraFailure(items: VlmItemResult[]): boolean {
   return items.every(
     (i) =>
       i.unknown &&
-      (i.evidence === "vlm_error" || i.evidence === "vlm_parse_fail" || i.evidence === "missing_id"),
+      (i.evidence === "vlm_infra" ||
+        i.evidence === "vlm_error" ||
+        i.evidence === "vlm_parse_fail" ||
+        i.evidence === "missing_id"),
   );
 }
 

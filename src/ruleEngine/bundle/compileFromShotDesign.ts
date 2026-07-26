@@ -21,16 +21,14 @@ export function compileFromShotDesign(shot: PreDesignShot): { imagePrompt?: stri
   ].filter(Boolean);
 
   const lip = (sd as { lipSyncPolicy?: string }).lipSyncPolicy;
-  const vidParts = [
-    cam?.shotSize ? `${cam.shotSize} static` : "medium shot static",
-    "slow push 2s",
-    shot.duration ? `duration ${shot.duration}s` : undefined,
-    lip === "subtle_natural" ? "subtle lip sync, natural mouth movement, no exaggerated mouth" : "lipSync off",
-    "motion-from-frame",
-  ].filter(Boolean);
+  // Do NOT plant thin VID stubs (medium shot static / motion-from-frame / lipSync off).
+  // Video body is authored only by compileVideoPromptSpine; leave videoPrompt empty for spine.
+  void lip;
+  void cam;
+  void shot.duration;
 
   return {
     imagePrompt: imgParts.join(", "),
-    videoPrompt: vidParts.join(", "),
+    videoPrompt: undefined,
   };
 }

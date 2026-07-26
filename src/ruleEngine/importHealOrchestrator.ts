@@ -46,6 +46,8 @@ export interface RunImportHealInput {
   checks?: string[];
   apply?: boolean;
   maxRounds?: number;
+  acknowledgeKeepLegacy?: boolean;
+  forceExpand?: boolean;
 }
 
 export interface HealLogEntry {
@@ -170,6 +172,93 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
   }
 
   let working = prep.bundle;
+
+  // Design-layer INTENT/CREF/NAR auto-close (same kernel as export) before import heals
+  if (apply) {
+    try {
+      const { applyDesignAutoCloseToBundle } =
+        require("./design/designAutoClose") as typeof import("./design/designAutoClose");
+      const ac = applyDesignAutoCloseToBundle(working, { stageId: "SB", maxRounds: 4, forceExpand: true });
+      working = ac.bundle;
+      if (ac.autoClosed.applied) {
+        for (const id of ac.autoClosed.clearedIds) salvagedRuleIds.add(id);
+        healLog.push({
+          at: now(),
+          ruleId: "SH-DESIGN-AUTO-CLOSE",
+          action: "design_auto_close",
+          detail: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"};ops=${ac.autoClosed.changes.length}`,
+        });
+        (shapeSalvageLog as ShapeSalvageEntry[]).push({
+          ruleId: "SH-DESIGN-AUTO-CLOSE",
+          path: "planData.shotDesignIntent|assetCrefPlan|dialoguePlan",
+          action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"}`,
+        });
+      }
+    } catch {
+      /* optional */
+    }
+
+    // Import ≡ design: same-kernel smart split (placement heal + SplitOrchestrator)
+    try {
+      const meta = ((working as { meta?: Record<string, unknown> }).meta ??= {});
+      if (!meta.importSplitExpanded) {
+        const { healMisboundDialoguePlacement } =
+          require("./design/dialoguePlacementMatch") as typeof import("./design/dialoguePlacementMatch");
+        const { runSplitOrchestrator } =
+          require("./design/splitOrchestrator") as typeof import("./design/splitOrchestrator");
+        const { detectLipSplitPressure } =
+          require("./design/lipSplit") as typeof import("./design/lipSplit");
+        const pack = working.preDesignPack ?? { shots: [] };
+        let shots = [...((pack.shots ?? []) as Record<string, unknown>[])];
+        const place = healMisboundDialoguePlacement(shots);
+        shots = place.shots;
+        const planData = (working.planData ?? {}) as Record<string, unknown>;
+        const needOrch = shots.some((s) => detectLipSplitPressure(s).mustConfirm) || place.remainingPressure > 0;
+        if (needOrch || place.stripped || place.peeledToAudio) {
+          const orch = runSplitOrchestrator({
+            planData,
+            shots,
+            meta,
+            applyClauseSplit: true,
+            applyVisBeatExpanders: true,
+            applySemanticSplit: true,
+          });
+          pack.shots = orch.shots as never;
+          working.preDesignPack = pack;
+          working.planData = orch.planData;
+          meta.importSplitExpanded = true;
+          const remain = orch.shots.filter((s) => detectLipSplitPressure(s).mustConfirm).length;
+          if (remain > 0) {
+            meta.lipConfirmRequired = true;
+            meta.importOkNotExitPass = true;
+          } else {
+            meta.lipConfirmRequired = false;
+          }
+          healLog.push({
+            at: now(),
+            ruleId: "SH-IMPORT-SMART-SPLIT",
+            action: "orchestrator",
+            detail: `strip=${place.stripped};peel=${place.peeledToAudio};shots=${orch.shots.length};remain=${remain};log=${orch.log.map((l) => l.step).join(",")}`,
+          });
+          (shapeSalvageLog as ShapeSalvageEntry[]).push({
+            ruleId: "SH-IMPORT-SMART-SPLIT",
+            path: "preDesignPack.shots",
+            action: `remain=${remain}`,
+          });
+          salvagedRuleIds.add("LIP-01");
+          salvagedRuleIds.add("DEX-LIP-SPLIT");
+        }
+      }
+    } catch (e) {
+      healLog.push({
+        at: now(),
+        ruleId: "SH-IMPORT-SMART-SPLIT",
+        action: "fail",
+        detail: e instanceof Error ? e.message : "err",
+      });
+    }
+  }
+
   // Fixed order D15: projectFx → orphan → F0 → precheckLoop → orphan → F0 → exportGate once
   const fxProj = apply && canSilentHeal(healBudget) ? projectFxProseOnBundle(working) : { projected: [], strippedLetterStubs: [] };
   if (fxProj.projected.length) {
@@ -193,6 +282,41 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
   const episodeCap = DEFAULT_EPISODE_DURATION_CAP;
   const used = sumShotDurations(shots0);
   const allowRaise = used < episodeCap;
+
+  // 导入兜底：同核抬时（设计主责已抬；此处清历史/旁路残留）
+  if (apply && allowRaise && canSilentHeal(healBudget)) {
+    try {
+      const { raiseDurationHygieneOnly } =
+        require("./export/durationHygiene") as typeof import("./export/durationHygiene");
+      const vendorId =
+        (working as { meta?: { vendorId?: string } }).meta?.vendorId ??
+        (working.planData as { vendorId?: string } | undefined)?.vendorId ??
+        null;
+      const hy = raiseDurationHygieneOnly(working, {
+        vendorId,
+        episodeCap,
+        respectEpisodeCap: true,
+      });
+      if (hy.raised) {
+        healBudget = consumeSilentHeal(healBudget, hy.raised);
+        salvagedRuleIds.add("LIP-01");
+        salvagedRuleIds.add("DFW-DURATION");
+        healLog.push({
+          at: now(),
+          ruleId: "LIP-01",
+          action: "import_raise_duration",
+          detail: `raised=${hy.raised};cap_skip=${hy.skippedCap};${hy.log.slice(0, 6).join(",")}`,
+        });
+        (shapeSalvageLog as ShapeSalvageEntry[]).push({
+          ruleId: "SH-DURATION-ALIGN",
+          path: "preDesignPack.shots[].duration",
+          action: `import_raise:${hy.raised};cap=${hy.skippedCap}`,
+        });
+      }
+    } catch {
+      /* optional */
+    }
+  }
 
   const capture = captureApplier();
   const precheckLoop = runPrecheckLoop(
@@ -229,14 +353,11 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
     alreadyPrepared: true,
     shapeSalvageLog,
     allowShapeSalvage: true,
+    acknowledgeKeepLegacy: Boolean(input.acknowledgeKeepLegacy),
+    forceExpand: Boolean(input.forceExpand),
   });
 
-  const chatRepairText = buildAggregatedChatRepairText(
-    exportGateFull.repairHints,
-    exportGateFull.closureSnapshot.blockIds,
-    exportGateFull.missingFieldSummary,
-    exportGateFull.blocks,
-  );
+  const chatRepairText = exportGateFull.chatRepairText;
 
   const serverFixedIds = [
     ...salvageRuleIds(shapeSalvageLog),
@@ -295,6 +416,8 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
       closureSnapshot: exportGateFull.closureSnapshot,
       coverage: exportGateFull.coverage,
       chatRepairText,
+      designExitIncomplete: exportGateFull.designExitIncomplete,
+      previewStatusLine: exportGateFull.previewStatusLine,
       blocks: exportGateFull.blocks,
       warns: exportGateFull.warns,
       repairHints: exportGateFull.repairHints,

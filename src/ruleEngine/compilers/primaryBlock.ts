@@ -37,7 +37,7 @@ const COPY: Record<
     userMessageKey: "gate.batch_still",
   },
   regen_storyboard_hq: {
-    userMessage: "分镜图构图不够好，视频会糊",
+    userMessage: "分镜静照未过高质量（不可作视频首帧），请更新高质量分镜图",
     ctaLabel: "更新高质量分镜图",
     userMessageKey: "gate.regen_storyboard_hq",
   },

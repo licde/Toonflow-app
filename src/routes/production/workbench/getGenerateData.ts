@@ -153,14 +153,21 @@ export default router.post(
     }
 
     const trackData = await u.db("o_videoTrack").where({ projectId, scriptId });
+    // Only tracks still bound to ≥1 storyboard — orphans (re-sync leftover) poison regen with false「缺画面」
+    const linkedTrackIds = new Set(
+      storyboardList.map((s) => s.trackId).filter((id): id is number => id != null && Number.isFinite(Number(id))),
+    );
+    const liveTracks = linkedTrackIds.size
+      ? trackData.filter((t) => linkedTrackIds.has(Number(t.id)))
+      : trackData;
     const videoList = await u.db("o_video").whereIn(
       "videoTrackId",
-      trackData.map((t) => t.id),
+      liveTracks.map((t) => t.id),
     );
     const trackList: TrackItem[] = [];
-    const trackIdMap = [...new Set<number>(trackData.map((t) => t.id!))];
+    const trackIdMap = [...new Set<number>(liveTracks.map((t) => t.id!))];
     for (const trackId of trackIdMap) {
-      const item = trackData.find((t) => t.id === trackId);
+      const item = liveTracks.find((t) => t.id === trackId);
       const trackStoryboards = storyboardList.filter((s) => s.trackId === trackId);
       const seedVideoPrompt = trackStoryboards.find((s) => s.videoDesc?.trim())?.videoDesc?.trim() ?? "";
       trackList.push({

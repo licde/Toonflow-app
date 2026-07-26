@@ -63,6 +63,11 @@ export interface MergeReport {
 export interface ExportGateSummary {
   exportAllowed: boolean;
   chatRepairText?: string;
+  /** SB designExit failed */
+  designExitIncomplete?: boolean;
+  /** Prefer this for preview toast — 阻断时不以 salvage 冒充已修；须重设计优先于设计未闭合 */
+  previewStatusLine?: string;
+  redesignRequired?: boolean;
   blocks?: { id: string; message?: string; field?: string; shotIndex?: number }[];
   warns?: { id: string; message?: string }[];
   repairHints?: RepairHint[];

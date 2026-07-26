@@ -1,5 +1,6 @@
 /**
  * DesignSplit FE contract — mirror POST /api/scriptAgent/designSplitOps
+ * Unified ConfirmBar for lip / NAR / VisBeat / IRD (M9).
  */
 export type DesignSplitOpsAction =
   | "proposeClauseSplit"
@@ -7,7 +8,8 @@ export type DesignSplitOpsAction =
   | "dryRun"
   | "undo"
   | "forwardReentry"
-  | "decideLine";
+  | "decideLine"
+  | "stockMigrate";
 
 export type DesignSplitOpsRequest = {
   projectId: number;
@@ -19,13 +21,26 @@ export type DesignSplitOpsRequest = {
   syncStoryboard?: boolean;
   applyClauseSplit?: boolean;
   applyVisBeatExpanders?: boolean;
+  forceExpand?: boolean;
 };
 
-/** ConfirmBar a11y: busy while confirm; announce result. */
+export type DesignSplitDryRunResult = {
+  predictedPlanLineCount: number;
+  predictedShotCount: number;
+  confidence: number;
+  autoEligible: boolean;
+  autoMin: number;
+  pressureShots: number;
+  a11ySummary?: string;
+};
+
+/** ConfirmBar a11y: busy while confirm; announce result. Undo via designSplitLifecycle (primary). */
 export type DesignSplitConfirmBarProps = {
   explain: string;
   a11yHint?: string;
   ariaBusy?: boolean;
+  confidence?: number;
+  autoEligible?: boolean;
   onConfirm: () => void;
   onUndo?: () => void;
   onDryRun?: () => void;

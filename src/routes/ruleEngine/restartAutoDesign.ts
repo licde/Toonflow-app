@@ -59,10 +59,36 @@ export default router.post(
         { script: scriptRow.content ?? "", context: ctx, fromStage: stage },
         async (output) => {
           flowData = { ...flowData, scriptPlan: output.scriptPlan, storyboardTable: output.storyboardTable, storyboard: output.storyboard as FlowData["storyboard"] };
+          // M13: sidepath must not dump-mirror; panels keep clientId / banIndexMedia flags
           const sync = await syncStoryboardToDb(u.db, projectId, scriptId, output.storyboard, { replaceAll: true });
           flowData.storyboard = sync.panels as FlowData["storyboard"];
           await saveFlowData(projectId, scriptId, flowData);
           const pkg = await syncFromFlowData(u.db, { projectId, scriptId, ...flowData });
+          try {
+            const { mirrorDialoguePlanToShots } =
+              require("@/ruleEngine/bundle/normalizePreDesignPack") as typeof import("@/ruleEngine/bundle/normalizePreDesignPack");
+            const { runSplitOrchestrator } =
+              require("@/ruleEngine/design/splitOrchestrator") as typeof import("@/ruleEngine/design/splitOrchestrator");
+            // Prefer EpisodePackage shots when present — SSOT mirror only (no private dump)
+            const asBundle = {
+              planData: { dialoguePlan: (pkg as { dialoguePlan?: unknown }).dialoguePlan },
+              preDesignPack: { shots: (pkg.shots ?? []).map((s, i) => ({ ...s, shotIndex: i + 1 })) },
+            };
+            mirrorDialoguePlanToShots(asBundle as never);
+            const orch = runSplitOrchestrator({
+              planData: asBundle.planData as Record<string, unknown>,
+              shots: (asBundle.preDesignPack.shots ?? []) as Record<string, unknown>[],
+              applySemanticSplit: true,
+            });
+            (pkg as { meta?: Record<string, unknown> }).meta = {
+              ...((pkg as { meta?: object }).meta ?? {}),
+              importSplitExpanded: true,
+              restartAutoDesignOrch: true,
+            };
+            void orch;
+          } catch {
+            /* optional — diagnose path still saves pkg */
+          }
           await saveEpisodePackage(u.db, pkg);
         },
         useLlm,

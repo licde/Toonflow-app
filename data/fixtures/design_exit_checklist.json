@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "description": "Design-time exit checklist SSOT — doctrine + layered rhythm + recon applied; no false green",
+  "description": "Design-time exit checklist SSOT — doctrine + layered rhythm + recon applied; no false green. expandProvenance: setStepStatus/exportGate/prepare 默认 diagnose_only，仅 forceExpand 才 apply IRD/cam/oneBeat。",
   "forbidFalseGreen": true,
   "byStage": {
     "P0": [
@@ -58,9 +58,21 @@
       "DEX-VIS-SPLIT",
       "DEX-VIS-TAG-MISSING",
       "DEX-STILL-ONEBEAT",
+      "DEX-STILL-CU-CAST",
       "DEX-STILL-OS-NAME",
       "DEX-STILL-FILLER",
-      "DEX-QP-02"
+      "DEX-QP-02",
+      "DEX-CAST-ON-DESC",
+      "DEX-EMPTY-SHOT-CONSISTENCY",
+      "DEX-EXPR-SPEAK",
+      "DEX-CUT-01",
+      "DEX-CAM-XSHOT",
+      "DESIGN-LOSS",
+      "CHAIN-BEAT",
+      "DEX-CAM-FIT",
+      "DC-01-EXTRA",
+      "DEX-INTENT-PIC",
+      "IRD-CONFIRM"
     ],
     "designBrief": [
       "DEX-PAYPOINT",
@@ -70,9 +82,13 @@
       "DEX-SFX-BRIDGE",
       "DEX-VIS-TAG-MISSING",
       "DEX-STILL-ONEBEAT",
+      "DEX-STILL-CU-CAST",
       "DEX-STILL-OS-NAME",
       "DEX-STILL-FILLER",
-      "DEX-QP-02"
+      "DEX-QP-02",
+      "DEX-CAST-ON-DESC",
+      "DEX-EMPTY-SHOT-CONSISTENCY",
+      "DEX-EXPR-SPEAK"
     ],
     "SB": [
       "DEX-ESTABLISHING",
@@ -89,9 +105,25 @@
       "DEX-VIS-SPLIT",
       "DEX-VIS-TAG-INCONSISTENT",
       "DEX-STILL-ONEBEAT",
+      "DEX-STILL-CU-CAST",
       "DEX-STILL-OS-NAME",
       "DEX-STILL-FILLER",
-      "DEX-QP-02"
+      "DEX-QP-02",
+      "DEX-CAST-ON-DESC",
+      "DEX-EMPTY-SHOT-CONSISTENCY",
+      "DEX-EXPR-SPEAK",
+      "DEX-ASSET-CREF",
+      "DEX-DUP-VD",
+      "DEX-DIRTY-STILL-PROMPT",
+      "DEX-HAND-LIP",
+      "DEX-CUT-01",
+      "DEX-CAM-XSHOT",
+      "DESIGN-LOSS",
+      "CHAIN-BEAT",
+      "DEX-CAM-FIT",
+      "DC-01-EXTRA",
+      "DEX-INTENT-PIC",
+      "IRD-CONFIRM"
     ],
     "AS": [
       "DEX-ASSET-CREF"
@@ -164,7 +196,7 @@
     },
     "DEX-LIP-SPLIT": {
       "severity": "BLOCK",
-      "message": "NAR分句/多句同镜口型/超vendor须 Confirm拆镜或改短；对齐 duration_norms + lip_split_doctrine"
+      "message": "NAR分句/多句同镜口型/超vendor须 Confirm拆镜或改短；可抬短镜须退出前抬时净；对齐 duration_norms + lip_split_doctrine（导入抬时仅兜底）"
     },
     "DEX-FX-INTENT": {
       "severity": "BLOCK",
@@ -239,8 +271,20 @@
       "message": "首登场 establishing"
     },
     "DEX-ASSET-CREF": {
-      "severity": "WARN",
-      "message": "角色资产与 cref 计划"
+      "severity": "BLOCK",
+      "message": "出脸/CHAR：SB 须绑码或 stub+assetCrefPlan（可延期补图）；AS/生成须定妆真图"
+    },
+    "DEX-DUP-VD": {
+      "severity": "BLOCK",
+      "message": "连续≥3镜 visualDescription 归一化相同（有对白也算；禁 clone 父镜同文当口型设计）"
+    },
+    "DEX-DIRTY-STILL-PROMPT": {
+      "severity": "BLOCK",
+      "message": "generation.imagePrompt/VD 文学体：禁手+眼同帧、裸 --cref CHAR / --sref SCENE（composed IR 尾除外）"
+    },
+    "DEX-HAND-LIP": {
+      "severity": "BLOCK",
+      "message": "手/道具特写须 lipSyncPolicy=none（禁 subtle_natural）"
     },
     "DEX-CAST-CODES": {
       "severity": "BLOCK",
@@ -260,15 +304,15 @@
     },
     "DEX-LITERARY-STALE": {
       "severity": "BLOCK",
-      "message": "故事核/公式已变，须重写本阶段后再出站"
+      "message": "公式已更换，请按新规范重设计。"
     },
     "NAR-14": {
       "severity": "BLOCK",
-      "message": "长句须物理拆行或 splitHint（plan+shots 同核）"
+      "message": "长句须物理拆行或 splitHint（plan 权威；shots 同 lineId 覆盖）"
     },
     "NAR-15": {
       "severity": "BLOCK",
-      "message": "emotion_hit 须 reactionAction（plan+shots 同核）"
+      "message": "emotion_hit 须 plan.reactionAction；shots 权威双镜 speak 无 RA"
     },
     "DC-01": {
       "severity": "BLOCK",
@@ -295,20 +339,68 @@
       "message": "自检 passed 与服务器闸不一致"
     },
     "DEX-STILL-ONEBEAT": {
-      "severity": "WARN",
-      "message": "visualDescription/picture 一镜一可静帧拍；多拍须拆镜或 VisBeat Confirm"
+      "severity": "BLOCK",
+      "message": "visualDescription/picture 一镜一可静帧拍；多拍须智能拆镜或 VisBeat Confirm"
+    },
+    "DEX-STILL-CU-CAST": {
+      "severity": "BLOCK",
+      "message": "特写/近景与出镜≥2人冲突；文学单人特写→降出场人数；多人同框意图→拆反应特写+场面镜；歧义 Confirm；导入 demote 不硬拦"
     },
     "DEX-STILL-OS-NAME": {
-      "severity": "WARN",
-      "message": "画面/CD/speaker 禁名（OS）；speaker 裸名+type=os"
+      "severity": "BLOCK",
+      "message": "画面/CD/speaker 禁名（OS）；speaker 裸名+type=os；导入 soft demote"
     },
     "DEX-STILL-FILLER": {
-      "severity": "WARN",
-      "message": "禁对白瞬间神态等无画面填料进 visualDescription"
+      "severity": "BLOCK",
+      "message": "禁对白瞬间神态等无画面填料进 visualDescription；导入 soft demote"
     },
     "DEX-QP-02": {
       "severity": "BLOCK",
       "message": "visualDescription 须可拍：非空、≥minChars 底线、禁抽象无物象；与 export QP-02 同核"
+    },
+    "DEX-CAST-ON-DESC": {
+      "severity": "BLOCK",
+      "message": "描写点名须进入 charCodes（与 DEX-CAST-CODES 分立）"
+    },
+    "DEX-EMPTY-SHOT-CONSISTENCY": {
+      "severity": "BLOCK",
+      "message": "空镜声明不得与人名/出脸/charCodes 并存"
+    },
+    "DEX-EXPR-SPEAK": {
+      "severity": "BLOCK",
+      "message": "高强度对白镜须 microExpression + lipSyncPolicy"
+    },
+    "DEX-CUT-01": {
+      "severity": "WARN",
+      "message": "邻镜场景/色温/道具硬切突变（与 export CUT-01 同核）"
+    },
+    "DEX-CAM-XSHOT": {
+      "severity": "WARN",
+      "message": "邻镜运镜/转场/节奏突变（与 export CAM-XSHOT 同核）"
+    },
+    "DESIGN-LOSS": {
+      "severity": "BLOCK",
+      "message": "设计遗失且无正式源；须 SB 强补"
+    },
+    "CHAIN-BEAT": {
+      "severity": "BLOCK",
+      "message": "拆镜子镜须覆盖父文学锚点"
+    },
+    "DEX-CAM-FIT": {
+      "severity": "BLOCK",
+      "message": "运镜不可拍：须拆或改景别；禁 soft 顶"
+    },
+    "DC-01-EXTRA": {
+      "severity": "BLOCK",
+      "message": "分镜台词乱入（不在 script∪plan）"
+    },
+    "DEX-INTENT-PIC": {
+      "severity": "BLOCK",
+      "message": "shotDesignIntent.picture 与 visualDescription 须同核"
+    },
+    "IRD-CONFIRM": {
+      "severity": "BLOCK",
+      "message": "IRD 低置信补丁待 Confirm；禁止假绿出站"
     }
   },
   "adaptScorePass": 65,

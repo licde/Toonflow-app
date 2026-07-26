@@ -10,12 +10,13 @@
     { "id": "DC-06", "field": "scene", "rule": "B6.scenes ↔ SB.sceneName", "severity": "BLOCK" },
     { "id": "DC-07", "field": "story_fx", "rule": "markers payoff 或 FX 等级", "severity": "WARN" },
     { "id": "DC-08", "field": "asset", "rule": "charCodes ↔ script 角色", "severity": "BLOCK" },
-    { "id": "DC-09", "field": "camera", "rule": "transition/rhythm 合法", "severity": "WARN" },
+    { "id": "DC-09", "field": "camera", "rule": "transition/rhythm 白名单", "severity": "BLOCK" },
     { "id": "DC-10", "field": "av_modality", "rule": "B9 或 T3 AUD 标注", "severity": "WARN" },
     { "id": "DC-11", "field": "debut", "rule": "debutIntroPack", "severity": "WARN" },
     { "id": "DC-12", "field": "compile", "rule": "T3 前 EN 草案", "severity": "INFO" },
     { "id": "DC-13", "field": "linkage", "rule": "十链无 broken", "severity": "BLOCK" },
     { "id": "DC-14", "field": "forwardTrace", "rule": "≥5 trace dialogue+av+scene", "severity": "WARN" },
-    { "id": "DC-15", "field": "adaptation", "rule": "W2 策略与 P03 矩阵一致", "severity": "WARN" }
+    { "id": "DC-15", "field": "adaptation", "rule": "W2 策略与 P03 矩阵一致", "severity": "WARN" },
+    { "id": "DC-16", "field": "cast", "rule": "说话人∪上镜码 ⊆ CD+VLT（非 stub，须 L0.identity）", "severity": "BLOCK" }
   ]
 }

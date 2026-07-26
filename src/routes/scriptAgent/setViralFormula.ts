@@ -17,7 +17,7 @@ import {
   extractPeakLedgerFromText,
   setPeakHookOnPlan,
 } from "@/ruleEngine/design/extractPeakLedger";
-import { setViralPrefs, loadViralRhythmContract, cascadeAfterStoryRecon } from "@/ruleEngine/design/viralDoctrine";
+import { setViralPrefs, loadViralRhythmContract, cascadeAfterStoryRecon, LITERARY_STALE_USER_MESSAGE, LITERARY_STALE_OPTIONS } from "@/ruleEngine/design/viralDoctrine";
 
 const router = express.Router();
 
@@ -80,12 +80,13 @@ export default router.post(
     }
     syncPackIdAliases(plan);
     const prevPack = getGenreTemplateFromPlan(plan).packId;
+    const packChanged = prevPack !== packId;
     const genreTemplate = setGenreTemplateOnPlan(plan, {
       packId,
       provisional: provisional ?? true,
       adaptationDepth,
-      markStale: !provisional || prevPack !== packId,
-      literaryStale: !provisional || prevPack !== packId,
+      markStale: packChanged || !provisional,
+      literaryStale: packChanged || !provisional,
     });
     const contract = loadViralRhythmContract();
     setViralPrefs(plan, {
@@ -94,8 +95,9 @@ export default router.post(
       platformProfileId: platformProfileId || "miniprogram_paywall",
       episodeDurationSec: episodeDurationSec ?? 90,
     });
-    if (!provisional && prevPack !== packId) {
-      cascadeAfterStoryRecon(plan, `pack_switch:${prevPack}->${packId}`);
+    let cascade: ReturnType<typeof cascadeAfterStoryRecon> | undefined;
+    if (packChanged) {
+      cascade = cascadeAfterStoryRecon(plan, `pack_switch:${prevPack}->${packId}`);
     }
     if (derivationText?.trim()) {
       appendViralDerivation(plan, derivationText, stageId || "P0");
@@ -125,6 +127,8 @@ export default router.post(
       derivations: getViralDerivations(plan),
     });
 
+    const redesignRequired = Boolean(getGenreTemplateFromPlan(plan).literaryStale);
+
     return res.status(200).send(
       success({
         genreTemplate: getGenreTemplateFromPlan(plan),
@@ -135,13 +139,17 @@ export default router.post(
         viralWritingContext,
         peakLedger: viralWritingContext.peakLedger,
         hookPlan: viralWritingContext.hookPlan,
-        rebrief: prevPack !== packId,
+        rebrief: packChanged,
+        redesignRequired,
+        cascade,
         stale: {
           literaryStale: genreTemplate.literaryStale,
           structureStale: genreTemplate.structureStale,
         },
+        options: redesignRequired ? [...LITERARY_STALE_OPTIONS] : undefined,
         ux: {
-          cta: genreTemplate.literaryStale ? "按新 brief 重写本阶段" : "按设计思路补全",
+          cta: redesignRequired ? "请按新规范重设计" : "按设计思路补全",
+          message: redesignRequired ? LITERARY_STALE_USER_MESSAGE : undefined,
         },
       }),
     );

@@ -148,5 +148,17 @@ export function enrichShotGenerationFromDesign(shot: PreDesignShot, opts?: { vis
       }
     }
   }
+
+  // Strong contract mark: VD || dialogue — import does not BLOCK, generation heals or true-gap BLOCKs
+  const vd = String(shot.visualDescription ?? "").trim();
+  const dial = shot.narrative?.dialogue?.lines ?? [];
+  const hasDial = Array.isArray(dial) && dial.some((l) => String(typeof l === "string" ? l : l?.text ?? "").trim());
+  const designGaps: string[] = [];
+  if (!vd) designGaps.push("missing_visualDescription");
+  if (!hasDial && !vd) designGaps.push("missing_dialogue_and_vd");
+  if (designGaps.length) {
+    (gen as { designGaps?: string[] }).designGaps = designGaps;
+  }
+
   return { ...shot, generation: gen };
 }

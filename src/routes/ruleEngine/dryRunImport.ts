@@ -16,15 +16,17 @@ export default router.post(
     bundle: z.any(),
     targetScriptId: z.number().optional(),
     mergeStrategy: z.enum(["replaceAll", "mergeLayers", "preserveMedia"]).optional(),
+    acknowledgeKeepLegacy: z.boolean().optional(),
   }),
   async (req, res) => {
     try {
-      const { projectId, bundle, targetScriptId, mergeStrategy } = req.body;
+      const { projectId, bundle, targetScriptId, mergeStrategy, acknowledgeKeepLegacy } = req.body;
       const summary = await dryRunImport(u.db, bundle, {
         projectId,
         targetScriptId,
         mergeStrategy,
         validateOnly: true,
+        acknowledgeKeepLegacy,
       });
       return res.status(200).send(success(summary));
     } catch (e) {

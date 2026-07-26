@@ -40,9 +40,13 @@ Layer C 镜头
 | `test:prompt-touch` | touch / strip tokens |
 | `test:import-asset-quality` | SCENE rewrite、PROP |
 | `test:identity-asset-gate` | cref 定妆闸 |
-| `test:closure-suite` | 上述已纳入 suite |
+| **`test:still-quality-closed-loop`** | **静帧正推×反推闭环自动化**：CU×cast、compose→split_shot、expand/切片、SSOT/envelope、import demote、identity_plate、CI 门禁 |
+| **`test:still-quality-loop`** | 上项 + onebeat/identity/compose/IRD/burn/video 串联 |
+| `test:closure-suite` | 含 `still-quality-closed-loop` |
 
 ```bash
+yarn test:still-quality-closed-loop   # 静帧闭环快门（CI portable.yml）
+yarn test:still-quality-loop          # 静帧相关全串
 yarn test:dc16-cast
 yarn test:design-export-gate
 yarn test:asset-still-prompt-contract

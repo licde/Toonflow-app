@@ -1,28 +1,59 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "enabled": true,
   "twoStageEnabled": true,
   "skipTwoStageOnDraft": true,
   "countStageATowardBudget": true,
   "poseProvider": "template",
+  "aspectBias": "9:16",
   "templates": [
     {
       "id": "high_sit_low_kneel_2p",
       "file": "layout_templates/high_sit_low_kneel_2p.svg",
       "match": { "requireVerbs": ["端坐", "跪"], "minChars": 2 },
-      "stageAPrompt": "竖屏构图灰模：上方高位坐姿人物，下方低位跪姿人物，座次权力反差，无香案无供桌无站立仪式，简单家具剪影"
+      "stageAPrompt": "竖屏构图灰模：上方高位坐姿人物，下方低位跪姿人物，座次权力反差，无香案无供桌无站立仪式，简单家具剪影。整幅仅{castCount}人剪影，禁止第三人、群像、路人"
     },
     {
       "id": "single_throne_sit",
       "file": "layout_templates/single_throne_sit.svg",
       "match": { "requireVerbs": ["端坐"], "forbidVerbs": ["跪"], "minChars": 1 },
-      "stageAPrompt": "竖屏构图灰模：单人高位端坐太师椅，正面朝向镜头，背景虚化"
+      "stageAPrompt": "竖屏构图灰模：单人高位端坐太师椅，正面朝向镜头，背景虚化。整幅仅{castCount}人剪影"
     },
     {
       "id": "single_kneel",
       "file": "layout_templates/single_kneel.svg",
       "match": { "requireVerbs": ["跪"], "forbidVerbs": ["端坐"], "minChars": 1 },
-      "stageAPrompt": "竖屏构图灰模：单人低位跪姿于蒲团，正面可读，背景虚化"
+      "stageAPrompt": "竖屏构图灰模：单人低位跪姿于蒲团，正面可读，背景虚化。整幅仅{castCount}人剪影"
+    },
+    {
+      "id": "confront_lr_2p",
+      "file": "layout_templates/confront_lr_2p.svg",
+      "match": { "minChars": 2 },
+      "stageAPrompt": "竖屏构图灰模：左右分立对峙两人剪影，面对面，无香案无供桌。整幅仅{castCount}人剪影，禁止第三人"
+    },
+    {
+      "id": "ots_2p",
+      "file": "layout_templates/ots_2p.svg",
+      "match": { "minChars": 2 },
+      "stageAPrompt": "竖屏构图灰模：前景过肩剪影，对面主体正脸可读。整幅仅{castCount}人相关剪影"
+    },
+    {
+      "id": "power_triangle_3p",
+      "file": "layout_templates/power_triangle_3p.svg",
+      "match": { "minChars": 3 },
+      "stageAPrompt": "竖屏构图灰模：主位高坐、对立侧位、旁观第三人三角站位。整幅仅{castCount}人剪影，禁止第4人"
+    },
+    {
+      "id": "two_plus_one_3p",
+      "file": "layout_templates/two_plus_one_3p.svg",
+      "match": { "minChars": 3 },
+      "stageAPrompt": "竖屏构图灰模：二人组分立，第三人插入位。整幅仅{castCount}人剪影"
+    },
+    {
+      "id": "establishing_empty",
+      "file": "layout_templates/establishing_empty.svg",
+      "match": { "minChars": 0 },
+      "stageAPrompt": "竖屏环境建立灰模：建筑/室内空间剪影，零人物，禁止画出人"
     }
   ]
 }

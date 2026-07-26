@@ -23,11 +23,14 @@ ok("batch imports vendorCapability", /resolveVendorCapability|vendorCapabilityMa
 ok("batch uses inferMediaType or optional type", /inferMediaType|filePath\?\.type/.test(batch));
 ok("batch filePath?.type safe", /filePath\?\.type/.test(batch));
 ok("batch outer try/catch 500", /BATCH_GENERATE_VIDEO/.test(batch) && /catch \(e\)/.test(batch));
+ok("batch stillGateApplied", /stillGateApplied/.test(batch));
+ok("batch assertStillFirstFrameContract or detect", /assertStillFirstFrameContract|assertStillDetectForBurn/.test(batch));
 ok("batch audioGateDeferred", /audioGateDeferred/.test(batch));
 ok("single has identity", /gateIdentityForShot/.test(single));
 ok("single has bridge", /bridgeShotToVendor/.test(single));
 ok("single audio L0 → 400", /AUD-LIT-L0/.test(single));
 ok("single voice bind", /assertAudioVoiceBindGate|AUD-VOICE-BIND/.test(single));
+ok("single detect passes stillQuality", /stillQuality/.test(single) && /assertStillDetectForBurn/.test(single));
 ok("single outer 500", /GENERATE_VIDEO/.test(single) && /catch \(e\)/.test(single));
 
 if (failed) process.exit(1);

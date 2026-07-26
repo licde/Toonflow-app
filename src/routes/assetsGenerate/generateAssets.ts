@@ -47,7 +47,8 @@ export default router.post("/", validateFields(requestSchema), async (req, res) 
     promptMode,
     allowWeakOverride,
   } = req.body;
-  const mode = (promptMode ?? "turnaround_sheet") as AssetStillPromptMode;
+  // Default identity_plate for storyboard cref hygiene; pass turnaround_sheet for CD book
+  const mode = (promptMode ?? "identity_plate") as AssetStillPromptMode;
 
   const project = await u
     .db("o_project")

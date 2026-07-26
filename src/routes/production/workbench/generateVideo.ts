@@ -63,9 +63,50 @@ export default router.post(
       } catch (e) {}
     }
     const ratio = await u.db("o_project").select("videoRatio").where("id", projectId).first();
-    const storyboardId = (uploadData as UploadItem[]).find((item) => item.sources === "storyboard")?.id;
+    const { resolveStoryboardForTrack } = await import("@/ruleEngine/compilers/resolveTrackStoryboard");
+    const infoSbIds = (uploadData as UploadItem[])
+      .filter((item) => item.sources === "storyboard" && item.id != null)
+      .map((item) => Number(item.id));
+    const trackBind = await resolveStoryboardForTrack(u.db, trackId, infoSbIds);
+    const storyboardId =
+      trackBind?.storyboardId ??
+      (uploadData as UploadItem[]).find((item) => item.sources === "storyboard")?.id;
     const pkg = await loadEpisodePackage(u.db, projectId, scriptId);
-    const shotMeta = storyboardId != null ? pkg?.shots?.find((s) => s.storyboardId === storyboardId) : undefined;
+    let shotMeta = storyboardId != null ? pkg?.shots?.find((s) => s.storyboardId === storyboardId) : undefined;
+    if (!shotMeta && trackBind?.row?.index != null && pkg?.shots?.length) {
+      const idx = Number(trackBind.row.index);
+      shotMeta =
+        pkg.shots.find((s) => Number((s as { shotIndex?: number }).shotIndex) === idx) ??
+        pkg.shots.find((s) => Number((s as { index?: number }).index) === idx);
+    }
+    // Enrich shotMeta with track panel — package literary VD wins over motion-template videoDesc
+    if (trackBind?.row || shotMeta) {
+      const { preferLiteraryVisualDesc } = await import("@/ruleEngine/compilers/resolveTrackStoryboard");
+      const vd = preferLiteraryVisualDesc(
+        (shotMeta as { visualDescription?: string } | undefined)?.visualDescription,
+        String(trackBind?.row?.videoDesc ?? "").trim(),
+      );
+      shotMeta = {
+        ...(shotMeta as object),
+        storyboardId: trackBind?.storyboardId ?? (shotMeta as { storyboardId?: number } | undefined)?.storyboardId,
+        shotIndex: trackBind?.row?.index ?? (shotMeta as { shotIndex?: number } | undefined)?.shotIndex,
+        visualDescription: vd || (shotMeta as { visualDescription?: string } | undefined)?.visualDescription || undefined,
+        duration:
+          (shotMeta as { duration?: number } | undefined)?.duration ??
+          (trackBind?.row?.duration != null ? Number(trackBind.row.duration) : undefined),
+        generation: {
+          ...((shotMeta as { generation?: object } | undefined)?.generation ?? {}),
+          audioPrompt:
+            (shotMeta as { generation?: { audioPrompt?: string } } | undefined)?.generation?.audioPrompt ??
+            trackBind?.row?.audioPrompt ??
+            undefined,
+          fxPrompt:
+            (shotMeta as { generation?: { fxPrompt?: string } } | undefined)?.generation?.fxPrompt ??
+            trackBind?.row?.fxPrompt ??
+            undefined,
+        },
+      } as typeof shotMeta;
+    }
     const { identity: resolvedId, gate: identityGate, missingQueue } = await gateIdentityForShot({
       db: u.db,
       projectId,
@@ -162,8 +203,27 @@ export default router.post(
       const roleIds = identityGate.bound.filter((b) => /^CHAR-/i.test(b.code)).map((b) => b.assetId);
       const audioBind = await collectAudioBindGaps(u.db, roleIds);
       if (audioBind.audioGap) {
-        // Soft warn in payload — dialogue still forces generate_audio native; bound file missing is audioGap
         (req as { __audioGap?: unknown }).__audioGap = audioBind;
+        // Homology with assertAudioVoiceBindGate: bound-but-no-file must not silent-burn
+        const dialEarly = (() => {
+          try {
+            const { flattenDialogueText } = require("@/ruleEngine/design/dialogueCoverage") as typeof import("@/ruleEngine/design/dialogueCoverage");
+            return Boolean(flattenDialogueText(shotMeta?.narrative?.dialogue?.lines)?.trim());
+          } catch {
+            return false;
+          }
+        })();
+        if (dialEarly) {
+          return res.status(400).send(
+            error("对白镜音色绑定文件缺失，禁止假绿烧片", {
+              code: "AUD-VOICE-BIND",
+              primaryNextStep: "chat_repair",
+              userMessage: "角色已绑音色但音频文件缺失；请补音色资产后再烧",
+              ctaLabel: "补音色后重试",
+              audioGaps: audioBind.gaps,
+            }),
+          );
+        }
       }
     }
 
@@ -259,6 +319,9 @@ export default router.post(
 
     const aspectRatio = (compiled.aspectRatio ?? ratio?.videoRatio ?? bridge.params.aspectRatio ?? "16:9") as "16:9" | "9:16";
     const dialLines = splitDialogueUtterances(shotMeta?.narrative?.dialogue?.lines);
+    const { hasOnCameraDialogue } = await import("@/ruleEngine/design/onCameraDialogue");
+    const { resolveLipSyncPolicyFromShot } = await import("@/ruleEngine/quality/resolveLipSyncPolicy");
+    const onCamDialogue = hasOnCameraDialogue(shotMeta?.narrative?.dialogue?.lines);
     const lip = lipForBridge ?? (shotMeta ? resolveLipDuration(shotMeta as never) : null);
     let burnDuration = Math.max(bridge.params.duration, lip?.durationSec ?? 0) || bridge.params.duration;
     const fin = finalizeFiveSectionPrompt({
@@ -268,67 +331,312 @@ export default router.post(
       preferStaticOnDialogue: dialLines.length > 0,
     });
     let burnPrompt = fin.prompt;
+    // Heal-first: thin/pollution → spine; hard BLOCK only on true design gap
+    {
+      const { sanitizeVideoPrompt } = await import("@/ruleEngine/compilers/sanitizeVideoPrompt");
+      const { assertVideoPromptReady } = await import("@/ruleEngine/compilers/assertVideoPromptReady");
+      const { compileVideoPromptSpine } = await import("@/ruleEngine/compilers/compileVideoPromptSpine");
+      const {
+        hydrateShotCompileContextSync,
+        mergeWorkbenchCompileSources,
+        isTrueDesignGap,
+      } = await import("@/ruleEngine/compilers/hydrateShotCompileContext");
+      const scrubbed = sanitizeVideoPrompt({
+        prompt: burnPrompt,
+        dialogueLines: dialLines,
+        durationSec: burnDuration,
+        preferStaticOnDialogue: dialLines.length > 0,
+      });
+      burnPrompt = scrubbed.prompt;
+      const merged = mergeWorkbenchCompileSources({
+        designShot: shotMeta as never,
+        shotMeta: shotMeta as never,
+        storyboard: null,
+      });
+      // Prefer VD from shotMeta / visualDescription
+      if (!(merged.shotMeta.visualDescription as string)?.trim()) {
+        const vd = String((shotMeta as { visualDescription?: string } | undefined)?.visualDescription ?? "").trim();
+        if (vd) merged.shotMeta.visualDescription = vd;
+      }
+      if (dialLines.length) {
+        merged.shotMeta.narrative = {
+          ...((merged.shotMeta.narrative as object) ?? {}),
+          dialogue: { lines: dialLines.map((t) => ({ text: t })) },
+        };
+      }
+      const ctx = hydrateShotCompileContextSync({
+        designShot: merged.designShot,
+        shotMeta: merged.shotMeta,
+        seedPrompt: burnPrompt,
+        shotIndex:
+          Number((shotMeta as { shotIndex?: number } | undefined)?.shotIndex) ||
+          Number((shotMeta as { index?: number } | undefined)?.index) ||
+          null,
+        vendorId: "agnesai",
+      });
+      let ready = assertVideoPromptReady(burnPrompt, ctx);
+      if (!ready.ok && ctx.canAuthorFromDesign) {
+        const spine = compileVideoPromptSpine({
+          ctx: { ...ctx, durationSec: burnDuration || ctx.durationSec },
+          forceRebuild: true,
+          includeSidecar: false,
+        });
+        if (spine.prompt) burnPrompt = spine.prompt;
+        if (spine.durationSec) burnDuration = spine.durationSec;
+        ready = assertVideoPromptReady(burnPrompt, ctx);
+      }
+      if (!ready.ok && isTrueDesignGap(ctx)) {
+        return res.status(400).send(
+          error("本镜缺少画面描写与对白，无法烧片；请补设计后重编译", {
+            code: "VP-THIN-SHELL",
+            primaryNextStep: "chat_repair",
+            reverseTrigger: "video_prompt_stub",
+            conflicts: scrubbed.conflicts,
+            reasons: ["true_design_gap", ...ready.reasons],
+          }),
+        );
+      }
+      // Material present: proceed with healed prompt even if soft WARN
+    }
+    {
+      const { resolveLipDurationSingleSource } = await import("@/ruleEngine/quality/resolveLipDuration");
+      const lipPol = resolveLipSyncPolicyFromShot(shotMeta as Record<string, unknown> | undefined);
+      const ss = resolveLipDurationSingleSource({
+        prompt: burnPrompt,
+        lipSyncPolicy: lipPol,
+        hasDialogue: onCamDialogue,
+        durationSec: burnDuration,
+        hardBlockNoLipOnDialogue: true,
+        refuseExplicitSilent: true,
+      });
+      if (ss.blocked) {
+        return res.status(400).send(
+          error(ss.blockMessage || "no lip on dialogue", {
+            code: ss.blockCode ?? "NO-LIP-DIALOGUE",
+            primaryNextStep: "chat_repair",
+            userMessage: ss.blockMessage,
+            reverseTrigger: "no_lip_dialogue",
+          }),
+        );
+      }
+      burnPrompt = ss.prompt;
+      if (ss.durationSec != null) burnDuration = Math.max(burnDuration, ss.durationSec);
+    }
+    // M0/M5/M9: ShotChainContract egress at burn
+    {
+      const { buildShotChainContract, assertChainEgress, chainContractEnabled } =
+        await import("@/ruleEngine/quality/shotChainContract");
+      const meta = (shotMeta as { meta?: Record<string, unknown> } | undefined)?.meta;
+      if (chainContractEnabled(meta) && shotMeta) {
+        const designDur = Number(
+          (shotMeta as { duration?: number }).duration ??
+            (shotMeta as { narrative?: { duration?: number } }).narrative?.duration ??
+            0,
+        );
+        const c = buildShotChainContract(shotMeta as Record<string, unknown>);
+        const eg = assertChainEgress("burn", c, {
+          videoPrompt: burnPrompt,
+          burnDuration,
+        });
+        if (!eg.ok) {
+          return res.status(400).send(
+            error(eg.findings[0]?.message || "chain egress blocked", {
+              code: eg.codes[0] ?? "CHAIN-EGRESS",
+              primaryNextStep: eg.breakAt === "split" || eg.breakAt === "cam_split" ? "split_shot" : "chat_repair",
+              userMessage: eg.findings.map((f) => f.message).join("；"),
+              reverseTrigger: eg.codes[0] === "DUR-DESYNC" ? "dur_desync" : eg.codes[0] === "PROMPT-FIDELITY" ? "prompt_fidelity" : "design_loss",
+              breakAt: eg.breakAt,
+              designDuration: designDur || c.durationSec,
+            }),
+          );
+        }
+        // Raise-only: never burn shorter than trusted design
+        if (c.durationTrusted && c.durationSec > burnDuration) {
+          burnDuration = c.durationSec;
+        }
+      }
+    }
+    {
+      const { injectMirrorAntiWarp } = await import("@/ruleEngine/qc/mirrorAntiWarp");
+      const mir = injectMirrorAntiWarp(
+        burnPrompt,
+        String((shotMeta as { visualDescription?: string })?.visualDescription ?? ""),
+      );
+      burnPrompt = mir.prompt;
+    }
 
     let stillQuality: "missing" | "weak" | "hq_ok" | null = null;
     let stillMeta: Record<string, unknown> | null = null;
     let stillPromptForHandoff = "";
+    let resolvedStillPath = "";
     try {
       const { inferStillQuality } = await import("@/ruleEngine/compilers/stillQuality");
-      const sbRow = await u.db("o_storyboard").where({ id: storyboardId, projectId, scriptId }).first();
-      stillPromptForHandoff = String(sbRow?.prompt ?? "");
+      const { resolveStillForBurn, isStillVlmInfraGap } = await import("@/ruleEngine/qc/resolveStillForBurn");
+      const resolved = await resolveStillForBurn({
+        db: u.db as never,
+        projectId,
+        scriptId,
+        trackId,
+        uploadStoryboardId: storyboardId ?? null,
+        packageStoryboardIds: (pkg?.shots ?? [])
+          .map((s: { storyboardId?: number }) => Number(s.storyboardId))
+          .filter((n: number) => Number.isFinite(n) && n > 0),
+      });
+      if (resolved.storyboardId != null && resolved.storyboardId !== storyboardId) {
+        (req as { __resolvedStoryboardId?: number }).__resolvedStoryboardId = resolved.storyboardId;
+      }
+      const sbRow = resolved.row;
+      resolvedStillPath = resolved.filePath;
+      stillPromptForHandoff = resolved.prompt || String(sbRow?.prompt ?? "");
       try {
-        stillMeta = sbRow?.reason ? JSON.parse(String(sbRow.reason)) : null;
+        stillMeta = resolved.reasonRaw ? JSON.parse(resolved.reasonRaw) : null;
       } catch {
         stillMeta = null;
       }
-      // G7: only persisted meta.stillQuality === hq_ok with visualPassAt allows burn
+      const vlmInfra = isStillVlmInfraGap(stillMeta);
+      let sheetLeak = Boolean((stillMeta as { sheetLeak?: boolean } | null)?.sheetLeak);
+      try {
+        const { promptImpliesSheetCollageLeak } =
+          await import("@/ruleEngine/compilers/stillFirstFrameLiterarySsot");
+        sheetLeak = sheetLeak || promptImpliesSheetCollageLeak(stillPromptForHandoff);
+      } catch {
+        /* optional */
+      }
+      // G7 / P2: stillQuality !== hq_ok or sheetLeak → never first_frame (no weak→hq fake upgrade)
       stillQuality = inferStillQuality({
-        filePath: sbRow?.filePath,
-        imageId: sbRow?.imageId,
+        filePath: resolvedStillPath || (sbRow?.filePath as string | undefined),
+        imageId: sbRow?.imageId as number | undefined,
         meta: stillMeta?.stillQuality ? (stillMeta as { stillQuality?: "missing" | "weak" | "hq_ok" }) : null,
         requireVisualPass: true,
       });
-      if (stillMeta?.videoStale) {
+      if (sheetLeak) {
+        stillQuality = "weak";
+      }
+      if (stillMeta?.videoStale && !vlmInfra) {
         /* still may be hq_ok but video is stale — burn gate for still still allows; FE shows stale */
       }
       const { assertStillFirstFrameContract } = await import("@/ruleEngine/qc/stillFirstFrameGate");
+      const { assertStillDetectForBurn } = await import("@/ruleEngine/qc/stillDetectRepair");
       const { markStillStaleOnDescChange } = await import("@/ruleEngine/compilers/stillQuality");
+      const pkgShotVd = (
+        pkg?.shots?.find(
+          (s: { storyboardId?: number }) => Number(s.storyboardId) === Number(resolved.storyboardId ?? storyboardId),
+        ) as { visualDescription?: string } | undefined
+      )?.visualDescription;
       const literaryDesc = String(
-        (shotMeta as { visualDescription?: string } | undefined)?.visualDescription ?? "",
+        (shotMeta as { visualDescription?: string } | undefined)?.visualDescription ?? pkgShotVd ?? "",
       );
-      const staleMeta = markStillStaleOnDescChange(stillMeta as never, literaryDesc);
+      const staleMeta = !vlmInfra ? markStillStaleOnDescChange(stillMeta as never, literaryDesc) : null;
       if (staleMeta && sbRow) {
         stillMeta = { ...(stillMeta as object), ...staleMeta };
         stillQuality = "weak";
       }
+      const detect = assertStillDetectForBurn({
+        stillPrompt: stillPromptForHandoff,
+        stillFilePath: resolvedStillPath,
+        literaryDesc,
+        literaryDescHashAtCompose: (stillMeta as { literaryDescHash?: string } | null)?.literaryDescHash,
+        stillMeta: stillMeta as never,
+        stillQuality,
+        sheetLeak,
+        fidelityFailed:
+          !vlmInfra &&
+          stillQuality === "weak" &&
+          Boolean((stillMeta as { fidelityFailed?: boolean } | null)?.fidelityFailed),
+        shot: shotMeta as Record<string, unknown> | null,
+      });
+      if (!detect.ok) {
+        const { buildBurnGateEnvelope } = await import("@/ruleEngine/compilers/burnGateEnvelope");
+        const noFile = !resolvedStillPath;
+        // Homology: pass through split_shot — never collapse to chat_repair
+        const next = noFile
+          ? "batch_still"
+          : detect.primaryNextStep === "batch_still"
+            ? "batch_still"
+            : detect.primaryNextStep === "split_shot"
+              ? "split_shot"
+              : detect.primaryNextStep === "chat_repair"
+                ? "chat_repair"
+                : detect.primaryNextStep === "regen_storyboard_hq"
+                  ? "regen_storyboard_hq"
+                  : "chat_repair";
+        const env = buildBurnGateEnvelope(
+          [{ id: detect.code ?? "STILL-FIRSTFRAME-DIRTY", message: detect.message || "静照检测未过", reverseTrigger: detect.reverseTrigger }],
+          { nextStep: next },
+        );
+        return res.status(400).send(
+          error(detect.message || "静照检测未过", {
+            code: detect.code ?? "STILL-FIRSTFRAME-DIRTY",
+            primaryNextStep: noFile ? "batch_still" : detect.primaryNextStep ?? next,
+            reverseTrigger: detect.reverseTrigger ?? "still_firstframe_dirty",
+            rePushPlan: env.rePushPlan,
+            repairHints: env.repairHints,
+            nextStep: next,
+            resolvedStoryboardId: resolved.storyboardId,
+            hasStillFile: Boolean(resolvedStillPath),
+            vlmInfraGap: vlmInfra,
+            resolveSource: resolved.resolveSource,
+          }),
+        );
+      }
       const ff = assertStillFirstFrameContract({
         stillPrompt: stillPromptForHandoff,
-        stillFilePath: sbRow?.filePath,
+        stillFilePath: resolvedStillPath,
         requireStill: true,
         literaryDesc,
         literaryDescHashAtCompose: (stillMeta as { literaryDescHash?: string } | null)?.literaryDescHash,
+        stillQuality,
+        sheetLeak,
       });
       if (!ff.ok && ff.severity === "BLOCK") {
         const { buildBurnGateEnvelope } = await import("@/ruleEngine/compilers/burnGateEnvelope");
+        const noFile = !resolvedStillPath || ff.code === "STILL-FIRSTFRAME-MISSING";
+        // Homology: pass through split_shot — never collapse to chat_repair
+        const next = noFile || ff.primaryNextStep === "batch_still"
+          ? "batch_still"
+          : ff.primaryNextStep === "split_shot"
+            ? "split_shot"
+            : ff.primaryNextStep === "chat_repair"
+              ? "chat_repair"
+              : ff.primaryNextStep === "regen_storyboard_hq"
+                ? "regen_storyboard_hq"
+                : "chat_repair";
         const env = buildBurnGateEnvelope(
           [{ id: ff.code ?? "STILL-FIRSTFRAME-DIRTY", message: ff.message || "静照首帧不合格", reverseTrigger: ff.reverseTrigger }],
-          { nextStep: ff.primaryNextStep === "batch_still" ? "batch_still" : "chat_repair" },
+          { nextStep: next },
         );
         return res.status(400).send(
           error(ff.message || "静照首帧不合格", {
             code: ff.code ?? "STILL-FIRSTFRAME-DIRTY",
-            primaryNextStep: ff.primaryNextStep ?? "chat_repair",
+            primaryNextStep: noFile ? "batch_still" : ff.primaryNextStep ?? next,
             userMessage: ff.message,
-            ctaLabel: env.ctaLabel || "回 SB 改描写",
+            ctaLabel:
+              noFile ? "去生成静照" : next === "split_shot" ? env.ctaLabel || "确认智能拆镜" : env.ctaLabel || "回 SB 改描写",
             reverseTrigger: ff.reverseTrigger ?? "still_firstframe_dirty",
             rePushPlan: env.rePushPlan,
             repairHints: env.repairHints,
+            nextStep: next,
             chatRepairText: env.userMessage,
+            resolvedStoryboardId: resolved.storyboardId,
+            hasStillFile: Boolean(resolvedStillPath),
+            vlmInfraGap: vlmInfra,
+            resolveSource: resolved.resolveSource,
           }),
         );
       }
-    } catch {
-      stillQuality = null;
+    } catch (gateErr) {
+      // Fail-closed: never swallow first-frame gate errors into burn-open
+      const gateMsg = u.error(gateErr).message || "静照首帧校验异常";
+      return res.status(400).send(
+        error(gateMsg, {
+          code: "STILL-FIRSTFRAME-GATE-ERROR",
+          primaryNextStep: "chat_repair",
+          reverseTrigger: "still_firstframe_dirty",
+          userMessage: "静照首帧校验异常，禁止烧片；请回制作台检查静照后重试",
+          ctaLabel: "回制作台",
+          nextStep: "chat_repair",
+        }),
+      );
     }
 
     // Audio literary L0 + mouth handoff before burn
@@ -440,7 +748,20 @@ export default router.post(
         stillPrompt: stillPromptForHandoff,
         videoPrompt: burnPrompt,
         stillMouthDetail: String((stillMeta as { mouthDetail?: string } | null)?.mouthDetail ?? ""),
+        lipSyncPolicy: resolveLipSyncPolicyFromShot(shotMeta as Record<string, unknown> | undefined),
+        hasDialogue: onCamDialogue,
       });
+      if (!mouthGate.ok && mouthGate.severity === "BLOCK") {
+        return res.status(400).send(
+          error(mouthGate.message || "mouth handoff blocked", {
+            code: "STILL-MOUTH-HANDOFF",
+            primaryNextStep: "regen_storyboard_hq",
+            ctaLabel: "重出开口静照",
+            userMessage: mouthGate.message,
+            reverseTrigger: mouthGate.reverseTrigger ?? "still_mouth_handoff",
+          }),
+        );
+      }
       if (!mouthGate.ok && mouthGate.strengthen) {
         burnPrompt = finalizeFiveSectionPrompt({
           prompt: burnPrompt,
@@ -449,6 +770,26 @@ export default router.post(
           preferStaticOnDialogue: dialLines.length > 0,
           strengthen: mouthGate.strengthen,
         }).prompt;
+        const again = assertStillMouthVideoHandoff({
+          stillPrompt: stillPromptForHandoff,
+          videoPrompt: burnPrompt,
+          stillMouthDetail: String((stillMeta as { mouthDetail?: string } | null)?.mouthDetail ?? ""),
+          hasDialogue: onCamDialogue,
+          lipSyncPolicy: mouthGate.strengthen?.lipSyncPolicy ?? "subtle",
+          afterStrengthen: true,
+        });
+        // subtle policy should clear strongLip; if still closed∩strong → BLOCK
+        if (!again.ok && again.severity === "BLOCK") {
+          return res.status(400).send(
+            error(again.message || "mouth handoff still blocked", {
+              code: "STILL-MOUTH-HANDOFF",
+              primaryNextStep: "regen_storyboard_hq",
+              ctaLabel: "重出开口静照",
+              userMessage: again.message,
+              reverseTrigger: "still_mouth_handoff",
+            }),
+          );
+        }
       }
     } catch (e) {
       const errMsg = u.error(e).message || "mouth handoff failed";
@@ -545,13 +886,22 @@ export default router.post(
       lipMin: lip?.lipMin || undefined,
       nativeAudio: resolveVendorCapability(vendorIdFromModel(model)).nativeAudio,
     });
-    // Sync Camera text to API duration
-    burnPrompt = finalizeFiveSectionPrompt({
-      prompt: packed.prompt,
-      dialogueLines: dialLines,
-      durationSec: packed.duration,
-      preferStaticOnDialogue: dialLines.length > 0,
-    }).prompt;
+    // Sync Camera text to API duration + scrub XML/sidecar/EN QF shells
+    {
+      const { sanitizeVideoPrompt } = await import("@/ruleEngine/compilers/sanitizeVideoPrompt");
+      const scrubbed = sanitizeVideoPrompt({
+        prompt: packed.prompt,
+        dialogueLines: dialLines,
+        durationSec: packed.duration,
+        preferStaticOnDialogue: dialLines.length > 0,
+      });
+      burnPrompt = finalizeFiveSectionPrompt({
+        prompt: scrubbed.prompt,
+        dialogueLines: dialLines,
+        durationSec: packed.duration,
+        preferStaticOnDialogue: dialLines.length > 0,
+      }).prompt;
+    }
     const generateAudio = packed.audio;
     const runDuration = packed.duration;
     const vendorPromptFinal = burnPrompt;
@@ -567,7 +917,8 @@ export default router.post(
       uploadData.map(async (item: UploadItem) => {
         if (item.sources === "storyboard") {
           const filePath = await u.db("o_storyboard").where("id", item.id).select("filePath").first();
-          return { path: filePath?.filePath, mediaType: inferMediaType(filePath?.filePath, "image") as "image" | "video" | "audio" };
+          const path = String(filePath?.filePath ?? "").trim() || resolvedStillPath;
+          return { path: path || undefined, mediaType: inferMediaType(path, "image") as "image" | "video" | "audio" };
         }
         if (item.sources === "assets") {
           const filePath = await u
@@ -584,6 +935,10 @@ export default router.post(
         }
       }),
     );
+    // FE omitted storyboard in uploadData — inject track-resolved still as start frame
+    if (resolvedStillPath && !images.some((i) => i?.path === resolvedStillPath)) {
+      images.unshift({ path: resolvedStillPath, mediaType: "image" });
+    }
     const base64 = await Promise.all(
       images.map(async (item) => {
         if (!item?.path) return null;
@@ -599,6 +954,26 @@ export default router.post(
       projectId,
       videoTrackId: trackId,
     });
+    // Keep track pointer on newest clip (history rows remain in o_video)
+    try {
+      const trackRow = await u.db("o_videoTrack").where({ id: trackId }).select("prompt", "reason").first();
+      let reason: Record<string, unknown> = {};
+      try {
+        reason = typeof trackRow?.reason === "string" ? JSON.parse(trackRow.reason || "{}") : { ...(trackRow?.reason ?? {}) };
+      } catch {
+        reason = {};
+      }
+      const promptNow = String(trackRow?.prompt ?? "");
+      reason.promptOverwriteAt = new Date().toISOString();
+      reason.promptHash = require("crypto").createHash("sha1").update(promptNow).digest("hex").slice(0, 12);
+      reason.note = "track.prompt 覆盖非版本库；片历史在 o_video 多行";
+      await u.db("o_videoTrack").where({ id: trackId }).update({
+        videoId,
+        reason: JSON.stringify(reason),
+      });
+    } catch {
+      await u.db("o_videoTrack").where({ id: trackId }).update({ videoId }).catch(() => undefined);
+    }
     res.status(200).send(success(videoId));
     const relatedObjects = {
       projectId,
@@ -640,7 +1015,7 @@ export default router.post(
           videoPrompt: vendorPromptFinal,
         });
         await u.db("o_video").where("id", videoId).update({
-          state: post.videoPass ? "生成成功" : "生成成功",
+          state: post.videoPass ? "生成成功" : "质检未过",
           errorReason: JSON.stringify({
             postBurn: {
               videoPass: post.videoPass,
@@ -649,6 +1024,10 @@ export default router.post(
               seedStrengthen: post.seedStrengthen,
               primaryNextStep: post.primaryNextStep,
               userMessage: post.userMessage,
+              scorecard: post.scorecard,
+              failDims: post.failDims,
+              unknownDims: post.unknownDims,
+              deeplinks: post.deeplinks,
             },
           }),
         });

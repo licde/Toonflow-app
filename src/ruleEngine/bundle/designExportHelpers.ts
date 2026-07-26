@@ -6,6 +6,7 @@ import { normalizeAssetCode } from "../codes/assetCodeContract";
 import { collectReferencedCodes } from "./assetClosureGate";
 import { assetDisplayName } from "./assetLabel";
 import { collectNar14Nar15Fails, type Nar14LineLike } from "../nar14ClauseSplit";
+import { isCharOrphCode } from "../quality/matchDescNamesToCasting";
 
 export function collectDialogueSpeakers(bundle: ScriptBundle): Set<string> {
   const names = new Set<string>();
@@ -96,6 +97,8 @@ export function auditCastCoverage(bundle: ScriptBundle): {
   const missingCodes: string[] = [];
   for (const code of referenced) {
     if (!code.startsWith("CHAR-")) continue;
+    // Defense: NER invent stubs are stripped on ingest; never require them in CD.
+    if (isCharOrphCode(code)) continue;
     if (!cdCodes.has(code)) missingCodes.push(code);
   }
 
@@ -104,6 +107,8 @@ export function auditCastCoverage(bundle: ScriptBundle): {
   for (const a of assets) {
     const label = assetDisplayName(a.name) || a.code || "?";
     const code = a.code ? normalizeAssetCode(a.code) ?? a.code : undefined;
+    // Skip CHAR-ORPH NER invent assets (auto_adapt strip); do not treat as must-edit CD labels.
+    if (isCharOrphCode(code)) continue;
     const nameStr = assetDisplayName(a.name);
     const nameHit = nameStr
       ? speakers.has(nameStr) || [...speakers].some((n) => n.includes(nameStr) || nameStr.includes(n))
@@ -147,10 +152,21 @@ export function serverNarrativeSelfcheckFails(bundle: ScriptBundle): { id: strin
   const planLines =
     ((bundle.planData as { dialoguePlan?: { lines?: Nar14LineLike[] } } | undefined)?.dialoguePlan?.lines ??
       []) as Nar14LineLike[];
-  const shotLines = (bundle.preDesignPack?.shots ?? []).map((s) => ({
-    shotIndex: (s as { shotIndex?: number }).shotIndex,
-    lines: (s.narrative?.dialogue?.lines ?? []) as Nar14LineLike[],
-  }));
+  const shotLines = (bundle.preDesignPack?.shots ?? []).map((s) => {
+    let skipNar15 = false;
+    try {
+      const { isClearedSpeakSplitChild } =
+        require("../design/splitChildVisual") as typeof import("../design/splitChildVisual");
+      skipNar15 = isClearedSpeakSplitChild(s as Record<string, unknown>);
+    } catch {
+      /* optional */
+    }
+    return {
+      shotIndex: (s as { shotIndex?: number }).shotIndex,
+      lines: (s.narrative?.dialogue?.lines ?? []) as Nar14LineLike[],
+      skipNar15,
+    };
+  });
   return collectNar14Nar15Fails(planLines, shotLines).map((f) => ({ id: f.id, message: f.message }));
 }
 

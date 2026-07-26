@@ -342,7 +342,7 @@ export function stripCommentFields<T extends Record<string, unknown>>(obj: T): T
   return rest as T;
 }
 
-export { prepareBundleRaw, prepareBundleWithLog, parseBundleJson, tryFixPasteJson, stripChatRepairPrefix } from "./bundleShapePipeline";
+export { prepareBundleRaw, prepareBundleWithLog, parseBundleJson, parseBundleJsonWithSalvage, tryFixPasteJson, stripChatRepairPrefix, stripTrailingRepairSuffix, JsonIncompleteError, hoistPlanDataPackaging } from "./bundleShapePipeline";
 export type { PrepareBundleResult, ShapeSalvageEntry } from "./bundleShapePipeline";
 export { getRegisteredShapeIds, SHAPE_REGISTRY } from "./shapeRegistry";
 export { auditShapeResidualGaps } from "./shapeResidualAudit";

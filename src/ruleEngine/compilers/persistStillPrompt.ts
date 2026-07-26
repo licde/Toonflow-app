@@ -4,19 +4,16 @@
 import type { Knex } from "knex";
 import {
   assertStillPromptClean,
+  buildStillPreviousIngress,
   composeStillPrompt,
   computeComposeHash,
   isDirtyStillPrompt,
-  resolveComposeMode,
-  scrubStillPromptNoise,
   shouldDefaultFidelityCompose,
-  stripIdentityTokens,
-  stripStaleBindingFromPrevious,
   type ComposeMode,
   type ComposeStillResult,
 } from "./composeStillPrompt";
 import { hydrateComposeStillContext } from "./hydrateComposeStillContext";
-import { mergeReasonMeta, parseStillMetaFromReason } from "./stillQuality";
+import { mergeReasonMeta } from "./stillQuality";
 import { hashLiteraryDesc } from "../qc/stillFirstFrameGate";
 
 export async function composeAndPersistStillPrompt(
@@ -57,7 +54,6 @@ export async function composeAndPersistStillPrompt(
     };
   }
 
-  const meta = parseStillMetaFromReason(row.reason);
   const existingPrompt = String(input.rawPrompt ?? row.prompt ?? "");
   const ctx = await hydrateComposeStillContext(db, {
     projectId: input.projectId,
@@ -69,24 +65,53 @@ export async function composeAndPersistStillPrompt(
     purpose: "compose",
   });
   const currentHash = computeComposeHash(ctx);
-  const mode = resolveComposeMode({
-    requested: input.mode,
-    existingPrompt,
-    promptState: meta?.promptState,
-    composeHash: meta?.composeHash,
+  const ingress = buildStillPreviousIngress({
+    reason: row.reason,
+    storedPrompt: row.prompt,
+    requestPrompt: existingPrompt,
+    requestedMode: input.mode,
     currentHash,
     preferFidelity: shouldDefaultFidelityCompose(ctx),
+    loadPrevious: true,
   });
-
-  if (meta?.promptUsed || row.prompt) {
-    ctx.previousVisualBody = stripStaleBindingFromPrevious(
-      scrubStillPromptNoise(stripIdentityTokens(String(meta?.promptUsed ?? row.prompt)).body).cleaned,
-    );
-  }
-
-  const result = composeStillPrompt(ctx, { mode });
+  const meta = ingress.prevMeta;
+  ctx.previousVisualBody = ingress.previousVisualBody;
+  const result = composeStillPrompt(ctx, { mode: ingress.effectiveMode });
   if (!result.ok) {
     return { ok: false, result, blockReason: result.blockReason };
+  }
+
+  // M5/IRD: hq compose — PROMPT-FIDELITY BLOCK
+  try {
+    const { assertPromptDesignFidelity } =
+      require("../quality/assertPromptDesignFidelity") as typeof import("../quality/assertPromptDesignFidelity");
+    const fid = assertPromptDesignFidelity({
+      shot: {
+        visualDescription: ctx.visualDescription,
+        duration: row.duration,
+        charCodes: (ctx.characters ?? []).map((c) => c.code).filter(Boolean),
+      },
+      knownNames: (ctx.characters ?? []).map((c) => c.name).filter(Boolean) as string[],
+      imagePrompt: result.visualBody || result.prompt,
+      stage: "compose",
+      fidelityHard: (input.qualityMode ?? "hq_update") !== "draft",
+    });
+    const blockFid = fid.findings.filter((f) => f.severity === "BLOCK");
+    if (blockFid.length) {
+      return {
+        ok: false,
+        result: {
+          ...result,
+          ok: false,
+          blockReason: blockFid[0].id,
+          userMessage: `${blockFid[0].message}；请 stillIntentOps 反推改 VD 或重 compose`,
+          warnings: [...result.warnings, ...blockFid.map((f) => f.id)],
+        },
+        blockReason: blockFid[0].id,
+      };
+    }
+  } catch {
+    /* optional */
   }
 
   // Gate: never persist contract-shell / dirty noise (recipe-at-end composed prompts are OK)
@@ -134,16 +159,30 @@ export async function composeAndPersistStillPrompt(
     modality: "image",
   });
   const promptToStore = pipeline.egressPrompt || result.prompt;
+  const composeMode = result.composeMode ?? ingress.effectiveMode ?? input.mode ?? "full";
   const promptState =
-    mode === "fidelity" ? "fidelity" : mode === "refine" ? "refined" : "composed";
+    composeMode === "fidelity" ? "fidelity" : composeMode === "refine" ? "refined" : "composed";
+
+  let stillIntentClass: string | undefined;
+  try {
+    const { classifyStillIntent } = await import("./stillIntentPolicy");
+    stillIntentClass = classifyStillIntent({
+      visualDescription: String(ctx.visualDescription ?? ""),
+      shotSize: String((row as { shotSize?: string }).shotSize ?? (ctx as { shotSize?: string }).shotSize ?? ""),
+      promptBlob: promptToStore,
+    }).intentClass;
+  } catch {
+    /* optional */
+  }
 
   await db("o_storyboard")
     .where({ id: input.storyboardId })
     .update({
+      // SSOT: only composed prompt slot — never write recipe layers back into visualDescription
       prompt: promptToStore,
       reason: mergeReasonMeta(row.reason, {
         promptState,
-        composeMode: mode,
+        composeMode,
         composeHash: currentHash,
         composedAt: new Date().toISOString(),
         composeSources: result.sources,
@@ -157,6 +196,13 @@ export async function composeAndPersistStillPrompt(
         pipelineVersion: pipeline.pipelineVersion,
         recipeHeals: pipeline.recipeHeals ?? result.recipeHeals,
         literaryDescHash: hashLiteraryDesc(String(ctx.visualDescription ?? "")),
+        recipeNotPersistedToVd: true,
+        stillIntentClass,
+        // M7: design hash recorded; video stale if prior hash differs
+        ...(meta?.literaryDescHash &&
+        meta.literaryDescHash !== hashLiteraryDesc(String(ctx.visualDescription ?? ""))
+          ? { chainStale: { still: false, video: true, burn: true }, videoStale: true }
+          : {}),
       }),
     });
 

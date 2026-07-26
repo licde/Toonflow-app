@@ -1,5 +1,5 @@
 {
-  "version": "2.0.1",
+  "version": "2.1.0",
   "chains": {
     "dialogue": { "trigger": "dialogue_hash_mismatch", "preserveFields": ["script"], "ruleId": "R2" },
     "av": { "trigger": "emotion_composition", "preserveFields": [] },
@@ -7,10 +7,17 @@
     "story": { "trigger": "story_link_broken", "preserveFields": ["script"], "ruleId": "W41" },
     "camera": { "trigger": "shot_camera_invalid", "preserveFields": [], "ruleId": "PR-CAM-01" },
     "adaptation": { "trigger": "story_link_broken", "preserveFields": ["script", "planData"] },
-    "asset": { "trigger": "img_cref_missing", "preserveFields": [] },
+    "adaptation_deep": { "trigger": "adaptation_deep_empty", "preserveFields": ["planData"], "ruleId": "P03" },
+    "asset": { "trigger": "identity_mismatch", "preserveFields": [], "ruleId": "CD" },
     "continuity": { "trigger": "narrative_graph_broken", "preserveFields": ["continuity"] },
     "modality_compile": { "trigger": "modality_slot_missing", "preserveFields": [] },
+    "modality_feasibility": { "trigger": "fx_f5_unhandled", "preserveFields": [], "ruleId": "W3" },
     "generation": { "trigger": "generation_feedback", "preserveFields": [] },
-    "repair": { "trigger": "generation_feedback", "preserveFields": [] }
+    "generation_apply": { "trigger": "generation_design_drift", "preserveFields": [] },
+    "repair": { "trigger": "generation_feedback", "preserveFields": [] },
+    "retention": { "trigger": "retention_opening_missing", "preserveFields": [], "ruleId": "W3" },
+    "narrative_drive": { "trigger": "narrative_info_gap", "preserveFields": [], "ruleId": "W3" },
+    "packaging": { "trigger": "packaging_debut_missing", "preserveFields": [], "ruleId": "W3" },
+    "viral": { "trigger": "viral_clip_shortfall", "preserveFields": [], "ruleId": "W1" }
   }
 }

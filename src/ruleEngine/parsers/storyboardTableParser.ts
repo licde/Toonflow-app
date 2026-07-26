@@ -11,8 +11,16 @@ export function parseStoryboardTable(markdown: string, storyboardIds?: number[])
   let index = 0;
 
   for (const line of lines) {
+    const cellsProbe = line.split("|").map((c) => c.trim()).filter(Boolean);
+    if (cellsProbe.length >= 2 && cellsProbe.every((c) => /^:?-+:?$/.test(c))) continue;
     if (/^\|?\s*[-:|]+\s*\|?$/.test(line)) continue;
-    if (/镜号|镜\s|类型|duration|时长/i.test(line) && line.includes("|")) continue;
+    if (
+      /镜号|^\s*镜\s*$|类型|duration|时长|画面描写|景别|表演/i.test(line) &&
+      line.includes("|") &&
+      !/CHAR-SCENE|PURE-SCENE|PURE-PROP|CHAR-PROP|\d+\s*s/i.test(line)
+    ) {
+      continue;
+    }
 
     const pipeCells = line.split("|").map((c) => c.trim()).filter(Boolean);
     if (pipeCells.length >= 2) {
@@ -38,28 +46,53 @@ export function parseStoryboardTable(markdown: string, storyboardIds?: number[])
 }
 
 function pipeRowToShot(cells: string[], index: number, storyboardId?: number): EpisodeShot | null {
-  const [col0, col1, col2, col3] = cells;
+  const [col0, col1, col2, col3, col4, col5, col6, col7] = cells;
   const num = parseInt(col0, 10);
   const idx = Number.isFinite(num) ? num - 1 : index;
   const typeRaw = cells.find((c) => SHOT_TYPES.some((t) => c.includes(t)));
-  const durationRaw = cells.find((c) => /^\d+(\.\d+)?s?$/.test(c) || /^\d+(\.\d+)?$/.test(c));
-  const linesCell = cells.find((c) => /台词|对白|：/.test(c)) ?? col3 ?? col2;
+  // Wide table: 镜|类型|场景|画面描写|景别|表演|台词|时长 — optional new cols
+  const wide = cells.length >= 7;
+  // Prefer explicit Ns duration; never take bare shot index as duration
+  const durationRaw =
+    cells.find((c) => /^\d+(\.\d+)?s$/i.test(c)) ??
+    (wide ? col7 : undefined) ??
+    cells.filter((c) => /^\d+(\.\d+)?$/.test(c)).slice(-1)[0];
+  const sceneName = wide ? col2 : col1;
+  const visualDescription = wide ? String(col3 ?? "").trim() || undefined : undefined;
+  const shotSize = wide ? String(col4 ?? "").trim() || undefined : undefined;
+  const perfCell = wide ? String(col5 ?? "").trim() : "";
+  const linesCell = wide
+    ? col6 ?? cells.find((c) => /台词|对白|：/.test(c)) ?? ""
+    : cells.find((c) => /台词|对白|：/.test(c)) ?? col3 ?? col2;
 
-  return {
+  const shot: EpisodeShot = {
     id: `shot-${idx + 1}`,
     storyboardId,
     index: idx,
     narrative: {
       type: (typeRaw as ShotType) ?? inferType(col1 ?? col2 ?? ""),
-      sceneName: col1,
+      sceneName,
       lines: linesCell,
       dialogue: linesCell ? { type: inferDialogueType(linesCell), lines: linesCell } : undefined,
       duration: durationRaw ? parseFloat(durationRaw.replace(/s$/i, "")) : 3,
       emotionIntensity: 4,
       transitionType: "切",
+      ...(shotSize ? { shotSize } : {}),
     },
     generation: {},
   };
+  if (visualDescription) {
+    (shot as { visualDescription?: string }).visualDescription = visualDescription;
+    (shot.narrative as { visualDescription?: string }).visualDescription = visualDescription;
+  }
+  if (perfCell) {
+    (shot as { shotDesign?: { performance?: { microExpression?: { mouthDetail?: string } }; lipSyncPolicy?: string } }).shotDesign =
+      {
+        performance: { microExpression: { mouthDetail: perfCell.slice(0, 120) } },
+        lipSyncPolicy: /lip|口型/i.test(perfCell) ? "subtle" : undefined,
+      };
+  }
+  return shot;
 }
 
 function freeformToShot(text: string, index: number, storyboardId?: number): EpisodeShot {

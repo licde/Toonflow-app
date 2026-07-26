@@ -92,7 +92,7 @@ const allSections: [string, string][] = [
   ["附录 G W93-W100", readChat("appendix/G_smart_design_W93.md")],
   ["附录 H 图锚点", readChat("appendix/H_visual_lock_table.md")],
   ["附录 I 六链", readFixture("linkage_chains.json") + "\n\n" + readFixture("linkage_repair_plan.schema.json")],
-  ["附录 J 出口闸门", readChat("T1_quality_gate.md") + "\n\n" + readChat("T3_quality_gate.md") + "\n\n" + readFixture("adaptation_profiles.json") + "\n\n" + readFixture("adaptation_recommendation_map.json") + "\n\n" + readFixture("narrative_drive_spec.json") + "\n\n" + readFixture("viral_video_spec.json")],
+  ["附录 J 出口闸门", readChat("T1_quality_gate.md") + "\n\n" + readChat("T3_quality_gate.md") + "\n\n" + readFixture("still_video_quality_doctrine.json") + "\n\n" + readFixture("adaptation_profiles.json") + "\n\n" + readFixture("adaptation_recommendation_map.json") + "\n\n" + readFixture("narrative_drive_spec.json") + "\n\n" + readFixture("viral_video_spec.json")],
   ["附录 K 走廊", readGen("rule_checklists_linkage.md")],
   ["附录 L rePush", readFixture("reverse_route_table.json")],
   ["附录 M QP+模态", readFixture("modality_prompt_slots.json")],

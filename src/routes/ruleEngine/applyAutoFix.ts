@@ -45,13 +45,26 @@ export default router.post(
       const rePushPlan = buildRePushPlan(fix.applied.length ? fix.applied : fix.rePushTargets.filter((t) => !/^(SB|EN|MD|AS|CD|GB|W3|INFRA)$/i.test(t)));
       const repairHints = loadRepairHints(fix.applied);
 
+      // M13: sidepath may only patch image/video prompt strings — never dialogue dump / silent lip split
+      const lipish = dry.report.issues.some((i) =>
+        /LIP|DEX-LIP|multi_line|NAR-14|DC-01/i.test(String(i.ruleId ?? "")),
+      );
       let appliedToDb = false;
       if (apply === true && fix.patches.length) {
+        if (lipish) {
+          return res.status(400).send(
+            error("口型/对白压力须走 designSplitOps / 导入同核拆，禁止 applyAutoFix 侧路写对话", {
+              code: "SIDEPATH-LIP-FORBID",
+              primaryNextStep: "split_shot",
+            }),
+          );
+        }
         for (const patch of fix.patches) {
           const shotId = patch.shotId as string | undefined;
           const shot = pkg.shots.find((s) => s.id === shotId) ?? pkg.shots[0];
           if (!shot) continue;
           const fp = String(patch.fieldPath ?? "");
+          if (/dialogue|lineId|narrative\.dialogue/i.test(fp)) continue;
           if (fp.includes("image") || patch.imageAppend || patch.promptPrefix) {
             const extra = String(patch.imageAppend ?? patch.promptPrefix ?? "");
             shot.generation.imagePrompt = `${shot.generation.imagePrompt ?? ""}${extra}`.trim();

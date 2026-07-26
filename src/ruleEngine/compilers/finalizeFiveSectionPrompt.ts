@@ -95,8 +95,8 @@ export function finalizeFiveSectionPrompt(input: FinalizeFiveSectionInput): Fina
     if (PLACEHOLDER_MOTION.test(prompt) || /0s-Ns/i.test(prompt) || SEED_MOTION.test(prompt)) {
       const d = dur ?? 4;
       const nextMotion = hasDialMotion
-        ? `0s-${d}s: hold frame, subtle mouth movement for dialogue.`
-        : `0s-${d}s: readable action beats.`;
+        ? `0s-${d}s: 保持画幅，对白时轻微口型。`
+        : `0s-${d}s: 可读动作拍点。`;
       prompt = injectSection(prompt, "Motion", nextMotion);
       changes.push("finalize_motion_ns");
       conflicts.push("VP-PLACEHOLDER_MOTION");
@@ -116,7 +116,7 @@ export function finalizeFiveSectionPrompt(input: FinalizeFiveSectionInput): Fina
     }
   }
 
-  // --- Audio: placeholders / fake --- / silence+dialogue XOR ---
+  // --- Audio: placeholders / fake --- / silence+dialogue XOR / ban "1." stub ---
   {
     let audio = sectionBody(prompt, "Audio") ?? "";
     const lines = Array.isArray(input.dialogueLines)
@@ -125,24 +125,42 @@ export function finalizeFiveSectionPrompt(input: FinalizeFiveSectionInput): Fina
           .split(/\n+/)
           .map((l) => l.trim())
           .filter(Boolean);
-    const hasLines = lines.some((l) => /[\u4e00-\u9fffA-Za-z]/.test(l) && l !== "---");
+    const hasLines = lines.some((l) => /[\u4e00-\u9fffA-Za-z]/.test(l) && l !== "---" && !/^["']?\d+\.?["']?$/.test(l));
     const silent = SILENT_AUDIO_RE.test(audio);
     const bodyHasDial =
-      /lip-sync\s*active/i.test(audio) || /\(dialogue\)/i.test(audio) || /\bsays\b/i.test(audio);
+      /lip-sync\s*active|口型同步开启/i.test(audio) || /\(dialogue\)/i.test(audio) || /\bsays\b/i.test(audio);
+    const stubOne = /["']1\.["']\s*\(dialogue\)|^["']?1\.["']?\s*$/m.test(audio);
+    const osOnly = /\(OS\)|画外|type\s*:\s*os|subtle lip sync（OS）/i.test(audio) && !hasLines;
 
-    if (hasLines && (silent || PLACEHOLDER_AUDIO.test(audio) || FAKE_DIALOGUE.test(audio) || !audio.trim() || !bodyHasDial)) {
-      audio = [...lines.map((t) => (t.startsWith('"') || t.startsWith("“") ? t : `"${t}"`)), "lip-sync active."].join("\n");
+    if (stubOne) {
+      audio = hasLines
+        ? [...lines.map((t) => (t.startsWith('"') || t.startsWith("“") ? t : `"${t}"`)), "口型同步开启。"].join("\n")
+        : "无对白。仅环境音效。";
+      prompt = injectSection(prompt, "Audio", audio);
+      changes.push("finalize_audio_ban_stub_one");
+      conflicts.push("VP-AUDIO_STUB");
+    } else if (osOnly && bodyHasDial) {
+      // OS must not force dialogue lip-sync
+      audio = audio
+        .replace(/lip-sync active\.?/gi, "")
+        .replace(/口型同步开启。?/g, "")
+        .replace(/natural mouth movement for dialogue\.?/gi, "")
+        .trim();
+      if (!/无对白|环境/.test(audio)) audio = `${audio}\n无对白口型；OS/画外音。`.trim();
+      prompt = injectSection(prompt, "Audio", audio);
+      changes.push("finalize_audio_os_no_lip");
+    } else if (hasLines && (silent || PLACEHOLDER_AUDIO.test(audio) || FAKE_DIALOGUE.test(audio) || !audio.trim() || !bodyHasDial)) {
+      audio = [...lines.map((t) => (t.startsWith('"') || t.startsWith("“") ? t : `"${t}"`)), "口型同步开启。"].join("\n");
       prompt = injectSection(prompt, "Audio", audio);
       changes.push(silent ? "finalize_audio_xor_dialogue" : "finalize_audio_from_lines");
       conflicts.push("VP-PLACEHOLDER_AUDIO");
     } else if (!hasLines && (PLACEHOLDER_AUDIO.test(audio) || FAKE_DIALOGUE.test(audio) || !audio.trim())) {
-      audio = "No spoken dialogue. ambient/SFX only.";
+      audio = "无对白。仅环境音效。";
       prompt = injectSection(prompt, "Audio", audio);
       changes.push("finalize_audio_explicit_silent");
       conflicts.push("VP-PLACEHOLDER_AUDIO");
     } else if (hasLines && silent && bodyHasDial) {
-      // Belt: still contradiction after sanitize
-      audio = [...lines.map((t) => (t.startsWith('"') || t.startsWith("“") ? t : `"${t}"`)), "lip-sync active."].join("\n");
+      audio = [...lines.map((t) => (t.startsWith('"') || t.startsWith("“") ? t : `"${t}"`)), "口型同步开启。"].join("\n");
       prompt = injectSection(prompt, "Audio", audio);
       changes.push("finalize_audio_xor_dialogue");
       conflicts.push("VP-CONFLICT_AUDIO_NO_DIALOGUE");
@@ -169,7 +187,7 @@ export function finalizeFiveSectionPrompt(input: FinalizeFiveSectionInput): Fina
         return pan === 1 ? "slow pan" : "";
       });
       if (visual !== before) {
-        prompt = injectSection(prompt, "Visual", visual || "subject in scene, keep face identity.");
+        prompt = injectSection(prompt, "Visual", visual || "场景主体，锁定脸型身份。");
         changes.push("finalize_visual_declutter");
       }
     }
@@ -197,7 +215,7 @@ export function finalizeFiveSectionPrompt(input: FinalizeFiveSectionInput): Fina
         narr = `${input.narrativePeak.slice(0, 120)}. ${narr}`.trim();
       }
       if (narr.length > 280) narr = `${narr.slice(0, 260).trim()}…`;
-      if (!narr) narr = "continuity from design; keep face identity.";
+      if (!narr) narr = "设计连贯；锁定脸型身份。";
       if (narr !== before || /--cref|--sref/i.test(before)) {
         prompt = injectSection(prompt, "Narrative", narr);
         changes.push("finalize_narrative_strip_cref");
@@ -225,6 +243,48 @@ export function finalizeFiveSectionPrompt(input: FinalizeFiveSectionInput): Fina
   }
 
   prompt = prompt.replace(/,\s*,/g, ",").replace(/\n{3,}/g, "\n\n").trim();
+
+  // Must M5: minimal zh shell — strip EN boilerplate / rule IDs; map motion whitelist
+  {
+    const before = prompt;
+    prompt = prompt
+      .replace(/\(\s*QF-EXPR-0?6\s*\)/gi, "")
+      .replace(/\bQF-EXPR-0?6\b/gi, "")
+      .replace(/keep face identity[^.；;\n]*/gi, "锁定脸型身份")
+      .replace(/no exaggerated expression rewrite[^.；;\n]*/gi, "禁止夸张改脸")
+      .replace(/continuity:\s*continues from/gi, "承接：")
+      .replace(/continues from/gi, "承接：")
+      .replace(/No spoken dialogue[^.；;\n]*/gi, "无对白")
+      .replace(/ambient\/?SFX\s*only\.?/gi, "仅环境音效")
+      .replace(/subject in scene[^.；;\n]*/gi, "画面主体")
+      .replace(/\bPeak:\s*/gi, "情绪峰值：")
+      .replace(/continuity from design intent\.?/gi, "设计连贯")
+      .replace(/subtle camera follow/gi, "轻微跟随")
+      .replace(/static hold/gi, "静止持镜")
+      .replace(/readable action beats(?:\s+from seed)?\.?/gi, "可读动作拍点")
+      .replace(/clear emotional beat/gi, "情绪拍点清晰")
+      .replace(/warm color temperature/gi, "暖色温")
+      .replace(/shallow depth of field/gi, "浅景深")
+      .replace(/soft background/gi, "背景虚化")
+      .replace(/single continuous take\.?/gi, "单次连续镜头")
+      .replace(/no subtitle,?\s*no watermark,?\s*no Logo/gi, "无字幕无水印无Logo")
+      .replace(/lip-sync active/gi, "口型同步开启")
+      .replace(/subtle lip sync/gi, "轻微口型")
+      .replace(/natural mouth movement/gi, "自然嘴部动作")
+      .replace(/\bslow pan\b/gi, "缓慢横移")
+      .replace(/\bslow zoom\b/gi, "缓慢变焦")
+      .replace(/\bgentle push\b/gi, "轻推")
+      .replace(/\bsubtle drift\b/gi, "微漂移")
+      .replace(/\bstatic\b/gi, "静止")
+      .replace(/continuity from design;?\s*/gi, "设计连贯；")
+      .replace(/duration\s+(\d+(?:\.\d+)?)s/gi, "时长 $1s")
+      .replace(/medium shot/gi, "中景")
+      .replace(/subtle camera/gi, "轻微运镜")
+      .replace(/,\s*,/g, ",")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    if (prompt !== before) changes.push("finalize_zh_shell_min");
+  }
 
   return {
     prompt,

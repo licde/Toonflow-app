@@ -21,18 +21,21 @@ const DESC = "沈母端坐高位太师椅摩挲扳指，沈清瓷跪低位蒲团
 // --- alias ---
 ok("labelMatches 沈母⊂沈母周氏", labelMatches("沈母端坐太师椅", "沈母周氏"));
 ok("labelMatches exact", labelMatches("沈清瓷跪蒲团", "沈清瓷"));
+ok("labelMatches 姐妹不串：漪↛瓷", !labelMatches("沈清漪弯腰捡书", "沈清瓷"));
+ok("labelMatches 姐妹不串：瓷↛漪", !labelMatches("沈清瓷跪蒲团", "沈清漪"));
 
 // --- binding with 沈母周氏 asset name ---
 {
   const bind = resolveShotIdentityBinding({
     description: DESC,
     characters: [
-      { code: "CHAR-SHENQINGCI", name: "沈清瓷" },
-      { code: "CHAR-SHENMU", name: "沈母周氏" },
+      { code: "CHAR-SHENQINGCI", name: "沈清瓷", hasImage: true },
+      { code: "CHAR-SHENMU", name: "沈母周氏", hasImage: true },
     ],
+    seatingHard: true,
   });
-  ok("high is 沈母周氏/CHAR-SHENMU", bind.orderedCodes[0] === "CHAR-SHENMU", bind.orderedCodes.join(","));
-  ok("low is 清瓷", bind.orderedCodes[1] === "CHAR-SHENQINGCI", bind.orderedCodes.join(","));
+  ok("high is 沈母周氏/CHAR-SHENMU", bind.highRole?.code === "CHAR-SHENMU" && bind.orderedCodes[0] === "CHAR-SHENMU", bind.orderedCodes.join(","));
+  ok("low is 清瓷", bind.lowRole?.code === "CHAR-SHENQINGCI" && bind.orderedCodes[1] === "CHAR-SHENQINGCI", bind.orderedCodes.join(","));
   ok("binding distinct names", Boolean(bind.bindingLine && /站位绑定/.test(bind.bindingLine) && !/沈清瓷=高位.*沈清瓷=低位/.test(bind.bindingLine)), bind.bindingLine);
   ok("binding has 母 and 清瓷", Boolean(bind.bindingLine && /沈母|周氏/.test(bind.bindingLine!) && /清瓷/.test(bind.bindingLine!)), bind.bindingLine);
   ok("single cref high→low", bind.crefTail === "--cref CHAR-SHENMU CHAR-SHENQINGCI", bind.crefTail);
@@ -113,7 +116,11 @@ ok("labelMatches exact", labelMatches("沈清瓷跪蒲团", "沈清瓷"));
   ok("no full 45岁 L0 personality", !/45岁/.test(r.prompt), "should omit dual hq personality");
   ok("descCoverageOk", r.descCoverageOk === true, (r.descCoverageMissing ?? []).join(","));
   ok("orderedCrefCodes", r.orderedCrefCodes?.[0] === "CHAR-SHENMU" && r.orderedCrefCodes?.[1] === "CHAR-SHENQINGCI", String(r.orderedCrefCodes));
-  ok("named power seat", /权力位：.*高位|沈母.*视觉重心|周氏.*视觉重心/.test(r.prompt), r.prompt.match(/权力位[^。]+/)?.[0]);
+  ok(
+    "named power or seating bind",
+    /权力位：.*高位|沈母.*视觉重心|周氏.*视觉重心|站位绑定：.*高位|权力位站位清晰/.test(r.prompt),
+    r.prompt.match(/权力位[^。]+|站位绑定[^。]+/)?.[0],
+  );
 }
 
 // --- coverage fail detects missing ---

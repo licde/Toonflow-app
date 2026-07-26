@@ -194,15 +194,66 @@ export function cascadeAfterStoryRecon(plan: Record<string, unknown>, reason: st
   }
   plan.planData = pd;
 
+  // Unlock so redesign can rewrite literary fields
+  try {
+    const { unlockLiteraryForRedesign } = require("./redesignContract") as typeof import("./redesignContract");
+    unlockLiteraryForRedesign(plan);
+  } catch {
+    setLiteraryLocked(plan, false);
+  }
+
   return {
     literaryStale: true,
     invalidatedSteps,
-    message: `故事核已变（${reason}）：下游 W1/W3 等已作废，须按新内核重写`,
+    message: "公式已更换，请按新规范重设计。",
   };
 }
+
+/** Clear literary/structure stale after redesignPass (W3) — never on W1 done alone. */
+export function clearLiteraryStale(plan: Record<string, unknown>): void {
+  const pd = asPd(plan);
+  const gt = getGenreTemplateFromPlan(plan);
+  const next = setGenreTemplateOnPlan(plan, {
+    packId: gt.packId,
+    adaptationDepth: gt.adaptationDepth,
+    provisional: gt.provisional,
+    markStale: false,
+    literaryStale: false,
+  });
+  next.literaryStale = false;
+  next.structureStale = false;
+  pd.genreTemplate = next;
+  const en = (pd.emotionNorm as { structureStale?: boolean } | undefined) ?? {};
+  en.structureStale = false;
+  pd.emotionNorm = en;
+  plan._emotionNorm = en;
+  delete pd.literaryStaleReason;
+  plan.planData = pd;
+}
+
+/** Short user-facing copy (no internal W1/stale mechanics). */
+export const LITERARY_STALE_USER_MESSAGE = "公式已更换，请按新规范重设计。";
+
+export const LITERARY_STALE_OPTIONS = [
+  { id: "redesign", label: "按新规范重设计", primary: true },
+  { id: "keepLegacy", label: "保留旧稿继续补洞" },
+] as const;
 
 export function literaryStaleBlocksExit(plan: Record<string, unknown>, stageId: string): boolean {
   const gt = getGenreTemplateFromPlan(plan);
   if (!gt.literaryStale) return false;
-  return ["W1", "W2", "W3", "designBrief", "GB", "SB"].includes(stageId);
+  // W1 is redesign entry — allowed while stale; debt clears only after W3 redesignPass
+  return ["W2", "W3", "designBrief", "GB", "SB"].includes(stageId);
+}
+
+/** Read literaryStale from ScriptBundle / planData. */
+export function isBundleLiteraryStale(bundle: {
+  planData?: unknown;
+  genreTemplate?: { literaryStale?: boolean; structureStale?: boolean };
+}): boolean {
+  const pd = (bundle.planData ?? {}) as {
+    genreTemplate?: { literaryStale?: boolean; structureStale?: boolean };
+  };
+  const gt = pd.genreTemplate ?? bundle.genreTemplate;
+  return Boolean(gt?.literaryStale || gt?.structureStale);
 }

@@ -53,7 +53,7 @@ const DESC = "沈母端坐高位太师椅摩挲扳指，沈清瓷跪低位蒲团
   ok("has composition", items.some((i) => i.id.includes("权力反差") || i.kind === "composition"));
   ok("has atmosphere 烛火", items.some((i) => i.id.includes("烛火")));
   ok("has forbidden", items.some((i) => i.forbidden));
-  const packPrompt = `${DESC} 场面硬约束：沈母必须端坐太师椅；沈清瓷必须跪于蒲团。禁止用双人站立香案仪式。站位绑定：沈母周氏=高位，沈清瓷=低位 --cref CHAR-SHENMU CHAR-SHENQINGCI`;
+  const packPrompt = `${DESC} 场面硬约束：沈母必须端坐太师椅；沈清瓷必须跪于蒲团。禁止用双人站立香案仪式。出镜人数：仅2人（沈母周氏、沈清瓷）。站位绑定：沈母周氏=高位，沈清瓷=低位 --cref CHAR-SHENMU CHAR-SHENQINGCI`;
   const assert = assertLiteraryFidelity(packPrompt, items);
   ok("full prompt fidelity ok", assert.ok, assert.missing.map((m) => m.id).join(","));
 }

@@ -22,16 +22,20 @@ motion, camera, duration, lipSync, identity, fx
 
 ## BaseSpec
 
-- V9 duration 与 SB 一致（1–30s）
-- QF-VIEW / QF-DUR 运镜词
-- 有对白须 lipSync 关键词
+- V9 duration 与 SB 一致（1–30s）；高情绪对白须 **emotionHold** 预留（可读进 Camera）
+- QF-VIEW / QF-DUR 运镜词；裸秒 `2s,3s` 须收敛为单一 `duration Ns`（quality 单源）
+- 有**出镜**对白须 lipSync 关键词；**禁止**显式 `no lip sync` / `lipSyncPolicy=none|silent`（NO-LIP-DIALOGUE → `no_lip_dialogue`）。**OS/VO 不强制口型**；空 policy 自动升 subtle（≠ silent 假阳）
+- burn 读 policy：`shotDesign` → `narrative` → `shot` →（出镜）默认 subtle
+- 静帧闭口 ∩ 强口型（仅出镜）：mouth handoff soft 一次后复检，仍冲突 BLOCK（`still_mouth_handoff`）
+- 镜/倒影描写须 anti-warp（禁 funhouse 变形）
+- `sfx:<>` 须有 `audioCue`/intent 真源；无 SfxSynthPort ≠ 音效满分（`sfx_unbacked`）
 - fx 同镜 ≤F3（PR-07）
 
 ## Agnes VendorPack
 
 | 项 | 规则 |
 |----|------|
-| 首位帧 | AG-GATE-01：referenceImage 或分镜图 |
+| 首位帧 | AG-GATE-01：referenceImage 或分镜图；脏静帧禁烧（分流：`still_firstframe_dirty` / `_stale` / `_weak` / `dirty_still_prompt`） |
 | 运动 | motion-from-frame 白名单 |
 | 原生语音 | generate_audio=true + dialogue-native |
 | 表情 | QF-EXPR-06 禁改面部 |
@@ -52,9 +56,14 @@ SB duration/type → EN compile → 分镜图 → MD-VID videoPrompt → singleI
 | 触发 | 目标 | 优先级 |
 |------|------|--------|
 | video_first_frame_missing | MD → EN | P0 |
+| still_firstframe_dirty | SB → MD-IMG | P0 |
+| still_mouth_handoff | EN / SB | P0 |
+| no_lip_dialogue | EN | P0 |
+| sfx_unbacked | SB | P1 |
+| svq_motion_fail（含镜面） | EN | P1 |
 | motion_overflow | EN | P0 |
 | native_audio_mismatch | EN | P1 |
-| duration_clamp | SB | P0 WARN |
+| duration_clamp / lip_duration_short | SB | P0 WARN |
 
 ## SD / SF
 
@@ -77,4 +86,4 @@ PC-09：首帧/时长/运镜 BLOCK。
 
 ## 质量链（实现）
 
-编译/烧片走五层：`buildPromptIR` → `sanitizeVideoPrompt` → `applyModeDialect` → `applyVendorPromptPack` → burn gate（BLOCK 带 RH+rePushPlan）。详见 `docs/video-quality-chain.md`。对白源语言进 `[Audio]`；stub videoPrompt 强制 IR 重编译；`motion-from-frame` 全文至多一次。
+编译/烧片走五层：`buildPromptIR` → `sanitizeVideoPrompt` → `applyModeDialect` → `applyVendorPromptPack` → burn gate（BLOCK 带 RH+rePushPlan）。**lip/时长以 `quality/resolveLipDuration` 单源**（裸秒去重、对白禁 no-lip）。详见 `docs/video-quality-chain.md`。对白源语言进 `[Audio]`；stub videoPrompt 强制 IR 重编译；`motion-from-frame` 全文至多一次。

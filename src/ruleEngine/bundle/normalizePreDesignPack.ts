@@ -15,8 +15,7 @@ import { ShapeSalvageLog } from "./shapeSalvageTypes";
 import { expandLinesByClauseSplit, type Nar14LineLike } from "../nar14ClauseSplit";
 import { normalizeDialogueSpeaker } from "../compilers/normalizeDialogueSpeaker";
 import { ensureShotPerformanceDefaults } from "../emotion/defaultPerformance";
-import { healNar14ResidualWithB } from "../design/nar14Residual";
-import { healLipMultiLineWithB } from "../design/lipSplit";
+import { detectLipSplitPressure } from "../design/lipSplit";
 import { resolveRequiredDuration } from "../compilers/resolveRequiredDuration";
 
 /** Stable SCENE-* allocator from sceneName list. */
@@ -362,61 +361,11 @@ type DialoguePlanLine = {
   functions?: string[];
 };
 
-/** Mirror dialoguePlan splitHint/reactionAction/functions onto shots[].narrative.dialogue.lines by lineId.
- * Also append missing plan lineIds into first dialogue shot (post-split sync → DC-01=0).
- */
+/** Mirror SSOT — never dump missing lineIds onto first dialogue shot. */
 export function mirrorDialoguePlanToShots(bundle: ScriptBundle): number {
-  const planLines =
-    (bundle.planData as { dialoguePlan?: { lines?: DialoguePlanLine[] } } | undefined)?.dialoguePlan?.lines ?? [];
-  if (!planLines.length) return 0;
-  const byId = new Map<string, DialoguePlanLine>();
-  for (const pl of planLines) {
-    if (pl.lineId) byId.set(pl.lineId, pl);
-  }
-  let mirrored = 0;
-  const present = new Set<string>();
-  for (const shot of bundle.preDesignPack?.shots ?? []) {
-    const lines = shot.narrative?.dialogue?.lines ?? [];
-    for (const line of lines) {
-      const lid = (line as { lineId?: string }).lineId;
-      if (lid) present.add(lid);
-      if (!lid) continue;
-      const src = byId.get(lid);
-      if (!src) continue;
-      const l = line as {
-        splitHint?: string;
-        reactionAction?: string;
-        functions?: string[];
-      };
-      if (src.splitHint && !l.splitHint) {
-        l.splitHint = src.splitHint;
-        mirrored++;
-      }
-      if (src.reactionAction && !l.reactionAction) {
-        l.reactionAction = src.reactionAction;
-        mirrored++;
-      }
-      if (src.functions?.length && (!l.functions || !l.functions.length)) {
-        l.functions = [...src.functions];
-        mirrored++;
-      }
-    }
-  }
-  const missing = planLines.filter((p) => p.lineId && !present.has(String(p.lineId)));
-  const shots = bundle.preDesignPack?.shots ?? [];
-  if (missing.length && shots.length) {
-    let targetIdx = shots.findIndex((s) => (s.narrative?.dialogue?.lines ?? []).length > 0);
-    if (targetIdx < 0) targetIdx = 0;
-    const t = shots[targetIdx]!;
-    if (!t.narrative) t.narrative = { type: "CHAR-SCENE" } as PreDesignShot["narrative"];
-    if (!t.narrative!.dialogue) t.narrative!.dialogue = { lines: [] };
-    const lines = t.narrative!.dialogue!.lines as Nar14LineLike[];
-    for (const m of missing) {
-      lines.push({ ...(m as Nar14LineLike) });
-      mirrored++;
-    }
-  }
-  return mirrored;
+  const { mirrorDialoguePlanToShotsSsot } =
+    require("../design/dialogueMirrorSsot") as typeof import("../design/dialogueMirrorSsot");
+  return mirrorDialoguePlanToShotsSsot(bundle);
 }
 
 /**
@@ -525,6 +474,7 @@ export function splitOverloadedDialogueShots(bundle: ScriptBundle, maxSec = DURA
 /** Ensure B6 ∪ dialogue speakers have minimal characterDesign.assets entries.
  * Note: stubs set L0.stub=true — DC-16 / auditCastCoverage still BLOCK (anti green-wash).
  * Import may seed stubs as safety net; exportAllowed must not pass on stub-only cast.
+ * Distinct from CHAR-ORPH NER invent stubs (those are stripped; never invent from visualDescription).
  */
 export function ensureCdSpeakerStubs(bundle: ScriptBundle): string[] {
   const missing = speakersMissingFromCd(bundle);
@@ -732,6 +682,8 @@ export interface NormalizePreDesignResult {
 export interface NormalizePreDesignOpts {
   /** Import/dryRun: mirror dialogue, CD stubs, lip split. Export gate: false (strict semantic check). */
   ingestHeal?: boolean;
+  /** Propose-only heal (preview/chatStrict): diffs without persist. */
+  chatStrict?: boolean;
 }
 
 /**
@@ -754,46 +706,48 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
   }
 
   mirrorDialoguePlanToShots(bundle);
+  // Strip duration-only pseudo dialogue (：3s / 时长：3s) so DC-01 EXTRA cannot recur
+  try {
+    const { stripDurationOnlyDialogueLines } = require("../design/dialogueCoverage") as typeof import("../design/dialogueCoverage");
+    for (const shot of pack.shots ?? []) {
+      const narr = (shot as { narrative?: { dialogue?: { lines?: unknown } } }).narrative;
+      if (!narr?.dialogue || narr.dialogue.lines == null) continue;
+      const cleaned = stripDurationOnlyDialogueLines(narr.dialogue.lines);
+      const before = Array.isArray(narr.dialogue.lines)
+        ? narr.dialogue.lines.length
+        : typeof narr.dialogue.lines === "string"
+          ? 1
+          : 0;
+      if (cleaned.length < before) {
+        narr.dialogue.lines = cleaned;
+        warnings.push("strip_duration_dialogue");
+        healLog.push("DC-01", "narrative.dialogue.lines", "strip_duration_only");
+      }
+    }
+  } catch {
+    /* optional */
+  }
   // Always: physical clause-split (no invented splitHint) — Chat-strict + ingest
   const clauseSplits = applyNar14ClauseSplitInBundle(bundle, healLog);
   if (clauseSplits > 0) warnings.push(`nar14_clause_split:${clauseSplits}`);
-  // Residual NAR-14 → B cluster + truthful bind (import/ingest only)
+  // Residual NAR-14 / lip multi-B: Confirm-only（designSplitOps），禁 ingest 静默同文扩镜
   if (ingestHeal && pack.shots?.length) {
     const planLines =
       ((bundle.planData as { dialoguePlan?: { lines?: Nar14LineLike[] } } | undefined)?.dialoguePlan?.lines ??
         []) as Nar14LineLike[];
-    if (planLines.length) {
-      const healed = healNar14ResidualWithB({
-        planLines,
-        shots: pack.shots as Record<string, unknown>[],
-      });
-      if (bundle.planData && typeof bundle.planData === "object") {
-        const pd = bundle.planData as { dialoguePlan?: { lines?: Nar14LineLike[] } };
-        pd.dialoguePlan = { ...(pd.dialoguePlan ?? {}), lines: healed.planLines };
-      }
-      pack.shots = healed.shots as PreDesignShot[];
-      if (healed.expandedCount || healed.bound) {
-        warnings.push(`nar14_residual_B:expand=${healed.expandedCount},bound=${healed.bound}`);
-        healLog.push(
-          "NAR-14",
-          "preDesignPack.shots",
-          `residual_B_expand:${healed.expandedCount};bind:${healed.bound};remain:${healed.remainingResiduals.length}`,
-        );
-      }
+    const pressure = (pack.shots as Record<string, unknown>[]).filter((s) =>
+      detectLipSplitPressure(s).mustConfirm,
+    ).length;
+    if (pressure > 0) {
+      warnings.push(`lip_confirm_required:${pressure}`);
+      healLog.push("LIP-01", "preDesignPack.shots", `confirm_only;pressure=${pressure};no_silent_lip_multi_B`);
+      const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+      bMeta.lipConfirmRequired = true;
+      bMeta.importOkNotExitPass = true;
     }
-    const lipHeal = healLipMultiLineWithB({
-      shots: pack.shots as Record<string, unknown>[],
-    });
-    if (lipHeal.expandedCount || lipHeal.healedShotIndexes.length) {
-      pack.shots = lipHeal.shots as PreDesignShot[];
-      warnings.push(
-        `lip_multi_B:expand=${lipHeal.expandedCount},healed=${lipHeal.healedShotIndexes.join(",")},remain=${lipHeal.remainingPressure}`,
-      );
-      healLog.push(
-        "LIP-01",
-        "preDesignPack.shots",
-        `lip_multi_B_expand:${lipHeal.expandedCount};remain:${lipHeal.remainingPressure}`,
-      );
+    if (planLines.some((l) => Boolean((l as { _nar14Residual?: boolean })._nar14Residual))) {
+      warnings.push("nar14_confirm_required:ingest_skips_silent_B");
+      healLog.push("NAR-14", "preDesignPack.shots", "confirm_only;no_silent_residual_B");
     }
   }
   // Strip 名（OS） before CD stubs / orphan slug so identity matches bare names
@@ -811,10 +765,102 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
   if (ingestHeal) {
     healDialoguePlanMetadata(bundle);
     healShotDialogueMetadata(bundle);
+    try {
+      const { applyDesignLossSupplement } =
+        require("../quality/designLossSupplement") as typeof import("../quality/designLossSupplement");
+      const loss = applyDesignLossSupplement(bundle, { proposeOnly: Boolean(opts.chatStrict) });
+      for (const w of loss.warnings) warnings.push(w);
+      if (loss.supplemented) warnings.push(`design_loss_supplemented:${loss.supplemented}`);
+      if (loss.unsalvageable.length) {
+        warnings.push(`design_loss_unsalvageable:${loss.unsalvageable.length}`);
+        (bundle as { designLossUnsalvageable?: unknown }).designLossUnsalvageable = loss.unsalvageable;
+      }
+    } catch {
+      /* optional */
+    }
+    // Order: strip NER CHAR-ORPH → cast bind (healShotQuality) → speaker stubs → audit
+    const { stripCharOrphNerStubs } =
+      require("../quality/matchDescNamesToCasting") as typeof import("../quality/matchDescNamesToCasting");
+    const cdAssets = ((bundle.characterDesign as { assets?: unknown[] } | undefined)?.assets ??
+      []) as Array<{ code?: string; name?: string; L0?: { identity?: string; stub?: boolean } }>;
+    const vlt = (bundle.visualLockTable ?? {}) as { characterAssets?: Record<string, unknown> };
+    const stripped = stripCharOrphNerStubs({
+      shots: pack.shots as Array<{ charCodes?: string[] }>,
+      characterAssets: cdAssets,
+      visualLockTable: vlt,
+    });
+    if (stripped.strippedCodes.length || stripped.strippedAssets.length) {
+      warnings.push(
+        `char_orph_strip:${[...stripped.strippedCodes, ...stripped.strippedAssets].slice(0, 12).join(",")}`,
+      );
+      if (bundle.characterDesign) {
+        (bundle.characterDesign as { assets: typeof cdAssets }).assets = cdAssets;
+      }
+      bundle.visualLockTable = vlt;
+    }
+    const { healShotQuality } = require("../quality/healShotQuality") as typeof import("../quality/healShotQuality");
+    const sq = healShotQuality({
+      shots: pack.shots as never[],
+      characterAssets: (bundle.characterDesign?.assets ?? []) as never[],
+      proposeOnly: Boolean(opts.chatStrict),
+      chatStrict: Boolean(opts.chatStrict),
+    });
+    if (sq.healed > 0) warnings.push(`shot_quality_heal:${sq.healed}`);
+    if (sq.diffs.length) {
+      warnings.push(`shot_quality_diffs:${sq.diffs.length}`);
+      (bundle as { shotQualityDiffs?: unknown }).shotQualityDiffs = sq.diffs;
+    }
+    if (sq.unsalvageable.length) {
+      warnings.push(`shot_quality_unsalvageable:${sq.unsalvageable.map((u) => u.shotIndex ?? "?").join(",")}`);
+      (bundle as { shotQualityUnsalvageable?: unknown }).shotQualityUnsalvageable = sq.unsalvageable;
+    }
+    if (sq.residual.length) {
+      (bundle as { shotQualityResidual?: unknown }).shotQualityResidual = sq.residual;
+    }
+    try {
+      const { hasOnCameraDialogue, onCameraDialogueTexts } =
+        require("../design/onCameraDialogue") as typeof import("../design/onCameraDialogue");
+      let seeded = 0;
+      for (const shot of pack.shots) {
+        const gen = (shot.generation ?? {}) as { audioPrompt?: string };
+        const lines = shot.narrative?.dialogue?.lines ?? [];
+        if (hasOnCameraDialogue(lines) && !String(gen.audioPrompt ?? "").trim()) {
+          const texts = onCameraDialogueTexts(lines);
+          if (texts.length && !opts.chatStrict) {
+            shot.generation = { ...gen, audioPrompt: texts.join("\n") };
+            seeded += 1;
+          }
+        }
+      }
+      if (seeded) warnings.push(`audio_prompt_seed:${seeded}`);
+    } catch {
+      /* optional */
+    }
+    // M10: on-cam / aggressive → clamp camera static (observable auto_adapt)
+    try {
+      const { auditCamShootableFit } =
+        require("../quality/camShootableFit") as typeof import("../quality/camShootableFit");
+      let clamped = 0;
+      for (const shot of pack.shots as Record<string, unknown>[]) {
+        const cam = auditCamShootableFit(shot);
+        if (cam.healHint === "clamp_static" && !opts.chatStrict) {
+          shot.camera = "static";
+          const narr = (shot.narrative as Record<string, unknown>) ?? {};
+          narr.camera = "static";
+          shot.narrative = narr;
+          clamped += 1;
+        }
+      }
+      if (clamped) warnings.push(`cam_speak_clamp_static:${clamped}`);
+    } catch {
+      /* optional */
+    }
+    // Speaker stubs AFTER orphan strip — real missing speakers still BLOCK until L0.identity
     const stubbed = ensureCdSpeakerStubs(bundle);
     if (stubbed.length) warnings.push(`cd_speaker_stub:${stubbed.join(",")}`);
     let perfN = 0;
     for (const shot of pack.shots) {
+      // High-intensity already residual in healShotQuality; defaults only for low intensity
       if (ensureShotPerformanceDefaults(shot as never)) perfN += 1;
     }
     if (perfN > 0) warnings.push(`performance_default:${perfN}`);
@@ -823,6 +869,11 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
     if (meta.pillarsDurationV2 == null) {
       (bundle as { meta?: Record<string, unknown> }).meta = { ...meta, pillarsDurationV2: true };
       warnings.push("pillarsDurationV2:true");
+    }
+    const meta2 = (bundle as { meta?: Record<string, unknown> }).meta ?? {};
+    if (meta2.pillarsChainContractV1 == null) {
+      (bundle as { meta?: Record<string, unknown> }).meta = { ...meta2, pillarsChainContractV1: true };
+      warnings.push("pillarsChainContractV1:true");
     }
   }
 
@@ -1043,10 +1094,9 @@ export function normalizePreDesignPack(bundle: ScriptBundle, opts: NormalizePreD
   }
 
   bundle.preDesignPack = { ...bundle.preDesignPack!, shots };
-  let splitCount = 0;
+  // Never silent same-VD lip-split on ingest — Confirm via designSplitOps / raise≤vendor only
   if (ingestHeal) {
-    splitCount = splitOverloadedDialogueShots(bundle, DURATION_CAP_SEC);
-    if (splitCount > 0) warnings.push(`dialogue_shot_split:${splitCount}`);
+    warnings.push("dialogue_shot_split:skipped_confirm_only");
   }
   const finalShots = bundle.preDesignPack.shots;
 

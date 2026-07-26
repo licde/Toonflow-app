@@ -63,8 +63,8 @@
     {
       "id": "DC-16",
       "chatDex": "B6 names in CD with L0.identity",
-      "ingestHeal": "stub still BLOCK",
-      "neverAuto": "stub as PASS"
+      "ingestHeal": "speaker stub still BLOCK until L0.identity; CHAR-ORPH free-NER strip auto_adapt (never invent orphan names as PASS)",
+      "neverAuto": "stub as PASS; invent CD from visualDescription NER"
     },
     {
       "id": "PASTE-HYBRID",
@@ -101,9 +101,214 @@
       "chatDex": "tags require picture; no half-sets",
       "ingestHeal": "warn + RH",
       "neverAuto": null
+    },
+    {
+      "id": "DEX-CAST-ON-DESC",
+      "chatDex": "names in visualDescription ⊆ charCodes via CD map",
+      "ingestHeal": "unique CD name→code when confidence≥threshold",
+      "neverAuto": "ambiguous multi-CD match or invent CHAR"
+    },
+    {
+      "id": "DEX-EMPTY-SHOT-CONSISTENCY",
+      "chatDex": "empty-shot mark XOR face/name/codes",
+      "ingestHeal": "strip conflicting empty-shot clauses only",
+      "neverAuto": "invent establishing action"
+    },
+    {
+      "id": "DEX-EXPR-SPEAK",
+      "chatDex": "high-intensity speak requires microExpression+lipSyncPolicy",
+      "ingestHeal": "low-intensity defaults only",
+      "neverAuto": "high-intensity fake defaults"
+    },
+    {
+      "id": "DEX-CUT-01",
+      "chatDex": "adjacent scene/color/prop hard-cut WARN",
+      "ingestHeal": null,
+      "neverAuto": "invent transition prose"
+    },
+    {
+      "id": "DEX-CAM-XSHOT",
+      "chatDex": "adjacent motion/transition rhythm WARN",
+      "ingestHeal": null,
+      "neverAuto": "invent camera moves"
+    },
+    {
+      "id": "DEX-STILL-ONEBEAT",
+      "chatDex": "visualDescription 一镜一可静帧拍；多拍须 splitPlan/still_onebeat",
+      "ingestHeal": "expandStillOneBeat when confidence≥0.7 + not chatStrict; else Confirm",
+      "neverAuto": "trim 假绿 / soft_patch 顶拆 / 只 regen 脏首帧"
+    },
+    {
+      "id": "DEX-STILL-CU-CAST",
+      "chatDex": "特写/近景 × 出镜≥2 → must_split 反应特写+场面镜",
+      "ingestHeal": "expandStillCuCast when deterministic + conf≥autoMin + not chatStrict; else Confirm; demoteAfterHeal",
+      "neverAuto": "silent single_hero 洗绿 / 只 regen / 导入硬拦"
+    },
+    {
+      "id": "VIS-MULTI-BEAT",
+      "chatDex": "VisBeat tags×景别 conflict → expand or override",
+      "ingestHeal": "runShotExpanders visual_multi when enforce",
+      "neverAuto": "suggestor 静默立法拆镜"
     }
   ],
-  "autoAdaptBlockIds": ["DFW-DURATION", "MOD-03", "MOD-IMG-M1", "MOD-VID-M1", "DG-SCENE-KEY"],
-  "mustEditBlockIds": ["NAR-15", "DC-16", "DG-CD-COVERAGE", "DG-FALSE-GREEN-FX", "DG-NAR-SELFCHECK", "DEX-VIS-TAG-MISSING", "DEX-VIS-TAG-INCONSISTENT", "DEX-VIS-SPLIT", "LIP-01", "DEX-LIP-SPLIT", "FX-GRADE-01"],
-  "mustEditBlockIdsNote": "NAR-14 residual + LIP-01 needsSplit/lipOver + DEX-VIS-SPLIT are 须手改 (removed from autoAdapt)"
+  "autoAdaptBlockIds": ["DFW-DURATION", "MOD-03", "MOD-IMG-M1", "MOD-VID-M1", "DG-SCENE-KEY", "CAM-SPEAK", "DEX-CAM-FIT"],
+  "mustEditBlockIds": ["DEX-LITERARY-STALE", "NAR-15", "DC-16", "DG-CD-COVERAGE", "DG-FALSE-GREEN-FX", "DG-NAR-SELFCHECK", "DEX-VIS-TAG-MISSING", "DEX-VIS-TAG-INCONSISTENT", "DEX-VIS-SPLIT", "LIP-01", "DEX-LIP-SPLIT", "FX-GRADE-01", "DEX-CAST-ON-DESC", "DEX-EMPTY-SHOT-CONSISTENCY", "DEX-EXPR-SPEAK", "DEX-QP-02", "DEX-STILL-ONEBEAT", "DEX-STILL-CU-CAST", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER", "VIS-MULTI-BEAT", "NO-LIP-DIALOGUE", "DESIGN-LOSS", "DUR-DESYNC", "PROMPT-FIDELITY", "DC-01-EXTRA", "CHAIN-BEAT", "CHAT-AUD-01", "IMPORT-SPLIT-SYNC", "AUD-ORPHAN-SPEECH", "DEX-INTENT-PIC", "IRD-CONFIRM", "DEX-DUP-VD", "DEX-DIRTY-STILL-PROMPT", "DEX-HAND-LIP"],
+  "mustEditBlockIdsNote": "Chat/设计须重设计过检（不过绿）。导入：见 importSalvageRegistry.demoteAfterHeal — 智能愈后残留 soft 不硬拦；importOk≠designExitPass。DEX-DUP-VD/QP-02 仍禁 demote。",
+  "importSalvageRegistry": [
+    {
+      "ruleId": "DEX-DUP-VD",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "none",
+      "demoteAfterHeal": false,
+      "notes": "同文连镜（含有对白）非设计；禁 demote；禁 silent clone 父 VD"
+    },
+    {
+      "ruleId": "DEX-DIRTY-STILL-PROMPT",
+      "chatBlock": true,
+      "healClass": "dirty_literary",
+      "importHeal": "strip_bare_tokens",
+      "demoteAfterHeal": true,
+      "notes": "Chat 真脏 BLOCK。导入：strip 愈后残留 soft 不硬拦（SH-IMPORT-DIRTY-NONBLOCK）；禁静默拆手脸；配方适配≠改 VD；importOk≠designExitPass"
+    },
+    {
+      "ruleId": "DEX-HAND-LIP",
+      "chatBlock": true,
+      "healClass": "dirty_literary",
+      "importHeal": "hand_lip_none",
+      "demoteAfterHeal": true,
+      "notes": "Chat BLOCK；导入 lip→none 愈后残留 soft；禁 demote Chat"
+    },
+    {
+      "ruleId": "IRD-CONFIRM",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "smart_expand_or_stamp",
+      "demoteAfterHeal": true,
+      "notes": "导入可进仓但 importOk≠designExitPass；Chat/设计仍红须 Confirm 重设计"
+    },
+    {
+      "ruleId": "DEX-CAM-FIT",
+      "chatBlock": true,
+      "healClass": "cam_heal",
+      "importHeal": "cam_until_clear",
+      "demoteAfterHeal": true,
+      "notes": "导入可语义愈；残留→IRD soft；Chat 仍须重设计/Confirm"
+    },
+    {
+      "ruleId": "LIP-01",
+      "chatBlock": true,
+      "healClass": "duration",
+      "importHeal": "raise_duration_only",
+      "demoteAfterHeal": false,
+      "notes": "Chat：可抬设计抬时；超限/多句 BLOCK 反推 Confirm（不过绿）。导入：raise 兜底后残留 soft 不硬拦；demoteAfterHeal=false 防 Chat 假绿；禁同文拆"
+    },
+    {
+      "ruleId": "DEX-LIP-SPLIT",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "same_kernel_split",
+      "demoteAfterHeal": true,
+      "notes": "导入同核拆后残留 WARN；Chat/设计须 Confirm 重设计"
+    },
+    {
+      "ruleId": "PR-09",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "none",
+      "demoteAfterHeal": true
+    },
+    {
+      "ruleId": "DFW-DURATION",
+      "chatBlock": false,
+      "healClass": "duration",
+      "importHeal": "raise_duration_only",
+      "demoteAfterHeal": true
+    },
+    {
+      "ruleId": "NAR-15",
+      "chatBlock": true,
+      "healClass": "placeholder_ra",
+      "importHeal": "placeholder_ra_plan_and_shots",
+      "demoteAfterHeal": true,
+      "notes": "设计须重设计写真 RA（heal_placeholder 不顶 redesignPass）。导入：占位愈+soft 不硬拦"
+    },
+    {
+      "ruleId": "FALSE_GREEN_SELFCHECK",
+      "chatBlock": true,
+      "healClass": "derived",
+      "importHeal": "follow_nar_demote",
+      "demoteAfterHeal": true,
+      "notes": "随 NAR 债 demote；设计仍 BLOCK 假绿"
+    },
+    {
+      "ruleId": "DG-NAR-SELFCHECK",
+      "chatBlock": true,
+      "healClass": "derived",
+      "importHeal": "follow_nar_demote",
+      "demoteAfterHeal": true,
+      "notes": "随 NAR 债 demote；设计仍 BLOCK"
+    },
+    {
+      "ruleId": "DEX-SHOT-INTENT",
+      "chatBlock": true,
+      "healClass": "intent_sidecar",
+      "importHeal": "ensure_from_peaks",
+      "demoteAfterHeal": true,
+      "notes": "设计须补 picture/durationSec。导入：autoClose 派生后残留 soft"
+    },
+    {
+      "ruleId": "VIS-MULTI-BEAT",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "smart_expand",
+      "demoteAfterHeal": true
+    },
+    {
+      "ruleId": "DEX-STILL-ONEBEAT",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "smart_expand",
+      "demoteAfterHeal": true
+    },
+    {
+      "ruleId": "DEX-STILL-CU-CAST",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "smart_expand",
+      "demoteAfterHeal": true,
+      "notes": "Chat/Exit BLOCK。导入：expandStillCuCast 或 demote soft；importOk≠designExitPass"
+    },
+    {
+      "ruleId": "DEX-STILL-OS-NAME",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "strip_soft",
+      "demoteAfterHeal": true,
+      "notes": "设计期 BLOCK；导入 soft demote 不硬拦"
+    },
+    {
+      "ruleId": "DEX-STILL-FILLER",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "strip_soft",
+      "demoteAfterHeal": true,
+      "notes": "设计期 BLOCK；导入 soft demote 不硬拦"
+    },
+    {
+      "ruleId": "QP-02",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "none",
+      "demoteAfterHeal": false,
+      "notes": "愈诱导短占位→RH-QP-02-HEAL Confirm；禁 demote 假绿"
+    },
+    {
+      "ruleId": "DEX-QP-02",
+      "chatBlock": true,
+      "healClass": "confirm_only",
+      "importHeal": "none",
+      "demoteAfterHeal": false
+    }
+  ]
 }

@@ -41,6 +41,10 @@ export interface StillQualityMeta {
   /** keep/upload path — must not forge visualPass */
   keepPath?: boolean;
   fidelityStopReason?: string;
+  /** VLM single_frame fail / collage leak — burn must treat as weak */
+  sheetLeak?: boolean;
+  pendingHumanRejudge?: boolean;
+  vlmError?: string;
   audioPass?: boolean;
   audioPassAt?: string;
   videoPass?: boolean;
@@ -184,6 +188,71 @@ export function parseStillMetaFromReason(reason: unknown): Partial<StillQualityM
 export function mergeReasonMeta(existingReason: unknown, patch: Record<string, unknown>): string {
   const prev = parseStillMetaFromReason(existingReason) ?? {};
   return JSON.stringify({ ...prev, ...patch });
+}
+
+/** Hard pixel ids — human rejudge cannot hq_ok / 可燃片 while any fail or sheetLeak uncleared */
+const HUMAN_REJUDGE_HARD_PIXEL =
+  /single_frame|cast_cardinality|background_readable/i;
+
+export function resolveStillHumanRejudgeOutcome(input: {
+  items: Array<{ id: string; pass: boolean }>;
+  prev?: Partial<StillQualityMeta> | null;
+  modality?: "still" | "audio";
+}): {
+  allPass: boolean;
+  burnOk: boolean;
+  stillQuality: StillQuality;
+  visualPass: boolean;
+  sheetLeak: boolean;
+  ctaLabel: string;
+  userMessage: string;
+  humanOverride?: "vlm_infra" | "human_checklist";
+  infraOverride: boolean;
+} {
+  const modality = input.modality ?? "still";
+  const allPass = input.items.every((i) => i.pass);
+  const hardFail = input.items.some(
+    (i) => HUMAN_REJUDGE_HARD_PIXEL.test(i.id) && !i.pass,
+  );
+  const prevSheet = Boolean(input.prev?.sheetLeak);
+  const sheetCleared = input.items.some(
+    (i) => /single_frame/i.test(i.id) && i.pass,
+  );
+  const sheetLeak = prevSheet && !sheetCleared;
+  const infraOverride =
+    input.prev?.pendingHumanRejudge === true ||
+    /VLM_API_KEY_MISSING|vlm_error|vlm_infra/i.test(String((input.prev as { vlmError?: string } | null)?.vlmError ?? ""));
+  const burnOk = modality === "audio" ? allPass : allPass && !hardFail && !sheetLeak;
+  if (modality === "audio") {
+    return {
+      allPass,
+      burnOk,
+      stillQuality: (input.prev?.stillQuality as StillQuality) ?? "weak",
+      visualPass: Boolean(input.prev?.visualPass),
+      sheetLeak: prevSheet,
+      ctaLabel: allPass ? "可燃片" : "继续修复",
+      userMessage: allPass ? "人工改判已写入语料" : "人工改判已写入语料（未全过）",
+      humanOverride: allPass ? "human_checklist" : undefined,
+      infraOverride,
+    };
+  }
+  return {
+    allPass,
+    burnOk,
+    stillQuality: burnOk ? "hq_ok" : "weak",
+    visualPass: burnOk,
+    sheetLeak: sheetLeak || hardFail && input.items.some((i) => /single_frame/i.test(i.id) && !i.pass),
+    ctaLabel: burnOk ? "可燃片" : "继续修复",
+    userMessage: burnOk
+      ? infraOverride
+        ? "人工改判已通过（VLM 基建覆盖）；可燃片，审计见 humanOverride"
+        : "人工改判已写入语料"
+      : hardFail || sheetLeak
+        ? "人工改判未过拼版/人数/灰棚硬项；弱图不可作视频首帧"
+        : "人工改判已写入语料（未全过）",
+    humanOverride: burnOk ? (infraOverride ? "vlm_infra" : "human_checklist") : undefined,
+    infraOverride,
+  };
 }
 
 export function resolveImageQualityAnchor(requested: string, projectQuality?: string | null): string {

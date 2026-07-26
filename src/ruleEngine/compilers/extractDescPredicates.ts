@@ -32,6 +32,12 @@ const PREDICATE_PATTERNS: Array<{ verb: string; prop?: string; re: RegExp }> = [
   { verb: "跪", prop: "蒲团", re: /跪[^，。；]{0,8}蒲团|蒲团[^，。；]{0,6}跪|跪低位蒲团/ },
   { verb: "跪", re: /跪[在于地]?|下跪/ },
   { verb: "抄书", prop: "书", re: /抄书|誊写|书写/ },
+  { verb: "捡", prop: "休书", re: /捡[起下]?[^，。；]{0,6}休书|休书[^，。；]{0,4}捡/ },
+  { verb: "捡", re: /捡[起下]/ },
+  { verb: "递", re: /递[上出给至]/ },
+  { verb: "撕", re: /撕[开破掉]/ },
+  { verb: "拍案", re: /拍案/ },
+  { verb: "摔杯", re: /摔杯|摔盏/ },
   { verb: "侧卧", re: /侧卧/ },
   { verb: "倚靠", re: /倚靠|靠坐/ },
 ];

@@ -17,6 +17,7 @@ export type FidelityKind =
   | "role_action"
   | "prop"
   | "seating"
+  | "cast_cardinality"
   | "composition"
   | "atmosphere"
   | "identity"
@@ -57,6 +58,15 @@ interface ChecklistFixture {
     strengthenValue: string;
     forbidden?: boolean;
   };
+  /** When bgPolicy demote/drop — VLM pixel gate vs grey studio void */
+  backgroundReadableWhenDemote?: {
+    id: string;
+    mustTokens?: string[];
+    vlmQuestion: string;
+    healInject: string;
+    strengthenKey: string;
+    strengthenValue: string;
+  };
   strengthenKeys?: Record<string, string>;
 }
 
@@ -73,6 +83,15 @@ const FALLBACK: ChecklistFixture = {
     strengthenKey: "negativeBan",
     strengthenValue: "no_altar_standing_ritual",
     forbidden: true,
+  },
+  backgroundReadableWhenDemote: {
+    id: "identity:background_readable",
+    mustTokens: [],
+    vlmQuestion: "背景是否为可辨室内/场景（非灰棚/纯色摄影棚空白/无环境）？",
+    healInject:
+      "背景弱化：浅景深，保留室内环境可辨（木作/墙面/烛光），禁止灰棚/纯色摄影棚空白背景，禁止香案升为主构图",
+    strengthenKey: "compositionLock",
+    strengthenValue: "background_readable",
   },
   strengthenKeys: {
     role_action: "roleLock",
@@ -141,6 +160,8 @@ export function buildLiteraryFidelityChecklist(input: {
   requireDualIdentity?: boolean;
   /** When not keep, skip atmosphere items (background demoted) */
   bgPolicy?: "drop" | "demote" | "keep" | null;
+  /** Face CU skips exact-N cast cardinality */
+  shotSize?: string | null;
 }): StillFidelityItem[] {
   const cfg = loadLiteraryFidelityChecklistConfig();
   const keys = cfg.strengthenKeys ?? FALLBACK.strengthenKeys!;
@@ -208,7 +229,8 @@ export function buildLiteraryFidelityChecklist(input: {
   }
 
   for (const pat of cfg.atmospherePatterns ?? []) {
-    if (input.bgPolicy && input.bgPolicy !== "keep") continue;
+    // Homology with atmosphereIsContentWhenInVd: demote/drop still gate VD-named atmosphere
+    // (skip only when pattern absent from desc — not when bgPolicy demotes scene pixels)
     if (!desc.includes(pat)) continue;
     const id = `atmosphere:${pat}`;
     if (seen.has(id)) continue;
@@ -250,6 +272,74 @@ export function buildLiteraryFidelityChecklist(input: {
     });
   }
 
+  // Exact cast count — seating or multi-char mid shots (skip face CU — shotSize/VD 同核)
+  let skipCastCard = false;
+  try {
+    const { resolveFaceCuFraming } =
+      require("../design/detectCuCastConflict") as typeof import("../design/detectCuCastConflict");
+    skipCastCard = resolveFaceCuFraming({
+      shotSize: input.shotSize,
+      visualDescription: input.description,
+      prompt: input.description,
+    }).faceCu;
+  } catch {
+    try {
+      const { isCuShotSize } =
+        require("./stillLiteraryIntentSsot") as typeof import("./stillLiteraryIntentSsot");
+      skipCastCard = isCuShotSize(input.shotSize);
+    } catch {
+      /* optional */
+    }
+  }
+  if (!skipCastCard && names.length >= 1 && (pack.hasSeatingOrKneel || names.length >= 2)) {
+    try {
+      const { buildCastCardinalityFidelityItem } = require("./stillRefSlotContract") as typeof import("./stillRefSlotContract");
+      const castItem = buildCastCardinalityFidelityItem(names as string[]);
+      if (castItem && !seen.has(castItem.id)) {
+        seen.add(castItem.id);
+        items.push({
+          ...castItem,
+          kind: "cast_cardinality",
+        });
+      }
+    } catch {
+      /* optional */
+    }
+  }
+
+  // Single cinematic frame — VLM-only (empty mustTokens ⇒ L0 skip); detect sheet/panel leak
+  if (!seen.has("identity:single_frame")) {
+    seen.add("identity:single_frame");
+    items.push({
+      id: "identity:single_frame",
+      kind: "composition",
+      mustTokens: [],
+      vlmQuestion:
+        "画面是否为单一电影镜头画幅（非四视图/定妆拼版/多宫格/character turnaround sheet）？",
+      healInject: "单镜头成片画幅，禁止四视图、定妆拼版、多格参考墙",
+      strengthenKey: "compositionLock",
+      strengthenValue: "single_frame",
+    });
+  }
+
+  // Soft bg demote/drop: pixel must stay readable interior — not grey studio void
+  if (input.bgPolicy && input.bgPolicy !== "keep") {
+    const bgCfg = cfg.backgroundReadableWhenDemote ?? FALLBACK.backgroundReadableWhenDemote!;
+    const bgId = bgCfg.id || "identity:background_readable";
+    if (!seen.has(bgId)) {
+      seen.add(bgId);
+      items.push({
+        id: bgId,
+        kind: "composition",
+        mustTokens: bgCfg.mustTokens ?? [],
+        vlmQuestion: bgCfg.vlmQuestion,
+        healInject: bgCfg.healInject,
+        strengthenKey: bgCfg.strengthenKey,
+        strengthenValue: bgCfg.strengthenValue,
+      });
+    }
+  }
+
   // Seating shots need 场面硬约束 marker in prompt
   if (pack.hasSeatingOrKneel) {
     items.push({
@@ -278,6 +368,11 @@ export function assertLiteraryFidelity(
   const passed: StillFidelityItem[] = [];
 
   for (const item of items) {
+    // VLM-only items (no prompt tokens) — do not fail L0
+    if (!item.mustTokens.length && item.vlmQuestion) {
+      passed.push(item);
+      continue;
+    }
     if (item.forbidden) {
       // Prompt-layer: negative ban fragment must be present for seating forbidden
       if (/禁止/.test(text) && (/香案|供桌|站立/.test(text) || /no_altar/i.test(text))) {
@@ -287,6 +382,15 @@ export function assertLiteraryFidelity(
       } else {
         missing.push(item);
       }
+      continue;
+    }
+    if (item.kind === "cast_cardinality") {
+      const nTok = item.mustTokens.find((t) => /仅\d+人/.test(t));
+      const ok =
+        /出镜人数/.test(text) &&
+        (!nTok || text.includes(nTok) || new RegExp(nTok.replace(/仅(\d+)人/, "仅\\s*$1\\s*人")).test(text));
+      if (ok) passed.push(item);
+      else missing.push(item);
       continue;
     }
     if (item.kind === "identity") {

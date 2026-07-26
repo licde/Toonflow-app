@@ -7,6 +7,11 @@ import { runDesignExitGate } from "@/ruleEngine/design/designExitGate";
 import { syncPackIdAliases, getGenreTemplateFromPlan } from "@/ruleEngine/genre/loadGenreTemplatePack";
 import { healViralDesignRouter } from "@/ruleEngine/design/healViralDesignRouter";
 import { setLiteraryLocked, isLiteraryLocked } from "@/ruleEngine/design/viralDoctrine";
+import {
+  clearDebtAfterRedesignPass,
+  isRedesignRequired,
+  getKeepLegacyAck,
+} from "@/ruleEngine/design/redesignContract";
 
 const router = express.Router();
 
@@ -40,6 +45,7 @@ export default router.post(
     optimizeRound: z.number().optional(),
     autoHeal: z.boolean().optional(),
     unlockLiterary: z.boolean().optional(),
+    forceExpand: z.boolean().optional(),
   }),
   async (req, res) => {
     const {
@@ -50,6 +56,7 @@ export default router.post(
       optimizeRound,
       autoHeal,
       unlockLiterary,
+      forceExpand,
     } = req.body as {
       projectId: number;
       stepId: string;
@@ -58,6 +65,7 @@ export default router.post(
       optimizeRound?: number;
       autoHeal?: boolean;
       unlockLiterary?: boolean;
+      forceExpand?: boolean;
     };
     const row = await u.db("o_agentWorkData").where({ projectId, key: "scriptAgent" }).first();
     let plan: Record<string, unknown> = {};
@@ -90,11 +98,51 @@ export default router.post(
 
     if (status === "done" && !acknowledgeWeakPath) {
       if (["P0", "P03", "P06", "W1", "W2", "W3", "designBrief", "GB", "SB", "AS", "CD", "G"].includes(stageId)) {
-        exitGate = runDesignExitGate(stageId, plan, { optimizeRound });
+        exitGate = runDesignExitGate(stageId, plan, { optimizeRound, forceExpand: Boolean(forceExpand) });
         if (!exitGate.ok && autoHeal !== false && depth === "viral") {
-          healResult = healViralDesignRouter(plan, stageId, { maxRounds: 1 });
-          plan = healResult.plan;
-          exitGate = healResult.exitGate ?? runDesignExitGate(stageId, plan, { optimizeRound });
+          // High-confidence design auto-close first, then domain heal one round
+          try {
+            const { runDesignAutoClose } =
+              require("@/ruleEngine/design/designAutoClose") as typeof import("@/ruleEngine/design/designAutoClose");
+            const ac = runDesignAutoClose(plan, {
+              stageId,
+              maxRounds: 1,
+              failedIds: exitGate.failedIds,
+              forceExpand: Boolean(forceExpand),
+            });
+            plan = ac.plan;
+            exitGate = ac.exitGate;
+          } catch {
+            /* optional */
+          }
+          if (!exitGate.ok) {
+            healResult = healViralDesignRouter(plan, stageId, { maxRounds: 1 });
+            plan = healResult.plan;
+            exitGate =
+              healResult.exitGate ??
+              runDesignExitGate(stageId, plan, { optimizeRound, forceExpand: Boolean(forceExpand) });
+          }
+        }
+        // W3: core redesignPass green while only LITERARY-STALE remains → clear debt and re-exit
+        if (stageId === "W3" && exitGate && isRedesignRequired(plan)) {
+          const debtClear = clearDebtAfterRedesignPass(plan, { exitGate });
+          if (debtClear.cleared) {
+            exitGate = runDesignExitGate(stageId, plan, { optimizeRound, forceExpand: Boolean(forceExpand) });
+            try {
+              const pd = (plan.planData as Record<string, unknown>) ?? {};
+              const shots =
+                ((pd.preDesignPack as { shots?: Record<string, unknown>[] } | undefined)?.shots ??
+                  (plan.preDesignPack as { shots?: Record<string, unknown>[] } | undefined)?.shots ??
+                  []) as Record<string, unknown>[];
+              if (shots.length) {
+                const { cascadeForwardStale } =
+                  require("@/ruleEngine/quality/forwardStaleCascade") as typeof import("@/ruleEngine/quality/forwardStaleCascade");
+                cascadeForwardStale({ shots, forwardStages: ["SB", "MD-IMG", "EN"] });
+              }
+            } catch {
+              /* optional */
+            }
+          }
         }
         if (!exitGate.ok) {
           return res.status(400).send({
@@ -102,6 +150,7 @@ export default router.post(
             message: exitGate.userMessage,
             data: {
               designExitGate: exitGate,
+              redesignRequired: isRedesignRequired(plan),
               heal: healResult
                 ? {
                     rounds: healResult.rounds,
@@ -110,15 +159,20 @@ export default router.post(
                     rollbackTo: healResult.rollbackTo,
                   }
                 : undefined,
-              cta: "本阶段优化",
+              cta: isRedesignRequired(plan)
+                ? "请按新规范重设计至 W3 验收"
+                : exitGate.userMessage
+                  ? "按失败清单同轮重写 JSON 后再 setStepStatus（禁止只改 passed）"
+                  : "本阶段优化",
               forbidProductionRework: true,
+              chatRetryRequired: true,
             },
           });
         }
-        // W3 pass → literary lock
         if (stageId === "W3" && exitGate.ok && !isLiteraryLocked(plan)) {
           setLiteraryLocked(plan, true);
         }
+        // W1 = redesign entry only — never clearLiteraryStale here
       }
     }
 
@@ -154,7 +208,12 @@ export default router.post(
         stepStatus,
         designExitGate: exitGate,
         literaryLocked: isLiteraryLocked(plan),
+        redesignRequired: isRedesignRequired(plan),
+        keepLegacyAck: getKeepLegacyAck(plan) ?? null,
         healChangeDiff: healResult?.changeDiff,
+        splitApplied: exitGate?.splitApplied,
+        splitExpandedCount: exitGate?.splitExpandedCount,
+        splitLog: exitGate?.splitLog,
       }),
     );
   },

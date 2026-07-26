@@ -1,7 +1,9 @@
 /**
  * C0: Short Video Quality scorecard — default soft_patch / retry / strengthen.
+ * Must dims: missing flag → unknownScore (not 0.7). Optional: skip weight when absent.
  */
 import { readFixtureJson } from "../utils/fixturesPath";
+import { dimPolicyOf, loadSvqDoctrine } from "../quality/loadSvqDoctrine";
 
 type Dim = {
   id: string;
@@ -29,6 +31,10 @@ export type SvqInput = {
     motionOk?: boolean;
     visBeatOk?: boolean;
   };
+  /** Explicit unknown must-dims (fail, not 0.7) */
+  unknownDims?: string[];
+  /** Optional dims to exclude from weighting */
+  skippedDims?: string[];
 };
 
 export type SvqResult = {
@@ -36,12 +42,13 @@ export type SvqResult = {
   pass: boolean;
   failDims: { id: string; score: number; action: string }[];
   defaultAction: "soft_patch" | "retry" | "strengthen" | "pass";
+  unknownDims: string[];
 };
 
-function flagToScore(ok: boolean | undefined): number {
+function flagToScore(ok: boolean | undefined): number | undefined {
   if (ok === true) return 0.85;
   if (ok === false) return 0.35;
-  return 0.7;
+  return undefined;
 }
 
 export function scoreShortVideo(input: SvqInput): SvqResult {
@@ -49,36 +56,49 @@ export function scoreShortVideo(input: SvqInput): SvqResult {
     dimensions: [],
     passScore: 0.65,
   });
+  const unknownScore = loadSvqDoctrine().unknownScore ?? 0.35;
+  const unknownSet = new Set(input.unknownDims ?? []);
+  const skipSet = new Set(input.skippedDims ?? []);
+
   const flagMap: Record<string, number | undefined> = {
-    identity_cast: input.flags?.identityOk === undefined ? undefined : flagToScore(input.flags.identityOk),
-    vis_beat: input.flags?.visBeatOk === undefined ? undefined : flagToScore(input.flags.visBeatOk),
-    emotion_clarity: input.flags?.emotionOk === undefined ? undefined : flagToScore(input.flags.emotionOk),
-    dialogue_lip: input.flags?.lipOk === undefined ? undefined : flagToScore(input.flags.lipOk),
-    cam_variety: input.flags?.camVarietyOk === undefined ? undefined : flagToScore(input.flags.camVarietyOk),
-    audio_mood: input.flags?.audioOk === undefined ? undefined : flagToScore(input.flags.audioOk),
-    retention_hook: input.flags?.retentionOk === undefined ? undefined : flagToScore(input.flags.retentionOk),
-    packaging: input.flags?.packagingOk === undefined ? undefined : flagToScore(input.flags.packagingOk),
-    motion_fidelity: input.flags?.motionOk === undefined ? undefined : flagToScore(input.flags.motionOk),
+    identity_cast: flagToScore(input.flags?.identityOk),
+    vis_beat: flagToScore(input.flags?.visBeatOk),
+    emotion_clarity: flagToScore(input.flags?.emotionOk),
+    dialogue_lip: flagToScore(input.flags?.lipOk),
+    cam_variety: flagToScore(input.flags?.camVarietyOk),
+    audio_mood: flagToScore(input.flags?.audioOk),
+    retention_hook: flagToScore(input.flags?.retentionOk),
+    packaging: flagToScore(input.flags?.packagingOk),
+    motion_fidelity: flagToScore(input.flags?.motionOk),
   };
 
   let weighted = 0;
   let wSum = 0;
   const failDims: SvqResult["failDims"] = [];
+  const unknownDims: string[] = [];
+
   for (const d of card.dimensions) {
-    const s = input.scores?.[d.id] ?? flagMap[d.id] ?? 0.7;
+    if (skipSet.has(d.id) || dimPolicyOf(d.id) === "skip") continue;
+    const policy = dimPolicyOf(d.id);
+    let s = input.scores?.[d.id] ?? flagMap[d.id];
+    if (s === undefined || unknownSet.has(d.id)) {
+      if (policy === "optional") continue;
+      s = unknownScore;
+      unknownDims.push(d.id);
+    }
     weighted += s * d.weight;
     wSum += d.weight;
     if (s < d.failBelow) {
       failDims.push({ id: d.id, score: s, action: d.defaultAction });
     }
   }
-  const score = wSum > 0 ? weighted / wSum : 0.7;
-  const pass = score >= (card.passScore ?? 0.65) && failDims.length === 0;
+  const score = wSum > 0 ? weighted / wSum : unknownScore;
+  const pass = score >= (card.passScore ?? 0.65) && failDims.length === 0 && unknownDims.length === 0;
   let defaultAction: SvqResult["defaultAction"] = "pass";
   if (!pass) {
     if (failDims.some((f) => f.action === "strengthen")) defaultAction = "strengthen";
     else if (failDims.some((f) => f.action === "retry")) defaultAction = "retry";
     else defaultAction = "soft_patch";
   }
-  return { score, pass, failDims, defaultAction };
+  return { score, pass, failDims, defaultAction, unknownDims };
 }

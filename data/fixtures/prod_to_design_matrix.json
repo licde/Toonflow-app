@@ -21,7 +21,7 @@
     { "prodSymptom": "story_kernel_hollow", "ruleIds": ["DEX-PRIMARY-DRIVE", "DEX-RECON-APPLIED"], "designStage": "P06", "exitCheckId": "DEX-RECON-APPLIED", "fallbackRh": "RH-VIR-REVERSE" },
     { "prodSymptom": "shot_intent_decay", "ruleIds": ["DEX-SHOT-INTENT", "DEX-SFX-BRIDGE"], "designStage": "W3", "exitCheckId": "DEX-SHOT-INTENT", "fallbackRh": "RH-VIR-INTENT" },
     { "prodSymptom": "propulsion_opaque", "ruleIds": ["NAR-01", "NAR-05"], "designStage": "W3", "exitCheckId": "DEX-PRIMARY-DRIVE", "fallbackRh": "RH-NAR-05" },
-    { "prodSymptom": "literary_stale_advance", "ruleIds": ["DEX-LITERARY-STALE"], "designStage": "W1", "exitCheckId": "DEX-LITERARY-STALE", "fallbackRh": null }
+    { "prodSymptom": "literary_stale_advance", "ruleIds": ["DEX-LITERARY-STALE"], "designStage": "W1", "exitCheckId": "DEX-LITERARY-STALE", "acceptStage": "W3", "note": "W1=entry; W3 redesignPass clears debt", "fallbackRh": "RH-LITERARY-STALE" }
   ],
   "leaveInProduction": ["VP-CONFLICT", "vendor_duration_snap", "motion_vlm", "INFRA", "runtime_type_error"]
 }

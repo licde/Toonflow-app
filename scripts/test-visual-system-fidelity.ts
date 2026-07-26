@@ -381,9 +381,10 @@ async function main() {
     ok("egress strips who glue or notes", n.changed || !/沈清瓷跪必须/.test(n.prompt), n.prompt.slice(0, 80));
   }
 
-  // --- literary edit prompt: no contract English noise ---
+  // --- literary edit prompt: no contract English noise; fixHints live in Edit SSOT ---
   {
     const { buildLiteraryEditPrompt } = await import("../src/ruleEngine/compilers/stillEditLiteraryPrompt");
+    const { buildEditFocusPrompt } = await import("../src/ruleEngine/qc/stillImageEdit");
     const lit = buildLiteraryEditPrompt({
       description: "沈母端坐高位",
       fullPrompt:
@@ -392,7 +393,12 @@ async function main() {
     });
     ok("edit literary body zh", /沈母端坐/.test(lit));
     ok("edit no vertical9 contract", !/vertical\s*9:16/i.test(lit));
-    ok("edit has fixHint focus", /改成端坐/.test(lit));
+    const focused = buildEditFocusPrompt({
+      literaryPrompt: lit,
+      fixHints: ["改成端坐"],
+      visualDescription: "沈母端坐高位",
+    });
+    ok("edit has fixHint focus", /改成端坐/.test(focused) && /【Edit焦点】/.test(focused));
   }
 
   // --- DC-01 human envelope: never raw dialogue_hash_mismatch→SB alone ---
@@ -560,6 +566,14 @@ async function main() {
     ok("infra bypass ran 1 edit", editCalls === 1, `editCalls=${editCalls}`);
     ok("infra bypass pending human rejudge", bypassOut.pendingHumanRejudge === true);
     ok("infra bypass flag", bypassOut.infraEditBypassUsed === true);
+    ok(
+      "infra bypass settingsDeepLink",
+      /settings\/vendor/.test(String(bypassOut.settingsDeepLink ?? "")),
+    );
+    ok(
+      "infra thin edit no literary healInject soup",
+      !/禁止香案站立|必须端坐太师椅/.test(String(bypassOut.promptUsed ?? "")),
+    );
 
     const { composeStillPrompt } = await import("../src/ruleEngine/compilers/composeStillPrompt");
     const seat = composeStillPrompt({

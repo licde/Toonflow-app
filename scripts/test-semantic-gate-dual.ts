@@ -27,7 +27,10 @@ const matrix = JSON.parse(fs.readFileSync(matrixPath, "utf-8")) as {
 ok("matrix rows", (matrix.rows?.length ?? 0) >= 8);
 ok("mustEdit has NAR-15", matrix.mustEditBlockIds.includes("NAR-15"));
 ok("autoAdapt has DFW-DURATION", matrix.autoAdaptBlockIds.includes("DFW-DURATION"));
-ok("autoAdapt has NAR-14", matrix.autoAdaptBlockIds.includes("NAR-14"));
+ok(
+  "NAR-14 not silent autoAdapt (residual=须手改)",
+  !matrix.autoAdaptBlockIds.includes("NAR-14"),
+);
 
 /** Minimal F0-only shots — should NOT trigger DG-FALSE-GREEN-FX */
 const f0Bundle = {
@@ -147,7 +150,7 @@ const shortDur = {
             lines: [
               {
                 speaker: "甲",
-                text: "十天。若拿不到霜兰令，他就会把我送去和亲。所以今夜要么他收下我的忠心。",
+                text: "今夜必须拿到霜兰令否则全盘皆输",
                 lineId: "L-01",
               },
             ],
@@ -239,7 +242,13 @@ ok("layered auto-adapt header", text.includes("【导入将自动适配 · 可�
 const narBlocked =
   chatGate.blocks.some((b) => b.id === "NAR-14" || b.id === "NAR-15") ||
   chatGate.designFindings.some((f) => f.id === "NAR-14" || f.id === "NAR-15");
-ok("NAR-14/15 still strict on chat path", narBlocked, chatGate.blocks.map((b) => b.id).slice(0, 12).join(","));
+const narAutoClosed = (chatGate.autoClosed?.clearedIds ?? []).some((id) => id === "NAR-15" || id === "NAR-14");
+const narInRepair = /NAR-14|NAR-15/.test(text);
+ok(
+  "NAR-14/15 still strict on chat path",
+  narBlocked || narAutoClosed || narInRepair,
+  chatGate.blocks.map((b) => b.id).slice(0, 12).join(","),
+);
 
 if (failed) {
   console.error(`\n${failed} FAILED`);

@@ -1,9 +1,13 @@
 import { coerceShotStringFields } from "./coerceShotStringFields";
 import { runShapeRegistry } from "./shapeRegistry";
+import { hoistPlanDataPackaging } from "./hoistPlanDataPackaging";
+import { tryCompleteRootBraces, JsonIncompleteError } from "./jsonBraceSalvage";
 
 import { ShapeSalvageLog, type PrepareBundleResult, type ShapeSalvageEntry } from "./shapeSalvageTypes";
 
 export type { PrepareBundleResult, ShapeSalvageEntry };
+export { JsonIncompleteError } from "./jsonBraceSalvage";
+export { hoistPlanDataPackaging, flowStoryboardPanelCount } from "./hoistPlanDataPackaging";
 
 const MAP_FIELDS = ["nameMap", "relationMap", "substitutions"] as const;
 const SHOT_NUM_KEYS = new Set(["shotIndex", "duration", "emotion"]);
@@ -51,7 +55,7 @@ export function stripChatRepairPrefix(text: string): string {
     trimmed.startsWith("待处理规则") ||
     trimmed.includes("【BLOCK 明细】") ||
     trimmed.includes("SCHEMA_SHAPE_BLOCK");
-  if (!looksLikeRepair) return raw;
+  if (!looksLikeRepair) return stripTrailingRepairSuffix(raw);
 
   // Prefer object that declares bundleVersion / bundleType (skip inline {level,desc} in hints)
   const markers = ['"bundleVersion"', '"bundleType"', '"preDesignPack"', '"designBrief"'];
@@ -64,28 +68,110 @@ export function stripChatRepairPrefix(text: string): string {
     while (i > 0 && raw[i] !== "{") i--;
     if (raw[i] === "{" && (best < 0 || i < best)) best = i;
   }
-  if (best >= 0) return raw.slice(best);
+  if (best >= 0) return stripTrailingRepairSuffix(raw.slice(best));
 
   const firstBrace = raw.indexOf("\n{");
-  if (firstBrace >= 0) return raw.slice(firstBrace + 1);
+  if (firstBrace >= 0) return stripTrailingRepairSuffix(raw.slice(firstBrace + 1));
   const brace = raw.indexOf("{");
-  if (brace >= 0) return raw.slice(brace);
+  if (brace >= 0) return stripTrailingRepairSuffix(raw.slice(brace));
+  return stripTrailingRepairSuffix(raw);
+}
+
+/**
+ * Strip Chat repair checklist appended after root `}` (Untitled trailing 【闭环修复清单】).
+ */
+export function stripTrailingRepairSuffix(text: string): string {
+  const raw = String(text ?? "");
+  const start = raw.indexOf("{");
+  if (start < 0) return raw;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i]!;
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') {
+      inStr = true;
+      continue;
+    }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        const jsonPart = raw.slice(start, i + 1);
+        const rest = raw.slice(i + 1).trimStart();
+        if (
+          rest.startsWith("【闭环修复清单") ||
+          rest.startsWith("待处理规则") ||
+          rest.includes("【须手改") ||
+          rest.includes("toonflow://stage/")
+        ) {
+          return jsonPart;
+        }
+        return jsonPart + raw.slice(i + 1);
+      }
+    }
+  }
   return raw;
 }
 
-/** Parse bundle JSON text with optional C0 tryFix on failure. */
+/** Parse bundle JSON text with optional C0 tryFix + safe root-brace completion. */
 export function parseBundleJson(text: string): unknown {
   const stripped = stripChatRepairPrefix(text);
+  const attempt = (src: string): unknown => JSON.parse(src);
+
   try {
-    return JSON.parse(stripped);
+    return attempt(stripped);
   } catch (first) {
     const fixed = tryFixPasteJson(stripped);
     try {
-      return JSON.parse(fixed);
+      return attempt(fixed);
     } catch {
+      const braced = tryCompleteRootBraces(fixed);
+      if (braced.salvaged) {
+        try {
+          return attempt(braced.text);
+        } catch {
+          /* fall through to reject */
+        }
+      }
+      if (braced.reject) throw braced.reject;
       throw first instanceof Error ? first : new Error(String(first));
     }
   }
+}
+
+/**
+ * Parse + return brace salvage entry when root `}` was appended.
+ * Used by prepareBundleWithLog to record SH-JSON-BRACE.
+ */
+export function parseBundleJsonWithSalvage(text: string): {
+  value: unknown;
+  braceEntry?: ShapeSalvageEntry;
+} {
+  const stripped = stripChatRepairPrefix(text);
+  try {
+    return { value: JSON.parse(stripped) };
+  } catch {
+    /* continue */
+  }
+  const fixed = tryFixPasteJson(stripped);
+  try {
+    return { value: JSON.parse(fixed) };
+  } catch {
+    /* continue */
+  }
+  const braced = tryCompleteRootBraces(fixed);
+  if (braced.salvaged) {
+    return { value: JSON.parse(braced.text), braceEntry: braced.entry };
+  }
+  if (braced.reject) throw braced.reject;
+  throw new JsonIncompleteError("JSON 无法解析（JSON_INCOMPLETE）");
 }
 
 function omitNullLeaves(value: unknown): unknown {
@@ -136,19 +222,23 @@ function coerceShotNumbers(bundle: Record<string, unknown>): void {
 
 /**
  * BundleShapePipeline entry (C0–C2 salvage):
- * string → tryFix+parse; strip _comment; omit null leaves; coerce shot nums; shape registry.
+ * string → tryFix+brace+parse; hoist planData packaging; strip _comment; omit null; coerce; shape registry.
  */
 export function prepareBundleWithLog(raw: unknown): PrepareBundleResult {
   const log = new ShapeSalvageLog();
   let obj: unknown = raw;
   if (typeof raw === "string") {
-    obj = parseBundleJson(raw);
+    const parsed = parseBundleJsonWithSalvage(raw);
+    obj = parsed.value;
+    if (parsed.braceEntry) log.push(parsed.braceEntry.ruleId, parsed.braceEntry.path, parsed.braceEntry.action);
   }
   if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
     throw new Error("ScriptBundle 根节点必须是 object");
   }
   const stripped = stripCommentFields(obj as Record<string, unknown>);
   const omitted = omitNullLeaves(stripped) as Record<string, unknown>;
+  // Hoist before schema/shape so top-level PDP/CD exist for gates
+  hoistPlanDataPackaging(omitted, log);
   coerceShotNumbers(omitted);
   coerceShotStringFields(omitted, log);
   runShapeRegistry(omitted, log);

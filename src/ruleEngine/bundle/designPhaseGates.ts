@@ -31,9 +31,49 @@ export function runDesignPhaseGates(bundle: ScriptBundle): {
 } {
   const findings: DesignGateFinding[] = [];
   const shots = (bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[];
-  const empty = assertNonEmptyEpisode({ preDesignShotCount: shots.length });
+  const flowPanels = Array.isArray((bundle.flowData as { storyboard?: unknown[] } | undefined)?.storyboard)
+    ? ((bundle.flowData as { storyboard: unknown[] }).storyboard.length)
+    : 0;
+  const empty = assertNonEmptyEpisode({
+    preDesignShotCount: shots.length,
+    packageShotCount: flowPanels,
+  });
   if (!empty.ok) {
-    findings.push({ id: "DG-EMPTY", severity: "BLOCK", message: empty.message ?? "无分镜" });
+    // Prefer structural hint when planData still holds nested PDP (should have been hoisted)
+    const nested = (bundle.planData as { preDesignPack?: { shots?: unknown[] } } | undefined)?.preDesignPack
+      ?.shots?.length;
+    const msg =
+      nested && nested > 0
+        ? `集无可用分镜（顶层空，但 planData.preDesignPack 有 ${nested} 镜 — 应走 SH-HOIST-PDP；若仍见此条请重导）`
+        : empty.message ?? "无分镜";
+    findings.push({ id: "DG-EMPTY", severity: "BLOCK", message: msg });
+  } else if (shots.length === 0 && flowPanels > 0) {
+    findings.push({
+      id: "DG-FLOW-ONLY",
+      severity: "WARN",
+      message: `无 preDesignPack.shots，但 flowData.storyboard 有 ${flowPanels} 条 — 旁路计数已通过空集闸；请尽快写回顶层 preDesignPack`,
+      field: "flowData.storyboard",
+    });
+  }
+
+  // After hoist, planData may still hold a copy — warn Chat not to re-nest as sole SSOT
+  const nestedPdpShots =
+    (bundle.planData as { preDesignPack?: { shots?: unknown[] } } | undefined)?.preDesignPack?.shots?.length ?? 0;
+  if (nestedPdpShots > 0 && shots.length > 0) {
+    findings.push({
+      id: "NESTED_PACK_ONLY",
+      severity: "WARN",
+      message:
+        "planData.preDesignPack 仍有副本；闸门认顶层。下次导出请把 preDesignPack/characterDesign/designBrief 写在 Bundle 根，禁止只塞 planData",
+      field: "planData.preDesignPack",
+    });
+  } else if (nestedPdpShots > 0 && shots.length === 0) {
+    findings.push({
+      id: "NESTED_PACK_ONLY",
+      severity: "WARN",
+      message: "分镜仅在 planData.preDesignPack；应已被 SH-HOIST-PDP 提升。若仍空顶层请重导/检查 prepare 管道",
+      field: "planData.preDesignPack",
+    });
   }
 
   const impl =
@@ -173,6 +213,43 @@ export function runDesignPhaseGates(bundle: ScriptBundle): {
         field: "dialoguePlan.lines",
       });
     }
+  }
+
+  // DEX-CAM-FIT 未物理拆：禁假绿 selfcheck（chatStrict / 权威形闸）
+  try {
+    const { auditCamShootableFit } =
+      require("../quality/camShootableFit") as typeof import("../quality/camShootableFit");
+    const shots = (bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[];
+    const camHits = shots.filter((s) =>
+      auditCamShootableFit(s).findings.some((f) => f.id === "DEX-CAM-FIT" && f.severity === "BLOCK"),
+    );
+    if (camHits.length) {
+      const self = bundle.narrativeSelfcheck as { passed?: boolean; failedIds?: string[] } | undefined;
+      if (self?.passed === true) {
+        (bundle as { narrativeSelfcheck?: Record<string, unknown> }).narrativeSelfcheck = {
+          ...(self ?? {}),
+          passed: false,
+          failedIds: [...new Set([...(self?.failedIds ?? []), "DEX-CAM-FIT"])],
+          serverOverwritten: true,
+          checkedAt: new Date().toISOString(),
+        };
+        findings.push({
+          id: "DG-CAM-FIT-FALSE-GREEN",
+          severity: "BLOCK",
+          message: `narrativeSelfcheck 假绿：仍有 ${camHits.length} 镜未拆 DEX-CAM-FIT（须权威双镜或 untilClear）`,
+          field: "narrativeSelfcheck",
+        });
+      } else if (Boolean((bundle as { chatStrict?: boolean }).chatStrict)) {
+        findings.push({
+          id: "DEX-CAM-FIT",
+          severity: "BLOCK",
+          message: `chatStrict：${camHits.length} 镜口播+反应未物理拆，不得假绿出站`,
+          field: "preDesignPack.shots",
+        });
+      }
+    }
+  } catch {
+    /* optional */
   }
 
   if (linkageAssetChainFalseGreen(bundle)) {

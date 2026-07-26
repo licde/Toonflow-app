@@ -5,10 +5,8 @@ import { z } from "zod";
 import { validateFields } from "@/middleware/middleware";
 import { normalizeVisualBeatTags, defaultTagsFromPurpose } from "@/ruleEngine/design/visualBeatPolicy";
 import { suggestVisualBeatTags } from "@/ruleEngine/design/visualBeatSuggestor";
-import { runShotExpanders } from "@/ruleEngine/design/expanderRegistry";
 import { setVisBeatOverrideOnShot, planForwardReentry } from "@/ruleEngine/design/visBeatLifecycle";
 import { buildVisBeatDryRunPanel, exemplarSuggestTags } from "@/ruleEngine/design/visBeatEnhance";
-import { runContractStructureHeal } from "@/ruleEngine/heal/contractStructureHeal";
 import { preDesignShotsToPanels } from "@/ruleEngine/bundle/preDesignPackAdapter";
 import { syncStoryboardToDb } from "@/ruleEngine/bundle/storyboardSync";
 import type { PreDesignShot } from "@/ruleEngine/bundle/types";
@@ -142,30 +140,82 @@ export default router.post(
     }
 
     if (action === "confirmExpand" || action === "proposeSplit") {
+      // Delegate to IRD + SplitOrchestrator nucleus (no parallel expand write path)
       const meta = (pd.meta as Record<string, unknown>) ?? { pillarsVisBeatV2: "enforce" };
-      const healed = runContractStructureHeal({
-        plan,
-        shots,
-        applyClusters: true,
+      const { runStillIntentHeal } =
+        require("@/ruleEngine/design/stillIntentReverse") as typeof import("@/ruleEngine/design/stillIntentReverse");
+      const { runSplitOrchestrator } =
+        require("@/ruleEngine/design/splitOrchestrator") as typeof import("@/ruleEngine/design/splitOrchestrator");
+      const { pushDesignSplitUndo, peekPackageVersion, runForwardReentryAfterRepair } =
+        require("@/ruleEngine/design/designSplitLifecycle") as typeof import("@/ruleEngine/design/designSplitLifecycle");
+
+      pushDesignSplitUndo(projectId, {
+        planData: { ...pd },
+        shots: [...shots],
+        packageVersion: peekPackageVersion(shots),
       });
-      const forced = runShotExpanders(healed.shots as Record<string, unknown>[], {
+
+      const mini = {
+        preDesignPack: { shots },
+        planData: pd,
+        meta,
+      } as never;
+      const ird = runStillIntentHeal(mini, {
+        forceApply: action === "confirmExpand",
+        meta,
+        planData: pd,
+      });
+      let next = ird.shots;
+      const orch = runSplitOrchestrator({
+        planData: pd,
+        shots: next,
         meta: { ...meta, pillarsVisBeatV2: meta.pillarsVisBeatV2 ?? "enforce" },
+        applyVisBeatExpanders: true,
+        applyClauseSplit: false,
       });
-      pack.shots = forced.shots;
+      next = orch.shots;
+      Object.assign(pd, orch.planData);
+      const re = runForwardReentryAfterRepair({
+        planData: pd,
+        shots: next,
+        meta,
+        applyVisBeatExpanders: false,
+        applySemanticSplit: false,
+        applyClauseSplit: false,
+      });
+      next = re.shots;
+      pack.shots = next;
       pd.preDesignPack = pack;
+      ((pd.meta as Record<string, unknown>) ?? (pd.meta = {})).irdProvenance = {
+        appliedAt: new Date().toISOString(),
+        via: "visBeatOps→IRD",
+        patchIds: ird.applied,
+      };
+      (pd.meta as Record<string, unknown>).designExitRequiredAfterIrd = true;
+
       let syncResult: unknown;
-      if (syncStoryboard && scriptId) {
-        const panels = preDesignShotsToPanels(forced.shots as PreDesignShot[], { enrichFromDesign: true });
-        syncResult = await syncStoryboardToDb(u.db, projectId, scriptId, panels, { preserveMedia: true });
+      if (syncStoryboard !== false && scriptId) {
+        const panels = preDesignShotsToPanels(next as PreDesignShot[], { enrichFromDesign: true });
+        try {
+          syncResult = await syncStoryboardToDb(u.db, projectId, scriptId, panels, { preserveMedia: true });
+        } catch (e) {
+          return res.status(500).json({
+            message: `IMPORT-SPLIT-SYNC: ${e instanceof Error ? e.message : e}`,
+            code: "IMPORT-SPLIT-SYNC",
+          });
+        }
       }
       await savePlan(projectId, row, plan);
       return res.json(
         success({
           action,
-          shotCount: forced.shots.length,
-          log: forced.log,
-          healPatches: healed.healSummary.patches,
+          shotCount: next.length,
+          irdApplied: ird.applied,
+          irdRefused: ird.refused,
+          log: orch.log,
           syncResult,
+          designExitRequired: true,
+          a11yAnnounce: "VisBeat 已委托 IRD 应用；请再跑 designExit",
         }),
       );
     }

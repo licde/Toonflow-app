@@ -59,3 +59,39 @@ for (const must of ["QF-EXPR-01", "IMG-STILL-QA"]) {
 }
 
 console.log("audit-skill-matrix-sync: OK");
+
+// Hard fail: importSalvageRegistry contract (Chat/Import dual-track)
+{
+  const matrixPath2 = path.join(root, "data/fixtures/semantic_gate_dual_track_matrix.json");
+  const dual = JSON.parse(fs.readFileSync(matrixPath2, "utf8")) as {
+    importSalvageRegistry?: { ruleId: string; demoteAfterHeal?: boolean; healClass?: string }[];
+    mustEditBlockIds?: string[];
+  };
+  const reg = dual.importSalvageRegistry ?? [];
+  const dup = reg.find((e) => e.ruleId === "DEX-DUP-VD");
+  if (!dup || dup.demoteAfterHeal !== false) {
+    console.error("FAIL: DEX-DUP-VD must have demoteAfterHeal=false in importSalvageRegistry");
+    process.exit(1);
+  }
+  if (dup.healClass !== "confirm_only") {
+    console.error("FAIL: DEX-DUP-VD healClass must be confirm_only");
+    process.exit(1);
+  }
+  for (const must of ["DEX-DUP-VD", "DEX-DIRTY-STILL-PROMPT", "DEX-HAND-LIP", "LIP-01"]) {
+    if (!(dual.mustEditBlockIds ?? []).includes(must)) {
+      console.error(`FAIL: ${must} missing from mustEditBlockIds`);
+      process.exit(1);
+    }
+  }
+  const corridor = path.join(skillsDir, "corridor/corridor_SB.md");
+  if (fs.existsSync(corridor)) {
+    const text = fs.readFileSync(corridor, "utf8");
+    for (const needle of ["一镜一画面", "diagnose-only", "importOk≠designExitPass", "forceExpand", "expandProvenance"]) {
+      if (!text.includes(needle)) {
+        console.error(`FAIL: corridor_SB.md missing contract phrase: ${needle}`);
+        process.exit(1);
+      }
+    }
+  }
+  console.log("audit-skill-matrix-sync: importSalvageRegistry + corridor OK");
+}

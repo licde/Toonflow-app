@@ -46,9 +46,18 @@ export function collectPlanAndShotLines(input: {
       []) as Nar14LineLike[];
   const shotLines = (input.shots ?? []).map((s) => {
     const n = s.narrative as { dialogue?: { lines?: Nar14LineLike[] } } | undefined;
+    let skipNar15 = false;
+    try {
+      const { isClearedSpeakSplitChild } =
+        require("./splitChildVisual") as typeof import("./splitChildVisual");
+      skipNar15 = isClearedSpeakSplitChild(s);
+    } catch {
+      /* optional */
+    }
     return {
       shotIndex: Number(s.shotIndex ?? 0) || undefined,
       lines: (n?.dialogue?.lines ?? []) as Nar14LineLike[],
+      skipNar15,
     };
   });
   return { planLines, shotLines };
@@ -186,4 +195,75 @@ export function findOrphanExportRuleIds(exportBlockIds: string[], matrix?: Mount
   const m = matrix ?? loadDesignGateMountMatrix();
   const known = new Set(m.rows.map((r) => r.ruleId));
   return exportBlockIds.filter((id) => !known.has(id) && !id.startsWith("DFW-") && !id.startsWith("MOD-"));
+}
+
+/** Shot-quality diagnoses �� mount predicates only (no second regex). */
+export function diagnoseShotQuality(bundle: ScriptBundle): GateFinding[] {
+  const {
+    checkCastOnDesc,
+    checkEmptyShotConsistency,
+    checkSpeakPerformance,
+    checkQp02,
+    checkCutCamFindings,
+  } = require("../quality/shotQualityPredicates") as typeof import("../quality/shotQualityPredicates");
+  const shots = bundle.preDesignPack?.shots ?? [];
+  const assets = bundle.characterDesign?.assets ?? [];
+  const knownNames: string[] = [];
+  const nameToCodes: Record<string, string[]> = {};
+  for (const a of assets) {
+    const name = String((a as { name?: string }).name ?? "").replace(/��OS��|\(OS\)/g, "").trim();
+    const code = String((a as { code?: string }).code ?? "").trim();
+    if (!name || !code) continue;
+    knownNames.push(name);
+    (nameToCodes[name] ??= []).push(code);
+  }
+  const out: GateFinding[] = [];
+  for (const s of shots) {
+    const idx = Number(s.shotIndex) || undefined;
+    const vd = String(s.visualDescription ?? "");
+    const codes = (s.charCodes as string[]) ?? [];
+    for (const f of [
+      checkQp02({ visualDescription: vd, shotIndex: idx }),
+      checkCastOnDesc({ visualDescription: vd, charCodes: codes, knownNames, nameToCodes, shotIndex: idx }),
+      checkEmptyShotConsistency({ visualDescription: vd, charCodes: codes, knownNames, shotIndex: idx }),
+    ]) {
+      if (!f) continue;
+      out.push({
+        id: f.id,
+        message: f.message,
+        severity: f.severity,
+        shotIndex: f.shotIndex,
+        reverseTrigger: f.id === "DEX-CAST-ON-DESC" ? "cast_on_desc_missing" : f.id === "DEX-EMPTY-SHOT-CONSISTENCY" ? "empty_shot_conflict" : "qp02_visual_short",
+      });
+    }
+    const lines = (s.narrative as { dialogue?: { lines?: unknown[] } } | undefined)?.dialogue?.lines ?? [];
+    const sd = s.shotDesign as { performance?: { microExpression?: { eyes?: string; mouthDetail?: string } }; lipSyncPolicy?: string } | undefined;
+    const expr = checkSpeakPerformance({
+      hasDialogue: Array.isArray(lines) && lines.length > 0,
+      emotionIntensity: (s as { emotionIntensity?: number }).emotionIntensity,
+      microExpression: sd?.performance?.microExpression,
+      lipSyncPolicy: sd?.lipSyncPolicy,
+      shotIndex: idx,
+    });
+    if (expr) {
+      out.push({ id: expr.id, message: expr.message, severity: expr.severity, shotIndex: expr.shotIndex, reverseTrigger: "expr_speak_missing" });
+    }
+  }
+  for (const f of checkCutCamFindings(
+    shots.map((s) => ({
+      shotIndex: Number(s.shotIndex) || undefined,
+      sceneName: s.sceneName,
+      transitionType: s.transitionType,
+      motion: String(s.motion ?? (s.shotDesign as { motion?: string } | undefined)?.motion ?? ""),
+    })),
+  )) {
+    out.push({
+      id: f.id,
+      message: f.message,
+      severity: f.severity,
+      shotIndex: f.shotIndex,
+      reverseTrigger: f.id === "DEX-CUT-01" ? "cut01_adjacent" : "cam_xshot",
+    });
+  }
+  return out;
 }

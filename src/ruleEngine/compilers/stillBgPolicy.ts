@@ -73,11 +73,14 @@ export function resolveStillBgPolicy(input: StillBgPolicyInput): StillBgPolicyRe
     };
   }
 
+  // Character-centric mid: keep soft readable interior (never grey-void / empty studio).
+  // Scene pixels stay as weak --sref; altar must not become main composition.
   return {
     policy: "demote",
-    excludeScene: true,
-    omitSrefToken: true,
-    bgGuidance: "背景弱化：浅景深、环境虚化，人物与构图优先，场景参考不送像素",
+    excludeScene: false,
+    omitSrefToken: false,
+    bgGuidance:
+      "背景弱化：浅景深，保留室内环境可辨（木作/墙面/烛光），禁止灰棚/纯色摄影棚空白背景，禁止香案升为主构图",
     reason: "characterCentric",
     pack,
     sceneEstablishing: false,

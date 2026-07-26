@@ -139,7 +139,7 @@ export async function compileTrackVideoPrompt(
   prompt: string,
   projectRatio?: string,
   projectId?: number,
-): Promise<{ vendorPrompt: string; generateAudio: boolean; aspectRatio: string }> {
+): Promise<{ vendorPrompt: string; generateAudio: boolean; aspectRatio: string; promptHash?: string; ready?: boolean; readyCode?: string }> {
   const enrich = storyboardId ? await loadStoryboardVideoEnrichment(db, scriptId, storyboardId, projectId) : {};
   const compiled = compileVideoNativePrompt(
     { prompt, ...enrich },
@@ -149,5 +149,8 @@ export async function compileTrackVideoPrompt(
     vendorPrompt: compiled.vendorPrompt,
     generateAudio: compiled.generateAudio,
     aspectRatio: (compiled.aspectRatio ?? projectRatio ?? "16:9") as string,
+    promptHash: compiled.promptHash,
+    ready: compiled.ready,
+    readyCode: compiled.readyCode,
   };
 }

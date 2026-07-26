@@ -123,10 +123,17 @@ export interface NarFail {
   field?: string;
 }
 
-/** Deduped NAR-14/15 collection from plan + shots (plan wins for same lineId). */
+/** Deduped NAR-14/15 collection from plan + shots (plan wins for same lineId).
+ * Speak split children (CAM cleared) never emit NAR-15 for missing reactionAction on-shot.
+ */
 export function collectNar14Nar15Fails(
   planLines: Nar14LineLike[],
-  shotLines: { shotIndex?: number; lines: Nar14LineLike[] }[],
+  shotLines: {
+    shotIndex?: number;
+    lines: Nar14LineLike[];
+    /** Cleared speak child after CAM split — skip NAR-15 on-shot */
+    skipNar15?: boolean;
+  }[],
 ): NarFail[] {
   const fails: NarFail[] = [];
   const seen = new Set<string>();
@@ -173,6 +180,7 @@ export function collectNar14Nar15Fails(
           field: "narrative.dialogue.lines",
         });
       }
+      if (shot.skipNar15) continue;
       if (line.functions?.includes("emotion_hit") && !String(line.reactionAction ?? "").trim()) {
         push({
           id: "NAR-15",

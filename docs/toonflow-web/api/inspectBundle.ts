@@ -42,12 +42,15 @@ export async function dryRunImport(
   const exportGate = data.exportGate;
   const chatRepairText =
     exportGate?.chatRepairText ?? data.chatRepairText ?? data.preImport?.chatRepairText;
+  const previewStatusLine =
+    exportGate?.previewStatusLine ?? (data as { previewStatusLine?: string }).previewStatusLine;
   return {
     ...data.preImport,
     ...data,
     preImport: data.preImport,
     exportGate,
     chatRepairText,
+    previewStatusLine,
   };
 }
 

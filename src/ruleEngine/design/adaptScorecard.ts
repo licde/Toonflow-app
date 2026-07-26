@@ -23,6 +23,8 @@ export type AdaptScoreInput = {
   contentTranslateExtensibleWithoutDerivation?: boolean;
   /** VisBeat L0: no unresolved must_split / tag_missing under enforce */
   visBeatOk?: boolean;
+  /** CU × multi-cast resolved (no DEX-STILL-CU-CAST residual) */
+  cuCastOk?: boolean;
 };
 
 export type AdaptScoreResult = {
@@ -87,16 +89,21 @@ export function scoreAdaptationDesign(input: AdaptScoreInput, passThreshold = 65
     input.visBeatOk === false ? 0.3 : input.visBeatOk === true ? 0.92 : 0.75;
   if (input.visBeatOk === false) failDims.push("vis_beat");
 
+  details.cu_cast =
+    input.cuCastOk === false ? 0.25 : input.cuCastOk === true ? 0.92 : 0.75;
+  if (input.cuCastOk === false) failDims.push("cu_cast");
+
   const weights: Record<string, number> = {
     nameMap: 0.1,
-    avTags: 0.13,
-    lipSplit: 0.13,
-    opening: 0.11,
-    peakLedger: 0.11,
-    shotIntent: 0.11,
-    selfcheck: 0.11,
-    contentTranslate: 0.09,
-    vis_beat: 0.11,
+    avTags: 0.12,
+    lipSplit: 0.12,
+    opening: 0.1,
+    peakLedger: 0.1,
+    shotIntent: 0.1,
+    selfcheck: 0.1,
+    contentTranslate: 0.08,
+    vis_beat: 0.1,
+    cu_cast: 0.08,
   };
   let score = 0;
   let w = 0;

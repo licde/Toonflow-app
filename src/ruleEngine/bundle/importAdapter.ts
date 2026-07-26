@@ -64,7 +64,7 @@ import { materializePackaging } from "./packagingMaterialize";
 import { assertNonEmptyEpisode } from "./emptyEpisodeGate";
 import { runDesignPhaseGates } from "./designPhaseGates";
 import { prepareBundleForInspect } from "./prepareBundleForInspect";
-import { ExportGateBlockError, runExportGate, buildAggregatedChatRepairText } from "../exportGate";
+import { ExportGateBlockError, runExportGate } from "../exportGate";
 
 async function loadOrCreateFlowDataRow(db: Knex, projectId: number, scriptId: number) {
   return db("o_agentWorkData").where({ projectId: String(projectId), episodesId: String(scriptId), key: "productionAgent" }).first();
@@ -113,10 +113,11 @@ async function mergeFlowData(
     const mergedPanels =
       incomingPanels.length > 0
         ? incomingPanels.map((p, i) => {
+            const countsAlign = incomingPanels.length === existingPanels.length;
             const old =
               (p.flowId && byFlowId.get(p.flowId)) ||
               (p.clientId && byClientId.get(p.clientId)) ||
-              existingPanels[i];
+              (countsAlign ? existingPanels[i] : undefined);
             return old ? { ...old, ...p, id: old.id, flowId: old.flowId ?? p.flowId } : p;
           })
         : existingPanels;
@@ -139,18 +140,25 @@ async function mergeFlowData(
   };
   if (strategy === "preserveMedia" && existing.storyboard?.length) {
     const incomingPanels = (incoming.storyboard ?? []) as StoryboardPanelInput[];
+    const existingPanels = (existing.storyboard ?? []) as StoryboardPanelInput[];
     const byFlowId = new Map<number, StoryboardPanelInput>();
     const byClientId = new Map<string, StoryboardPanelInput>();
-    for (const old of existing.storyboard as StoryboardPanelInput[]) {
+    for (const old of existingPanels) {
       if (old.flowId) byFlowId.set(old.flowId, old);
       if (old.clientId) byClientId.set(old.clientId, old);
     }
+    const countsAlign = incomingPanels.length === existingPanels.length;
     merged.storyboard = incomingPanels.map((p, i) => {
       const old =
         (p.flowId && byFlowId.get(p.flowId)) ||
         (p.clientId && byClientId.get(p.clientId)) ||
-        (existing.storyboard?.[i] as StoryboardPanelInput | undefined);
-      if (old && ((old as { src?: string }).src || (old as { filePath?: string }).filePath) && (old as { state?: string }).state === "已完成") {
+        // 行数不一致时禁按下标偷绑（库 170 / 作者 16 会错位保媒体）
+        (countsAlign ? existingPanels[i] : undefined);
+      if (
+        old &&
+        ((old as { src?: string }).src || (old as { filePath?: string }).filePath) &&
+        (old as { state?: string }).state === "已完成"
+      ) {
         return {
           ...p,
           id: old.id,
@@ -290,15 +298,26 @@ export function buildDryRunSummary(
   bundle: ScriptBundle | EpisodeBundle,
   opts: ImportOptions,
   scriptExists: boolean,
-  shapeExtras?: { shapeSalvageLog?: ShapeSalvageEntry[] },
+  shapeExtras?: {
+    shapeSalvageLog?: ShapeSalvageEntry[];
+    shotCounts?: import("./prepareBundleForInspect").PrepareBundleShotCounts;
+    irdConfirmRequired?: boolean;
+  },
 ): DryRunImportSummary {
   const layers: string[] = ["script"];
   let storyboardCount = 0;
   let skipAutoDesignSb = false;
+  const counts = shapeExtras?.shotCounts;
+  const rawShotCount = counts?.rawShotCount;
+  const postPrepareCount = counts?.postPrepareCount;
 
   if ("preDesignPack" in bundle && bundle.preDesignPack && hasPreDesignShots(bundle.preDesignPack)) {
     layers.push("scriptPlan", "storyboardTable", "storyboard");
-    storyboardCount = bundle.preDesignPack.shots.length;
+    const metaCounts = (bundle as { meta?: { shotCounts?: { postHeal?: number } } }).meta?.shotCounts;
+    storyboardCount =
+      typeof metaCounts?.postHeal === "number" && metaCounts.postHeal > 0
+        ? metaCounts.postHeal
+        : bundle.preDesignPack.shots.length;
     skipAutoDesignSb = true;
   } else if ("flowData" in bundle && bundle.flowData) {
     const fd = bundle.flowData;
@@ -309,6 +328,68 @@ export function buildDryRunSummary(
   }
 
   const warnings: string[] = [];
+  if (counts?.authorShotsPresent) {
+    warnings.push(
+      `分镜：作者镜 ${counts.rawShotCount} → prepare 后 ${counts.postPrepareCount}` +
+        (counts.diagnoseOnly ? "（diagnose-only，未静默再拆）" : counts.expandApplied ? "（已 forceExpand/再拆）" : ""),
+    );
+    if (counts.diagnoseOnly) {
+      warnings.push("skipAutoDesignSb≠禁再拆：已有 shots 时默认只诊不拆；forceExpand 才允许 IRD/cam/oneBeat apply");
+    }
+    if (
+      counts.rawShotCount > 0 &&
+      counts.postPrepareCount > counts.rawShotCount &&
+      counts.postPrepareCount / counts.rawShotCount >= 2
+    ) {
+      warnings.push(
+        `【不可静默可导入】分镜膨胀 ${counts.rawShotCount}→${counts.postPrepareCount}；请 Confirm 拆镜或关掉 forceExpand`,
+      );
+    }
+  }
+  if ("preDesignPack" in bundle && bundle.preDesignPack?.shots?.length && counts?.rawShotCount) {
+    const live = bundle.preDesignPack.shots.length;
+    const postHeal = (bundle as { meta?: { shotCounts?: { postHeal?: number } } }).meta?.shotCounts?.postHeal;
+    if (typeof postHeal === "number" && postHeal > 0 && postHeal !== counts.rawShotCount) {
+      warnings.push(`【postHeal】作者 ${counts.rawShotCount} → 愈后 ${postHeal}（空克隆可删；禁同文口型增产）`);
+    } else if (live < counts.rawShotCount) {
+      warnings.push(
+        `【空克隆已折叠】作者/prepare ${counts.rawShotCount} → 愈合后 ${live}`,
+      );
+    }
+    try {
+      const { findDupVdStreaks, normalizeVdKey } =
+        require("../design/dirtyStillPromptGate") as typeof import("../design/dirtyStillPromptGate");
+      const shots = bundle.preDesignPack.shots as { shotIndex?: number; visualDescription?: string }[];
+      const dups = findDupVdStreaks(shots, 3);
+      if (dups.length) {
+        const keys = new Set(dups.map((d) => d.vdKey));
+        let sameRatio = 0;
+        for (const k of keys) {
+          const n = shots.filter((s) => normalizeVdKey(String(s.visualDescription ?? "")) === k).length;
+          sameRatio = Math.max(sameRatio, n / Math.max(shots.length, 1));
+        }
+        warnings.push(
+          `【非法同文占比】连续同文连镜 ${dups.length} 处（最高同文占比 ${(sameRatio * 100).toFixed(0)}%）；非语义设计，须回 SB 改画面或 Confirm 语义拆`,
+        );
+      }
+    } catch {
+      /* optional */
+    }
+  }
+  const bMeta = ("meta" in bundle ? (bundle as ScriptBundle).meta : undefined) as
+    | Record<string, unknown>
+    | undefined;
+  const irdConfirm =
+    Boolean(shapeExtras?.irdConfirmRequired) ||
+    Boolean((bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired) ||
+    Boolean(bMeta?.irdConfirmRequired);
+  if (irdConfirm) {
+    warnings.push("【IRD-CONFIRM】存在 mustSplit/多拍待确认；深链 SB VisBeat Confirm，禁止当设计已闭合");
+  }
+  if (bMeta?.importOkNotExitPass || bMeta?.importDiagnoseOnly) {
+    warnings.push("importOk≠designExitPass：形态适配/自报绿≠契约已修");
+  }
+
   let productionClosureChecks;
   let designClosureChecks;
   let intelligentClosureChecks;
@@ -372,6 +453,11 @@ export function buildDryRunSummary(
     willCreateScript: !scriptExists && opts.importMode !== "update",
     willOverwriteLayers: layers,
     storyboardCount,
+    rawShotCount,
+    postPrepareCount: postPrepareCount ?? storyboardCount,
+    importDiagnoseOnly: Boolean(counts?.diagnoseOnly || bMeta?.importDiagnoseOnly),
+    irdConfirmRequired: irdConfirm,
+    importOkNotExitPass: Boolean(bMeta?.importOkNotExitPass),
     mergeStrategy: resolveImportMergeStrategy({
       importMode: opts.importMode,
       mergeStrategy: opts.mergeStrategy,
@@ -403,15 +489,37 @@ export async function importScriptBundle(db: Knex, raw: unknown, opts: ImportOpt
 }
 
 async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOptions): Promise<ImportResult> {
-  const prep = prepareBundleForInspect(raw);
+  const prep = prepareBundleForInspect(raw, { forceExpand: opts.forceExpand });
   let bundle = prep.bundle;
   const shapeSalvageLog = prep.shapeSalvageLog;
   const tier = prep.tier;
-  const exportGate = runExportGate(raw, { bundle: prep.bundle, tier, alreadyPrepared: true, shapeSalvageLog: prep.shapeSalvageLog, allowShapeSalvage: true });
+  const exportGate = runExportGate(raw, {
+    bundle: prep.bundle,
+    tier,
+    alreadyPrepared: true,
+    shapeSalvageLog: prep.shapeSalvageLog,
+    allowShapeSalvage: true,
+    acknowledgeKeepLegacy: opts.acknowledgeKeepLegacy,
+    forceExpand: opts.forceExpand,
+  });
+  // collapse 仅在 exportGate salvage pass 跑一次（禁双跑）
   const designGates = {
     ok: !exportGate.designFindings.some((f) => f.severity === "BLOCK"),
     findings: exportGate.designFindings,
   };
+  if (
+    !opts.validateOnly &&
+    opts.blockOnQualityGate !== false &&
+    (Boolean((bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired) ||
+      Boolean((bundle.meta as { irdConfirmRequired?: boolean } | undefined)?.irdConfirmRequired))
+  ) {
+    // 导入轨：IRD 已在 exportGate(allowShapeSalvage) 降级 WARN；禁止硬抛卡死仓
+    // Chat 导出轨仍 BLOCK（allowShapeSalvage=false）
+    const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+    bMeta.importOkNotExitPass = true;
+    bMeta.importDiagnoseOnly = true;
+    // soft: continue — designExitIncomplete 由 dryRun/exportGate 文案告知
+  }
   const emptyEp = assertNonEmptyEpisode({
     preDesignShotCount: (bundle.preDesignPack?.shots as unknown[] | undefined)?.length ?? 0,
   });
@@ -450,7 +558,11 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
       scriptId: predicted.scriptId ?? 0,
       idMap: {},
       resolvedContext: await resolveContextFromScriptBundle(db, opts.projectId, predicted.scriptId ?? 0, bundle).catch(() => undefined),
-      dryRun: buildDryRunSummary(bundle, opts, !predicted.wouldCreate, { shapeSalvageLog }),
+      dryRun: buildDryRunSummary(bundle, opts, !predicted.wouldCreate, {
+        shapeSalvageLog,
+        shotCounts: prep.shotCounts,
+        irdConfirmRequired: Boolean((bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired),
+      }),
       preImport: {
         ...preImport,
         warnings: [...(preImport.warnings ?? []), ...ruleConsistencyGaps.map((g) => g.message)],
@@ -613,6 +725,36 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
           existingFlow = {};
         }
       }
+      const existingN = Array.isArray(existingFlow.storyboard) ? existingFlow.storyboard.length : 0;
+      const incomingN = linkedPanels.length;
+      const rawN = prep.shotCounts?.rawShotCount ?? incomingN;
+      const diagnoseOnly =
+        Boolean(prep.shotCounts?.diagnoseOnly) && !opts.forceExpand;
+      // 作者镜稳定（未再拆）：以作者包为 SSOT，允许库内膨胀行缩回（170→16）
+      const authorStable =
+        diagnoseOnly && rawN > 0 && incomingN === rawN;
+      const inflateRisk =
+        (rawN > 0 && incomingN >= Math.max(rawN * 2, rawN + 8)) ||
+        (Boolean(prep.shotCounts?.expandApplied) && incomingN !== rawN);
+      if (existingN > 0 && incomingN !== existingN) {
+        if (authorStable) {
+          // recovery path — continue; media by clientId only
+          const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+          bMeta.mergeCountAuthorSSot = true;
+          bMeta.mergeCountNote = `preserveMedia: 库内 ${existingN} → 作者 ${incomingN}（diagnose-only SSOT）`;
+        } else if (inflateRisk && !opts.forceExpand && !opts.acknowledgeKeepLegacy) {
+          throw Object.assign(new Error("IMPORT-MERGE-COUNT"), {
+            code: "IMPORT-MERGE-COUNT",
+            message: `preserveMedia/分层合并行数不一致：库内 ${existingN} / 作者 ${rawN} / 待写入 ${incomingN}。请 replaceAll、确认 forceExpand，或对齐镜数后再导。`,
+          });
+        } else if (!authorStable && !opts.forceExpand && !opts.acknowledgeKeepLegacy) {
+          // 中间态（如待写入既≠作者又≠库）：仍挡，避免错位保媒体
+          throw Object.assign(new Error("IMPORT-MERGE-COUNT"), {
+            code: "IMPORT-MERGE-COUNT",
+            message: `preserveMedia/分层合并行数不一致：库内 ${existingN} / 作者 ${rawN} / 待写入 ${incomingN}。请 replaceAll、确认 forceExpand，或对齐镜数后再导。`,
+          });
+        }
+      }
       const merged = await mergeFlowData(existingFlow, { storyboard: linkedPanels }, mergeStrategy);
       panelsToSync = merged.storyboard as StoryboardPanelInput[];
     }
@@ -624,9 +766,34 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
     };
     storyboardReplaced = mergeStrategy === "replaceAll";
     storyboardCount = panelsToSync.length;
-    const sync = await syncStoryboardToDb(db, opts.projectId, scriptId, panelsToSync, syncOpts);
+    let sync: Awaited<ReturnType<typeof syncStoryboardToDb>>;
+    try {
+      sync = await syncStoryboardToDb(db, opts.projectId, scriptId, panelsToSync, syncOpts);
+    } catch (e) {
+      (bundle as { importSplitSyncFailed?: boolean }).importSplitSyncFailed = true;
+      throw Object.assign(e instanceof Error ? e : new Error(String(e)), {
+        code: "IMPORT-SPLIT-SYNC",
+        message: `拆镜后 storyboard 写库失败: ${e instanceof Error ? e.message : e}`,
+      });
+    }
     idMap = sync.idMap;
     mediaPreservedCount += sync.mediaPreservedCount ?? 0;
+    // M14: after expand, pack shot count must match synced panels
+    const packShotN = bundle.preDesignPack.shots?.length ?? 0;
+    const expanded =
+      Boolean((bundle as { _importSplitExpanded?: boolean })._importSplitExpanded) ||
+      panelsToSync.some(
+        (p) =>
+          Boolean((p as { _stillBeatSplitId?: string })._stillBeatSplitId) ||
+          Boolean((p as { _visualSplitId?: string })._visualSplitId),
+      );
+    if (expanded && packShotN > 0 && sync.panels.length !== packShotN) {
+      (bundle as { importSplitSyncFailed?: boolean }).importSplitSyncFailed = true;
+      throw Object.assign(new Error("IMPORT-SPLIT-SYNC"), {
+        code: "IMPORT-SPLIT-SYNC",
+        message: `拆后镜数不同步 pack=${packShotN} dbPanels=${sync.panels.length}`,
+      });
+    }
     flowData.storyboard = sync.panels as FlowData["storyboard"];
     flowData = mergeFlowDataFromBundle(flowData, bundle, { skipStoryboard: true });
     await saveFlowData(db, opts.projectId, scriptId, flowData);
@@ -738,8 +905,15 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
         existingPlan = {};
       }
     }
-    const mergedPlan = mergePlanDataFields(existingPlan, bundle.planData);
-    const planPayload = JSON.stringify(mergedPlan);
+    // Merge into plan.planData (not plan root) so genreTemplate/keepLegacyAck stay readable
+    const existingPd = ((existingPlan.planData as Record<string, unknown>) ?? {}) as Record<string, unknown>;
+    const incomingPd = bundle.planData as unknown as Record<string, unknown>;
+    const mergedPd = mergePlanDataFields(existingPd, incomingPd);
+    if (opts.acknowledgeKeepLegacy) {
+      mergedPd.keepLegacyAck = { at: Date.now(), reason: "acknowledgeKeepLegacy" };
+    }
+    existingPlan.planData = mergedPd;
+    const planPayload = JSON.stringify(existingPlan);
     if (planRow) {
       await db("o_agentWorkData").where({ id: planRow.id }).update({ data: planPayload, updateTime: Date.now() });
     } else {
@@ -1118,11 +1292,19 @@ export async function importSeriesBundle(db: Knex, raw: unknown, opts: Omit<Impo
 }
 
 export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions): Promise<DryRunImportSummary> {
-  const prep = prepareBundleForInspect(raw);
+  const prep = prepareBundleForInspect(raw, { forceExpand: opts.forceExpand });
   const bundleObj = prep.bundle;
   const kind = detectBundleType(bundleObj);
   const tier = kind === "script" ? prep.tier : bundleObj.modalityPromptAudit ? "T3" : "T2";
-  const exportGate = runExportGate(raw, { bundle: prep.bundle, tier, alreadyPrepared: true, shapeSalvageLog: prep.shapeSalvageLog, allowShapeSalvage: true });
+  const exportGate = runExportGate(raw, {
+    bundle: prep.bundle,
+    tier,
+    alreadyPrepared: true,
+    shapeSalvageLog: prep.shapeSalvageLog,
+    allowShapeSalvage: true,
+    acknowledgeKeepLegacy: opts.acknowledgeKeepLegacy,
+    forceExpand: opts.forceExpand,
+  });
   const preImport = exportGate.inspected;
 
   let summary: DryRunImportSummary;
@@ -1138,11 +1320,34 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
   if (kind === "script") {
     summary = buildDryRunSummary(prep.bundle, { ...opts, validateOnly: true }, !predicted.wouldCreate, {
       shapeSalvageLog: prep.shapeSalvageLog,
+      shotCounts: prep.shotCounts,
+      irdConfirmRequired: Boolean((prep.bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired),
     });
+    // Align dryRun with import: warn when DB bloated vs author (will shrink on import SSOT)
+    if (predicted.scriptId && prep.shotCounts?.diagnoseOnly) {
+      try {
+        const existingRow = await loadOrCreateFlowDataRow(db, opts.projectId, predicted.scriptId);
+        let existingN = 0;
+        if (existingRow?.data) {
+          const fd = JSON.parse(existingRow.data as string) as { storyboard?: unknown[] };
+          existingN = Array.isArray(fd.storyboard) ? fd.storyboard.length : 0;
+        }
+        const authorN = prep.shotCounts.rawShotCount;
+        if (existingN > 0 && authorN > 0 && existingN !== authorN) {
+          summary.warnings = [
+            ...(summary.warnings ?? []),
+            `【导入将缩对齐】库内分镜 ${existingN} ≠ 作者 ${authorN}：preserveMedia 按 clientId 保媒体，以作者包为 SSOT（无须 forceExpand）`,
+          ];
+        }
+      } catch {
+        /* optional */
+      }
+    }
   } else {
     const bundle = kind === "legacy" ? normalizeLegacyFlowData(bundleObj) : { flowData: (bundleObj as unknown as EpisodeBundle).flowData, meta: {} };
     summary = buildDryRunSummary({ flowData: bundle.flowData, meta: bundle.meta } as EpisodeBundle, { ...opts, validateOnly: true }, !predicted.wouldCreate, {
       shapeSalvageLog: prep.shapeSalvageLog,
+      shotCounts: prep.shotCounts,
     });
   }
   return {
@@ -1155,12 +1360,9 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
       exportAllowed: exportGate.exportAllowed,
       closureSnapshot: exportGate.closureSnapshot,
       coverage: exportGate.coverage,
-      chatRepairText: buildAggregatedChatRepairText(
-        exportGate.repairHints,
-        exportGate.closureSnapshot.blockIds,
-        exportGate.missingFieldSummary,
-        exportGate.blocks,
-      ),
+      chatRepairText: exportGate.chatRepairText,
+      designExitIncomplete: exportGate.designExitIncomplete,
+      previewStatusLine: exportGate.previewStatusLine,
       blocks: exportGate.blocks,
       warns: exportGate.warns,
       repairHints: exportGate.repairHints,
@@ -1170,6 +1372,7 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
       shapeSalvageSummary: formatShapeSalvageSummary(prep.shapeSalvageLog),
       rePushPlan: exportGate.inspected?.rePushPlan ?? [],
     },
+    previewStatusLine: exportGate.previewStatusLine,
     endpoint: "int" as const,
   };
 }

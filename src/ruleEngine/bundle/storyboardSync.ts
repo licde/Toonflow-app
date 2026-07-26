@@ -56,7 +56,13 @@ export async function syncStoryboardToDb(
       storyboardId = existingByFlowId.get(flowId)!.id;
     }
     // DeepSeek / re-import: no stable flowId — match by shot index when preserving media
-    if (!storyboardId && opts?.preserveMedia && existingByIndex.has(panelIndex)) {
+    // Must: never inherit media by index after split (children would steal parent jpg)
+    const banIndexMedia =
+      Boolean(panel.burnParentForbidden) ||
+      Boolean(panel._stillBeatSplitId) ||
+      Boolean(panel._visualSplitId) ||
+      Boolean((panel as { _splitFrom?: unknown })._splitFrom);
+    if (!storyboardId && opts?.preserveMedia && !banIndexMedia && existingByIndex.has(panelIndex)) {
       storyboardId = existingByIndex.get(panelIndex)!.id;
     }
 
@@ -120,11 +126,31 @@ export async function syncStoryboardToDb(
     if (flowId) idMap[`flow:${flowId}`] = storyboardId!;
 
     // On preserveMedia keep existing asset links when incoming has none
-    const incomingLinks = panel.associateAssetsIds?.length
+    let incomingLinks = panel.associateAssetsIds?.length
       ? panel.associateAssetsIds
       : opts?.preserveMedia
         ? undefined
         : [];
+    // M11: split children inherit parent asset links when empty (by _stillBeatSplitId / parent clientId)
+    if (
+      (!incomingLinks || !incomingLinks.length) &&
+      opts?.preserveMedia &&
+      (panel._stillBeatSplitId || panel._visualSplitId)
+    ) {
+      const parentKey = String(panel._stillBeatSplitId ?? panel._visualSplitId ?? "");
+      const parentFlow = parentKey ? clientIdToFlowId(parentKey) : 0;
+      const parentRow =
+        (parentFlow && existingByFlowId.get(parentFlow)) ||
+        existingRows.find((r) => r.flowId && String(r.flowId) === parentKey);
+      if (parentRow?.id) {
+        const parentAssets = await db("o_assets2Storyboard")
+          .where({ storyboardId: parentRow.id })
+          .select("assetId");
+        if (parentAssets.length) {
+          incomingLinks = parentAssets.map((a: { assetId: number }) => a.assetId);
+        }
+      }
+    }
     if (incomingLinks) {
       await db("o_assets2Storyboard").where("storyboardId", storyboardId).delete();
       if (incomingLinks.length) {

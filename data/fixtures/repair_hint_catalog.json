@@ -1,6 +1,30 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
   "hints": [
+    {
+      "id": "RH-JSON-INCOMPLETE",
+      "ruleId": "JSON_INCOMPLETE",
+      "checkIds": ["JSON_INCOMPLETE"],
+      "symptom": "Bundle JSON 截断或不完整",
+      "action": "重出可 parse 的完整根对象",
+      "chatTemplate": "【JSON_INCOMPLETE】Bundle JSON 截断/中段损坏，禁止瞎补。请重出完整可 JSON.parse 的根对象（含顶层 preDesignPack/characterDesign/designBrief）。勿当作 DG-EMPTY「无分镜」。大包须根 `}` 闭合自检。"
+    },
+    {
+      "id": "RH-HOIST-NEST",
+      "ruleId": "NESTED_PACK_ONLY",
+      "checkIds": ["NESTED_PACK_ONLY", "SH-HOIST-PDP", "SH-HOIST-CD", "SH-HOIST-CONFLICT"],
+      "symptom": "包装字段只写在 planData 内",
+      "action": "下次导出写 Bundle 根；冲突时人工确认顶层",
+      "chatTemplate": "【结构】preDesignPack/characterDesign/designBrief 须在 Bundle 根。服务器可 SH-HOIST 提升假空集；双源冲突（顶层少镜、嵌套多镜）不静默覆盖。假空集已 salvage 后只改剩余真闸（如 NAR-14），勿整包重写。"
+    },
+    {
+      "id": "RH-SERIES-CONT",
+      "ruleId": "SH-SERIES-CONT",
+      "checkIds": ["SH-SERIES-CONT", "SCHEMA_SHAPE", "SCHEMA_SHAPE_BLOCK"],
+      "symptom": "seriesContinuity 写成散文 string，Zod 期望 record",
+      "action": "写成 { ep1Summary, carryInfoIds? }；导入可 SH-SERIES-CONT 默愈",
+      "chatTemplate": "【SH-SERIES-CONT】planData.narrativeBrief.seriesContinuity 须为对象，例如 {\"ep1Summary\":\"…\",\"carryInfoIds\":[\"INF-01\"]}。禁止整段散文 string。服务器可自动 string→record，下次请写权威形。sceneAvTags 用数组；microExpression 用 {eyes,mouthDetail}（多角色可 byName）。"
+    },
     {
       "id": "RH-QP-01",
       "qpId": "QP-01",
@@ -11,16 +35,26 @@
     {
       "id": "RH-QP-02",
       "qpId": "QP-02",
-      "symptom": "画面描述空泛",
-      "action": "重写 SB 画面描述",
-      "chatTemplate": "【QP-02·可拍描写】visualDescription 须非空、≥minChars 防空壳、禁抽象无物象。导入可智能溯源：shotDesign.picture/composition/blocking + sceneName+短描写拼接；无可用字段则须手改 SB。深链：toonflow://stage/SB?trigger=qp02_visual_short。禁止发明占位句。",
+      "symptom": "画面描述空泛或过短",
+      "action": "重写 SB 画面描述；若为拆镜子镜自伤则 Confirm/重切而非整包重写",
+      "chatTemplate": "【QP-02·可拍描写】visualDescription 须非空、≥minChars、禁抽象无物象、禁「听者反应特写」等占位。若 evidence 含 healInduced / 拆镜子镜 / IRD·lip 自愈：勿当文学空洞整包重写——应 Confirm 拆镜或从父 VD 重切反应镜。真短 VD：shotDesign.picture/composition 溯源或手改 SB。深链：toonflow://stage/SB?trigger=qp02_visual_short。",
       "checkIds": [
         "QP-02",
         "CHAT-SB-01",
         "DEX-QP-02",
-        "too_short"
+        "too_short",
+        "healInduced"
       ],
       "ruleId": "QP-02"
+    },
+    {
+      "id": "RH-QP-02-HEAL",
+      "qpId": "QP-02",
+      "ruleId": "QP-02-HEAL-INDUCED",
+      "checkIds": ["QP-02", "healInduced", "IRD-PLACEHOLDER"],
+      "symptom": "拆镜/IRD 自愈写出短占位 VD",
+      "action": "服务端应重切或 Confirm；勿当空洞文学整包重写",
+      "chatTemplate": "【QP-02·自愈自伤】该镜过短很可能是 speak/react·lip 拆镜占位（如听者反应特写）。请 Confirm 智能拆或从父镜 VD 切片补足锚点；禁止只改 audit / 整集重设计。"
     },
     {
       "id": "RH-QP-03",
@@ -167,8 +201,8 @@
         "DEX-LIP-SPLIT"
       ],
       "symptom": "镜时长/多句同镜口型冲突",
-      "action": "needsSplit|lipOver→Confirm拆镜；仅canSilentRaise→抬时",
-      "chatTemplate": "【LIP双轨】①多句同镜/超厂商上限：须 Confirm 设计拆分（confirmClusterSplit|forwardReentry），禁止只写 prose hint / 禁止把 reactionAction 当 splitHint。②仅时长偏短且可无感抬时：调 duration 或导入一键完善。深链：toonflow://stage/SB?trigger=pr_lip_duration"
+      "action": "needsSplit|lipOver→Confirm拆镜；仅canSilentRaise→设计侧抬时（导入仅兜底）",
+      "chatTemplate": "【LIP双轨】①多句同镜/超厂商上限：设计不过绿，须 Confirm 语义拆（confirmClusterSplit|forwardReentry）；导入不静默同文拆、亦不因本项硬拦导入。②仅时长偏短且可无感抬时：设计侧调 duration（autoClose/export 会抬）；导入 raise 仅兜底。深链：toonflow://stage/SB?trigger=pr_lip_duration"
     },
     {
       "id": "RH-LIP-MULTI",
@@ -190,23 +224,54 @@
         "vis_multi_beat"
       ],
       "symptom": "visualBeatTags×景别冲突须拆镜",
-      "action": "Confirm 拆镜或艺术 override；非可不手改",
-      "chatTemplate": "【VisBeat·须手改】DEX-VIS-SPLIT / VIS-MULTI-BEAT 已移出 autoAdapt。请 Confirm 拆镜（VisBeatConfirmBar / confirmClusterSplit）或显式艺术长镜头 override；禁止 suggestor 静默立法。深链：toonflow://stage/SB?trigger=visual_multi_beat。修后 forwardReentry。"
+      "action": "高置信可 auto 拆镜；低置信 Confirm 或艺术 override；非可不手改静默立法",
+      "chatTemplate": "【VisBeat】DEX-VIS-SPLIT / VIS-MULTI-BEAT：高置信 exit/import 可 auto expand；低置信须 Confirm（VisBeatConfirmBar / confirmClusterSplit）或艺术长镜头 override。禁止 suggestor 静默立法。深链：toonflow://stage/SB?trigger=visual_multi_beat。修后 forwardReentry。"
     },
     {
       "id": "RH-STILL-FIRSTFRAME",
       "ruleId": "STILL-FIRSTFRAME-DIRTY",
       "checkIds": [
         "STILL-FIRSTFRAME-DIRTY",
-        "STILL-FIRSTFRAME-STALE",
         "DEX-STILL-ONEBEAT",
         "DEX-STILL-OS-NAME",
         "DEX-STILL-FILLER",
         "still_firstframe_dirty"
       ],
-      "symptom": "静照假双脸/OS名/描写已变却烧旧图",
-      "action": "SB改visualDescription单拍裸名→stale→MD-IMG重出；禁止只regen",
-      "chatTemplate": "【静帧Identity·反推】脏首帧/DEX-STILL-*：①先回 SB 改 visualDescription（一镜一可静帧拍、裸名禁（OS）、禁对白瞬间神态）；②改描写后旧静照作废；③再 MD-IMG 重出 HQ。禁止只 regen 静照假闭环。深链：toonflow://stage/SB?trigger=still_firstframe_dirty"
+      "symptom": "假双脸/OS名/多拍脏首帧（非弱图、非真手+脸）",
+      "action": "智能拆镜（splitPlan/still_onebeat）或改单拍描写→stale→MD-IMG；禁止只regen",
+      "chatTemplate": "【静帧Identity·反推】假双脸/DEX-STILL-ONEBEAT：①优先智能拆镜；②或手改 visualDescription 为单拍裸名；③改后旧静照作废再 MD-IMG。禁止只 regen。真手+脸→RH-DIRTY-STILL；弱静照→RH-STILL-WEAK；描写漂移→RH-STILL-STALE。深链：toonflow://stage/SB?trigger=still_firstframe_dirty"
+    },
+    {
+      "id": "RH-STILL-CU-CAST",
+      "ruleId": "DEX-STILL-CU-CAST",
+      "checkIds": ["DEX-STILL-CU-CAST", "still_cu_cast"],
+      "symptom": "特写/近景与出镜≥2人同镜冲突",
+      "action": "智能拆：反应特写+场面中景；或改景别；Confirm；禁止 silent 洗绿/只 regen",
+      "chatTemplate": "【CU×人数·DEX-STILL-CU-CAST】特写不能硬塞多人同框。①文学已是单人特写→按意图降出场人数（绑定主角定妆，不拆镜）；②真多人同框意图→确认智能拆（反应特写+场面镜）或改中景。导入不硬拦；设计期须过绿。深链：toonflow://stage/SB?trigger=still_cu_cast"
+    },
+    {
+      "id": "RH-STILL-STALE",
+      "ruleId": "STILL-FIRSTFRAME-STALE",
+      "checkIds": ["STILL-FIRSTFRAME-STALE", "still_firstframe_stale"],
+      "symptom": "画面描写已变更，旧静照哈希不匹配",
+      "action": "改/确认 visualDescription 后重出 HQ；禁止拿旧图烧视频",
+      "chatTemplate": "【静帧过期·STALE】描写已变，旧静照作废。请改 VD 后 MD-IMG 重出再烧。深链：toonflow://stage/SB?trigger=still_firstframe_stale"
+    },
+    {
+      "id": "RH-STILL-WEAK",
+      "ruleId": "STILL-FIRSTFRAME-WEAK",
+      "checkIds": ["STILL-FIRSTFRAME-WEAK", "STILL-FIRSTFRAME-MISSING", "still_firstframe_weak"],
+      "symptom": "弱静照/缺 visualPass/缺首帧（设计层无缺口）",
+      "action": "hq_update / batch_still 重出静照；勿先逼改 VD",
+      "chatTemplate": "【弱静照】质量未达标或缺少首帧。请重出 HQ 静照后再烧视频（不必先改画面描写）。污染壳/XML索要→净洁重编译。深链：toonflow://stage/MD-IMG?trigger=still_firstframe_weak"
+    },
+    {
+      "id": "RH-VIDEO-PROMPT-STUB",
+      "ruleId": "VP-XML-ASK-STUB",
+      "checkIds": ["VP-XML-ASK-STUB", "VP-CROSS-SHOT-SIDECAR", "VP-THIN-SHELL", "video_prompt_stub"],
+      "symptom": "视频词含「请提供分镜 XML」索要壳 / 薄壳空Visual/裸mff/有对白却无对白 / 跨镜 PEAK / EN QF 壳",
+      "action": "有设计料则 compileVideoPromptSpine 治愈落库；真缺 VD 与对白才 BLOCK；禁止只 regen",
+      "chatTemplate": "【视频词薄壳】若本镜已有画面描写/对白，系统应自动重编译治愈。仅双空时请补设计后再编译。深链：toonflow://stage/EN?trigger=video_prompt_stub"
     },
     {
       "id": "RH-QP-16",
@@ -334,8 +399,24 @@
         "NAR-14-RESIDUAL"
       ],
       "symptom": "A拆后残句仍超15字无标点",
-      "action": "须手改：改短重设计 | Confirm B拆镜 | 显式 splitHint；导入可 auto B 仅当真实反应镜存在才绑 hint",
+      "action": "须手改：改短重设计 | Confirm B拆镜 | 显式 splitHint；Confirm/forceExpand 才可 B；ingest 只诊不拆（真实反应镜可绑 hint，禁静默发明）",
       "chatTemplate": "【NAR-14·残句】clause-split 后仍超预算且无停顿标点。完整闭环：①改短/重写(W3)；②Confirm/导入 B 拆镜后才可绑 splitHint=reaction_shot；③禁止只改 passed。深链：toonflow://stage/W3?trigger=nar14_residual。修后 forwardReentry。"
+    },
+    {
+      "id": "RH-LITERARY-STALE",
+      "ruleId": "DEX-LITERARY-STALE",
+      "checkIds": ["DEX-LITERARY-STALE", "literary_stale"],
+      "symptom": "公式已更换仍用旧稿出站",
+      "action": "按新规范重设计；或 acknowledgeKeepLegacy 保留旧稿补洞",
+      "chatTemplate": "【须重设计】公式已更换。请按新规范重走设计（入口 W1 → 验收 W3 redesignPass：NAR-15/intent 等同核），勿只改旧字段或只点 W1。选项：A 按新规范重设计（推荐） / B 保留旧稿继续补洞（须 acknowledgeKeepLegacy）。entry=W1；accept=W3。"
+    },
+    {
+      "id": "RH-FALSE_GREEN",
+      "ruleId": "FALSE_GREEN_SELFCHECK",
+      "checkIds": ["FALSE_GREEN_SELFCHECK", "DG-NAR-SELFCHECK", "self_report_mismatch"],
+      "symptom": "narrativeSelfcheck.passed 与服务器 NAR 不一致",
+      "action": "按 redesignPass 写齐 reactionAction/拆句；禁止只改 passed",
+      "chatTemplate": "【假绿·须重设计验核】自报 passed 但服务器检出 NAR-14/15 等。须回 W3 同写 reactionAction/改短；禁止只改 narrativeSelfcheck.passed。reverseTarget=W3。"
     },
     {
       "id": "RH-NAR-15",
@@ -345,8 +426,8 @@
         "nar15_reaction"
       ],
       "symptom": "emotion_hit 无反应Action",
-      "action": "W3/SB 补 reactionAction",
-      "chatTemplate": "【NAR-15】functions 含 emotion_hit 的台词须写 reactionAction（听者可见反应），同时写在 dialoguePlan 与 shots[].narrative.dialogue.lines（同 lineId）。W3 打标阶段必须带齐，禁止只标 functions。修后调 designSplitOps.forwardReentry。reverseTarget=W3/SB。"
+      "action": "W3 补 dialoguePlan.reactionAction；shots 权威双镜 speak 无 RA",
+      "chatTemplate": "【NAR-15·双轨】①权威：dialoguePlan.lines[] 含 emotion_hit 须写 reactionAction（听者可见反应）；W3 打标带齐，禁止只标 functions。②shots：已拆则说话镜禁止带 reactionAction（+反应镜）；未拆同镜 onCam+RA→DEX-CAM-FIT。勿为过闸往 speak 镜回写 RA。修后 forwardReentry。reverseTarget=W3/SB。"
     },
     {
       "id": "RH-DC-16",
@@ -358,8 +439,96 @@
         "INT-CHAR-ORPHAN"
       ],
       "symptom": "说话人未入 CD / APP 伪角色",
-      "action": "CD 入册；APP/UI 改 type 非 speaker",
-      "chatTemplate": "【DC-16】说话人/上镜码须入 characterDesign.assets（code/name/L0.identity），禁止仅 L0.stub。APP/UI/系统 不可作 speaker。并写入 designBrief.B6.characters 与 visualLockTable.characterAssets。reverseTarget=CD。修复后重新 exportGate。"
+      "action": "CD 入册；APP/UI 改 type 非 speaker；假 orphan 勿建角色",
+      "chatTemplate": "【DC-16】真缺口：说话人/上镜码须入 characterDesign.assets（code/name/L0.identity），禁止仅 L0.stub。APP/UI/系统 不可作 speaker。并写入 designBrief.B6.characters 与 visualLockTable.characterAssets。\n【假 orphan】若标签含 CHAR-ORPH / 动词粘连假名（如「沈清漪紧」「视谢玄辞」），勿为描写切碎名建角色——导入会 auto_adapt 剥离；勿整集重设计。reverseTarget=CD（仅真缺口）。修复后重新 exportGate。"
+    },
+    {
+      "id": "RH-DESIGN-LOSS",
+      "ruleId": "DESIGN-LOSS",
+      "checkIds": ["DESIGN-LOSS", "DESIGN-LOSS-DURATION", "design_loss"],
+      "symptom": "镜级设计遗失（VD/时长等）且无正式源",
+      "action": "SB 强补可拍 visualDescription / duration；禁发明正文瞎补",
+      "chatTemplate": "【DESIGN-LOSS】设计字段遗失。仅可从 plan/父镜 stash 等正式源 salvage；无源须在 SB 手写可拍 visualDescription 与可信 duration。禁止默认 1s、禁止 trim 假绿。reverseTarget=SB。修后 designExit→再 exportGate。"
+    },
+    {
+      "id": "RH-DUR-DESYNC",
+      "ruleId": "DUR-DESYNC",
+      "checkIds": ["DUR-DESYNC"],
+      "symptom": "烧片/提示时长低于 shot.duration",
+      "action": "对齐 shot.duration；厂商桶只升不降",
+      "chatTemplate": "【DUR-DESYNC】shot.duration 为权威下限；prompt/API 不得降到更短（如 2→1）。可接受厂商升档并可见。reverseTarget=SB。修后重烧。"
+    },
+    {
+      "id": "RH-PROMPT-FIDELITY",
+      "ruleId": "PROMPT-FIDELITY",
+      "checkIds": ["PROMPT-FIDELITY"],
+      "symptom": "image/video 提示词未覆盖设计锚点",
+      "action": "改 VD 或重编译提示词，禁 freeform 跳过 Shot List",
+      "chatTemplate": "【PROMPT-FIDELITY】提示词须覆盖 visualDescription 文学意图原子（端坐/太师椅/抄书/座次等）。回 SB 改描写或重跑 compose；Edit 焦点只追加缺失项，禁止掏空文学基底假绿。reverseTarget=SB。"
+    },
+    {
+      "id": "RH-DEX-CAM-FIT",
+      "ruleId": "DEX-CAM-FIT",
+      "checkIds": ["DEX-CAM-FIT", "cam_split"],
+      "symptom": "景别×运镜×可拍物冲突或口播+反应同镜未拆",
+      "action": "服务端 untilClear 智能拆；Chat 下次写权威双镜；低置信 Confirm",
+      "chatTemplate": "【DEX-CAM-FIT·双轨】①下次权威形：dialoguePlan 可写 reactionAction（NAR-15）；shots 须已是说话镜（无 reactionAction）+反应镜两镜，禁同镜口播+反应、禁「听者反应特写」。②本包：服务端 untilClear/智能拆愈；勿手改镜号/勿当 Confirm 手拆已愈项。残留低置信→IRD-CONFIRM。reverseTarget=SB。"
+    },
+    {
+      "id": "RH-DC-01-EXTRA",
+      "ruleId": "DC-01-EXTRA",
+      "checkIds": ["DC-01-EXTRA"],
+      "symptom": "shots 台词乱入（不在 script∪plan）",
+      "action": "删多余行或回写 plan/script",
+      "chatTemplate": "【DC-01-EXTRA】分镜出现 script∪plan 没有的台词（乱入）。删除或对齐 plan。若样例为「：3s」/时长元数据，删除该伪台词行即可。reverseTarget=SB。"
+    },
+    {
+      "id": "RH-VID-INHERIT-COMPOSITION",
+      "ruleId": "VID-INHERIT-COMPOSITION",
+      "checkIds": ["VID-INHERIT-COMPOSITION"],
+      "symptom": "静帧缺出镜人数契约或座次/家具锚未进提示，却要烧视频",
+      "action": "回 MD-IMG 按 LayoutFamily 重烧静帧；确认仅N人与太师椅/蒲团等锚；禁止带病继承",
+      "chatTemplate": "【VID-INHERIT-COMPOSITION】静帧构图/人数未闭合，禁止烧视频。请高质量重出静照后再触达。深链：toonflow://stage/MD-IMG?trigger=vid_inherit_composition"
+    },
+    {
+      "id": "RH-CHAIN-BEAT",
+      "ruleId": "CHAIN-BEAT",
+      "checkIds": ["CHAIN-BEAT"],
+      "symptom": "拆镜子镜未覆盖父文学锚点",
+      "action": "补子镜 VD 锚点或重拆",
+      "chatTemplate": "【CHAIN-BEAT】拆后子镜须覆盖父文学锚点，否则故事碎裂。回 SB 补描写或 Confirm 重拆。reverseTarget=SB。"
+    },
+    {
+      "id": "RH-AUD-ORPHAN",
+      "ruleId": "AUD-ORPHAN-SPEECH",
+      "checkIds": ["AUD-ORPHAN-SPEECH", "aud_orphan"],
+      "symptom": "无对白镜残留口播/口型文案",
+      "action": "sanitize 剥口播或补对白设计；反应镜 OS 可留画外音",
+      "chatTemplate": "【AUD-ORPHAN】设计无对白却有 lip/引号口播。执行层会剥成环境音；若需独白请标 OS/VO。reverseTarget=SB。"
+    },
+    {
+      "id": "RH-IMPORT-SPLIT-SYNC",
+      "ruleId": "IMPORT-SPLIT-SYNC",
+      "checkIds": ["IMPORT-SPLIT-SYNC", "import_split_sync"],
+      "symptom": "拆镜后 o_storyboard 写库失败或镜数不一致",
+      "action": "重试 syncStoryboard；失败=愈失败，禁止假绿导出",
+      "chatTemplate": "【IMPORT-SPLIT-SYNC】拆后 pack↔DB 不同步。重试导入/confirm sync；勿按 index 偷父镜媒体。reverseTarget=SB。"
+    },
+    {
+      "id": "RH-INTENT-PIC",
+      "ruleId": "DEX-INTENT-PIC",
+      "checkIds": ["DEX-INTENT-PIC", "intent_pic"],
+      "symptom": "shotDesignIntent.picture 与 visualDescription 不同核",
+      "action": "stillIntentOps apply sync_intent_picture；或手改 VD/picture 对齐",
+      "chatTemplate": "【DEX-INTENT-PIC】意图 picture 与镜级 VD 须同核。调用 stillIntentOps.diagnose→apply；修后必须再 designExit→MD-IMG。禁止只 regen。"
+    },
+    {
+      "id": "RH-IRD-CONFIRM",
+      "ruleId": "IRD-CONFIRM",
+      "checkIds": ["IRD-CONFIRM", "ird_confirm"],
+      "symptom": "IRD 低置信补丁未 Confirm",
+      "action": "stillIntentOps.apply(force) 或手改后清 confirm",
+      "chatTemplate": "【IRD-CONFIRM】智能反推有低置信拆/补丁。点确认 apply 或手改 VD；import≠exit 通过。修后 designExit。"
     },
     {
       "id": "RH-SPEAKER-BARE",
@@ -602,6 +771,121 @@
       "symptom": "分镜静照弱图",
       "action": "hq_update 再生分镜首帧",
       "chatTemplate": "【IMG-STILL-QA】请用高质量模式更新分镜图（权力位/正脸/9:16 安全区），再烧视频。不要只改 VID 提示词。"
+    },
+    {
+      "id": "RH-CAST-ON-DESC",
+      "ruleId": "DEX-CAST-ON-DESC",
+      "checkIds": [
+        "DEX-CAST-ON-DESC"
+      ],
+      "symptom": "描写点名未进 charCodes",
+      "action": "补码或改描写",
+      "chatTemplate": "【CAST-ON-DESC】描写中的角色名须写入 charCodes（CD 唯一映射可导入自动补）。歧义多名拒修。深链：toonflow://stage/SB?trigger=cast_on_desc_missing"
+    },
+    {
+      "id": "RH-EMPTY-SHOT",
+      "ruleId": "DEX-EMPTY-SHOT-CONSISTENCY",
+      "checkIds": [
+        "DEX-EMPTY-SHOT-CONSISTENCY"
+      ],
+      "symptom": "空镜与人名/出脸冲突",
+      "action": "剥空镜声明或去掉人名",
+      "chatTemplate": "【EMPTY-SHOT】空镜声明不得与人名/出脸/charCodes 并存。导入仅剥冲突句。深链：toonflow://stage/SB?trigger=empty_shot_conflict"
+    },
+    {
+      "id": "RH-EXPR-SPEAK",
+      "ruleId": "DEX-EXPR-SPEAK",
+      "checkIds": [
+        "DEX-EXPR-SPEAK",
+        "GEN-01",
+        "QF-EXPR-01"
+      ],
+      "symptom": "高强度对白缺表演",
+      "action": "补 microExpression+lipSyncPolicy",
+      "chatTemplate": "【EXPR-SPEAK】高强度对白须 performance.microExpression + lipSyncPolicy；禁止用默认表演假过。深链：toonflow://stage/SB?trigger=expr_speak_missing"
+    },
+    {
+      "id": "RH-CUT-01",
+      "ruleId": "DEX-CUT-01",
+      "checkIds": [
+        "DEX-CUT-01",
+        "CUT-01"
+      ],
+      "symptom": "邻镜硬切场景跳变",
+      "action": "补转场或对齐场景",
+      "chatTemplate": "【CUT-01】邻镜场景/色温/道具硬切突变（WARN）。勿发明转场文案。深链：toonflow://stage/SB?trigger=cut01_adjacent"
+    },
+    {
+      "id": "RH-CAM-XSHOT",
+      "ruleId": "DEX-CAM-XSHOT",
+      "checkIds": [
+        "DEX-CAM-XSHOT",
+        "CAM-XSHOT"
+      ],
+      "symptom": "邻镜运镜突变",
+      "action": "对齐运镜/转场",
+      "chatTemplate": "【CAM-XSHOT】邻镜运镜/节奏突变（WARN）。深链：toonflow://stage/SB?trigger=cam_xshot"
+    },
+    {
+      "id": "RH-SVQ-MOTION",
+      "ruleId": "motion_fidelity",
+      "checkIds": [
+        "motion_fidelity",
+        "QC-SVQ"
+      ],
+      "symptom": "成片运镜记分未过",
+      "action": "加强 motion 或重试成片",
+      "chatTemplate": "【SVQ motion】成片 motion_fidelity 未过或缺测。深链：toonflow://stage/EN?trigger=svq_motion_fail"
+    },
+    {
+      "id": "RH-SVQ-AUDIO",
+      "ruleId": "audio_mood",
+      "checkIds": [
+        "audio_mood"
+      ],
+      "symptom": "成片听感/ASR 未过",
+      "action": "补 audioCue 或 ASR",
+      "chatTemplate": "【SVQ audio】audio_mood 未过。深链：toonflow://stage/EN?trigger=svq_audio_fail"
+    },
+    {
+      "id": "RH-ASSET-CREF",
+      "ruleId": "DEX-ASSET-CREF",
+      "checkIds": ["DEX-ASSET-CREF", "IMG-CREF", "QP-11"],
+      "symptom": "出脸镜未完成设计绑，或 AS/生成缺定妆真图（SB 可 stub 延期）",
+      "action": "SB：stub+charCodes/assetCrefPlan 过设计闸；AS：出定妆真图后再烧；禁止假 --cref URL",
+      "chatTemplate": "【ASSET-CREF·设计/生成分轨】SB 可用 stub+assetCrefPlan 延期配角补图；AS/compose 须本镜带图 CHAR-*。导入不发明假 --cref。缺真图→AS；缺设计绑→SB。深链：toonflow://stage/AS?trigger=asset_cref"
+    },
+    {
+      "id": "RH-DIRTY-STILL",
+      "ruleId": "DEX-DIRTY-STILL-PROMPT",
+      "checkIds": ["DEX-DIRTY-STILL-PROMPT", "DEX-DUP-VD", "DEX-HAND-LIP", "VID-INHERIT-DIRTY-STILL"],
+      "symptom": "手+眼同帧 / 连续同文 VD（有对白也算） / 文学体裸 cref·sref / 手镜口型 / 脏静帧烧视频；或配方未按镜型适配硬加正脸/全员必须出现",
+      "action": "回 SB 改一镜一画面（景别/运镜/intent.picture）；真手+脸→VisBeat Confirm 拆（禁同文脸镜）；手镜 lip=none；配方层智能适配≠改设计 VD；超 vendor→Confirm 语义拆或改短",
+      "chatTemplate": "【一镜一画面·脏静帧】真手+脸同写=Chat 不过绿，须 SB 改 VD 或 Confirm 拆手/脸（禁同文脸镜、禁导入静默拆）。手 CU 配方不得硬注正脸/权力位正脸/脸型微表情/全员必须出现。配方适配≠回写 visualDescription。importOk≠designExitPass。深链：toonflow://stage/SB?trigger=dirty_still_prompt"
+    },
+    {
+      "id": "RH-DUP-VD",
+      "ruleId": "DEX-DUP-VD",
+      "checkIds": ["DEX-DUP-VD"],
+      "symptom": "连续≥3镜 visualDescription 归一化相同",
+      "action": "为每镜写可区分画面/景别/运镜；或 Confirm 语义拆；禁止 clone 父镜同文",
+      "chatTemplate": "【DEX-DUP-VD】同文连镜不是设计。请改 VD/景别/运镜或 VisBeat Confirm 语义拆；导入不会替你编造画面。深链：toonflow://stage/SB?trigger=dirty_still_prompt&rule=DEX-DUP-VD"
+    },
+    {
+      "id": "RH-NO-LIP-DIALOGUE",
+      "ruleId": "NO-LIP-DIALOGUE",
+      "checkIds": ["NO-LIP-DIALOGUE"],
+      "symptom": "出镜对白镜含 no lip sync",
+      "action": "去掉 no lip；改 lipSyncPolicy；OS/VO 不强制口型",
+      "chatTemplate": "【NO-LIP】有出镜对白禁止 no lip sync（OS/VO 可允许；空 policy 自动升 subtle）。深链：toonflow://stage/EN?trigger=no_lip_dialogue"
+    },
+    {
+      "id": "RH-SFX-UNBACKED",
+      "ruleId": "SFX-UNBACKED",
+      "checkIds": ["SFX-UNBACKED", "audio_mood"],
+      "symptom": "sfx:<> 字面无交付",
+      "action": "补 audioCue 真源或 adapter；无 adapter≠满分",
+      "chatTemplate": "【SFX】字面 sfx:<> 不算交付。深链：toonflow://stage/SB?trigger=sfx_unbacked"
     }
   ]
 }

@@ -188,11 +188,10 @@ export async function hydrateComposeStillContext(
           ((shot.narrative as { reactionAction?: string } | undefined)?.reactionAction) ??
           null;
         const dial = (shot.narrative as { dialogue?: { lines?: { speaker?: string }[] } } | undefined)?.dialogue;
-        ctx.dialogueDominantSpeaker = Boolean(dial?.lines?.length);
+        const speakers = (dial?.lines ?? []).map((l) => String(l.speaker ?? "").trim()).filter(Boolean);
+        ctx.dialogueDominantSpeaker = speakers[0] || (speakers.length ? true : null);
         ctx.dialogueBeat = dialogueBeatFromShot(shot, ctx.visualDescription);
-        ctx.dialogueSpeakers = normalizeDialogueSpeakers(
-          (dial?.lines ?? []).map((l) => String(l.speaker ?? "").trim()).filter(Boolean),
-        );
+        ctx.dialogueSpeakers = normalizeDialogueSpeakers(speakers);
         ctx.sceneCode =
           (shot.sceneCode as string) ??
           ((shot as { sceneName?: string }).sceneName ? String((shot as { sceneName?: string }).sceneName) : null);
@@ -218,6 +217,18 @@ export async function hydrateComposeStillContext(
           } catch {
             /* optional */
           }
+        }
+        // Episode VD lexicon: neighbor ±3 shots (exclude current) for action-primary harvest
+        if (pkg?.shots?.length) {
+          const win: string[] = [];
+          const lo = Math.max(0, idx - 3);
+          const hi = Math.min(pkg.shots.length - 1, idx + 3);
+          for (let i = lo; i <= hi; i++) {
+            if (i === idx) continue;
+            const vd = String((pkg.shots[i] as { visualDescription?: string })?.visualDescription ?? "").trim();
+            if (vd.length >= 4) win.push(vd);
+          }
+          if (win.length) ctx.episodeVisualDescriptions = win.slice(0, 12);
         }
       }
     } catch {
@@ -318,10 +329,46 @@ export async function hydrateComposeStillContext(
   }
 
   // Always merge package speakers + description-hit names (even when no linked assets)
+  let knownNames: string[] = (ctx.characters ?? []).map((c) => String(c.name ?? "").trim()).filter((n) => n.length >= 2);
+  let nameToCodes: Record<string, string[]> = {};
+  for (const c of ctx.characters ?? []) {
+    const n = String(c.name ?? "").trim();
+    const code = String(c.code ?? "").trim();
+    if (n && code) (nameToCodes[n] ??= []).push(code);
+  }
+  // Expand casting pool from project script assets (CD / seeded roles)
+  try {
+    if (scriptId) {
+      const scriptAssets = await db("o_scriptAssets")
+        .where({ scriptId })
+        .select("assetId");
+      const ids = scriptAssets.map((r: { assetId: number }) => r.assetId).filter(Boolean);
+      if (ids.length) {
+        const rows = await db("o_assets").whereIn("id", ids).select("name", "remark", "type");
+        for (const a of rows as Array<{ name?: string; remark?: string; type?: string }>) {
+          if (looksLikeSceneName(a.name) || a.type === "scene") continue;
+          const name = String(a.name ?? "")
+            .replace(/（OS）|\(OS\)/g, "")
+            .trim();
+          const m = String(a.remark ?? "").match(/(?:assetCode|charCode):([A-Za-z]+-[A-Za-z0-9]+)/i);
+          const code = m?.[1]?.toUpperCase() ?? "";
+          if (name.length >= 2) {
+            knownNames.push(name);
+            if (code) (nameToCodes[name] ??= []).push(code);
+          }
+        }
+      }
+    }
+  } catch {
+    /* optional CD pool */
+  }
+  knownNames = [...new Set(knownNames)];
   ctx.characters = mergeCharacterHints(ctx.characters ?? [], {
     dialogueSpeakers: ctx.dialogueSpeakers,
     visualDescription: ctx.visualDescription,
     videoDesc: ctx.videoDesc,
+    knownNames,
+    nameToCodes,
   });
 
   return ctx;
@@ -340,6 +387,8 @@ export function mergeCharacterHints(
     dialogueSpeakers?: string[] | null;
     visualDescription?: string | null;
     videoDesc?: string | null;
+    knownNames?: string[] | null;
+    nameToCodes?: Record<string, string[]> | null;
   },
 ): ComposeStillCharHint[] {
   const byKey = new Map<string, ComposeStillCharHint>();
@@ -371,12 +420,62 @@ export function mergeCharacterHints(
     if (!sp || looksLikeSceneName(sp)) continue;
     put({ name: sp, hasImage: false, kind: "character", tier: "support" });
   }
-  // Casting sheet doctrine: NEVER invent character names from visualDescription NER
-  // (e.g. 沈清漪咬帕 → phantom 沈清漪咬). Description only matches known names via predicates.
-  void extra.visualDescription;
-  void extra.videoDesc;
-  // Alias merge: 沈母 ↔ 沈母周氏 — only among characters
+  // Smart bind against casting pool only — never free NER invent (禁剥名；无码保留名)
+  const poolNames = [
+    ...(extra.knownNames ?? []),
+    ...linked.map((c) => String(c.name ?? "").trim()).filter((n) => n.length >= 2),
+    ...normalizeDialogueSpeakers(extra.dialogueSpeakers),
+  ];
+  const poolCodes: Record<string, string[]> = { ...(extra.nameToCodes ?? {}) };
+  for (const c of linked) {
+    const n = String(c.name ?? "").trim();
+    const code = String(c.code ?? "").trim();
+    if (n && code) (poolCodes[n] ??= []).push(code);
+  }
+  if (poolNames.length || String(extra.visualDescription ?? "").trim()) {
+    try {
+      const { matchDescNamesToCasting } =
+        require("../quality/matchDescNamesToCasting") as typeof import("../quality/matchDescNamesToCasting");
+      const { extractMentionedNames } =
+        require("../quality/shotQualityPredicates") as typeof import("../quality/shotQualityPredicates");
+      const blob = `${extra.visualDescription ?? ""}\n${extra.videoDesc ?? ""}`;
+      const matched = matchDescNamesToCasting({
+        visualDescription: blob,
+        knownNames: poolNames,
+        nameToCodes: poolCodes,
+      });
+      for (const b of matched.bound) {
+        put({
+          name: b.name,
+          code: b.code,
+          hasImage: linked.some((c) => c.code === b.code && c.hasImage),
+          kind: "character",
+          tier: "support",
+        });
+      }
+      // Casting-first: known names only — never free-NER invent into still pool
+      for (const name of extractMentionedNames(blob, poolNames)) {
+        const codes = poolCodes[name] ?? [];
+        if (codes.length === 1) {
+          put({
+            name,
+            code: codes[0],
+            hasImage: linked.some((c) => c.code === codes[0] && c.hasImage),
+            kind: "character",
+            tier: "support",
+          });
+        } else {
+          put({ name, hasImage: false, kind: "character", tier: "support" });
+        }
+      }
+    } catch {
+      /* optional */
+    }
+  }
+  // Alias merge: 沈母 ↔ 沈母周氏 only (proper-prefix). NEVER 沈清瓷↔沈清漪 via「沈清」.
   const { toBareCastingName, stripToCastingName } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+  const { namesAreProperPrefixAlias } =
+    require("./resolveShotIdentityBinding") as typeof import("./resolveShotIdentityBinding");
   const list = [...byKey.values()]
     .filter((c) => c.kind !== "scene" && !looksLikeSceneName(c.name))
     .map((c) => {
@@ -392,14 +491,18 @@ export function mergeCharacterHints(
   for (const c of list) {
     const nk = nameKey(c.name);
     if (used.has(nk)) continue;
-    const alias = list.find(
-      (o) =>
-        o !== c &&
-        o.name &&
-        c.name &&
-        (o.name.includes(c.name.slice(0, 2)) || c.name.includes(o.name.slice(0, 2))) &&
-        (o.hasImage || c.hasImage),
-    );
+    // Same CHAR code → merge; else only proper-prefix alias (沈母⊂沈母周氏)
+    const alias = list.find((o) => {
+      if (o === c || !o.name || !c.name) return false;
+      if (!(o.hasImage || c.hasImage)) return false;
+      const sameCode =
+        Boolean(o.code && c.code && String(o.code).toUpperCase() === String(c.code).toUpperCase());
+      if (sameCode) return true;
+      if (o.code && c.code && String(o.code).toUpperCase() !== String(c.code).toUpperCase()) {
+        return false; // distinct CHAR codes never collapse
+      }
+      return namesAreProperPrefixAlias(o.name, c.name);
+    });
     if (alias && alias.hasImage && !c.hasImage) {
       out.push({
         ...alias,

@@ -44,7 +44,8 @@ const requestSchema = {
 
 export default router.post("/", validateFields(requestSchema), async (req, res) => {
   const { projectId, model, resolution, concurrentCount, items, promptMode, allowWeakOverride } = req.body;
-  const mode = (promptMode ?? "turnaround_sheet") as AssetStillPromptMode;
+  // Storyboard multiReference prefers identity_plate; CD 画册可显式传 turnaround_sheet
+  const mode = (promptMode ?? "identity_plate") as AssetStillPromptMode;
 
   const project = await u.db("o_project").where("id", projectId).select("artStyle", "type", "intro").first();
   if (!project) return res.status(500).send(error("项目为空"));

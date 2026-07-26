@@ -20,10 +20,11 @@ export default router.post(
     autoDesign: z.boolean().optional(),
     validateOnly: z.boolean().optional(),
     includeValidationReport: z.boolean().optional(),
+    acknowledgeKeepLegacy: z.boolean().optional(),
   }),
   async (req, res) => {
     try {
-      const { projectId, bundle, targetScriptId, importMode, mergeStrategy, autoDesign, validateOnly, includeValidationReport } =
+      const { projectId, bundle, targetScriptId, importMode, mergeStrategy, autoDesign, validateOnly, includeValidationReport, acknowledgeKeepLegacy } =
         req.body;
       const result = await importScriptBundle(u.db, typeof bundle === "string" ? bundle : bundle, {
         projectId,
@@ -33,6 +34,7 @@ export default router.post(
         autoDesign: autoDesign !== false,
         validateOnly: validateOnly === true,
         includeValidationReport: includeValidationReport === true,
+        acknowledgeKeepLegacy,
       });
       return res.status(200).send(success(result));
     } catch (e) {

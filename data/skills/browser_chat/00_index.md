@@ -110,9 +110,11 @@ Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`mu
 4. **自检回流**：export 前对照 `modality_closure_checklist` + `closureReport` 模板（missing/optimize）自修
 5. **契约对齐**：`adaptationMatrixStructured` 与 API `confirmMatrixChoices` Zod 同构
 6. **设计拆分闭环（v2.1 design-gate）**：决策树见 `W3_script` / `corridor_SB`；Confirm=`designSplitOps`；残句=`nar14_residual`（重设计∪导入B）；反推修好后必须 `forwardReentry`；深链见 chatRepairText
-7. **静帧 Identity 闭环**：casting 裸名权威 + multiFace 谓词 + egress 同谓词首帧闸；DEX-STILL-* WARN→chatRepair；反推 `still_firstframe_dirty`→SB→stale→MD-IMG；禁动词表白名单主修
+6b. **换公式**：`DEX-LITERARY-STALE` → 按新规范重设计（或 `acknowledgeKeepLegacy`）；Chat 写权威，导入只补充
+7. **静帧 Identity 闭环**：casting 裸名权威 + multiFace 谓词 + egress 同谓词首帧闸；DEX-STILL-* 设计强契约 BLOCK（导入 demote）；含 **CU×cast** `still_cu_cast`；反推 `still_firstframe_*` / `still_onebeat_multi` / `img_still_weak` 同源；禁只 regen；Chat/Exit/IRD/Compose 同核
 8. **QP-02 可拍描写闭环**：设计 DEX-QP-02 ≡ export QP-02；CHAT-SB 同核；导入仅溯源补写；深链 SB；minChars 为防空壳底线
 9. **冻结**：禁止静默发明 splitHint/reactionAction；B 须真实反应镜才绑 hint；静帧禁只 regen 假闭环；禁发明 visualDescription 占位
+10. **DEX-CAM-FIT 硬约束**：plan 可写 reactionAction（NAR-15）；shots **禁止**单镜口播+反应；须已拆说话镜+反应镜；服务器愈仅兜底，Chat 下次仍须权威形；禁假绿
 
 ## §7 ScriptBundle 字段对照
 
@@ -122,8 +124,9 @@ Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`mu
 | planData.narrativeBrief | P0/P03/P06/G/W1/W2/W3 累积 |
 | planData.sceneMeta | W3_script sidecar |
 | planData | P*/G/W* |
-| designBrief | design_brief |
-| preDesignPack | corridor_GB + corridor_SB |
+| preDesignPack | corridor_GB + corridor_SB（**Bundle 根**，禁仅 planData 内） |
+| characterDesign | CD（**Bundle 根**） |
+| designBrief | design_brief（**Bundle 根**） |
 | linkageAudit | linkage_continuity |
 | fixPlan | smart_fix |
 | rePushPlan | corridor_repush |
@@ -148,11 +151,14 @@ Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`mu
 | `preview_vs_import_guide.md` | 预览更新 vs 落库、Chat 修复后再验证、DC-16 配角入册 |
 | `closure_field_change_guide.md` | 字段闭环变更范围说明 |
 | `design_compliance_gate.md` | T3 设计合规闸（exportGate 强制调用） |
-| `T3_quality_gate.md` | T3 出口硬闸 + DC-16/RH-DC-16 |
+| `T3_quality_gate.md` | T3 出口硬闸 + DC-16/RH + **静帧→视频质量闭环**（CAST/EMPTY/EXPR/CREF/NO-LIP/SFX/mouth） |
 | `stages/W3_narrative_selfcheck.md` | W3 叙事自检（NAR-14/15 服务器重验） |
 | `production/CD_character_design.md` | CD L0–L6；DC-16 最小骨架 code+name+L0.identity |
 | `docs/image-quality-chain.md` | A→B→C 三层闭环（设计/定妆/生成） |
 | `docs/quality-loop/README.md` | exportGate / stub≠PASS / soft_patch 边界 |
+| `data/fixtures/still_video_quality_doctrine.json` | 静帧→视频质量 doctrine（DEX stages + failDimTriggers） |
+| `data/fixtures/reverse_route_table.json` | 反推 trigger→舞台（含 asset_cref / no_lip_dialogue / sfx_unbacked） |
+| `data/fixtures/repair_hint_catalog.json` | RH chatTemplate + 深链 |
 
 - `data/fixtures/debut_intro_templates.json`
 - `data/fixtures/rule_flow_unified.json`
