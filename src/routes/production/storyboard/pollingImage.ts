@@ -4,6 +4,7 @@ import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { classifyGenerationFailure } from "@/ruleEngine/bundle/generationFailureHelper";
+import { stillApiFieldsFromReason } from "@/ruleEngine/compilers/stillQuality";
 
 const router = express.Router();
 
@@ -32,6 +33,7 @@ export default router.post(
         const base = {
           ...item,
           src: item.filePath ? await u.oss.getSmallImageUrl(item.filePath) : null,
+          ...stillApiFieldsFromReason(item.reason),
         };
         if (item.state === "生成失败" && item.reason && item.id != null) {
           let feedback = parseFailureFeedback(item.reason, item.id, item.prompt ?? undefined);

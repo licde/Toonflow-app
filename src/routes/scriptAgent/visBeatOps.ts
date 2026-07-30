@@ -193,6 +193,35 @@ export default router.post(
       };
       (pd.meta as Record<string, unknown>).designExitRequiredAfterIrd = true;
 
+      // Homology with stillIntentOps: force designExit after VisBeat expand
+      let designExitGate: unknown;
+      let designExitOk = true;
+      try {
+        const { runDesignAutoClose } =
+          require("@/ruleEngine/design/designAutoClose") as typeof import("@/ruleEngine/design/designAutoClose");
+        const ac = runDesignAutoClose(plan as never, { forceExpand: false });
+        const nested = (plan as { preDesignPack?: { shots?: Record<string, unknown>[] } }).preDesignPack;
+        if (nested?.shots?.length) {
+          next = nested.shots;
+          pack.shots = next;
+          pd.preDesignPack = pack;
+        }
+        designExitGate = ac.exitGate;
+        designExitOk = Boolean(ac.exitGate?.ok);
+        (pd.meta as Record<string, unknown>).designExitRequiredAfterIrd = !designExitOk;
+      } catch {
+        try {
+          const { runDesignExitGate } =
+            require("@/ruleEngine/design/designExitGate") as typeof import("@/ruleEngine/design/designExitGate");
+          const exit = runDesignExitGate("SB", plan, { forceExpand: false });
+          designExitGate = exit;
+          designExitOk = exit.ok;
+          (pd.meta as Record<string, unknown>).designExitRequiredAfterIrd = !designExitOk;
+        } catch {
+          /* optional */
+        }
+      }
+
       let syncResult: unknown;
       if (syncStoryboard !== false && scriptId) {
         const panels = preDesignShotsToPanels(next as PreDesignShot[], { enrichFromDesign: true });
@@ -214,8 +243,13 @@ export default router.post(
           irdRefused: ird.refused,
           log: orch.log,
           syncResult,
-          designExitRequired: true,
-          a11yAnnounce: "VisBeat 已委托 IRD 应用；请再跑 designExit",
+          designExitGate,
+          designExitOk,
+          designExitRequired: !designExitOk,
+          a11yAnnounce: designExitOk
+            ? "VisBeat 已委托 IRD 应用；designExit 已过"
+            : "VisBeat 已委托 IRD 应用；designExit 未过绿，请继续智能设计/Confirm",
+          forwardReentryRequired: !designExitOk,
         }),
       );
     }

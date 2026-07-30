@@ -326,12 +326,23 @@ export function buildAggregatedChatRepairText(
   }
   if (blockIds.includes("DEX-SHOT-INTENT") || blocks?.some((b) => b.id === "DEX-SHOT-INTENT")) {
     lines.push(
-      "【DEX-SHOT-INTENT】shotDesignIntent 仍缺 picture/durationSec 或 peak/hook 回挂（无 peak 可派生时须 Chat 手写）。reverseTarget=W3。",
+      "【DEX-SHOT-INTENT】shotDesignIntent 仍缺 picture/durationSec（服务端已尝试从 peak/分镜 VD 派生；若本条仍在=无镜可派生或锁稿未写回）。reverseTarget=W3。",
       "",
     );
   } else if (opts?.autoClosedClearedIds?.includes("DEX-SHOT-INTENT")) {
     lines.push(
-      "【DEX-SHOT-INTENT】已自动闭合：已从 peakLedger/hookPlan 补 sidecar intents。",
+      "【DEX-SHOT-INTENT】已自动闭合：已从 peakLedger 或分镜 VD/时长补 sidecar intents。",
+      "",
+    );
+  }
+  if (blockIds.includes("DEX-PROP-CONT") || blocks?.some((b) => b.id === "DEX-PROP-CONT")) {
+    lines.push(
+      "【DEX-PROP-CONT】邻镜道具连续性仍未声明（服务端已尝试 propState 顺延，禁改 VD；若仍红=须 SB 交待离手/去向）。",
+      "",
+    );
+  } else if (opts?.autoClosedClearedIds?.includes("DEX-PROP-CONT")) {
+    lines.push(
+      "【DEX-PROP-CONT】已自动闭合：已 declare-only 写入 propState 顺延（未发明 VD 道具）。精品交待可回 SB。",
       "",
     );
   }
@@ -568,6 +579,10 @@ export function buildExportPreviewStatusLine(input: {
   deferredStill?: number;
   lipConfirmRequired?: boolean;
   illegalSameVdRatio?: number;
+  /** 文学债须设计 Confirm（拆/增强）或已智能拆 */
+  litConfirmRequired?: boolean;
+  litDebtCta?: string;
+  litSmartSplit?: boolean;
 }): string {
   const tier = input.tier ?? "T3";
   const ids = [...new Set((input.blocks ?? []).map((b) => b.id))].slice(0, 8);
@@ -577,14 +592,28 @@ export function buildExportPreviewStatusLine(input: {
   const deferred =
     (input.deferredStill ?? 0) > 0 ? `定妆延期 ${input.deferredStill}` : "";
   const lipNote = input.lipConfirmRequired ? "口型须Confirm语义拆" : "";
+  const litNote = input.litSmartSplit
+    ? "文学双接触已智能拆"
+    : input.litConfirmRequired
+      ? input.litDebtCta
+        ? `文学债须Confirm：${input.litDebtCta}`
+        : "文学债须Confirm拆镜/增强"
+      : "";
   const dupNote =
     typeof input.illegalSameVdRatio === "number" && input.illegalSameVdRatio >= 0.2
       ? `非法同文占比${Math.round(input.illegalSameVdRatio * 100)}%`
       : "";
-  const extrasBase = [closedNote, deferred, lipNote, dupNote].filter(Boolean);
+  const extrasBase = [closedNote, deferred, lipNote, litNote, dupNote].filter(Boolean);
   if (input.exportAllowed) {
+    const head = input.litSmartSplit
+      ? "可导入·已智能拆文学债"
+      : input.litConfirmRequired
+        ? "可导入·文学债未闭合"
+        : input.designExitIncomplete
+          ? "可导入·未完全闭合"
+          : "可导入";
     const extras = [...extrasBase, salvageN ? `形态已适配 ${salvageN}` : ""].filter(Boolean).join(" · ");
-    return `预览更新完成 · ${tier} · 可导入${extras ? ` · ${extras}` : ""}`;
+    return `预览更新完成 · ${tier} · ${head}${extras ? ` · ${extras}` : ""}`;
   }
   const literaryStale = ids.includes("DEX-LITERARY-STALE");
   const head = literaryStale
@@ -661,6 +690,9 @@ type ImportSalvageEntry = {
   ruleId: string;
   demoteAfterHeal?: boolean;
   importHeal?: string;
+  untilClear?: boolean;
+  confirmOnly?: boolean;
+  exitDetector?: string;
   healClass?: string;
 };
 
@@ -677,9 +709,17 @@ function loadImportSalvageRegistry(): ImportSalvageEntry[] {
 }
 
 function importSalvageDemoteIds(): Set<string> {
+  // Soft-banner on import (BLOCK→WARN + importOkNotExitPass). Not "demote = PASS".
+  // - demoteAfterHeal=true && !untilClear: legacy explicit soft-banner
+  // - importSoftBanner=true: Confirm residual stamps (IRD-CONFIRM / CAM-FIT)
+  // untilClear healable debts (CU-CAST / ONEBEAT / LIT…) must NOT soft-banner as success
   return new Set(
     loadImportSalvageRegistry()
-      .filter((e) => e.demoteAfterHeal === true)
+      .filter((e) => {
+        const soft = (e as { importSoftBanner?: boolean }).importSoftBanner === true;
+        if (soft) return true;
+        return e.demoteAfterHeal === true && (e as { untilClear?: boolean }).untilClear !== true;
+      })
       .map((e) => e.ruleId),
   );
 }
@@ -819,8 +859,9 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
       stageId: "SB",
       // Dirty/DUP heals often need merge then re-audit
       maxRounds: opts.allowShapeSalvage === true ? 4 : 3,
-      // 导入：语义愈（NAR-15/LIP/intent）；Chat/设计：仅 forceExpand 才语义扩
-      forceExpand: opts.allowShapeSalvage === true || Boolean(opts.forceExpand),
+      // 导入智愈 ≠ forceExpand：禁把 allowShapeSalvage 当成 VisBeat/clause 同文扩闸
+      // 语义扩仅 opts.forceExpand（Confirm / 显式扩）
+      forceExpand: Boolean(opts.forceExpand),
     });
     autoClosed = ac.autoClosed;
     if (ac.autoClosed.applied) {
@@ -1160,7 +1201,9 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
       id === "DC-01" ||
       id === "DC-01-EXTRA" ||
       id === "DEX-DIRTY-STILL-PROMPT" ||
-      id === "DEX-HAND-LIP"
+      id === "DEX-HAND-LIP" ||
+      id === "DEX-PROP-CONT" ||
+      id === "NO-LIP-DIALOGUE"
     ) {
       for (let i = blocks.length - 1; i >= 0; i--) {
         if (blocks[i]?.id === id) blocks.splice(i, 1);
@@ -1224,11 +1267,149 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
         bMeta.importDiagnoseOnly = true;
         (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired = true;
       }
+      // Lit XOR/CONTACT demoted → same-kernel soft-fill + design Confirm 债（≠ ExitPass）
+      // Full lit hygiene also runs below for all import salvage (even if lit not in demoted set)
+      if (demoted.some((id) => /^DEX-LIT-|^DEX-PROP-CONT/.test(id))) {
+        bMeta.litDebtImportPending = true;
+      }
       (prep.shapeSalvageLog ??= []).push({
         ruleId: "SH-IMPORT-SALVAGE-DEMOTE",
         path: "exportGate.blocks",
         action: `demoted=${[...new Set(demoted)].join(",")}`,
       });
+    }
+
+    // Always scan shots for lit debt on import (不等 demote 名单 — 防假绿「可导入」)
+    {
+      const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+      const shots = (bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[];
+      if (shots.length) {
+        try {
+          const { runImportLitDebtHygiene } =
+            require("./design/importLitDebtHygiene") as typeof import("./design/importLitDebtHygiene");
+          const lit = runImportLitDebtHygiene({
+            shots,
+            meta: bMeta,
+            shapeSalvageLog: (prep.shapeSalvageLog ??= []),
+          });
+          if ((lit.splitCount > 0 || lit.softFilled.length) && bundle.preDesignPack) {
+            (bundle.preDesignPack as { shots: unknown }).shots = shots;
+            if (bundle.planData && typeof bundle.planData === "object") {
+              const pd = bundle.planData as { preDesignPack?: { shots?: unknown } };
+              if (pd.preDesignPack) pd.preDesignPack.shots = shots;
+            }
+          }
+          // Lit XOR expand reindexes shots — must re-declare F0 (import heal F0 ran before expand)
+          try {
+            const { declareF0OnBundle } =
+              require("./import/declareF0") as typeof import("./import/declareF0");
+            const f0 = declareF0OnBundle(bundle as never);
+            if (f0.declared.length) {
+              (prep.shapeSalvageLog ??= []).push({
+                ruleId: "SH-FX-F0-AFTER-LIT-SPLIT",
+                path: "fxFeasibilityAudit.items",
+                action: `declared=${f0.declared.join(",")}`,
+              });
+              if (!warns.some((w) => w.id === "FX-F0-IMPORT")) {
+                warns.push({
+                  id: "FX-F0-IMPORT",
+                  message: `【可导入 · 已声明无特效 F0】镜 ${f0.declared.slice(0, 8).join(",")}（无特效不写 fxPrompt）`,
+                  field: "fxFeasibility",
+                });
+              }
+            }
+          } catch {
+            /* optional */
+          }
+          // Homology until-clear: F0 + strip noise + absorb literary EXTRA (same kernel as touch)
+          try {
+            const { softHealTouchHomology } =
+              require("./heal/touchHomologyHeal") as typeof import("./heal/touchHomologyHeal");
+            const heal = softHealTouchHomology(bundle as never);
+            if (heal.absorbed > 0 || heal.strippedNoise > 0 || heal.f0Declared.length) {
+              (prep.shapeSalvageLog ??= []).push({
+                ruleId: "SH-DC01-ABSORB-EXTRA",
+                path: "planData.dialoguePlan.lines",
+                action: `cleared=${heal.cleared};noise=${heal.strippedNoise};absorb=${heal.absorbed};left=${heal.extrasLeft};f0=${heal.f0Declared.join(",")}`,
+              });
+              if (!warns.some((w) => w.id === "DC-01-ABSORB-EXTRA")) {
+                warns.push({
+                  id: "DC-01-ABSORB-EXTRA",
+                  message: heal.cleared
+                    ? `【可导入 · 台词/FX 同核已清零】剥离噪点 ${heal.strippedNoise} · 吸收文学 ${heal.absorbed} · F0 ${heal.f0Declared.length}`
+                    : `【可导入 · 同核未完全清零】残留 EXTRA ${heal.extrasLeft} / 未声明 FX ${heal.undeclaredFxLeft} — 须设计重做`,
+                  field: "planData.dialoguePlan",
+                });
+              }
+            }
+            // Splice harvested BLOCKs cleared by homology (no demote-as-success)
+            if (heal.extrasLeft === 0) {
+              for (let i = blocks.length - 1; i >= 0; i--) {
+                const id = String(blocks[i]?.id ?? "");
+                if (id === "DC-01-EXTRA" || id === "DC-01" || id === "H3" || id === "R2") {
+                  if (/乱入|EXTRA|台词覆盖/.test(String(blocks[i]?.message ?? "")) || id === "DC-01-EXTRA") {
+                    blocks.splice(i, 1);
+                  }
+                }
+              }
+            }
+            if (heal.undeclaredFxLeft === 0) {
+              for (let i = blocks.length - 1; i >= 0; i--) {
+                const id = String(blocks[i]?.id ?? "");
+                if (id === "FX-GRADE-01" || id === "DG-FALSE-GREEN-FX" || id === "DG-FX-DUAL-TRACK") {
+                  if (/未声明|F0|空/.test(String(blocks[i]?.message ?? "")) || id !== "FX-GRADE-01") {
+                    // Only splice undeclared-empty class; keep F4/F5 hard
+                    const msg = String(blocks[i]?.message ?? "");
+                    if (/未声明|空未声明|须在 fxFeasibility/.test(msg) || id === "DG-FALSE-GREEN-FX") {
+                      blocks.splice(i, 1);
+                    }
+                  }
+                }
+              }
+            }
+            if (!heal.cleared && (heal.extrasLeft > 0 || heal.undeclaredFxLeft > 0)) {
+              designExitIncomplete = true;
+              bMeta.importOkNotExitPass = true;
+            }
+          } catch {
+            /* optional */
+          }
+          if (lit.splitCount > 0) {
+            designExitIncomplete = true;
+            bMeta.importSplitExpanded = true;
+            (bundle as { _importSplitExpanded?: boolean })._importSplitExpanded = true;
+            if (!warns.some((w) => w.id === "LIT-IMPORT-SMART-SPLIT")) {
+              warns.push({
+                id: "LIT-IMPORT-SMART-SPLIT",
+                message:
+                  lit.warnMessage ||
+                  `【可导入 · 已智能拆文学双接触】扩 ${lit.splitCount} 组；importOk≠designExitPass`,
+                field: "preDesignPack.shots",
+              });
+            }
+          } else if (lit.confirmRequired) {
+            designExitIncomplete = true;
+            (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired = true;
+            if (!warns.some((w) => w.id === "LIT-IMPORT-CONFIRM")) {
+              warns.push({
+                id: "LIT-IMPORT-CONFIRM",
+                message:
+                  lit.warnMessage ||
+                  `【可导入 · 文学债须设计确认】${lit.ctaLabel || "确认拆镜/批准增强"}；importOk≠designExitPass`,
+                field: "meta.litDebtPrimaryAction",
+              });
+            }
+          } else if (lit.warnMessage && !warns.some((w) => w.id === "LIT-IMPORT-SOFT")) {
+            warns.push({
+              id: "LIT-IMPORT-SOFT",
+              message: lit.warnMessage,
+              field: "preDesignPack.shots",
+            });
+          }
+        } catch {
+          /* optional */
+        }
+      }
     }
 
     // 导入：先同核智能拆；仅残留低置信 Confirm 才 soft（非「永不拆」）
@@ -1240,27 +1421,38 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
         if (!bMeta.importSplitExpanded && bundle.preDesignPack?.shots?.length) {
           const { healMisboundDialoguePlacement } =
             require("./design/dialoguePlacementMatch") as typeof import("./design/dialoguePlacementMatch");
-          const { runSplitOrchestrator } =
-            require("./design/splitOrchestrator") as typeof import("./design/splitOrchestrator");
           const place = healMisboundDialoguePlacement(
             (bundle.preDesignPack.shots as Record<string, unknown>[]).slice(),
           );
-          const orch = runSplitOrchestrator({
-            planData: (bundle.planData ?? {}) as Record<string, unknown>,
-            shots: place.shots,
-            meta: bMeta,
-            applyClauseSplit: true,
-            applyVisBeatExpanders: true,
-            applySemanticSplit: true,
-          });
-          bundle.preDesignPack.shots = orch.shots as never;
-          bundle.planData = orch.planData as never;
+          // forceExpand / Chat Confirm：才跑 clause/visbeat/semantic 扩镜
+          // 普通导入：只纠错台词落点 + 后续抬时；禁 clause 同文扩出伪设计（1→23）
+          if (opts.forceExpand) {
+            const { runSplitOrchestrator } =
+              require("./design/splitOrchestrator") as typeof import("./design/splitOrchestrator");
+            const orch = runSplitOrchestrator({
+              planData: (bundle.planData ?? {}) as Record<string, unknown>,
+              shots: place.shots,
+              meta: bMeta,
+              applyClauseSplit: true,
+              applyVisBeatExpanders: true,
+              applySemanticSplit: true,
+            });
+            bundle.preDesignPack.shots = orch.shots as never;
+            bundle.planData = orch.planData as never;
+            (prep.shapeSalvageLog ??= []).push({
+              ruleId: "SH-IMPORT-SMART-SPLIT",
+              path: "exportGate.preLipSoft",
+              action: `shots=${orch.shots.length};steps=${orch.log.map((l) => l.step).join(",")}`,
+            });
+          } else {
+            bundle.preDesignPack.shots = place.shots as never;
+            (prep.shapeSalvageLog ??= []).push({
+              ruleId: "SH-IMPORT-SMART-SPLIT",
+              path: "exportGate.preLipSoft",
+              action: `placement_only;shots=${place.shots.length};no_clause_inflate`,
+            });
+          }
           bMeta.importSplitExpanded = true;
-          (prep.shapeSalvageLog ??= []).push({
-            ruleId: "SH-IMPORT-SMART-SPLIT",
-            path: "exportGate.preLipSoft",
-            action: `shots=${orch.shots.length};steps=${orch.log.map((l) => l.step).join(",")}`,
-          });
         }
       } catch {
         /* best-effort */
@@ -1528,6 +1720,19 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
           ).length) ?? 0,
       ),
       lipConfirmRequired: Boolean((bundle as { meta?: { lipConfirmRequired?: boolean } }).meta?.lipConfirmRequired),
+      litConfirmRequired: Boolean(
+        (bundle as { meta?: { irdConfirmRequired?: boolean; litDebtImportPending?: boolean } }).meta
+          ?.irdConfirmRequired ||
+          (bundle as { meta?: { litDebtImportPending?: boolean } }).meta?.litDebtImportPending ||
+          (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired,
+      ),
+      litDebtCta: String(
+        (bundle as { meta?: { litDebtCta?: string } }).meta?.litDebtCta ?? "",
+      ) || undefined,
+      litSmartSplit: Boolean(
+        (bundle as { meta?: { litImportSmartSplit?: number } }).meta?.litImportSmartSplit ||
+          (prep.shapeSalvageLog ?? []).some((e) => e.ruleId === "SH-LIT-IMPORT-SMART-SPLIT"),
+      ),
       illegalSameVdRatio: (() => {
         try {
           const shots = bundle.preDesignPack?.shots ?? [];

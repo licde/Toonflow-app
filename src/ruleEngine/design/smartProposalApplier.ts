@@ -9,15 +9,8 @@ export function applySmartProposalsToBundle(
   proposals: SmartProposal[],
   issues: ValidationIssue[] = [],
 ): ScriptBundle {
-  const { fixPlanItems } = mergeConfirmedProposals(bundle, proposals);
-  let next = {
-    ...bundle,
-    smartDesignProposals: proposals,
-    fixPlan: {
-      ...(bundle as ScriptBundle & { fixPlan?: Record<string, unknown> }).fixPlan,
-      items: fixPlanItems,
-    },
-  } as ScriptBundle;
+  const merged = mergeConfirmedProposals(bundle, proposals);
+  let next = merged.bundle;
   if (issues.length) {
     next = applyFixPlanToBundle(next, issues).bundle;
   }

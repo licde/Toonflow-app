@@ -1,0 +1,73 @@
+{
+  "version": "1.0.0",
+  "description": "Viral retention motion intent → per-vendor allowlist mediation. Prefer nearest legal motion; never silent-delete retention intent.",
+  "passThroughIfAllowed": true,
+  "unmappableAction": "confirm_cam_mediate",
+  "contactEventPassThrough": {
+    "note": "Mediate Camera only — never map/delete contact Motion verbs or multi-phase beats (划过/贴合/抵…)",
+    "preserveMotionTokens": ["划过", "拂过", "贴合", "颊触", "甩至", "擦过", "抵", "压", "摩挲", "motionFrom:contactEvent"]
+  },
+  "intentPatterns": [
+    {
+      "id": "punch_open",
+      "match": "冲击|开场钩|急推|甩切|猛推|whip|crash.?zoom|punch",
+      "mediate": {
+        "agnesai": "轻推",
+        "wan": "缓慢推近",
+        "seedance": "缓推",
+        "klingai": "缓慢推进",
+        "minimax": "缓慢推进",
+        "vidu": "缓推",
+        "default": "轻微运镜"
+      }
+    },
+    {
+      "id": "fast_pan",
+      "match": "急摇|甩镜|快速横移|whip.?pan",
+      "mediate": {
+        "agnesai": "缓慢横移变焦",
+        "wan": "缓慢横移",
+        "seedance": "缓慢横移",
+        "klingai": "缓慢横移",
+        "minimax": "缓慢平移",
+        "vidu": "缓慢横移",
+        "default": "轻微运镜"
+      }
+    },
+    {
+      "id": "hold_static",
+      "match": "死盯|钉死|静止持镜|锁死构图",
+      "mediate": {
+        "agnesai": "静止",
+        "wan": "静止",
+        "seedance": "静止",
+        "klingai": "静止",
+        "minimax": "静止",
+        "vidu": "静止",
+        "default": "静止"
+      }
+    },
+    {
+      "id": "soft_follow",
+      "match": "跟随|微漂|呼吸运镜|轻微跟随",
+      "mediate": {
+        "agnesai": "微漂移",
+        "wan": "轻微跟随",
+        "seedance": "轻微跟随",
+        "klingai": "轻微跟随",
+        "minimax": "轻微跟随",
+        "vidu": "轻微跟随",
+        "default": "轻微运镜"
+      }
+    }
+  ],
+  "vendorAllow": {
+    "agnesai": ["静止", "缓慢横移变焦", "轻推", "微漂移", "轻微运镜"],
+    "wan": ["静止", "缓慢推近", "缓慢横移", "轻微跟随", "轻微运镜"],
+    "seedance": ["静止", "缓推", "缓慢横移", "轻微跟随", "轻微运镜"],
+    "klingai": ["静止", "缓慢推进", "缓慢横移", "轻微跟随", "轻微运镜"],
+    "minimax": ["静止", "缓慢推进", "缓慢平移", "轻微跟随", "轻微运镜"],
+    "vidu": ["静止", "缓推", "缓慢横移", "轻微跟随", "轻微运镜"],
+    "default": ["静止", "轻微运镜", "缓推"]
+  }
+}

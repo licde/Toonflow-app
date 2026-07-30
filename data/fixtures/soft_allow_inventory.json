@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "policy": "softAllow must never fake designExitPass or videoPass; infra soft-allow only clears stillQuality→null for decideVideoQuality when VLM infra + file present + !sheetLeak",
+  "entries": [
+    {
+      "id": "SOFT-ALLOW-WEAK-STILL-INFRA",
+      "site": "generateVideo.ts#softAllowWeakStillForInfra",
+      "condition": "vlmInfra && !sheetLeak && resolvedStillPath",
+      "effect": "stillQuality null into decideVideoQuality only",
+      "forbidden": ["clear sheetLeak", "set videoPass", "set designExitPass"]
+    },
+    {
+      "id": "SOFT-ALLOW-CONTACT-PROP-FORBIDDEN",
+      "site": "generateVideo.ts#softAllowWeakStillForInfra+contactEvent;batchGenerateVideo.ts#softAllowInfra",
+      "condition": "isContactEventVd && (!propInFrame || scarOnly)",
+      "effect": "force softAllowWeakStillForInfra=false; stamp propMissing",
+      "forbidden": ["null stillQuality for contact prop-missing", "set videoPass", "set designExitPass", "hq_ok without prop"]
+    },
+    {
+      "id": "SOFT-ALLOW-SVQ-SKIP-OPTIONAL",
+      "site": "collectPostBurnFlags.ts#skippedDims",
+      "condition": "optional dim unmeasured OR lit_* unmeasured",
+      "effect": "skip weight; unknown must-dims fail (not 0.7)",
+      "forbidden": ["score unknown as 0.7", "videoPass when unknown must-dims"]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "description": "Still identity SSOT — casting name authority + multiFace predicate + one-beat design + egress layers. Extend via JSON rows, not verb whack-a-mole.",
+  "freeze": {
+    "neverNerInventNames": true,
+    "neverVerbWhitelistAsPrimaryGlueFix": true,
+    "designExitStillTextBlock": true,
+    "noNewTodosWithoutSample": true
+  },
+  "nameAuthority": {
+    "source": "castingSheet_bareNames",
+    "normalizeOs": true,
+    "rejectOsInDisplayName": true
+  },
+  "multiFacePredicate": {
+    "requireDistinctCharCodes": 2,
+    "requireBareNamesAfterNormalize": 2,
+    "alignWithCrefCharCount": true,
+    "neverEmitWhenSingleCref": true
+  },
+  "refRoles": {
+    "layout": { "takesFace": false, "ordinalPolicy": "prepend_then_remap" },
+    "failed_still": { "takesFace": false, "ordinalPolicy": "prepend_then_remap" },
+    "cref": { "takesFace": true }
+  },
+  "castCardinalityPolicy": {
+    "emitExactCount": true,
+    "forbidExtras": true,
+    "mustSurvive": true,
+    "lineTemplate": "出镜人数：仅{N}人（{NAMES}）；禁止第{Nplus1}人、路人、群像、重复分身。",
+    "stageAExactFigures": true
+  },
+  "oneBeat": {
+    "beatVerbPattern": "刺入|咬帕|咬唇|包扎|露出|勾起|渗出|拂过|跪地|端坐|挥拳|跌坐|拔剑|落泪|拍案|摊掌|摊牌|攥拳|握拳|侧目|咬银簪|自残|取出",
+    "maxStrongBeatsBeforeWarn": 2,
+    "designWarnId": "DEX-STILL-ONEBEAT",
+    "trimWarn": "still_multi_beat_trim",
+    "maxExpandPerRun": 40,
+    "durationTiers": {
+      "insert": 2,
+      "reaction": 2,
+      "reveal": 2,
+      "action": 3,
+      "withDialogue": 4
+    }
+  },
+  "designFillerForbidden": ["对白瞬间神态", "对白瞬间", "瞬间神态"],
+  "egressLayers": {
+    "identityNoisePrefixes": ["不同脸", "对白瞬间", "沈清漪（OS）", "（OS）与"],
+    "contractEnPatterns": [
+      "face\\s+identity\\s+from\\s+character\\s+refs[^.；;]*",
+      "environment\\s+from\\s+scene\\s+refs[^.；;]*",
+      "do\\s+not\\s+blend\\s+faces\\s+into\\s+background[^.；;]*"
+    ]
+  },
+  "reverse": {
+    "trigger": "still_firstframe_dirty",
+    "primaryTarget": "SB",
+    "thenRegen": "MD-IMG",
+    "forbidRegenWithoutDescFix": true
+  },
+  "phases": ["P1_design", "P2_import", "P3_compose", "P4_egress", "P5_firstframe", "P6_golden"]
+}

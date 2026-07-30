@@ -252,10 +252,11 @@ export default router.post(
           } catch {
             /* best-effort prepare still queue */
           }
+          const { mergeReasonMeta: mergeFail } = await import("@/ruleEngine/compilers/stillQuality");
           await u.db("o_storyboard").where("id", item.id).update({
             filePath: "",
             state: "生成失败",
-            reason: JSON.stringify({
+            reason: mergeFail(item.reason, {
               message: `身份参考图缺失：${identityGate.gaps.map((g) => g.code).join(",")}`,
               feedback,
               identityGate,
@@ -327,7 +328,7 @@ export default router.post(
         await u.db("o_storyboard").where("id", item.id).update({
           filePath: "",
           state: "生成失败",
-          reason: JSON.stringify({
+          reason: mergeReasonMeta(item.reason, {
             message: composed.blockReason ?? composed.userMessage,
             nextStep: composed.primaryNextStep ?? primary.primaryNextStep,
             primaryNextStep: composed.primaryNextStep ?? primary.primaryNextStep,
@@ -358,7 +359,7 @@ export default router.post(
         await u.db("o_storyboard").where("id", item.id).update({
           filePath: "",
           state: "生成失败",
-          reason: JSON.stringify({
+          reason: mergeReasonMeta(item.reason, {
             message: idGate.userMessage,
             code: idGate.code,
             nextStep: idGate.primaryNextStep ?? "batch_still",
@@ -495,7 +496,21 @@ export default router.post(
               bind.orderedCodes.length ? bind.orderedCodes : imagedCodes,
               bind.orderedCodes.length ? bind.orderedCodes : imagedCodes,
               { excludeScene: Boolean(composedForPipe.excludeScene) },
-            ).then((b) => b.referenceList);
+            ).then((b) => {
+              // Cap already in builder; surface turnaround for short locks
+              if (b.turnaroundCrefUsed && !/四视图仅借身份|单镜头成片/.test(vendorPrompt.slice(-80))) {
+                try {
+                  const {
+                    STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH,
+                    STILL_SINGLE_FRAME_LOCK_EDIT_ZH,
+                  } = require("@/ruleEngine/compilers/stillFirstFrameLiterarySsot") as typeof import("@/ruleEngine/compilers/stillFirstFrameLiterarySsot");
+                  vendorPrompt = `${String(vendorPrompt).trim()}。${STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH}${STILL_SINGLE_FRAME_LOCK_EDIT_ZH}`;
+                } catch {
+                  /* optional */
+                }
+              }
+              return b.referenceList;
+            });
             if (!referenceList.length && !composedForPipe.excludeScene) {
               referenceList = await buildReferenceListFromAssetIds(u.db, assetIds);
             }
@@ -671,7 +686,12 @@ export default router.post(
             };
           },
         });
-        const allowHq = hq && loopOut.visualPass && !loopOut.sheetLeak;
+        const allowHq =
+          hq &&
+          loopOut.visualPass &&
+          !loopOut.sheetLeak &&
+          composed.descCoverageOk !== false &&
+          composed.ok !== false;
         const sheetLeak =
           Boolean(loopOut.sheetLeak) ||
           (loopOut.fidelityItems ?? []).some(
@@ -774,7 +794,11 @@ export default router.post(
         );
         const weakMsg =
           keyMissing
-            ? `成图诊断服务不可用（${String(loopOut.vlmError ?? "").slice(0, 80)}）；请配置 API Key 后人审或重试；弱图不可作视频首帧`
+            ? (() => {
+                const { stillQualityUserMessage } =
+                  require("@/ruleEngine/quality/practiceCompleteness") as typeof import("@/ruleEngine/quality/practiceCompleteness");
+                return stillQualityUserMessage({ keyAbsent: true });
+              })()
             : litDebtStop
               ? (loopOut.repairMissingSlots?.length
                   ? `文学细节契约未过（缺 ${loopOut.repairMissingSlots.join("/")}）；请手改 VD，禁止只 regen；弱图不可作视频首帧`
@@ -805,14 +829,32 @@ export default router.post(
                       : "still_firstframe_weak",
               ])
             : undefined;
+        // M7: preserve prior reason (hash etc.) + stamp live designContentHash (≠ mergeReasonMeta(null))
+        let designStamp: Record<string, unknown> = {};
+        try {
+          const { buildShotChainContract } = await import("@/ruleEngine/quality/shotChainContract");
+          const chain = buildShotChainContract({
+            visualDescription: String(literaryDesc ?? composeCtx.visualDescription ?? ""),
+            duration: item.duration,
+            shotSize: composeCtx.shotSize,
+            charCodes: (composeCtx.characters ?? []).map((c) => c.code).filter(Boolean),
+          });
+          designStamp = {
+            designContentHash: chain.designContentHash,
+            dialogueFingerprint: chain.dialogueFingerprint || undefined,
+          };
+        } catch {
+          /* optional */
+        }
         await u.db("o_storyboard").where("id", item.id).update({
           filePath: loopOut.savePath,
           state: "已完成",
           ...(promptWrite ? { prompt: promptWrite } : {}),
-          reason: mergeReasonMeta(null, {
+          reason: mergeReasonMeta(item.reason, {
             ...(policy.hasSensitiveTerms ? { policyWarnings: policy.warnings } : {}),
             ...hqMeta,
             ...(life.stillMeta ?? {}),
+            ...designStamp,
             nextStep: primaryNext,
             primaryNextStep: primaryNext,
             didSynthesize: composed.didSynthesize,
@@ -821,13 +863,16 @@ export default router.post(
               ? "/settings/vendor?focus=volcengine&field=apiKey"
               : repairRoute?.settingsDeepLink,
             ctaLabel: keyMissing
-              ? "去配置火山引擎 API Key"
+              ? "可选：配置诊断 Key 后人审"
               : loopOut.repairCtaLabel ??
                 repairRoute?.ctaLabel ??
                 (!allowHq ? weakPrimary.ctaLabel : undefined),
+            keyOptional: true,
+            pixelDimStatus: keyMissing ? "unmeasured" : allowHq ? "measured_pass" : "measured_fail",
             userMessage: weakMsg,
             missingSlots: loopOut.repairMissingSlots ?? repairRoute?.missingSlots,
             irdPrimaryAction: loopOut.repairIrdPrimaryAction ?? repairRoute?.irdPrimaryAction,
+            videoStale: true,
             ...(rePushPlan ? { rePushPlan } : {}),
           }),
         });
@@ -843,7 +888,7 @@ export default router.post(
         const failPrimary = buildPrimaryBlock(hq ? "regen_storyboard_hq" : "batch_still", { stage: "burn" });
         await u.db("o_storyboard").where("id", item.id).update({
           filePath: "",
-          reason: JSON.stringify({
+          reason: mergeReasonMeta(item.reason, {
             message: errMsg,
             feedback,
             nextStep: hq ? "regen_storyboard_hq" : "batch_still",

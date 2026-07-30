@@ -11,6 +11,12 @@
 | **Expression** | 表演与身份分离 | `shotDesign.performance.microExpression` + `lipSyncPolicy`；禁止合成万能嘴型 |
 | **Umbrella** | 成片质量记分 | `short_video_quality_scorecard` → 烧片 `scoreShortVideo`（≠ 设计时 `adaptScorecard`） |
 
+## 实践完备梯（规范↔逻辑对齐）
+
+通用规范类须六阶齐：Declare → Mount → Hard → UntilClear → FE-block → NoEscape。登记见 `practice_completeness_inventory.json`；质量态见 `quality_state_matrix.json`；CI：`yarn test:practice-completeness`。
+
+**Key 可选**：无 Key/无 adapter → 仅 L0 + 像素维 `unmeasured`，禁伪装 `hq_ok`/`videoPass`，文案非「必须配置 Key」；有 Key → 声明的 L1 must 必须跑。
+
 ## 铁律
 
 1. **有正式源才进 prompt**（CD / lip 预算 / performance 字段）
@@ -27,6 +33,15 @@
 12. **IRD 智能反推设计**（`stillIntentReverse.ts` + `stillIntentOps`）：失败→可应用补丁→auto/Confirm→**再 designExit**；导入默认设计层愈；hygiene≠still_ok；`irdProvenance` 防假绿
 13. **霜兰令导入加固**：`SH-SERIES-CONT`/`SH-SCENE-AV-TAGS`/`SH-MICRO-EXPR` 前置 salvage；拆后 `reindexDerivedTables`；`importOk≠designExitPass`；CI `yarn test:frost-import-hardening`
 14. **拆镜愈完仍绿**：禁「听者反应特写」等短占位；子镜继承父锚点消 CHAIN-BEAT；export 路径 duration raise-only；尾清单可剥；RH 区分自愈自伤
+15. **Audio XOR + PromptFidelity（台词↔语音 / 提示词↔设计）**：
+    - **M1** 乱入：`DC-01-EXTRA`（shot 有、plan/script 无）BLOCK
+    - **M2** 有词无声：对白镜缺 `audioPrompt` → `CHAT-AUD-01` **BLOCK**（可先 auto seed）
+    - **M3** 无词有声：设计确认静音（`dialogueLines: []`）→ `AUD-ORPHAN-SPEECH` strip；未传 lines 可保留嵌入 CJK
+    - **M4** 出镜对白禁 `none/silent` / `no lip sync` → `NO-LIP-DIALOGUE`
+    - **M5** 提示词须覆盖 VD 锚点 → `PROMPT-FIDELITY`；禁 non-stub freeform 跳过设计
+    - **M6** 多拍拒出站 → `DEX-STILL-ONEBEAT` / `split_shot`；禁 `trimToOneBeat` 假绿
+    - **M7** VD/对白 `designContentHash` 漂移 → `VIDEO-PROMPT-STALE`；须重编译再烧
+    - CI：`yarn test:dialogue-audio-loop` · `yarn test:prompt-fidelity-loop`
 
 ## 音画 × 反应/特写（怎么拆 vs 怎么愈）
 
@@ -59,6 +74,10 @@
 - 脏静照静默作为视频首帧（须可反推重出静照）
 - 拆镜后按 storyboard **index** 继承父镜 `filePath`（须 clientId / banIndexMedia）
 - Audio 占位 `"1."` / `No spoken dialogue` 与出镜对白并存假绿
+- 无设计对白却保留口播 / `lip-sync active` 当可烧（须 `AUD-ORPHAN-SPEECH` 或 BLOCK）
+- 设计/对白已变仍用旧 `videoPrompt` 烧片（须 `VIDEO-PROMPT-STALE`）
+- 多拍 VD `trimToOneBeat` 当 compose 成功出站
+- freeform 视频词跳过 VD 锚点覆盖仍当 PASS
 
 ## 迁移
 
@@ -85,4 +104,5 @@
 - Scorecard: `shortVideoQuality.ts`
 - Still→video quality doctrine: `still_video_quality_doctrine.json` ↔ `src/ruleEngine/quality/*`（谓词单核、L2 healShotQuality 置信/回验、collectPostBurnFlags、failDimRouter）；`unknown≠0.7`；CI `yarn test:still-video-quality-loop`
 - Language: `docs/LANGUAGE_MODALITY_POLICY.md`；egress `finalizeFiveSectionPrompt`
+- Dialogue↔Audio / PromptFidelity: `dialogueCoverage.ts`, `sanitizeVideoPrompt.ts`, `assertPromptDesignFidelity.ts`, `shotChainContract.ts`（`designContentHash` / `VIDEO-PROMPT-STALE`）；CI `yarn test:dialogue-audio-loop` · `yarn test:prompt-fidelity-loop`
 

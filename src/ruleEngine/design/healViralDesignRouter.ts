@@ -69,7 +69,22 @@ function ensureInformationLedger(plan: Record<string, unknown>, notes: string[])
 function ensureCarryInfo(plan: Record<string, unknown>, notes: string[]): void {
   if (getEpisodeIndex(plan) <= 1) return;
   const pd = asPd(plan);
-  const cont = (pd.seriesContinuity as { carryInfoIds?: string[]; empathyShift?: string }) ?? {};
+  const cont = (pd.seriesContinuity as { carryInfoIds?: string[]; empathyShift?: string; prevEpisodeSummary?: string } ) ?? {};
+  // Prefer hydrate from continuity.seriesContinuitySeed when present (real writeback)
+  try {
+    const seed = (plan as { continuity?: { seriesContinuitySeed?: Record<string, unknown> } }).continuity
+      ?.seriesContinuitySeed;
+    if (seed) {
+      const { hydrateSeriesContinuityFromSeed } =
+        require("../bundle/continuityWriteback") as typeof import("../bundle/continuityWriteback");
+      if (hydrateSeriesContinuityFromSeed(plan, seed as never)) {
+        notes.push("E: epN+ hydrate seriesContinuity from writeback seed");
+        return;
+      }
+    }
+  } catch {
+    /* fall through */
+  }
   if (!cont.carryInfoIds?.length) {
     cont.carryInfoIds = ["carry_prev_hook"];
     cont.empathyShift = cont.empathyShift || "上集钩兑现→本集加压";

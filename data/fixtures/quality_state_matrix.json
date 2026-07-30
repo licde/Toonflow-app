@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "description": "Quality state SSOT — single vocabulary for still/video/design egress. Key optional.",
+  "stillQuality": {
+    "missing": { "burn": "BLOCK", "feLabel": "缺静照" },
+    "weak": { "burn": "BLOCK", "feLabel": "弱图", "note": "includes L0-only / unmeasured / measured_fail" },
+    "l0_only": { "burn": "BLOCK", "feLabel": "未配置诊断·仅结构", "mapsTo": "weak", "keyAbsent": true },
+    "weak_incomplete": { "burn": "BLOCK", "feLabel": "诊断未完成", "mapsTo": "weak", "vendorPollFail": true },
+    "prop_missing": { "burn": "BLOCK", "feLabel": "缺道具静照", "contact": true },
+    "hq_ok": { "burn": "ALLOW", "requires": ["visualPassAt|visualPass|humanRejudgePass"], "feLabel": "可燃片" },
+    "stale_inherited": { "burn": "BLOCK", "feLabel": "继承过期" }
+  },
+  "pixelDims": {
+    "unmeasured": { "videoPass": false, "feCode": "unmeasured", "cta": "未测·非失败" },
+    "measured_fail": { "videoPass": false, "feCode": "measured_fail", "cta": "未过·须修复" },
+    "measured_pass": { "videoPass": "gate_other_dims" }
+  },
+  "designExit": {
+    "designExitPass": "chatStrict_SB_or_stage_ok",
+    "importOkNotExitPass": "never_equals_designExitPass",
+    "irdConfirmRequired": "blocks_silent_advance"
+  },
+  "video": {
+    "videoPass": "all_must_dims_measured_pass_and_gates",
+    "qcWeak": "soft_deliver_playable_with_debt_bar",
+    "videoStale": "requires_track_prompt_writeback_before_clear"
+  },
+  "forbidden": [
+    "hq_ok_without_visualPassAt_when_hqRequiresVisualPass",
+    "videoPass_when_contact_must_dim_unmeasured",
+    "designExitPass_via_heal_placeholder_ra",
+    "must_configure_key_as_hard_product_error"
+  ]
+}

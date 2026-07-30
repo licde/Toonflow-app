@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "description": "Intelligent repair confidence SSOT — high auto apply + untilClear; med presentationFork; low confirm_only.",
+  "thresholds": {
+    "autoApplyMin": 0.85,
+    "forkMin": 0.55,
+    "confirmBelow": 0.55
+  },
+  "autoApplyTriggers": [
+    "still_onebeat_multi",
+    "intent_pic",
+    "lit_detail_contact",
+    "still_prop_missing",
+    "DEX-PROP-IN-FRAME",
+    "sync_intent_picture"
+  ],
+  "forkTriggers": [
+    "still_cu_cast",
+    "lit_detail_contact_xor",
+    "visual_multi_beat",
+    "ird_confirm",
+    "aud_speak_react"
+  ],
+  "confirmOnlyTriggers": [
+    "ird_confirm",
+    "visual_multi_beat"
+  ],
+  "requireCascadeAfterApply": true,
+  "requireReGateAfterApply": true
+}

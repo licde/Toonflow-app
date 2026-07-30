@@ -9,6 +9,8 @@ import { decideVideoQuality } from "../src/ruleEngine/compilers/qualityDecision"
 
 assert.ok(BURN_NEXT_STEPS.includes("raise_duration"));
 assert.ok(BURN_NEXT_STEPS.includes("regen_storyboard_hq"));
+assert.ok(BURN_NEXT_STEPS.includes("human_review"));
+assert.ok(BURN_NEXT_STEPS.includes("batch_still"));
 
 const env = buildBurnGateEnvelope(
   [{ id: "IMG-STILL-QA", message: "weak", reverseTrigger: "img_still_weak" }],
@@ -42,7 +44,13 @@ const qd = decideVideoQuality({
   missingStillOrCref: false,
 });
 assert.equal(qd.burnAllowed, false);
-assert.equal(qd.nextStep, "regen_storyboard_hq");
+// Weak still → batch_still（去生成静照）；regen_storyboard_hq 仅显式 HQ 路径
+assert.equal(qd.nextStep, "batch_still");
+
+const { buildPrimaryBlock } = require("../src/ruleEngine/compilers/primaryBlock") as typeof import("../src/ruleEngine/compilers/primaryBlock");
+const hr = buildPrimaryBlock("human_review", { stage: "qc" });
+assert.equal(hr.primaryNextStep, "human_review");
+assert.ok(/人审|SVQ/.test(hr.ctaLabel));
 
 console.log("test-burn-nextstep-contract: OK");
 console.log("BURN_NEXT_STEPS=", JSON.stringify(BURN_NEXT_STEPS));

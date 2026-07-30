@@ -1,0 +1,33 @@
+{
+  "id": "still-onebeat-zan-ci",
+  "description": "簪刺多拍坏例 → 三镜正例（prop_insert → reaction → reveal）",
+  "badVisualDescription": "银簪尖端刺入锁骨下方皮肉，一滴暗红色液体从簪尖渗出。沈清漪包扎好伤口后，指尖拂过梳妆台下方。镜头下移，露出一柄匕首的冷光。她唇边勾起一抹浅笑。铜镜中，沈清漪勾起唇角的倒影，画外音传来'姑娘！谢家主来了！'。",
+  "splitTemplate": "prop_insert_reaction_reveal",
+  "goodShots": [
+    {
+      "role": "insert",
+      "shotSize": "大特写",
+      "visualBeatTags": ["prop_insert", "reveal"],
+      "visualDescription": "大特写。银簪尖端刺入锁骨下方皮肉，暗红色血珠自簪尖渗出。",
+      "hasDialogue": false,
+      "duration": 2
+    },
+    {
+      "role": "reaction",
+      "shotSize": "特写",
+      "visualBeatTags": ["reaction", "face_cu"],
+      "visualDescription": "特写。沈清漪唇边勾起一抹浅笑，眼神决绝。",
+      "hasDialogue": false,
+      "duration": 2
+    },
+    {
+      "role": "reveal",
+      "shotSize": "近景",
+      "visualBeatTags": ["reveal", "prop_insert"],
+      "visualDescription": "近景。梳妆台下方露出一柄匕首的冷光。",
+      "hasDialogue": false,
+      "duration": 2
+    }
+  ],
+  "chatContractTemplate": "【DEX-STILL-ONEBEAT·智能拆】多拍描写须拆为一镜一拍。本样本标准三镜：①prop_insert 大特写簪刺渗血；②reaction 特写浅笑决绝；③reveal 近景匕首冷光。VO/画外音进 AUD，不进 visualDescription。高置信可 exit auto apply splitPlan；低置信 Confirm。深链：toonflow://stage/SB?trigger=still_firstframe_dirty"
+}

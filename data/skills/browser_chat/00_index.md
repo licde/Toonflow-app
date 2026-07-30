@@ -113,7 +113,8 @@ Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`mu
 6b. **换公式**：`DEX-LITERARY-STALE` → 按新规范重设计（或 `acknowledgeKeepLegacy`）；Chat 写权威，导入只补充
 7. **静帧 Identity 闭环**：casting 裸名权威 + multiFace 谓词 + egress 同谓词首帧闸；DEX-STILL-* 设计强契约 BLOCK（导入 demote）；含 **CU×cast** `still_cu_cast`；反推 `still_firstframe_*` / `still_onebeat_multi` / `img_still_weak` 同源；禁只 regen；Chat/Exit/IRD/Compose 同核
 8. **QP-02 可拍描写闭环**：设计 DEX-QP-02 ≡ export QP-02；CHAT-SB 同核；导入仅溯源补写；深链 SB；minChars 为防空壳底线
-8b. **文学结构槽 / 道具连续**：DEX-LIT-* / DEX-PROP-CONT 设计强契约；IRD `hand_edit_vd`；LLM fill 仅 Confirm+复检（flag 默认关）
+8b. **文学结构槽 / 道具连续**：DEX-LIT-*（含 CONTACT-XOR）/ DEX-PROP-CONT 设计强契约；IRD `confirm_enhance` / `hand_edit_vd` / `confirm_split`；增强白名单 Confirm/autoMin+复检（flag）；导入结构软填+demote（`importOk≠designExitPass`）
+8c. **视频设计 IRD（VIRD）**：DEX-VID-*（伪台词/voice/beatDuration/Motion 动词/intent map/运镜调解）；`videoIntentOps` Confirm；烧片 soleAuthor+scrub 同源；导入/touch `softHealVideoHomology` until-clear；`designExitPass≠videoPromptReady`；SVQ 未测 → `human_review`（skip≠pass）
 9. **冻结**：禁止静默发明 splitHint/reactionAction；B 须真实反应镜才绑 hint；静帧禁只 regen 假闭环；禁发明 visualDescription 占位
 10. **DEX-CAM-FIT 硬约束**：plan 可写 reactionAction（NAR-15）；shots **禁止**单镜口播+反应；须已拆说话镜+反应镜；服务器愈仅兜底，Chat 下次仍须权威形；禁假绿
 

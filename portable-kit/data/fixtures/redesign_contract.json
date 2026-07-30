@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "description": "Redesign contract SSOT — debt=effective literaryStale; clear only after redesignPass (W3 literary core). exportReady is separate.",
+  "debtFlag": "literaryStale",
+  "debtNote": "Do not dual-write redesignDebt; redesignRequired is derived boolean from isBundleLiteraryStale / getGenreTemplateFromPlan",
+  "entryStage": "W1",
+  "clearStage": "W3",
+  "triggers": [
+    "pack_switch",
+    "cascadeAfterStoryRecon",
+    "emotionNorm_switch",
+    "provisional_commit",
+    "must_redesign_or_B",
+    "FALSE_GREEN_SELFCHECK",
+    "DG-NAR-SELFCHECK"
+  ],
+  "redesignPassIds": {
+    "W3": [
+      "NAR-14",
+      "NAR-15",
+      "FALSE_GREEN_SELFCHECK",
+      "DEX-SHOT-INTENT",
+      "DEX-TEMPLATE-FILL",
+      "DEX-HOOK-PLAN",
+      "DEX-PAYPOINT",
+      "DEX-LITERARY-STALE",
+      "DEX-LIT-CONTACT-XOR",
+      "DEX-LIT-CONTACT",
+      "DEX-LIT-ANCHOR",
+      "DEX-PROP-CONT",
+      "DEX-PROP-IN-FRAME",
+      "VID-CONTACT-BEATS"
+    ],
+    "ep2plusOmit": ["DEX-RHYTHM-EP1"]
+  },
+  "exportReadyNote": "assertDesignExportReady = runDesignExitGate(SB,{chatStrict}) ∪ runExportGate blocks; does NOT clear literaryStale",
+  "healPlaceholderRaNotPass": true,
+  "healPlaceholderRaNote": "设计 redesignPass 不认 heal_placeholder；导入可占位愈后 demote NAR-15（importOk≠designExitPass）",
+  "keepLegacyAckPath": "planData.keepLegacyAck",
+  "reverse": {
+    "DEX-LITERARY-STALE": {
+      "trigger": "literary_stale",
+      "entry": "W1",
+      "accept": "W3",
+      "note": "W1=redesign entry; W3 redesignPass clears debt"
+    },
+    "DEX-LIT-CONTACT-XOR": {
+      "trigger": "lit_detail_contact_xor",
+      "target": "SB",
+      "note": "颊触≠口含；≠audio_xor；redesignPass 须过"
+    },
+    "DEX-LIT-CONTACT": { "trigger": "lit_detail_contact", "target": "SB" },
+    "NAR-15": { "trigger": "nar15_reaction", "target": "W3" },
+    "FALSE_GREEN_SELFCHECK": { "trigger": "self_report_mismatch", "target": "W3" }
+  }
+}

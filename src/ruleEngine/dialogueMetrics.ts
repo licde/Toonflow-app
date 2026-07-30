@@ -4,6 +4,7 @@
  * V10 unit = 分句（按停顿标点切开），对话 ≤15 / 独白 ≤12；停顿本身另段、不并入邻句字数。
  * PR-09 still measures full utterance/shot text for speak duration.
  */
+import { isNonLiteraryDialogueKey } from "./design/dialogueCoverage";
 export interface DialogueMetrics {
   charCount: number;
   isMonologue: boolean;
@@ -66,12 +67,16 @@ export function splitIntoClauses(text: string): string[] {
 
 /** Shot dialogue → utterance texts (structured lines or newline speaker lines). */
 export function splitDialogueUtterances(lines: unknown): string[] {
+  const keep = (t: string) => {
+    const s = t.trim();
+    return Boolean(s) && !isNonLiteraryDialogueKey(s);
+  };
   if (lines == null) return [];
   if (Array.isArray(lines)) {
     return lines
       .map((l) => (typeof l === "string" ? l : (l as { text?: string }).text ?? ""))
       .map((t) => t.trim())
-      .filter(Boolean);
+      .filter(keep);
   }
   if (typeof lines === "string") {
     return lines
@@ -80,7 +85,7 @@ export function splitDialogueUtterances(lines: unknown): string[] {
         const m = part.match(/^([^：:]{1,20})[：:]\s*(.*)$/);
         return (m ? m[2] : part).trim();
       })
-      .filter(Boolean);
+      .filter(keep);
   }
   return [];
 }

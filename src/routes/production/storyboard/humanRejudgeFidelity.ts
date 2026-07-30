@@ -35,11 +35,13 @@ export default router.post(
     expected: z
       .array(z.object({ id: z.string(), pass: z.boolean() }))
       .optional(),
-    modality: z.enum(["still", "audio"]).optional(),
+    modality: z.enum(["still", "audio", "video"]).optional(),
+    videoId: z.number().optional(),
+    trackId: z.number().optional(),
   }),
   async (req, res) => {
     try {
-      const { storyboardId, description, items, expected, modality } = req.body;
+      const { storyboardId, description, items, expected, modality, videoId, trackId } = req.body;
       const row = await u.db("o_storyboard").where({ id: storyboardId }).first();
       if (!row) return res.status(404).send(error("分镜不存在"));
       const prev = parseStillMetaFromReason(row.reason);
@@ -59,11 +61,12 @@ export default router.post(
         modality: modality ?? "still",
       });
       const isAudio = modality === "audio";
+      const isVideo = modality === "video";
       let designDebtBlock = false;
       let missingSlots: string[] = [];
       let irdPrimaryAction: string | undefined;
       let debtCta: string | undefined;
-      if (!isAudio) {
+      if (!isAudio && !isVideo) {
         try {
           const { auditLiteraryDetailQuality } =
             require("@/ruleEngine/compilers/stillLiteraryDetailQuality") as typeof import("@/ruleEngine/compilers/stillLiteraryDetailQuality");
@@ -79,15 +82,25 @@ export default router.post(
             const blocks = d2.findings.filter(
               (f) =>
                 f.severity === "BLOCK" &&
-                (/^DEX-LIT-/.test(f.id) || f.id === "DEX-PROP-CONT"),
+                (/^DEX-LIT-/.test(f.id) ||
+                  f.id === "DEX-PROP-CONT" ||
+                  f.id === "DEX-PROP-IN-FRAME"),
             );
             designDebtBlock = blocks.length > 0;
             missingSlots = [
               ...new Set(blocks.flatMap((f) => f.missingSlots ?? f.missing ?? []).map(String).filter(Boolean)),
             ];
             if (designDebtBlock) {
-              irdPrimaryAction = "hand_edit_vd";
-              debtCta = irdCtaLabelFromAction({ primaryAction: "hand_edit_vd", missingSlots });
+              const enhanceable = missingSlots.length > 0 && missingSlots.every((s) =>
+                /contact|grip|ground|path|surface|threshold|xor|wound|propReadable|propInFrame|contactGeom/i.test(s),
+              );
+              const hasXor = missingSlots.includes("contactRoleXor") || blocks.some((f) => f.id === "DEX-LIT-CONTACT-XOR");
+              irdPrimaryAction = hasXor && !enhanceable
+                ? "confirm_split"
+                : enhanceable
+                  ? "confirm_enhance"
+                  : "hand_edit_vd";
+              debtCta = irdCtaLabelFromAction({ primaryAction: irdPrimaryAction, missingSlots });
             }
           }
         } catch {
@@ -98,7 +111,11 @@ export default router.post(
         (i: { id: string; pass: boolean }) =>
           /contact_geom|primary_look/i.test(i.id) && !i.pass,
       );
-      const burnOk = isAudio ? outcome.allPass : Boolean(outcome.burnOk) && !designDebtBlock;
+      const burnOk = isVideo
+        ? items.every((i: { pass: boolean }) => i.pass)
+        : isAudio
+          ? outcome.allPass
+          : Boolean(outcome.burnOk) && !designDebtBlock;
       const primaryNextStep = burnOk
         ? "burn"
         : designDebtBlock
@@ -118,53 +135,163 @@ export default router.post(
           : outcome.ctaLabel;
       const userMessage = designDebtBlock
         ? missingSlots.length
-          ? `文学细节契约未过（缺 ${missingSlots.join("/")}），人审不可标可燃片；请手改 VD`
-          : "文学细节契约未过，人审不可标可燃片；请手改 VD"
+          ? `文学细节契约未过（缺 ${missingSlots.join("/")}），人审不可标可燃片；请${
+              irdPrimaryAction === "confirm_enhance" || irdPrimaryAction === "apply_auto_enhance"
+                ? "批准增强或手改 VD"
+                : irdPrimaryAction === "confirm_split"
+                  ? "拆镜或手改 VD"
+                  : "手改 VD"
+            }`
+          : "文学细节契约未过，人审不可标可燃片；请增强/手改 VD"
         : outcome.userMessage;
+      const stillPoseFromItems = (() => {
+        const geom = items.find((i: { id: string; pass: boolean }) => /contact_geom|prop_pose/i.test(i.id));
+        if (!geom?.pass) return undefined;
+        return {
+          state: "at_locus" as const,
+          source: "human_rejudge" as const,
+        };
+      })();
+
       await u.db("o_storyboard").where({ id: storyboardId }).update({
         reason: mergeReasonMeta(row.reason, {
-          fidelityItems: items,
-          visualPass: isAudio ? prev?.visualPass : outcome.visualPass && !designDebtBlock,
+          fidelityItems: isVideo ? prev?.fidelityItems : items,
+          visualPass: isVideo ? prev?.visualPass : isAudio ? prev?.visualPass : outcome.visualPass && !designDebtBlock,
           visualPassAt:
-            !isAudio && burnOk ? new Date().toISOString() : isAudio ? prev?.visualPassAt : undefined,
+            !isAudio && !isVideo && burnOk
+              ? new Date().toISOString()
+              : isAudio
+                ? prev?.visualPassAt
+                : prev?.visualPassAt,
           audioPass: isAudio ? outcome.allPass : prev?.audioPass,
           audioPassAt: isAudio && outcome.allPass ? new Date().toISOString() : prev?.audioPassAt,
-          stillQuality: isAudio
-            ? outcome.allPass
-              ? prev?.stillQuality
-              : "weak"
-            : designDebtBlock
-              ? "weak"
-              : outcome.stillQuality,
-          sheetLeak: isAudio ? prev?.sheetLeak : outcome.sheetLeak,
+          stillQuality: isVideo
+            ? prev?.stillQuality
+            : isAudio
+              ? outcome.allPass
+                ? prev?.stillQuality
+                : "weak"
+              : designDebtBlock || !burnOk
+                ? "weak"
+                : outcome.stillQuality === "hq_ok"
+                  ? "hq_ok"
+                  : "weak",
+          sheetLeak: isAudio || isVideo ? prev?.sheetLeak : outcome.sheetLeak,
           humanRejudgeCorpusId: id,
           humanRejudgeFile: file,
           pendingHumanRejudge: false,
-          humanOverride: burnOk ? outcome.humanOverride : false,
-          humanOverrideAt: burnOk || (isAudio && outcome.allPass) ? new Date().toISOString() : undefined,
-          primaryNextStep: isAudio ? undefined : primaryNextStep,
-          ctaLabel: isAudio ? outcome.ctaLabel : ctaLabel,
-          userMessage: isAudio ? outcome.userMessage : userMessage,
-          burnReady: isAudio ? outcome.allPass : burnOk,
-          missingSlots: !isAudio && missingSlots.length ? missingSlots : undefined,
-          irdPrimaryAction: !isAudio ? irdPrimaryAction : undefined,
+          humanOverride: burnOk && !isVideo ? outcome.humanOverride : prev?.humanOverride,
+          humanOverrideAt: burnOk && !isVideo ? new Date().toISOString() : prev?.humanOverrideAt,
+          humanRejudgeRequiresVisualPassAt: true,
+          primaryNextStep: isVideo ? undefined : isAudio ? undefined : primaryNextStep,
+          ctaLabel: isVideo ? (burnOk ? "成片人审通过" : "继续修复") : isAudio ? outcome.ctaLabel : ctaLabel,
+          userMessage: isVideo
+            ? burnOk
+              ? "成片人审已通过（接触运动未测时仍须标注）"
+              : "成片人审未全过"
+            : isAudio
+              ? outcome.userMessage
+              : userMessage,
+          burnReady: isVideo ? undefined : isAudio ? outcome.allPass : burnOk,
+          missingSlots: !isAudio && !isVideo && missingSlots.length ? missingSlots : undefined,
+          irdPrimaryAction: !isAudio && !isVideo ? irdPrimaryAction : undefined,
+          ...(stillPoseFromItems ? { stillPoseAnchor: stillPoseFromItems, contactStartState: "at_locus" } : {}),
+          ...(burnOk && !isVideo && !isAudio ? { videoStale: true } : {}),
         }),
       });
+
+      if (burnOk && !isVideo && !isAudio) {
+        try {
+          const sb = await u.db("o_storyboard").where({ id: storyboardId }).select("trackId").first();
+          const tid = Number(trackId ?? sb?.trackId ?? 0);
+          if (tid > 0) {
+            await u.db("o_videoTrack").where({ id: tid }).update({ videoStale: true });
+            const videos = await u.db("o_video").where({ trackId: tid }).select("id", "errorReason");
+            for (const v of videos) {
+              let er: Record<string, unknown> = {};
+              try {
+                er =
+                  typeof v.errorReason === "string" && v.errorReason.trim().startsWith("{")
+                    ? JSON.parse(v.errorReason)
+                    : {};
+              } catch {
+                er = {};
+              }
+              await u.db("o_video").where({ id: v.id }).update({
+                errorReason: JSON.stringify({
+                  ...er,
+                  videoPass: false,
+                  videoStale: true,
+                  qcWeak: er.qcWeak === true ? true : undefined,
+                  primaryNextStep: "human_review",
+                  staleCascadeAt: new Date().toISOString(),
+                }),
+              });
+            }
+          }
+        } catch {
+          /* cascade best-effort */
+        }
+      }
+
+      if (isVideo && videoId) {
+        const vRow = await u.db("o_video").where({ id: videoId }).first();
+        if (vRow) {
+          let er: Record<string, unknown> = {};
+          try {
+            er =
+              typeof vRow.errorReason === "string" && vRow.errorReason.trim().startsWith("{")
+                ? JSON.parse(vRow.errorReason)
+                : {};
+          } catch {
+            er = {};
+          }
+          const now = new Date().toISOString();
+          await u.db("o_video").where({ id: videoId }).update({
+            errorReason: JSON.stringify({
+              ...er,
+              videoPass: burnOk,
+              motionPassAt: burnOk ? now : undefined,
+              qcWeak: burnOk ? false : true,
+              primaryNextStep: burnOk ? "burn" : "human_review",
+              ctaLabel: burnOk ? "成片人审通过" : "SVQ 未测维 · 人审",
+              humanRejudgeCorpusId: id,
+              humanOverride: burnOk ? "human_checklist" : undefined,
+            }),
+            state: burnOk ? vRow.state : vRow.state,
+          });
+        }
+      }
+
       return res.status(200).send(
         success({
           corpusId: id,
           file,
-          visualPass: isAudio ? undefined : outcome.visualPass && !designDebtBlock,
+          visualPass: isVideo ? undefined : isAudio ? undefined : outcome.visualPass && !designDebtBlock,
           audioPass: isAudio ? outcome.allPass : undefined,
-          stillQuality: isAudio ? undefined : designDebtBlock ? "weak" : outcome.stillQuality,
-          burnReady: isAudio ? outcome.allPass : burnOk,
-          primaryNextStep: isAudio ? undefined : primaryNextStep,
-          humanOverride: burnOk ? outcome.humanOverride : false,
-          userMessage: isAudio ? outcome.userMessage : userMessage,
-          ctaLabel: isAudio ? outcome.ctaLabel : ctaLabel,
-          designDebtBlock,
-          missingSlots: !isAudio && missingSlots.length ? missingSlots : undefined,
-          irdPrimaryAction: !isAudio ? irdPrimaryAction : undefined,
+          videoPass: isVideo ? burnOk : undefined,
+          stillQuality: isVideo
+            ? undefined
+            : isAudio
+              ? undefined
+              : designDebtBlock || !burnOk
+                ? "weak"
+                : outcome.stillQuality,
+          burnReady: isVideo ? undefined : isAudio ? outcome.allPass : burnOk,
+          primaryNextStep: isVideo ? (burnOk ? "burn" : "human_review") : isAudio ? undefined : primaryNextStep,
+          humanOverride: burnOk && !isVideo ? outcome.humanOverride : false,
+          userMessage: isVideo
+            ? burnOk
+              ? "成片人审已通过"
+              : "成片人审未全过"
+            : isAudio
+              ? outcome.userMessage
+              : userMessage,
+          ctaLabel: isVideo ? (burnOk ? "成片人审通过" : "继续修复") : isAudio ? outcome.ctaLabel : ctaLabel,
+          designDebtBlock: isVideo ? false : designDebtBlock,
+          missingSlots: !isAudio && !isVideo && missingSlots.length ? missingSlots : undefined,
+          irdPrimaryAction: !isAudio && !isVideo ? irdPrimaryAction : undefined,
+          videoStaleCascaded: burnOk && !isVideo && !isAudio,
         }),
       );
     } catch (e) {

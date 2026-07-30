@@ -1,0 +1,75 @@
+{
+  "version": "1.0.0",
+  "heal": {
+    "minConfidence": 0.72,
+    "exprHighIntensityMustEdit": 6,
+    "conflictOrder": ["cast_on_desc", "empty_shot", "performance_defaults", "duration_lip"]
+  },
+  "dimPolicy": {
+    "identity_cast": "must",
+    "dialogue_lip": "must",
+    "emotion_clarity": "must",
+    "motion_fidelity": "must",
+    "audio_mood": "must",
+    "lit_detail": "must",
+    "lit_contact_xor": "must",
+    "litDimNote": "must when measured (VD/flags); unmeasured → skip not unknown",
+    "cam_variety": "optional",
+    "retention_hook": "optional",
+    "packaging": "optional",
+    "vis_beat": "optional"
+  },
+  "unknownScore": 0.35,
+  "asr": { "defaultEnabled": false, "skipWhenNoAdapter": true },
+  "vlm": { "requireAdapter": true, "stubIsUnknown": true },
+  "dex": {
+    "DEX-CAST-ON-DESC": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "cast_on_desc_missing" },
+    "DEX-EMPTY-SHOT-CONSISTENCY": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "empty_shot_conflict" },
+    "DEX-EXPR-SPEAK": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "expr_speak_missing" },
+    "DEX-ASSET-CREF": { "severity": "BLOCK", "stages": ["AS", "SB"], "trigger": "asset_cref", "note": "SB may stub+plan defer; AS/compose require imaged" },
+    "DEX-CUT-01": { "severity": "WARN", "stages": ["SB"], "trigger": "cut01_adjacent" },
+    "DEX-CAM-XSHOT": { "severity": "WARN", "stages": ["SB"], "trigger": "cam_xshot" },
+    "DEX-QP-02": { "severity": "BLOCK", "stages": ["SB", "designBrief"], "trigger": "qp02_visual_short" },
+    "DEX-LIT-CONTACT": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "lit_detail_contact" },
+    "DEX-LIT-CONTACT-XOR": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "lit_detail_contact_xor", "note": "≠audio_xor" },
+    "DEX-PROP-IN-FRAME": { "severity": "BLOCK", "stages": ["SB", "MD-IMG", "EN"], "trigger": "still_prop_missing", "note": "contactEvent ∧ prop missing; wound≠prop" },
+    "VID-CONTACT-BEATS": { "severity": "BLOCK", "stages": ["EN", "MD-VID"], "trigger": "vid_contact_beats" },
+    "STILL-CONTACT-HANDOFF": { "severity": "BLOCK", "stages": ["EN", "MD-VID"], "trigger": "still_video_contact_handoff" },
+    "DEX-LIT-ANCHOR": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "lit_detail_anchor" },
+    "NO-LIP-DIALOGUE": { "severity": "BLOCK", "stages": ["EN", "MD-VID"], "trigger": "no_lip_dialogue" },
+    "SFX-UNBACKED": { "severity": "WARN", "stages": ["EN", "MD-VID"], "trigger": "sfx_unbacked" },
+    "MIRROR-WARP": { "severity": "WARN", "stages": ["EN", "MD-VID"], "trigger": "svq_motion_fail" }
+  },
+  "failDimTriggers": {
+    "identity_cast": "still_firstframe_dirty",
+    "dialogue_lip": "still_mouth_handoff",
+    "emotion_clarity": "expr_speak_missing",
+    "motion_fidelity": "svq_motion_fail",
+    "audio_mood": "svq_audio_fail",
+    "sfx_unbacked": "sfx_unbacked",
+    "cam_variety": "emotion_structure",
+    "retention_hook": "retention_opening_missing",
+    "packaging": "packaging_end_preview",
+    "vis_beat": "visual_multi_beat",
+    "lit_detail": "lit_detail_contact",
+    "lit_contact_xor": "lit_detail_contact_xor",
+    "still_prop_missing": "still_prop_missing",
+    "vid_contact_beats": "vid_contact_beats",
+    "contact_prop_missing": "still_prop_missing"
+  },
+  "healLayers": {
+    "L1": "healViralDesignRouter",
+    "L2": "healShotQuality",
+    "L3": "applySilentSoftPatches",
+    "L4": "planPostBurnRepairs"
+  },
+  "cases": [
+    { "id": "cast_on_desc_block", "pillar": "design", "expect": "DEX-CAST-ON-DESC" },
+    { "id": "empty_shot_block", "pillar": "design", "expect": "DEX-EMPTY-SHOT-CONSISTENCY" },
+    { "id": "expr_speak_block", "pillar": "design", "expect": "DEX-EXPR-SPEAK" },
+    { "id": "heal_ambiguous_refuse", "pillar": "heal", "expect": "unsalvageable" },
+    { "id": "heal_revalidate", "pillar": "heal", "expect": "residual" },
+    { "id": "svq_unknown_not_07", "pillar": "postburn", "expect": "fail" },
+    { "id": "block_to_trigger_mapped", "pillar": "reverse", "expect": "cast_on_desc_missing" }
+  ]
+}

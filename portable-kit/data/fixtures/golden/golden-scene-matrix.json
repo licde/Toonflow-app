@@ -1,0 +1,55 @@
+{
+  "id": "golden-scene-matrix",
+  "version": "1.0.0",
+  "description": "F6 golden 场景矩阵 — paper_doc/seating/lip/os/ensemble 最小可拍样本",
+  "scenes": [
+    {
+      "id": "paper_doc_contact",
+      "class": "CONTACT_GEOM",
+      "visualDescription": "特写。沈清漪侧脸，休书纸角贴颊，她紧咬下唇。",
+      "expect": {
+        "contactEvent": true,
+        "contactStartState": "at_locus",
+        "motionMustNot": ["自.*侧进入"]
+      }
+    },
+    {
+      "id": "seating_power",
+      "class": "SPATIAL_LAYOUT",
+      "visualDescription": "中景。沈辞端坐太师椅，对方面跪于蒲团。",
+      "expect": {
+        "layoutFamily": "high_sit_low_kneel_2p",
+        "stageAAllowed": true,
+        "characterCount": 2
+      }
+    },
+    {
+      "id": "lip_oncam",
+      "class": "MOUTH_LIP_HANDOFF",
+      "visualDescription": "近景。沈清漪开口：「休书我收下了。」唇形清晰。",
+      "expect": {
+        "lipSync": "on_cam",
+        "mouthHandoff": true
+      }
+    },
+    {
+      "id": "empty_os",
+      "class": "EMPTY_OS_ENSEMBLE",
+      "visualDescription": "空镜。寝殿烛火摇曳，无人入画。（OS）远处脚步声。",
+      "expect": {
+        "lipForbidden": true,
+        "emptyShot": true
+      }
+    },
+    {
+      "id": "ensemble_4plus",
+      "class": "EMPTY_OS_ENSEMBLE",
+      "visualDescription": "全景。四人分立殿中：沈辞、清漪、嬷嬷、小厮对峙。",
+      "expect": {
+        "layoutFamily": "ensemble_4plus",
+        "stageAForbidden": true,
+        "characterCount": 4
+      }
+    }
+  ]
+}

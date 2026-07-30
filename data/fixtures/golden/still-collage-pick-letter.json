@@ -1,0 +1,50 @@
+{
+  "id": "still-collage-pick-letter",
+  "version": "1.0.0",
+  "description": "中景捡休书样本：禁契约汤拼图；VD 主角沈清漪；四视图 cref 拒；weak 不可 burn",
+  "shot": {
+    "shotSize": "中景",
+    "visualDescription": "中景。沈清漪弯腰捡起休书，指尖捏紧纸张边缘、指节泛白；沈母裙摆虚化在后。",
+    "characters": [
+      { "code": "CHAR-SHENMU", "name": "沈母", "kind": "character", "hasImage": true },
+      { "code": "CHAR-SHENQINGYI", "name": "沈清漪", "kind": "character", "hasImage": true }
+    ],
+    "bindHighName": "沈母",
+    "continuityInject": "承接上一镜：沈母端坐太师椅摩挲扳指",
+    "qualityMode": "hq_update",
+    "referenceUrlCount": 2
+  },
+  "expectCompose": {
+    "mustInclude": ["捡", "休书", "沈清漪", "单镜头", "禁止四视图"],
+    "mustSources": ["fidelity.narrativeFirst", "identity.singleFrameLock", "beat.power.actionPrimary"],
+    "forbidInPrompt": [
+      "权力位：沈母（高位）靠近视觉重心",
+      "权力位：沈清漪（高位）",
+      "端坐太师椅摩挲扳指",
+      "禁止 锁定",
+      "沈清瓷跪低位",
+      "站位绑定",
+      "座次构图锚",
+      "场景参考不送像素"
+    ],
+    "mustSoftOther": true,
+    "mustCastCard": true,
+    "mustBgReadable": true,
+    "continuityStrip": true,
+    "dirtyContinuitySample": "continues from 沈母，沈清瓷跪低位"
+  },
+  "turnaroundAsset": {
+    "prompt": "promptMode:turnaround_sheet character turnaround 四视图定妆",
+    "remark": "四视图",
+    "type": "character"
+  },
+  "expectCrefGate": {
+    "excludeTurnaround": false,
+    "detectTurnaround": true,
+    "sheetAsIdentityOnly": true
+  },
+  "expectBurn": {
+    "stillQualityWeakBlocks": true,
+    "sheetLeakBlocks": true
+  }
+}

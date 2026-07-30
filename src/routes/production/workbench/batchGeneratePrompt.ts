@@ -10,6 +10,7 @@ import { syncFromFlowData } from "@/ruleEngine/facade";
 import { compileOrGenerateVideoPrompt } from "@/ruleEngine/compilers/compileOrGenerateVideoPrompt";
 import { resolveGenerationModeRules } from "@/ruleEngine/compilers/resolveGenerationModeRules";
 import { generationJobQueue } from "@/ruleEngine/ports/jobQueue";
+import { patchVideoTrackReason } from "@/ruleEngine/qc/persistVideoTrackPromptHash";
 import { v4 as uuidv4 } from "uuid";
 
 const router = express.Router();
@@ -72,6 +73,19 @@ export default router.post(
         }
       }
 
+      // Gate BEFORE 生成中 — never leave tracks stuck mid-flight on refuse
+      {
+        const meta = (pkg as { meta?: { lipConfirmRequired?: boolean; importOkNotExitPass?: boolean } } | null)?.meta;
+        if (meta?.lipConfirmRequired || meta?.importOkNotExitPass) {
+          return res.status(400).send(
+            error("设计/导入口型拆镜未闭合（lipConfirmRequired），请回 SB Confirm 或重导后再批量生成提示词", {
+              code: "LIP_CONFIRM_REQUIRED",
+              primaryNextStep: "split_shot",
+            }),
+          );
+        }
+      }
+
       await u
         .db("o_videoTrack")
         .whereIn(
@@ -89,33 +103,14 @@ export default router.post(
       });
 
       const limit = pLimit(concurrentCount ?? 5);
-      // Design/import incomplete: refuse batch prompt when lip Confirm still open
-      try {
-        const { loadEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
-        const firstTrack = await u.db("o_videoTrack").where("id", trackData[0]?.trackId).select("scriptId").first();
-        const sid = Number(scriptId ?? firstTrack?.scriptId ?? 0);
-        if (sid) {
-          const pkg = await loadEpisodePackage(u.db, projectId, sid);
-          const meta = (pkg as { meta?: { lipConfirmRequired?: boolean } } | null)?.meta;
-          if (meta?.lipConfirmRequired) {
-            return res.status(400).send(
-              error("设计/导入口型拆镜未闭合（lipConfirmRequired），请回 SB Confirm 或重导后再批量生成提示词", {
-                code: "LIP_CONFIRM_REQUIRED",
-                primaryNextStep: "split_shot",
-              }),
-            );
-          }
-        }
-      } catch {
-        /* optional */
-      }
 
       const tasks = trackData.map((track: { trackId: number; info: { id: number; sources: string; role?: string }[] }) =>
         limit(async () => {
           if (modeRules.mediaContract.minRefs > 0 && track.info.length < modeRules.mediaContract.minRefs) {
-            await u.db("o_videoTrack").where({ id: track.trackId }).update({
+            // M7: never wipe designContentHash with a plain-string reason
+            await patchVideoTrackReason(u.db, track.trackId, {
               state: "生成失败",
-              reason: `模式 ${modeRules.modeId} 缺少参考媒体`,
+              message: `模式 ${modeRules.modeId} 缺少参考媒体`,
             });
             return;
           }
@@ -191,11 +186,63 @@ export default router.post(
           });
 
           if (result.prompt) {
-            await u.db("o_videoTrack").where({ id: track.trackId }).update({ prompt: result.prompt, state: "已完成" });
+            const pkgShot =
+              (sbItem?.id != null
+                ? (pkg?.shots?.find((s) => s.storyboardId === sbItem.id) as Record<string, unknown> | undefined)
+                : undefined) ?? undefined;
+            // Homology with generateVideoPrompt: nonempty prompt ≠ burn-ready
+            let burnAllowed = true;
+            let qdExtra: Record<string, unknown> = {};
+            try {
+              const { decideVideoQuality } = await import("@/ruleEngine/compilers/qualityDecision");
+              const fxGradeStr = String(
+                (pkgShot as { fxFeasibility?: string } | undefined)?.fxFeasibility ??
+                  (pkgShot as { generation?: { fxFeasibility?: string } } | undefined)?.generation?.fxFeasibility ??
+                  "",
+              );
+              const qd = decideVideoQuality({
+                videoPrompt: result.prompt,
+                shot: pkgShot as never,
+                vendorId: "agnesai",
+                fxGrade: fxGradeStr,
+              });
+              burnAllowed = Boolean(qd.burnAllowed);
+              qdExtra = {
+                burnAllowed,
+                decision: qd.decision,
+                nextStep: qd.nextStep,
+                reasons: qd.reasons,
+                ctaLabel: qd.envelope?.ctaLabel ?? (burnAllowed ? undefined : "完善后重编译"),
+                userMessage: qd.envelope?.userMessage ?? (burnAllowed ? undefined : "提示词已落库但不可烧片"),
+              };
+            } catch {
+              /* decide best-effort — default allow persist as 已完成 */
+            }
+            const persistState = burnAllowed ? "已完成" : "需完善";
+            try {
+              const { persistVideoTrackPromptWithDesignHash } = await import(
+                "@/ruleEngine/qc/persistVideoTrackPromptHash"
+              );
+              await persistVideoTrackPromptWithDesignHash(u.db, {
+                trackId: track.trackId,
+                prompt: result.prompt,
+                state: persistState,
+                shot: pkgShot,
+                extraReason: burnAllowed ? undefined : qdExtra,
+              });
+            } catch {
+              // Prompt ok but hash stamp failed — keep prior designContentHash
+              await patchVideoTrackReason(u.db, track.trackId, {
+                prompt: result.prompt,
+                state: persistState,
+                message: "prompt_ok_hash_stamp_failed",
+                ...(burnAllowed ? {} : qdExtra),
+              });
+            }
           } else {
-            await u.db("o_videoTrack").where({ id: track.trackId }).update({
+            await patchVideoTrackReason(u.db, track.trackId, {
               state: "生成失败",
-              reason: result.warnings.join(",") || "提示词为空",
+              message: result.warnings.join(",") || "提示词为空",
             });
           }
         }),

@@ -32,6 +32,33 @@ ok("single audio L0 → 400", /AUD-LIT-L0/.test(single));
 ok("single voice bind", /assertAudioVoiceBindGate|AUD-VOICE-BIND/.test(single));
 ok("single detect passes stillQuality", /stillQuality/.test(single) && /assertStillDetectForBurn/.test(single));
 ok("single outer 500", /GENERATE_VIDEO/.test(single) && /catch \(e\)/.test(single));
+ok("batch refuses TRACK_PROMPT_NOT_BURN_READY / 需完善", /TRACK_PROMPT_NOT_BURN_READY|需完善/.test(batch));
+ok("batch soft_defer writeback patchVideoTrackReason", /patchVideoTrackReason/.test(batch) && /需完善/.test(batch));
+ok("single refuses TRACK_PROMPT_NOT_BURN_READY / 需完善", /TRACK_PROMPT_NOT_BURN_READY|需完善/.test(single));
+ok("batch refuses LIP_CONFIRM_REQUIRED on burn", /LIP_CONFIRM_REQUIRED/.test(batch) && /lipConfirmRequired/.test(batch));
+ok("single refuses LIP_CONFIRM_REQUIRED on burn", /LIP_CONFIRM_REQUIRED/.test(single) && /lipConfirmRequired/.test(single));
+ok(
+  "single vendorPrompt mutable (spine path reassign)",
+  /let vendorPrompt/.test(single) && !/const vendorPrompt\s*=/.test(single),
+);
+ok("prompt gen uses literaryDialogueTexts", /literaryDialogueTexts/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/generateVideoPrompt.ts"), "utf-8")));
+ok("prompt gen scrubs before quality decision", /scrubVideoPromptForBurn/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/generateVideoPrompt.ts"), "utf-8")) && /softHealVideoHomologyOnShots/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/generateVideoPrompt.ts"), "utf-8")));
+ok("single scrubs before quality decision", /scrubVideoPromptForBurn/.test(single) && /softHealVideoHomologyOnShots/.test(single));
+ok("getGenerateData qcSoftDeliver", /mapVideoStateForFe|qcSoftDeliver/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/getGenerateData.ts"), "utf-8")));
+ok("getGenerateData prefers burnDurationSec for duration", /duration:\s*burnDurationSec/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/getGenerateData.ts"), "utf-8")));
+ok("getGenerateData live rescore fidelity", /liveDesignIntentFidelityForTrack/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/getGenerateData.ts"), "utf-8")));
+ok(
+  "prompt gen durationSec is let (adaptBurn reassign)",
+  /let durationSec\s*=/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/generateVideoPrompt.ts"), "utf-8")),
+);
+ok(
+  "prompt gen uses adaptBurnFromDesign SSOT",
+  /adaptBurnFromDesign/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/generateVideoPrompt.ts"), "utf-8")),
+);
+ok("batch stamps burnDurationSec on track", /burnDurationSec:\s*vendorDuration/.test(batch));
+ok("checkVideoStateList qcSoftDeliver", /mapVideoStateForFe|qcSoftDeliver/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/checkVideoStateList.ts"), "utf-8")));
+const checkVideoSrc = fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/checkVideoStateList.ts"), "utf-8");
+ok("checkVideoStateList scorecard + track fidelity", /skippedDims/.test(checkVideoSrc) && /scorecard/.test(checkVideoSrc) && /trackFidelityFromReason/.test(checkVideoSrc));
 
 if (failed) process.exit(1);
 console.log("\n=== test:batch-video-parity OK ===");

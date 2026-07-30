@@ -26,6 +26,7 @@ const RULE_ENGINE_DIRS = [
   "heal",
   "transform",
   "vendor-packs",
+  "precheckLoop",
 ];
 
 const RULE_ENGINE_FILES = ["ruleRegistry.ts"];
@@ -69,6 +70,16 @@ const FIXTURES_ALL = [
   "still_literary_fidelity_checklist.json",
   "still_image_edit.json",
   "still_visual_fidelity_loop.json",
+  "lit_enhance_recipe_collision.json",
+  "short_video_quality_scorecard.json",
+  "video_literary_intent_doctrine.json",
+  "viral_motion_mediate.json",
+  "soft_allow_inventory.json",
+  "practice_completeness_inventory.json",
+  "repair_confidence_ladder.json",
+  "quality_state_matrix.json",
+  "golden/golden-scene-matrix.json",
+  "golden/video-contact-pose-handoff.json",
 ];
 
 const FIXTURES_T3_EXTRA = [

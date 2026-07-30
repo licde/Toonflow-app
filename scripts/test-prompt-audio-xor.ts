@@ -59,7 +59,7 @@ const fin = finalizeFiveSectionPrompt({
 ok("finalize no contradiction", !hasAudioDialogueContradiction(fin.prompt), fin.prompt.match(/\[Audio\][\s\S]*?(?=\[|$)/i)?.[0]?.slice(0, 180));
 ok("finalize no seed motion", !/from seed/i.test(fin.prompt), fin.prompt.match(/\[Motion\][\s\S]*?(?=\[|$)/i)?.[0]);
 ok("finalize motion uses 8s", /0s-8s:/i.test(fin.prompt), fin.prompt.match(/\[Motion\][\s\S]*?(?=\[|$)/i)?.[0]);
-ok("finalize camera duration 8s", /duration\s*8s/i.test(fin.prompt));
+ok("finalize camera duration 8s", /duration\s*8s|时长\s*8s/i.test(fin.prompt), fin.prompt.match(/\[Camera\][\s\S]*?(?=\[|$)/i)?.[0]);
 ok("finalize not placeholder-dirty", !hasFiveSectionPlaceholders(fin.prompt), fin.prompt.slice(0, 240));
 
 const qd = decideVideoQuality({

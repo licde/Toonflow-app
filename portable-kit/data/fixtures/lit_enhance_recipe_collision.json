@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "description": "Face-wound enhance × dirtyHandEye / hand_cu recipe collision — prevent mutual tear",
+  "note": "B6 hang-account; default soft warn; enforce via pillarsLitEnhanceV1",
+  "collisions": [
+    {
+      "id": "wound_vs_hand_cu",
+      "when": ["intentVisualWound.derive", "recipe.hand_cu"],
+      "resolve": "prefer_face_locus_keep_hand_out_of_primary",
+      "forbid": ["replace_face_wound_with_hand_only", "silent_drop_woundVisible"],
+      "severity": "WARN"
+    },
+    {
+      "id": "wound_vs_dirty_hand_eye",
+      "when": ["intentVisualWound.derive", "dirtyHandEye"],
+      "resolve": "keep_wound_on_declared_face_locus; dirtyHandEye as secondary atmosphere only",
+      "forbid": ["eye_dirt_overrides_cheek_wound", "invent_blood_on_hand"],
+      "severity": "WARN"
+    },
+    {
+      "id": "xor_vs_hand_lip",
+      "when": ["DEX-LIT-CONTACT-XOR", "DEX-HAND-LIP"],
+      "resolve": "xor_first_then_hand_lip_none_on_import",
+      "forbid": ["collapse_xor_into_hand_lip_demote"],
+      "severity": "BLOCK"
+    },
+    {
+      "id": "contact_prop_vs_face_identity",
+      "when": ["contactEvent.propInFrame", "recipe.face_or_scene", "identity.faceLock"],
+      "resolve": "keep_prop_positive_constraint; sheet/face recipe only borrows identity — never drop propInFrame",
+      "forbid": ["silent_drop_prop_for_face_lock", "scar_only_replaces_prop"],
+      "severity": "BLOCK"
+    }
+  ],
+  "namingIsolation": {
+    "contact_role_xor": "lit_detail_contact_xor",
+    "audio_xor": "audio track exclusive — never share reverseTrigger with contact_role_xor"
+  }
+}

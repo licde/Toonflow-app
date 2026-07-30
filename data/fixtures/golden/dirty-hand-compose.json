@@ -1,0 +1,10 @@
+{
+  "id": "dirty-hand-compose",
+  "title": "手CU配方适配闭环：不自造脏；真脏Chat BLOCK；Import soft；禁回写VD",
+  "handCuVd": "特写。沈母周氏指尖摩挲扳指，手部特写，袖口绣纹清晰。",
+  "propCuVd": "特写。案几上玉简摊开，道具特写，竹签压页。",
+  "osVd": "空镜。夜色庭院灯影摇曳（OS）。",
+  "dirtyHandFaceVd": "手部特写。沈母摩挲扳指，正脸清晰，眼神冰冷犀利。",
+  "forbidInHandCompose": ["正脸清晰", "正脸朝向镜头", "微表情落在锁定脸型", "锁定脸型", "权力位："],
+  "chatContractTemplate": "【一镜一画面·脏静帧】真手+脸同写=Chat不过绿；手CU配方不得硬注正脸；配方适配≠回写visualDescription；importOk≠designExitPass"
+}

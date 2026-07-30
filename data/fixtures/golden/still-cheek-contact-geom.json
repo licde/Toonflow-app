@@ -1,0 +1,28 @@
+{
+  "id": "still-cheek-contact-geom",
+  "description": "划过面颊：密 VD 过 CONTACT 但双接触须 XOR；互斥后过；稀 VD 走 hand_edit；像素失败走修接触几何",
+  "denseVisualDescription": "特写。沈清漪侧脸，休书纸角划过面颊，她紧咬下唇渗出血珠。",
+  "denseXorOkVisualDescription": "特写。沈清漪侧脸，休书纸角划过面颊（纸未入口），她紧咬下唇渗出血珠。",
+  "sparseVisualDescription": "特写。沈清漪侧脸，休书。",
+  "shotSize": "特写",
+  "castNames": ["沈清漪", "沈清瓷"],
+  "expect": {
+    "dense": {
+      "noLitContactBlock": true,
+      "litContactXorBlock": true,
+      "missingSlotsHasContactRoleXor": true,
+      "editFocusHasGeom": true,
+      "repairCta": "修接触几何",
+      "checklistHasContactGeom": true
+    },
+    "denseXorOk": {
+      "noLitContactBlock": true,
+      "noLitContactXorBlock": true
+    },
+    "sparse": {
+      "irdPrimaryAction": "confirm_enhance|hand_edit_vd",
+      "repairNextStep": "chat_repair",
+      "detectMissingSlots": true
+    }
+  }
+}

@@ -1,7 +1,8 @@
 {
   "fixture": "deepseek-20260716-43ce74.json",
   "tier": "T3",
-  "exportAllowed": true,
+  "exportAllowed": false,
   "mustNotBlockIds": ["DG-NAR-SELFCHECK", "DG-LINKAGE-FALSE-GREEN", "DG-MODALITY-MISMATCH", "DG-FALSE-GREEN-FX"],
-  "narrativeSelfcheckPassed": false
+  "narrativeSelfcheckPassed": false,
+  "notes": "F9: structural heal clears classic false-green gates; residual DEX/NAR/IRD/CHAIN design debt keeps exportAllowed=false (heal≠designExitPass)"
 }

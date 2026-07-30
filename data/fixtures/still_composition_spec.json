@@ -1,0 +1,180 @@
+{
+  "version": "1.0.0",
+  "description": "Still Composition Spec — IntentStack × LayoutFamily × SlotContract × Burn/Repair. Extend via JSON rows.",
+  "freeze": {
+    "neverNerInventCast": true,
+    "neverWriteLayoutToVd": true,
+    "familyFailNotDesignExit": false,
+    "familyFailDesignExitSeverity": "WARN",
+    "familyFailNote": "SB/designBrief: family=none with seating/confront signals ⇒ WARN (not silent); compose HQ may still BLOCK",
+    "poseProviderTemplateOnly": true
+  },
+  "conflictResolve": ["seating_hard", "ots", "confront", "triangle", "single"],
+  "selectionPriority": [
+    "insert_hand_or_prop",
+    "establishing_empty",
+    "ensemble_4plus",
+    "high_sit_low_kneel_2p",
+    "power_triangle_3p",
+    "two_plus_one_3p",
+    "ots_2p",
+    "reaction_favor_2p",
+    "confront_lr_2p",
+    "single_throne_sit",
+    "single_kneel",
+    "single_hero"
+  ],
+  "signals": {
+    "seatingHard": ["端坐", "太师椅", "蒲团", "权力反差", "跪于", "跪低位", "高坐", "低跪", "高位端坐", "低位跪"],
+    "confront": ["对峙", "面对面", "左右分立", "confront", "face.?off"],
+    "ots": ["过肩", "OTS", "听者肩", "over.?shoulder"],
+    "reaction": ["反应镜", "偏听者", "reaction"],
+    "witness": ["旁观", "见证", "witness"],
+    "empty": ["空镜", "无人物", "无人", "环境空镜", "establishing"],
+    "insert": ["手部特写", "道具特写", "物件特写"]
+  },
+  "families": {
+    "insert_hand_or_prop": {
+      "minCast": 0,
+      "maxCast": 1,
+      "twoStage": false,
+      "spatialRoles": [],
+      "templateId": null,
+      "bindingTemplate": null
+    },
+    "establishing_empty": {
+      "minCast": 0,
+      "maxCast": 0,
+      "twoStage": true,
+      "spatialRoles": [],
+      "templateId": "establishing_empty",
+      "bindingTemplate": null
+    },
+    "ensemble_4plus": {
+      "minCast": 4,
+      "maxCast": 99,
+      "twoStage": false,
+      "spatialRoles": [],
+      "templateId": null,
+      "bindingTemplate": "identity_order"
+    },
+    "high_sit_low_kneel_2p": {
+      "minCast": 2,
+      "maxCast": 2,
+      "twoStage": true,
+      "spatialRoles": ["high", "low"],
+      "templateId": "high_sit_low_kneel_2p",
+      "furnitureAnchors": ["太师椅", "蒲团"],
+      "bindingTemplate": "seating_high_low"
+    },
+    "power_triangle_3p": {
+      "minCast": 3,
+      "maxCast": 3,
+      "twoStage": true,
+      "spatialRoles": ["high", "low", "witness"],
+      "templateId": "power_triangle_3p",
+      "bindingTemplate": "triangle"
+    },
+    "two_plus_one_3p": {
+      "minCast": 3,
+      "maxCast": 3,
+      "twoStage": true,
+      "spatialRoles": ["pair_left", "pair_right", "outlier"],
+      "templateId": "two_plus_one_3p",
+      "bindingTemplate": "two_plus_one"
+    },
+    "ots_2p": {
+      "minCast": 2,
+      "maxCast": 2,
+      "twoStage": true,
+      "spatialRoles": ["fg_shoulder", "bg_face"],
+      "templateId": "ots_2p",
+      "bindingTemplate": "ots"
+    },
+    "reaction_favor_2p": {
+      "minCast": 2,
+      "maxCast": 2,
+      "twoStage": true,
+      "spatialRoles": ["favor_listener", "soft_speaker"],
+      "templateId": "ots_2p",
+      "bindingTemplate": "reaction"
+    },
+    "confront_lr_2p": {
+      "minCast": 2,
+      "maxCast": 2,
+      "twoStage": true,
+      "spatialRoles": ["left", "right"],
+      "templateId": "confront_lr_2p",
+      "bindingTemplate": "confront_lr"
+    },
+    "single_throne_sit": {
+      "minCast": 1,
+      "maxCast": 1,
+      "twoStage": true,
+      "spatialRoles": ["center"],
+      "templateId": "single_throne_sit",
+      "furnitureAnchors": ["太师椅"],
+      "bindingTemplate": null
+    },
+    "single_kneel": {
+      "minCast": 1,
+      "maxCast": 1,
+      "twoStage": true,
+      "spatialRoles": ["low"],
+      "templateId": "single_kneel",
+      "furnitureAnchors": ["蒲团"],
+      "bindingTemplate": null
+    },
+    "single_hero": {
+      "minCast": 1,
+      "maxCast": 1,
+      "twoStage": false,
+      "spatialRoles": ["center"],
+      "templateId": null,
+      "bindingTemplate": null,
+      "note": "Face CU / hero — never bind throne StageA SVG"
+    },
+    "none": {
+      "minCast": 0,
+      "maxCast": 99,
+      "twoStage": false,
+      "spatialRoles": [],
+      "templateId": null,
+      "bindingTemplate": "identity_order"
+    }
+  },
+  "bindingTemplates": {
+    "seating_high_low": "站位绑定：{0}=高位/图{ord0}（端坐或主位），{1}=低位/图{ord1}（跪或侧位）；禁止互换脸与站位",
+    "confront_lr": "站位绑定：{0}=左侧/图{ord0}，{1}=右侧/图{ord1}；对峙分立，禁止融脸",
+    "ots": "站位绑定：图{ord0}=过肩前景（{0}），图{ord1}=对面主体（{1}）；禁止互换前后景身份",
+    "reaction": "站位绑定：图{ord0}=听者主位（{0}），图{ord1}=说者虚位（{1}）；偏听者构图",
+    "triangle": "站位绑定：{0}=主位/图{ord0}，{1}=对立或低位/图{ord1}，{2}=旁观/图{ord2}；三人可辨，禁止融脸",
+    "two_plus_one": "站位绑定：{0}=左组/图{ord0}，{1}=右组/图{ord1}，{2}=插入位/图{ord2}",
+    "identity_order": "身份顺序：图{ord0}={0}，图{ord1}={1}；不同脸，禁止融成同一张脸"
+  },
+  "refBudget": {
+    "stageA_plus_2cref": 3,
+    "stageA_plus_3cref": 4,
+    "layout_preserve_max_cref": 2,
+    "insert_or_empty": 2
+  },
+  "repairByFamily": {
+    "default": {
+      "seatMissing": "swap",
+      "castOvercrowd": "swap",
+      "wrongFamily": "swap",
+      "faceBlend": "preserve"
+    },
+    "insert_hand_or_prop": {
+      "seatMissing": "focus",
+      "castOvercrowd": "focus",
+      "faceBlend": "focus"
+    },
+    "ensemble_4plus": {
+      "castOvercrowd": "regen",
+      "faceBlend": "focus"
+    }
+  },
+  "castCardinalityLineTemplate": "出镜人数：仅{N}人（{NAMES}）；禁止第{Nplus1}人、路人、群像、重复分身。",
+  "castCardinalityEmptyTemplate": "出镜人数：0人；禁止人物主体抢戏。"
+}

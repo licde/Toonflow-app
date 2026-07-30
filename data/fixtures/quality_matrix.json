@@ -48,6 +48,15 @@
       "softPatch": true
     },
     {
+      "id": "DC-01-EXTRA",
+      "domain": "dialogue",
+      "stages": ["export", "preflight"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK" },
+      "handler": "precheckLoop",
+      "repairHintId": "RH-DC-01-EXTRA",
+      "softPatch": false
+    },
+    {
       "id": "DC-13",
       "domain": "continuity",
       "stages": ["export", "preflight"],
@@ -243,6 +252,37 @@
       "repairHintId": "RH-RET-01",
       "softPatch": false,
       "t3Ep1Elevate": "BLOCK"
+    },
+    {
+      "id": "DEX-PROP-IN-FRAME",
+      "domain": "literary",
+      "stages": ["export", "preflight", "promptGen", "burn"],
+      "severityByStage": { "export": "BLOCK", "preflight": "BLOCK", "promptGen": "BLOCK", "burn": "BLOCK" },
+      "handler": "contactEvent",
+      "repairHintId": "RH-STILL-PROP-IN-FRAME",
+      "softPatch": false,
+      "nextStep": "regen_storyboard_hq",
+      "note": "contactEvent ∧ prop missing; wound≠prop; soft-allow forbidden"
+    },
+    {
+      "id": "STILL-CONTACT-HANDOFF",
+      "domain": "literary",
+      "stages": ["burn", "promptGen"],
+      "severityByStage": { "burn": "BLOCK", "promptGen": "BLOCK" },
+      "handler": "contactHandoff",
+      "repairHintId": "RH-STILL-VIDEO-CONTACT-HANDOFF",
+      "softPatch": false,
+      "nextStep": "regen_storyboard_hq"
+    },
+    {
+      "id": "VID-CONTACT-BEATS",
+      "domain": "motion",
+      "stages": ["promptGen", "burn"],
+      "severityByStage": { "promptGen": "BLOCK", "burn": "BLOCK" },
+      "handler": "contactBeats",
+      "repairHintId": "RH-VID-CONTACT-BEATS",
+      "softPatch": true,
+      "nextStep": "chat_repair"
     }
   ]
 }

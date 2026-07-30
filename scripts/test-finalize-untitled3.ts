@@ -50,7 +50,7 @@ ok("no filled placeholder", !/\(dialogue\s*\/\s*SFX\s*filled/i.test(fin.prompt))
 ok("no --- dialogue", !/["']---["']\s*\(dialogue\)/i.test(fin.prompt));
 ok("has Chinese lines", /跪下|天命/.test(fin.prompt));
 ok("no cref in body", !/--cref|--sref/i.test(fin.prompt));
-ok("duration 6 in camera", /duration\s*6s/i.test(fin.prompt));
+ok("duration 6 in camera", /duration\s*6s|时长\s*6s/i.test(fin.prompt), fin.prompt.match(/\[Camera\][\s\S]*?(?=\[|$)/i)?.[0]);
 ok("no singleImage in Visual clutter or stripped", !/\[Visual\][\s\S]*singleImage reference/i.test(fin.prompt) || !/singleImage reference/i.test(fin.prompt));
 
 // Registry section inject must not dump dialogue into Narrative

@@ -1,0 +1,25 @@
+{
+  "id": "still-onebeat-kneel-sword",
+  "description": "跪地拔剑多拍坏例 → 反应+拔剑两镜正例（题材扩样 L-t14）",
+  "badVisualDescription": "少年跪地落泪，随即拔剑起身，剑尖指向对方，目光决绝。",
+  "splitTemplate": "reaction_reveal",
+  "goodShots": [
+    {
+      "role": "reaction",
+      "shotSize": "特写",
+      "visualBeatTags": ["reaction", "face_cu"],
+      "visualDescription": "特写。少年跪地落泪，目光决绝。",
+      "hasDialogue": false,
+      "duration": 2
+    },
+    {
+      "role": "reveal",
+      "shotSize": "近景",
+      "visualBeatTags": ["reveal", "prop_insert"],
+      "visualDescription": "近景。少年拔剑起身，剑尖指向对方。",
+      "hasDialogue": false,
+      "duration": 2
+    }
+  ],
+  "chatContractTemplate": "【DEX-STILL-ONEBEAT】跪地+拔剑为两拍，须拆：①reaction 跪地落泪；②reveal 拔剑起身。禁止一镜混拍。"
+}

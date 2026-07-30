@@ -14,6 +14,7 @@ import { buildRePushPlan } from "@/ruleEngine/design/reverseRouteEngine";
 import { preflightGenerationMedia } from "@/ruleEngine/compilers/resolveGenerationModeRules";
 import { loadEpisodePackage } from "@/ruleEngine/storage/episodePackageStore";
 import { normalizeAssetCode } from "@/ruleEngine/codes/assetCodeContract";
+import { patchVideoTrackReason } from "@/ruleEngine/qc/persistVideoTrackPromptHash";
 
 const router = express.Router();
 
@@ -66,9 +67,10 @@ export default router.post(
 
       // Orphan track + no info storyboard → cannot invent design; tell user to refresh (not「缺画面」)
       if (!trackBind && !storyboardId) {
-        await u.db("o_videoTrack").where({ id: trackId }).update({
+        await patchVideoTrackReason(u.db, trackId, {
           state: "生成失败",
-          reason: "VP-TRACK-UNBOUND:本轨未绑定分镜",
+          message: "VP-TRACK-UNBOUND:本轨未绑定分镜",
+          code: "VP-TRACK-UNBOUND",
         });
         return res.status(400).send(
           error("本轨未绑定分镜（多为旧轨道残留），请刷新工作台后对已绑定分镜的轨道重试", {
@@ -341,9 +343,10 @@ export default router.post(
           }
           // Hard BLOCK only on true design gap
           if (!spine.ready && isTrueDesignGap(ctx)) {
-            await u.db("o_videoTrack").where({ id: trackId }).update({
+            await patchVideoTrackReason(u.db, trackId, {
               state: "生成失败",
-              reason: `VP-THIN-SHELL:真缺画面描写与对白`,
+              message: "VP-THIN-SHELL:真缺画面描写与对白",
+              code: "VP-THIN-SHELL",
             });
             return res.status(400).send(
               error("本镜缺少画面描写与对白，无法编译视频词；请补设计后重编译", {
@@ -361,6 +364,7 @@ export default router.post(
 
       const { finalizeFiveSectionPrompt } = await import("@/ruleEngine/compilers/finalizeFiveSectionPrompt");
       const { flattenDialogueText } = await import("@/ruleEngine/design/dialogueCoverage");
+      const { literaryDialogueTexts } = await import("@/ruleEngine/compilers/videoDesignContract");
       const { hasOnCameraDialogue } = await import("@/ruleEngine/design/onCameraDialogue");
       const { resolveLipSyncPolicyFromShot } = await import("@/ruleEngine/quality/resolveLipSyncPolicy");
       const { resolveLipDuration } = await import("@/ruleEngine/compilers/promptIR");
@@ -368,10 +372,7 @@ export default router.post(
       const dialLinesRaw =
         shotMeta?.narrative?.dialogue?.lines ??
         (mergedSources.shotMeta.narrative as { dialogue?: { lines?: unknown } } | undefined)?.dialogue?.lines;
-      const dialLines = flattenDialogueText(dialLinesRaw)
-        .split(/\n+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const dialLines = literaryDialogueTexts(dialLinesRaw);
       const onCamDialogue = hasOnCameraDialogue(dialLinesRaw);
       const lipShot = {
         ...(shotMeta as object),
@@ -397,7 +398,8 @@ export default router.post(
         lipMin: lip?.lipMin ?? reqDur.lipMin,
       });
       const hardened = applyTextHardening(result.prompt, bridge.textHardening);
-      const durationSec =
+      // let: adaptBurnFromDesign may later stamp author duration (const → Assignment to constant → INFRA)
+      let durationSec =
         Math.max(
           bridge.params.duration,
           lip?.durationSec ?? 0,
@@ -415,15 +417,32 @@ export default router.post(
         const lipPol = resolveLipSyncPolicyFromShot(shotMeta as Record<string, unknown> | undefined);
         const ss = resolveLipDurationSingleSource({
           prompt: result.prompt,
-          lipSyncPolicy: lipPol,
+          lipSyncPolicy: (() => {
+            let pol = lipPol;
+            if (onCamDialogue && /^(none|silent)$/i.test(pol)) {
+              try {
+                const { softHealNoLipDialogueOnShots, DEFAULT_ONCAM_LIP_POLICY } =
+                  require("@/ruleEngine/quality/resolveLipSyncPolicy") as typeof import("@/ruleEngine/quality/resolveLipSyncPolicy");
+                if (shotMeta) softHealNoLipDialogueOnShots([shotMeta as Record<string, unknown>]);
+                pol = DEFAULT_ONCAM_LIP_POLICY;
+              } catch {
+                const { DEFAULT_ONCAM_LIP_POLICY } =
+                  require("@/ruleEngine/quality/resolveLipSyncPolicy") as typeof import("@/ruleEngine/quality/resolveLipSyncPolicy");
+                pol = DEFAULT_ONCAM_LIP_POLICY;
+              }
+            }
+            return pol;
+          })(),
           hasDialogue: onCamDialogue,
           durationSec,
-          hardBlockNoLipOnDialogue: true,
+          hardBlockNoLipOnDialogue: false,
+          refuseExplicitSilent: false,
         });
         if (ss.blocked) {
-          await u.db("o_videoTrack").where({ id: trackId }).update({
+          await patchVideoTrackReason(u.db, trackId, {
             state: "生成失败",
-            reason: ss.blockMessage ?? "NO-LIP-DIALOGUE",
+            message: ss.blockMessage ?? "NO-LIP-DIALOGUE",
+            code: ss.blockCode ?? "NO-LIP-DIALOGUE",
           });
           return res.status(400).send(
             error(ss.blockMessage || "no lip on dialogue", {
@@ -457,6 +476,30 @@ export default router.post(
         "@/ruleEngine/compilers/qualityDecision"
       );
       const { applySilentSoftPatches } = await import("@/ruleEngine/heal/applySilentSoftPatches");
+      const { scrubVideoPromptForBurn } = await import("@/ruleEngine/compilers/videoDesignContract");
+      const { softHealVideoHomologyOnShots } = await import("@/ruleEngine/heal/videoHomologyHeal");
+      const scrubPreQd = scrubVideoPromptForBurn({
+        prompt: result.prompt,
+        vendorId: "agnesai",
+        dialogueLines: dialLines,
+      });
+      if (scrubPreQd.block) {
+        await patchVideoTrackReason(u.db, trackId, {
+          state: "需完善",
+          message: scrubPreQd.block.message,
+          code: scrubPreQd.block.id,
+          nextStep: "chat_repair",
+        });
+        return res.status(400).send(
+          error(scrubPreQd.block.message, {
+            code: scrubPreQd.block.id,
+            primaryNextStep: "chat_repair",
+            ctaLabel: "确认运镜调解",
+            reverseTrigger: "vid_cam_mediate",
+          }),
+        );
+      }
+      result.prompt = scrubPreQd.prompt;
       const trackRow = await u.db("o_videoTrack").where({ id: trackId }).select("scriptId").first();
       const resolvedScriptId = Number(bodyScriptId ?? trackRow?.scriptId ?? pkg?.scriptId ?? 0) || 0;
       const fxGradeStr = String(
@@ -465,6 +508,24 @@ export default router.post(
           "",
       );
       let workingShot = shotMeta as Record<string, unknown> | null | undefined;
+      if (workingShot) {
+        const hom = softHealVideoHomologyOnShots({ shots: [workingShot], vendorId: "agnesai" });
+        if (hom.changed && hom.shots[0]) {
+          workingShot = hom.shots[0];
+          try {
+            if (pkg?.shots?.length && storyboardId != null) {
+              const ix = pkg.shots.findIndex((s) => s.storyboardId === storyboardId);
+              if (ix >= 0) {
+                pkg.shots[ix] = hom.shots[0] as never;
+                const { saveEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
+                await saveEpisodePackage(u.db, pkg);
+              }
+            }
+          } catch {
+            /* best-effort persist */
+          }
+        }
+      }
       let workingPrompt = result.prompt;
       // Viral sidecar already in spine (before assert) — do NOT append again here
       let qd = decideVideoQuality({
@@ -557,9 +618,12 @@ export default router.post(
         );
         if (qg.blocked) {
           const envelope = buildBurnGateEnvelope(qg.blocks);
-          await u.db("o_videoTrack").where({ id: trackId }).update({
+          await patchVideoTrackReason(u.db, trackId, {
             state: "生成失败",
-            reason: envelope.userMessage || qg.blocks.map((b) => `${b.id}:${b.message}`).join("; "),
+            message: envelope.userMessage || qg.blocks.map((b) => `${b.id}:${b.message}`).join("; "),
+            code: envelope.nextStep ?? "QUALITY_GATE",
+            nextStep: envelope.nextStep,
+            primaryNextStep: envelope.primaryNextStep,
           });
           return res.status(400).send(
             error(envelope.userMessage || `提示词质量门禁未通过: ${qg.blocks.map((b) => b.message).join("; ")}`, {
@@ -600,14 +664,19 @@ export default router.post(
           error: pre.message ?? pre.code ?? "media missing",
         });
         const rePushPlan = buildRePushPlan([pre.reverseTrigger ?? "prompt_gen_media_missing"]);
-        await u.db("o_videoTrack").where({ id: trackId }).update({ state: "生成失败", reason: pre.message ?? pre.code });
+        await patchVideoTrackReason(u.db, trackId, {
+          state: "生成失败",
+          message: pre.message ?? pre.code,
+          code: pre.code ?? "PROMPT_GEN_MEDIA_MISSING",
+        });
         return res.status(400).send(error(pre.message ?? pre.code ?? "PROMPT_GEN_MEDIA_MISSING", { feedback, rePushPlan, code: pre.code }));
       }
 
       if (!identityGate.ok) {
-        await u.db("o_videoTrack").where({ id: trackId }).update({
+        await patchVideoTrackReason(u.db, trackId, {
           state: "生成失败",
-          reason: `IDENTITY_IMAGE_GAP:${identityGate.gaps.map((g) => `${g.code}:${g.reason}`).join(",")}`,
+          message: `IDENTITY_IMAGE_GAP:${identityGate.gaps.map((g) => `${g.code}:${g.reason}`).join(",")}`,
+          code: "IDENTITY_IMAGE_GAP",
         });
         return res.status(400).send(
           error("身份静照缺失，提示词未就绪", {
@@ -703,9 +772,10 @@ export default router.post(
           !/\[Camera\]/i.test(result.prompt) ||
           (visualLiteraryBody(result.prompt).match(/[\u4e00-\u9fff]/g) ?? []).length < 8;
         if (stillThin && isTrueDesignGap(ctx) && !trackVd && !dialLines.length) {
-          await u.db("o_videoTrack").where({ id: trackId }).update({
+          await patchVideoTrackReason(u.db, trackId, {
             state: "生成失败",
-            reason: `VP-THIN-SHELL:真缺画面描写与对白`,
+            message: "VP-THIN-SHELL:真缺画面描写与对白",
+            code: "VP-THIN-SHELL",
           });
           return res.status(400).send(
             error("本镜缺少画面描写与对白，无法编译视频词；请补设计后重编译", {
@@ -718,9 +788,11 @@ export default router.post(
         }
         if (stillThin) {
           // Material claimed but still shell — refuse lock-face-only / Audio-first scraps
-          await u.db("o_videoTrack").where({ id: trackId }).update({
+          await patchVideoTrackReason(u.db, trackId, {
             state: "生成失败",
-            reason: `VP-THIN-SHELL:治愈后仍无文学五段 reasons=${ready.reasons.join(",")}`,
+            message: `VP-THIN-SHELL:治愈后仍无文学五段 reasons=${ready.reasons.join(",")}`,
+            code: "VP-THIN-SHELL",
+            reasons: ready.reasons,
           });
           return res.status(400).send(
             error("视频词仍为锁脸/无对白空壳，已拒绝落库；请确认本镜画面描写已写入分镜后重编译", {
@@ -735,22 +807,106 @@ export default router.post(
         }
       }
 
-      await u.db("o_videoTrack").where({ id: trackId }).update({
-        state: qd.burnAllowed ? "已完成" : "需完善",
-        prompt: result.prompt,
-        ...(qd.burnAllowed
-          ? {}
-          : {
-              reason: JSON.stringify({
-                burnAllowed: false,
-                decision: qd.decision,
-                nextStep: qd.nextStep,
-                reasons: qd.reasons,
-                ctaLabel: qd.envelope?.ctaLabel ?? "完善后重编译",
-                userMessage: qd.envelope?.userMessage ?? "提示词已落库但不可烧片",
+      // Burn SSOT — same kernel as generateVideo adaptBurnFromDesign
+      let burnAdaptFidelity: Awaited<ReturnType<typeof import("@/ruleEngine/compilers/adaptBurnFromDesign").adaptBurnFromDesign>>["fidelity"];
+      {
+        const { adaptBurnFromDesign } = await import("@/ruleEngine/compilers/adaptBurnFromDesign");
+        const burnAdapt = adaptBurnFromDesign({
+          shotMeta: (workingShot ?? shotMeta ?? {}) as Record<string, unknown>,
+          trackPrompt: result.prompt,
+          vendorId: "agnesai",
+          trackId,
+          storyboardId: storyboardId ?? undefined,
+          modeId: mode,
+        });
+        result.prompt = burnAdapt.prompt;
+        burnAdaptFidelity = burnAdapt.fidelity;
+        if (burnAdapt.durationSec > 0) durationSec = burnAdapt.durationSec;
+        if (burnAdapt.fidelity && !burnAdapt.fidelity.pass) {
+          qd = {
+            ...qd,
+            burnAllowed: false,
+            decision: "chat_repair",
+            nextStep: "chat_repair",
+            reasons: [
+              ...(qd.reasons ?? []),
+              ...burnAdapt.fidelity.items.filter((i) => !i.pass).map((i) => `fidelity:${i.id}`),
+            ],
+            envelope: {
+              ...(qd.envelope ?? {
+                userMessage: "",
+                primaryNextStep: "chat_repair" as const,
+                ctaLabel: "确认视频设计修复",
               }),
-            }),
-      });
+              userMessage:
+                burnAdapt.fidelity.virdFindings?.map((f) => f.message).join("；") ||
+                qd.envelope?.userMessage ||
+                "设计意图未命中，须修复后重编译",
+              primaryNextStep: "chat_repair",
+              ctaLabel: "确认视频设计修复",
+            },
+          };
+        }
+      }
+
+      const promptHash = require("crypto")
+        .createHash("sha1")
+        .update(result.prompt)
+        .digest("hex")
+        .slice(0, 12);
+      const fidelityExtraReason = burnAdaptFidelity
+        ? {
+            designIntentFidelity: burnAdaptFidelity,
+            virdFindings: burnAdaptFidelity.virdFindings,
+            promptHash,
+            burnDurationSec: durationSec,
+          }
+        : { promptHash, burnDurationSec: durationSec };
+
+      if (qd.burnAllowed) {
+        try {
+          const { persistVideoTrackPromptWithDesignHash } = await import(
+            "@/ruleEngine/qc/persistVideoTrackPromptHash"
+          );
+          await persistVideoTrackPromptWithDesignHash(u.db, {
+            trackId,
+            prompt: result.prompt,
+            state: "已完成",
+            shot: {
+              ...(workingShot as object),
+              visualDescription:
+                (workingShot as { visualDescription?: string })?.visualDescription ??
+                mergedSources.shotMeta.visualDescription,
+              narrative: {
+                ...(((workingShot as { narrative?: object })?.narrative as object) ?? {}),
+                dialogue: {
+                  lines: dialLines.map((t) => ({ text: t })),
+                },
+              },
+              duration: durationSec,
+            } as Record<string, unknown>,
+            extraReason: fidelityExtraReason,
+          });
+        } catch {
+          await u.db("o_videoTrack").where({ id: trackId }).update({
+            state: "已完成",
+            prompt: result.prompt,
+          });
+        }
+      } else {
+        // Keep prior designContentHash — !burnAllowed must not blind M7 stale gate
+        await patchVideoTrackReason(u.db, trackId, {
+          state: "需完善",
+          prompt: result.prompt,
+          burnAllowed: false,
+          decision: qd.decision,
+          nextStep: qd.nextStep,
+          reasons: qd.reasons,
+          ctaLabel: qd.envelope?.ctaLabel ?? "完善后重编译",
+          userMessage: qd.envelope?.userMessage ?? "提示词已落库但不可烧片",
+          ...fidelityExtraReason,
+        });
+      }
       const qdSerialized = serializeQualityDecision(qd, {
         autoHealed,
         duration: healedDuration,
@@ -758,9 +914,9 @@ export default router.post(
       const chatRepairText = !qd.burnAllowed
         ? [
             "【闭环修复清单 — 质量决策挡烧】",
-            qd.envelope.userMessage || `decision=${qd.decision} nextStep=${qd.nextStep}`,
-            `reasons: ${qd.reasons.join("; ")}`,
-            qd.envelope.suggestedValue != null ? `suggestedValue: ${qd.envelope.suggestedValue}` : "",
+            qd.envelope?.userMessage || `decision=${qd.decision} nextStep=${qd.nextStep}`,
+            `reasons: ${(qd.reasons ?? []).join("; ")}`,
+            qd.envelope?.suggestedValue != null ? `suggestedValue: ${qd.envelope.suggestedValue}` : "",
             qd.splitHint ? `splitHint 建议: ${qd.splitHint}` : "",
             "",
             ...(qd.envelope?.repairHints ?? []).map((h) => `[${h.id}] ${h.chatTemplate ?? ""}`).filter(Boolean),
@@ -780,6 +936,8 @@ export default router.post(
           identityGate,
           qualityDecision: qdSerialized,
           burnAllowed: qd.burnAllowed,
+          designIntentFidelity: burnAdaptFidelity,
+          virdFindings: burnAdaptFidelity?.virdFindings,
           nextStep: qd.nextStep,
           splitHint: qd.splitHint,
           ...(autoHealed?.length ? { autoHealed } : {}),
@@ -819,7 +977,11 @@ export default router.post(
       const userMessage = isRuntime
         ? "生成提示词时发生结构异常（非台词保真问题）。请重试；若仍失败请检查分镜台词是否为结构化 lines。"
         : feedback.upstreamPatches?.[0]?.suggestion || errMsg;
-      await u.db("o_videoTrack").where({ id: trackId }).update({ state: "生成失败", reason: errMsg });
+      await patchVideoTrackReason(u.db, trackId, {
+        state: "生成失败",
+        message: errMsg,
+        code: isRuntime ? "RUNTIME_TYPE_ERROR" : feedback.ruleId || "VENDOR_PASSTHROUGH",
+      });
       return res.status(400).send(
         error(userMessage, {
           feedback,

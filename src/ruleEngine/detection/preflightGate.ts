@@ -62,7 +62,9 @@ export async function runPreflightGate(db: Knex, input: PreflightGateInput): Pro
 
   const result: PreflightGateResult = { skipped: false, allowed, preflight, blockReason, failedChecks };
 
-  const dc01 = preflight.detectionResults.find((r) => r.id === "DC-01" && !r.passed);
+  const dc01 = preflight.detectionResults.find(
+    (r) => (r.id === "DC-01" || r.id === "DC-01-EXTRA" || r.id === "H3") && !r.passed,
+  );
   if (dc01) {
     const { buildDc01HumanEnvelope } = await import("../heal/dc01Envelope");
     const env = buildDc01HumanEnvelope({

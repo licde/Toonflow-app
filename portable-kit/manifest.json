@@ -1,7 +1,7 @@
 {
   "version": "2.0.1",
-  "tier": "T1",
-  "syncedAt": "2026-07-25T21:38:37.203Z",
+  "tier": "T3",
+  "syncedAt": "2026-07-30T01:24:39.606Z",
   "modules": [
     "portable",
     "closure",
@@ -15,7 +15,8 @@
     "quality",
     "heal",
     "transform",
-    "vendor-packs"
+    "vendor-packs",
+    "precheckLoop"
   ],
-  "fixtureCount": 32
+  "fixtureCount": 46
 }

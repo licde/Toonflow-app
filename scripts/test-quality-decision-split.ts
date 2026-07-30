@@ -69,10 +69,18 @@ const nar14 = decideVideoQuality({
   },
 });
 ok("NAR-14 blocks without splitHint", !nar14.burnAllowed && nar14.decision === "split_shot");
-ok("NAR-14 trigger narrative_split_hint", nar14.envelope.triggers.includes("narrative_split_hint"));
-ok("NAR-14 shotWithSplitHint written", Boolean(
-  (nar14.shotWithSplitHint?.narrative?.dialogue?.lines?.[0] as { splitHint?: string })?.splitHint,
-));
+ok(
+  "NAR-14 trigger nar14_split",
+  nar14.envelope.triggers.includes("nar14_split") || nar14.envelope.triggers.includes("narrative_split_hint"),
+  JSON.stringify(nar14.envelope.triggers),
+);
+// Confirm/Orchestrator owns physical split — decide must NOT invent splitHint onto shot (false-green)
+ok(
+  "NAR-14 proposes splitHint without writing shot",
+  Boolean(nar14.splitHint) &&
+    !(nar14.shotWithSplitHint?.narrative?.dialogue?.lines?.[0] as { splitHint?: string } | undefined)?.splitHint,
+  `hint=${nar14.splitHint} written=${Boolean((nar14.shotWithSplitHint?.narrative?.dialogue?.lines?.[0] as { splitHint?: string })?.splitHint)}`,
+);
 
 const batchSplit = decideVideoQuality({
   vendorId: "klingai",

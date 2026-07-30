@@ -9,7 +9,7 @@
 | `types/closure.ts` | API 响应 TypeScript 类型（含 `exportGate.chatRepairText`） |
 | `types/emotionNorm.ts` | 情绪规范 profile API / UX 文案契约 |
 | `api/inspectBundle.ts` | HTTP 客户端（dryRun 暴露 exportGate） |
-| `components/RulePanel.vue` | 闭环展示 + **复制闭环修复清单** + 情绪结构补齐 CTA |
+| `components/RulePanel.vue` | 闭环展示 + 复制清单 + 情绪结构 CTA + **W93 smartProposal Confirm/Apply** + presentationFork |
 
 情绪规范切换说明见仓库根 [`docs/FE_EMOTION_NORM_SWITCH.md`](../FE_EMOTION_NORM_SWITCH.md)。
 
@@ -51,11 +51,18 @@ async function onDryRun(bundle: object) {
     :result="closure"
     :export-allowed="exportAllowed"
     :chat-repair-text="chatRepairText"
+    :smart-design-proposals="closure?.smartDesignProposals"
     @copy-chat="(t) => navigator.clipboard.writeText(t)"
     @re-push="(p) => router.push({ query: { stage: p.reverseTarget } })"
+    @confirm-smart-proposal="(p) => smartOps('confirm', p)"
+    @reject-smart-proposal="(p) => smartOps('reject', p)"
+    @apply-smart-proposals="() => smartOps('apply')"
+    @presentation-fork="(p) => smartOps('confirm', p)"
   />
 </template>
 ```
+
+`smartOps` → `POST /api/scriptAgent/smartProposalOps`（`list|build|confirm|reject|apply`）。Confirm 后须 `apply` 才写镜字段 / cascade stale。
 
 3. 确保后端已部署 `POST /api/ruleEngine/dryRunImport`（返回 `exportGate.chatRepairText`）。
 

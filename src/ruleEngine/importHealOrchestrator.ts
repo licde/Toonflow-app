@@ -198,6 +198,43 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
       /* optional */
     }
 
+    // Video homology until-clear: pseudo lines / orphan lip / beat / intent
+    try {
+      const { softHealVideoHomologyOnShots } =
+        require("./heal/videoHomologyHeal") as typeof import("./heal/videoHomologyHeal");
+      const pd = working.preDesignPack as { shots?: Record<string, unknown>[] } | undefined;
+      const shots = [...(pd?.shots ?? [])];
+      if (shots.length) {
+        const vh = softHealVideoHomologyOnShots({ shots });
+        if (vh.changed && pd) {
+          pd.shots = vh.shots as never;
+          working = { ...working, preDesignPack: pd };
+          for (const h of vh.heals) {
+            if (h === "sound_dialogue_false_on_silent") {
+              salvagedRuleIds.add("DEX-VID-VOICE-MODE");
+            } else if (h === "heal_av_scene_sfx") {
+              salvagedRuleIds.add("SFX-SCENE-MISMATCH");
+            } else {
+              salvagedRuleIds.add(h.startsWith("ird:") ? "DEX-VID-PSEUDO-LINE" : "DEX-VID-VOICE-MODE");
+            }
+            healLog.push({ at: now(), ruleId: "SH-VIDEO-HOMOLOGY", action: h });
+          }
+          if (vh.cleared) {
+            salvagedRuleIds.add("DEX-VID-PSEUDO-LINE");
+            salvagedRuleIds.add("DEX-VID-VOICE-MODE");
+            salvagedRuleIds.add("DEX-VID-BEAT-DUR");
+          }
+          (shapeSalvageLog as ShapeSalvageEntry[]).push({
+            ruleId: "SH-VIDEO-HOMOLOGY",
+            path: "preDesignPack.shots",
+            action: `heals=${vh.heals.join(",")};cleared=${vh.cleared}`,
+          });
+        }
+      }
+    } catch {
+      /* optional */
+    }
+
     // Import ≡ design: same-kernel smart split (placement heal + SplitOrchestrator)
     try {
       const meta = ((working as { meta?: Record<string, unknown> }).meta ??= {});
@@ -276,6 +313,39 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
   if (f0Heal.declared.length) {
     healBudget = consumeSilentHeal(healBudget, f0Heal.declared.length);
     healLog.push({ at: now(), ruleId: "FX-F0", action: "declare", detail: f0Heal.declared.join(",") });
+  }
+
+  // Homology: strip duration/punct + absorb literary EXTRA into plan before exportGate
+  if (apply && canSilentHeal(healBudget)) {
+    try {
+      const { softHealTouchHomology } =
+        require("./heal/touchHomologyHeal") as typeof import("./heal/touchHomologyHeal");
+      const heal = softHealTouchHomology(working);
+      if (heal.absorbed > 0 || heal.strippedNoise > 0 || heal.f0Declared.length) {
+        healBudget = consumeSilentHeal(healBudget, 1);
+        healLog.push({
+          at: now(),
+          ruleId: "DC-01-EXTRA",
+          action: "homology_until_clear",
+          detail: `cleared=${heal.cleared};noise=${heal.strippedNoise};absorb=${heal.absorbed};left=${heal.extrasLeft};f0=${heal.f0Declared.length}`,
+        });
+        (shapeSalvageLog as ShapeSalvageEntry[]).push({
+          ruleId: "SH-DC01-ABSORB-EXTRA",
+          path: "planData.dialoguePlan.lines",
+          action: `cleared=${heal.cleared};noise=${heal.strippedNoise};absorb=${heal.absorbed};left=${heal.extrasLeft}`,
+        });
+      }
+      // Only mark salvaged when detector cleared (no half-heal fake clear)
+      if (heal.cleared || heal.extrasLeft === 0) {
+        salvagedRuleIds.add("DC-01-EXTRA");
+        salvagedRuleIds.add("H3");
+      }
+      if (heal.undeclaredFxLeft === 0 && heal.f0Declared.length) {
+        salvagedRuleIds.add("FX-GRADE-01");
+      }
+    } catch {
+      /* optional */
+    }
   }
 
   // Episode duration budget (D1): stop silent raises when sum would exceed cap
@@ -404,7 +474,57 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
   }
 
   const uniqueFixed = [...new Set(serverFixedIds)];
-  observeImportHeal({ serverFixedIds: uniqueFixed, healLogLen: healLog.length, healBudget });
+
+  // Literary structure soft-fill (whitelist) — demote; importOk ≠ designExitPass
+  try {
+    const { getEnhancementFillPolicy } =
+      require("./compilers/stillLiteraryDetailQuality") as typeof import("./compilers/stillLiteraryDetailQuality");
+    const { applyLitFillToShots, buildLitFillSuggestions } =
+      require("./design/literaryDetailLlmFill") as typeof import("./design/literaryDetailLlmFill");
+    if (apply && getEnhancementFillPolicy().allowImportStructureSoftFill) {
+      const shots = (bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[];
+      if (shots.length) {
+        const sug = buildLitFillSuggestions({
+          shots,
+          literaryDetailLlmFill: true,
+          intentVisualEnhance: true,
+          importTrack: true,
+          confidence: 0.85,
+        });
+        if (sug.suggestions.length) {
+          const filled = applyLitFillToShots({
+            shots,
+            fills: sug.suggestions.map((s) => ({ shotIndex: s.shotIndex, append: s.suggestedAppend })),
+            literaryDetailLlmFill: true,
+            intentVisualEnhance: true,
+            importTrack: true,
+            confidence: 0.85,
+            forceApply: true,
+          });
+          if (filled.applied.length) {
+            (bundle.preDesignPack as { shots: Record<string, unknown>[] }).shots = filled.shots;
+            for (const idx of filled.applied) {
+              serverFixedIds.push(`LIT-SOFT-FILL:${idx}`);
+              healLog.push({
+                at: now(),
+                ruleId: "DEX-LIT-CONTACT",
+                action: "lit_structure_soft_fill",
+                detail: `shot ${idx}`,
+              });
+            }
+            if (!bundle.meta) (bundle as { meta?: Record<string, unknown> }).meta = {};
+            const m = (bundle as { meta: Record<string, unknown> }).meta;
+            m.importOkNotExitPass = true;
+            m.litImportSoftFilled = filled.applied;
+          }
+        }
+      }
+    }
+  } catch {
+    /* optional */
+  }
+
+  observeImportHeal({ serverFixedIds: [...new Set(serverFixedIds)], healLogLen: healLog.length, healBudget });
 
   return {
     bundle,
@@ -423,7 +543,7 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
       repairHints: exportGateFull.repairHints,
     },
     inspected: exportGateFull.inspected,
-    serverFixedIds: uniqueFixed,
+    serverFixedIds: [...new Set(serverFixedIds)],
     chatMustFixIds,
     healLog,
     healBudget,

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { mergeAssociateAssetIds } from "@/ruleEngine/compilers/referenceListBuilder";
+import { stillApiFieldsFromReason } from "@/ruleEngine/compilers/stillQuality";
 const router = express.Router();
 import { FlowData } from "@/agents/productionAgent/tools";
 
@@ -201,6 +202,7 @@ export default router.post(
                 shouldGenerateImage: i.shouldGenerateImage,
                 reason: i?.reason ?? "",
                 flowId: i.flowId,
+                ...stillApiFieldsFromReason(i?.reason),
               };
             }),
           )

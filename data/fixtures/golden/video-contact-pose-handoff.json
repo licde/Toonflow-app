@@ -1,0 +1,19 @@
+{
+  "id": "video-contact-pose-handoff",
+  "version": "1.0.0",
+  "description": "静帧 at_locus + VD entering → Motion 须 at_locus 模板",
+  "visualDescription": "特写。休书纸角贴颊，她紧咬下唇。",
+  "stillMeta": {
+    "stillPoseAnchor": { "state": "at_locus", "prop": "休书", "locus": "面颊" },
+    "contactStartState": "at_locus"
+  },
+  "expectMotion": {
+    "mustNotInclude": ["自面颊侧进入", "自.*侧进入"],
+    "mustInclude": ["贴合", "休书"]
+  },
+  "expectPoseGate": {
+    "vdEntering": "特写。休书自面颊侧进入贴合",
+    "stillAtLocus": true,
+    "severity": "WARN"
+  }
+}

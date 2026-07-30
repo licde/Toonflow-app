@@ -99,8 +99,11 @@ export default router.post(
     if (status === "done" && !acknowledgeWeakPath) {
       if (["P0", "P03", "P06", "W1", "W2", "W3", "designBrief", "GB", "SB", "AS", "CD", "G"].includes(stageId)) {
         exitGate = runDesignExitGate(stageId, plan, { optimizeRound, forceExpand: Boolean(forceExpand) });
-        if (!exitGate.ok && autoHeal !== false && depth === "viral") {
-          // High-confidence design auto-close first, then domain heal one round
+        const litFailed =
+          exitGate.failedIds.some((id) => /^DEX-LIT-|^DEX-PROP-CONT|IRD-CONFIRM/.test(id));
+        // Viral full auto-heal; lit debt also auto-closes on SB even outside viral depth
+        if (!exitGate.ok && autoHeal !== false && (depth === "viral" || (litFailed && stageId === "SB"))) {
+          // High-confidence design auto-close first, then domain heal one round (viral only)
           try {
             const { runDesignAutoClose } =
               require("@/ruleEngine/design/designAutoClose") as typeof import("@/ruleEngine/design/designAutoClose");
@@ -115,7 +118,7 @@ export default router.post(
           } catch {
             /* optional */
           }
-          if (!exitGate.ok) {
+          if (!exitGate.ok && depth === "viral") {
             healResult = healViralDesignRouter(plan, stageId, { maxRounds: 1 });
             plan = healResult.plan;
             exitGate =
@@ -145,6 +148,12 @@ export default router.post(
           }
         }
         if (!exitGate.ok) {
+          const meta =
+            ((plan.planData as { meta?: Record<string, unknown> } | undefined)?.meta ??
+              (plan.meta as Record<string, unknown> | undefined) ??
+              {}) as Record<string, unknown>;
+          const litCta = String(meta.litDebtCta ?? "");
+          const litAct = String(meta.litDebtPrimaryAction ?? "");
           return res.status(400).send({
             code: 400,
             message: exitGate.userMessage,
@@ -159,11 +168,18 @@ export default router.post(
                     rollbackTo: healResult.rollbackTo,
                   }
                 : undefined,
-              cta: isRedesignRequired(plan)
-                ? "请按新规范重设计至 W3 验收"
-                : exitGate.userMessage
-                  ? "按失败清单同轮重写 JSON 后再 setStepStatus（禁止只改 passed）"
-                  : "本阶段优化",
+              litDebtPrimaryAction: litAct || undefined,
+              litDebtCta: litCta || undefined,
+              irdConfirmRequired: Boolean(meta.irdConfirmRequired || exitGate.failedIds.includes("IRD-CONFIRM")),
+              cta: litCta
+                ? litCta
+                : isRedesignRequired(plan)
+                  ? "请按新规范重设计至 W3 验收"
+                  : exitGate.failedIds.some((id) => /^DEX-LIT-|^DEX-PROP-CONT/.test(id))
+                    ? "文学细节债：请批准增强互斥句或智能拆镜后再 setStepStatus"
+                    : exitGate.userMessage
+                      ? "按失败清单同轮重写 JSON 后再 setStepStatus（禁止只改 passed）"
+                      : "本阶段优化",
               forbidProductionRework: true,
               chatRetryRequired: true,
             },

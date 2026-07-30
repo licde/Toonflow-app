@@ -2,12 +2,14 @@
  * yarn test:design-export-gate
  *
  * Golden adversarial test: 43ce74 raw must FAIL export gate (false-green penetration);
- * programmatically healed bundle must PASS.
+ * programmatically healed bundle must clear classic false-green gates
+ * (DG-LINKAGE / DG-MODALITY / DG-FALSE-GREEN-FX / DG-NAR-SELFCHECK claim).
+ * F9: structural heal ≠ designExitPass — residual DEX/NAR/IRD debt may keep exportAllowed=false.
  */
 import fs from "fs";
 import path from "path";
 import { runExportGate, buildAggregatedChatRepairText } from "@/ruleEngine/exportGate";
-import { speakersMissingFromCd } from "@/ruleEngine/bundle/designExportHelpers";
+import { speakersMissingFromCd, serverNarrativeSelfcheckFails } from "@/ruleEngine/bundle/designExportHelpers";
 import { measureDialogue } from "@/ruleEngine/dialogueMetrics";
 import { flattenDialogueText } from "@/ruleEngine/design/dialogueCoverage";
 import type { ScriptBundle } from "@/ruleEngine/bundle/types";
@@ -106,8 +108,13 @@ function heal43ce74(raw: ScriptBundle): ScriptBundle {
     assets: { code?: string; name?: string; L0?: { identity?: string; gender?: string }; L6?: { arcVisual?: string } }[];
   };
   cd.assets = cd.assets ?? [];
+  let extraIdx = 0;
   for (const name of miss) {
-    const slug = name.replace(/[^\u4e00-\u9fffA-Za-z0-9]/g, "").slice(0, 6).toUpperCase() || "EXTRA";
+    // Codes must be ASCII (DG-CODE-FORBIDDEN bans CHAR-中文)
+    const ascii = name.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 8);
+    const slug =
+      ascii ||
+      (/^(OS|VO|旁白|画外)$/i.test(name.trim()) ? "OS" : `EXTRA${++extraIdx}`);
     cd.assets.push({
       code: `CHAR-${slug}`,
       name,
@@ -241,9 +248,12 @@ function heal43ce74(raw: ScriptBundle): ScriptBundle {
     );
   }
 
+  // F9 honest: structural heal may stub splitHint, but export/prepare can residualize NAR —
+  // never claim passed=true here (that re-creates DG-NAR-SELFCHECK false-green).
+  const residualNar = serverNarrativeSelfcheckFails(bundle).map((f) => f.id);
   bundle.narrativeSelfcheck = {
-    passed: true,
-    failedIds: [],
+    passed: false,
+    failedIds: residualNar.length ? residualNar : ["NAR-14"],
     checkedAt: new Date().toISOString(),
   };
 
@@ -292,9 +302,14 @@ async function main() {
 
   const healed = heal43ce74(raw);
   const healedGate = runExportGate(healed);
-  ok("healed exportAllowed=true", healedGate.exportAllowed === true, `blocks=${healedGate.blocks.map((b) => b.id).join(",")}`);
+  const healedBlocks = healedGate.blocks.map((b) => b.id).join(",");
+  ok(
+    `healed exportAllowed=${String(fixedExpect.exportAllowed)}`,
+    healedGate.exportAllowed === Boolean(fixedExpect.exportAllowed),
+    `blocks=${healedBlocks}`,
+  );
   for (const id of fixedExpect.mustNotBlockIds as string[]) {
-    ok(`healed no block ${id}`, !healedGate.blocks.some((b) => b.id === id));
+    ok(`healed no block ${id}`, !healedGate.blocks.some((b) => b.id === id), healedBlocks);
   }
 
   if (failed) {

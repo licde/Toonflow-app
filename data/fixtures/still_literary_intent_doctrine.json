@@ -1,0 +1,587 @@
+{
+  "version": "1.1.0",
+  "description": "Still literary intent SSOT — Content contract vs Recipe. Extend via JSON; never invent verbs at runtime.",
+  "freeze": {
+    "neverNerInventPredicates": true,
+    "neverWriteRecipeToVisualDescription": true,
+    "chatHandFaceStillBlocks": true
+  },
+  "contentContractKinds": ["seating", "cast_cardinality", "role_action", "prop", "atmosphere", "composition"],
+  "healPriority": ["seating", "cast_cardinality", "role_action", "prop", "composition", "atmosphere"],
+  "surviveStages": ["compose", "first_gen", "edit", "verify", "video_inherit"],
+  "seatingSignals": [
+    "权力反差",
+    "端坐",
+    "跪于",
+    "跪低位",
+    "蒲团",
+    "太师椅",
+    "站位绑定",
+    "高坐",
+    "低跪",
+    "高位",
+    "低位",
+    "居高临下"
+  ],
+  "seatingSignalNotes": "景别(中景)与场景名(祠堂)不得入 seatingSignals——否则常用中景动作镜假绿座次 StageA。俯视/说教/低头隐忍属气氛，不立法座次。",
+  "midWideShotSizes": ["中景", "全景", "远景", "大远", "wide", "medium", "ms", "ws", "fs"],
+  "handCuExplicit": ["手部特写", "手部特", "扳指特写", "指尖特写", "手腕特写"],
+  "cuShotSizes": ["特写", "大特", "大特写", "ecu", "cu", "extreme", "close.?up"],
+  "actionPrimarySignals": [
+    "弯腰",
+    "捡",
+    "捏",
+    "指节",
+    "持",
+    "递",
+    "抽",
+    "撕",
+    "咬",
+    "刺",
+    "抄书",
+    "起身",
+    "推门",
+    "开门",
+    "摔杯",
+    "拍案",
+    "掩面",
+    "拭泪",
+    "转身",
+    "拦",
+    "追",
+    "泼",
+    "攥",
+    "拂袖",
+    "掀",
+    "包扎",
+    "止血",
+    "攥紧",
+    "掀起",
+    "捡起",
+    "撕开",
+    "斩",
+    "砍",
+    "格挡",
+    "闪避",
+    "对打",
+    "扑"
+  ],
+  "actionPrimaryPolicy": {
+    "seedIsLexiconOnly": true,
+    "alsoExtractFromVd": true,
+    "neverInventAbsentVerbs": true,
+    "episodeLexiconWindow": "neighbor±3",
+    "note": "动作词=本镜 VD 已出现；seed+邻镜 harvest 仅扩词表；武打/群像禁座次 StageA"
+  },
+  "ensembleFightPolicy": {
+    "castGe4": "ensemble_4plus_no_stageA",
+    "fightVerbsNoStageA": true,
+    "bareN3NoAutoStageA": true
+  },
+  "commonScenarioClasses": [
+    "seating_power_mid",
+    "action_primary_mid",
+    "confront_mid",
+    "ots_mid",
+    "reaction_mid",
+    "hand_cu_explicit",
+    "prop_cu",
+    "ecu_face",
+    "empty_or_os",
+    "ensemble",
+    "unknown"
+  ],
+  "intentClasses": [
+    "seating_power_mid",
+    "action_primary_mid",
+    "confront_mid",
+    "ots_mid",
+    "reaction_mid",
+    "hand_cu_explicit",
+    "prop_cu",
+    "ecu_face",
+    "empty_or_os",
+    "ensemble",
+    "unknown"
+  ],
+  "intentPolicyMatrix": {
+    "seating_power_mid": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": true,
+      "twoStageLayout": true,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "face_or_scene"
+    },
+    "action_primary_mid": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": true,
+      "twoStageLayout": false,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "face_or_scene"
+    },
+    "confront_mid": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": true,
+      "twoStageLayout": true,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "face_or_scene"
+    },
+    "ots_mid": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": true,
+      "twoStageLayout": true,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "face_or_scene"
+    },
+    "reaction_mid": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": true,
+      "twoStageLayout": true,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "face_or_scene"
+    },
+    "hand_cu_explicit": {
+      "dirtyHandEye": true,
+      "allowFaceRecipe": false,
+      "twoStageLayout": false,
+      "primaryNextOnWeakStill": "chat_repair",
+      "recipeMode": "hand_cu"
+    },
+    "prop_cu": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": false,
+      "twoStageLayout": false,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "prop_cu"
+    },
+    "ecu_face": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": true,
+      "twoStageLayout": false,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "ecu_face"
+    },
+    "empty_or_os": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": false,
+      "twoStageLayout": false,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "empty"
+    },
+    "ensemble": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": true,
+      "twoStageLayout": false,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "face_or_scene"
+    },
+    "unknown": {
+      "dirtyHandEye": false,
+      "allowFaceRecipe": true,
+      "twoStageLayout": false,
+      "primaryNextOnWeakStill": "batch_still",
+      "recipeMode": "face_or_scene"
+    }
+  },
+  "coverageBoundary": "declared intentClasses + safe degrade for unknown; never invent predicates; never claim infinite literary coverage",
+  "collisionMatrix": {
+    "hand_cu": {
+      "forbidWhenKinds": ["seating"],
+      "forbidWhenSignals": ["权力反差", "端坐", "蒲团", "太师椅", "站位绑定", "高位", "低位"],
+      "stripPatterns": [
+        "本镜只出手与道具细节[^。；;]*",
+        "禁止同帧出人像头面部抢戏[^。；;]*",
+        "锁定角色定妆手部/袖口/配饰纹理参考[^。；;]*",
+        "竖屏9:16安全区构图，手部/道具主体清晰不裁切[^。；;]*"
+      ]
+    }
+  },
+  "editBasePolicy": {
+    "requireFullVd": true,
+    "requireFullHardConstraints": true,
+    "requireBinding": true,
+    "focusAppendOnly": true,
+    "truncateOrder": ["atmosphere", "personality", "mustAppear", "binding", "hardConstraint", "vd"]
+  },
+  "atmosphereIsContentWhenInVd": true,
+  "picturePadsAtmosphereOnly": true,
+  "maxEditHints": 8,
+  "literaryDetailQuality": {
+    "version": "2.1.0",
+    "description": "可拍细节质量 SSOT v2.1 — structureFirst；增强白名单；漂移硬禁；XOR 互斥。",
+    "structureFirst": true,
+    "lexiconIsBoostOnly": true,
+    "neverInventMissingAtoms": true,
+    "pillarsLitEnhanceV1": "enforce",
+    "rollout": {
+      "metaKey": "pillarsLitEnhanceV1",
+      "defaultMode": "enforce",
+      "modes": ["off", "shadow", "canary", "enforce"],
+      "canaryPercentMetaKey": "pillarsLitEnhanceCanaryPercent",
+      "note": "默认 enforce=设计Exit+Compose硬拦；显式 shadow=仅诊+CTA；导入 soft demote 永不硬拦；off=关增强写"
+    },
+    "industryAtoms": ["who", "action", "object", "contact", "spatial", "facing_not_anchor", "one_beat", "look_continuity", "contact_role_xor", "wound_visible", "prop_readable"],
+    "gatePriority": [
+      "DEX-STILL-ONEBEAT",
+      "DEX-STILL-CU-CAST",
+      "DEX-LIT-CONTACT-XOR",
+      "DEX-LIT-CONTACT",
+      "DEX-LIT-ANCHOR",
+      "DEX-PROP-CONT",
+      "DEX-LIT-EXPR",
+      "DEX-QP-02",
+      "batch_still"
+    ],
+    "enhancementPriority": ["split", "contactRoleXor", "singleSlotFill", "woundVisible", "propReadable"],
+    "driftPolicy": {
+      "forbidSilentSubjectSwap": true,
+      "forbidNewCastInvent": true,
+      "forbidNegateCoreAction": true,
+      "forbidUnderLiteraryLockedWithoutForce": true,
+      "kinds": ["subject_contradiction", "new_cast", "negate_core_action", "literary_locked"]
+    },
+    "enhancementFillPolicy": {
+      "enabledByDefault": false,
+      "requireConfirmBelowAutoMin": true,
+      "autoMin": 0.7,
+      "allowedSlots": ["contactStruct", "gripStruct", "groundOrPathStruct", "contactRoleXor", "woundVisible", "propReadable", "surfaceStruct", "thresholdStruct"],
+      "forbidPlotProse": true,
+      "forbidFxInvent": true,
+      "designDefault": "confirm",
+      "importDefault": "diagnose",
+      "allowImportStructureSoftFill": true,
+      "healAuthority": {
+        "design": "confirm_or_auto_enhance",
+        "import": "enhancementFill"
+      }
+    },
+    "intentVisualWound": {
+      "enabled": true,
+      "flagKey": "intentVisualEnhance",
+      "defaultOffUntilP1": false,
+      "touchFaceVerbFamily": "touch_face",
+      "bodyLocusRequired": true,
+      "deriveWoundVisible": true,
+      "distinctFromOralMicroWound": true,
+      "note": "触面×体表→浅痕可见度；不改是否受伤剧情；与口部微创分角色"
+    },
+    "llmFillPolicy": {
+      "enabledByDefault": false,
+      "requireConfirm": true,
+      "reassertSlots": true,
+      "forbidImportAutoWrite": true,
+      "forbidUnderChatStrict": true,
+      "forbidUnderLiteraryLocked": true,
+      "note": "P1 起 enhancementFillPolicy.allowImportStructureSoftFill 可白名单软写；本旗仍禁剧情散文"
+    },
+    "contactRoleXorLexicon": ["互斥", "另镜", "非同拍", "未入口", "未含于口", "分镜", "拆为", "仅颊触非口含", "纸未入口", "非含入口"],
+    "woundVisibleLexicon": ["浅痕", "红痕", "划痕可见", "痕可见", "皮表微红", "颊侧浅痕"],
+    "propContinuity": {
+      "findingId": "DEX-PROP-CONT",
+      "severityChat": "BLOCK",
+      "severityImport": "WARN",
+      "rules": ["vanish", "teleport", "airdrop"],
+      "exempt": ["sceneChange", "emptyShot", "osOnly", "reactionNoProp", "explicitRelease", "transition", "intentPicture", "xorSplit"]
+    },
+    "atoms": ["who", "action", "prop", "contactStruct", "gripStruct", "groundOrPathStruct", "facing", "surfaceStruct", "thresholdStruct"],
+    "contactLocusLexicon": [
+      "脸颊",
+      "面颊",
+      "颊",
+      "唇",
+      "下唇",
+      "嘴角",
+      "指尖",
+      "指节",
+      "手腕",
+      "腕",
+      "掌心",
+      "袖口",
+      "袖",
+      "肩",
+      "膝",
+      "额",
+      "颈",
+      "喉",
+      "胸口",
+      "眉心",
+      "眼角",
+      "眉"
+    ],
+    "facingLexicon": ["侧脸", "正面", "正脸", "背影", "侧身", "半侧"],
+    "facingNote": "朝向≠空间锚；禁用「侧脸」顶替地上/脚边等捡拾落点（防假绿）",
+    "spatialOrGripLexicon": [
+      "手持",
+      "握",
+      "捏",
+      "贴",
+      "划过",
+      "刺入",
+      "刺进",
+      "压在",
+      "抵在",
+      "放在",
+      "落在",
+      "膝前",
+      "胸前",
+      "额前",
+      "面前",
+      "身侧",
+      "掌中",
+      "指间"
+    ],
+    "groundLocusLexicon": [
+      "地上",
+      "地面",
+      "脚边",
+      "膝前",
+      "身侧",
+      "案下",
+      "椅下",
+      "从地上",
+      "自地上",
+      "拾起自",
+      "俯身于"
+    ],
+    "propSignalLexicon": [
+      "休书",
+      "信笺",
+      "信纸",
+      "纸角",
+      "纸",
+      "书信",
+      "扳指",
+      "剑",
+      "刀",
+      "杯",
+      "盏",
+      "扇",
+      "帕",
+      "簪",
+      "玉佩",
+      "香",
+      "环",
+      "佩"
+    ],
+    "faceCuShotSizes": ["特写", "大特", "大特写", "近景", "ecu", "cu"],
+    "faceMentionLexicon": ["侧脸", "正脸", "面颊", "脸颊", "唇", "眼", "眉", "嘴角"],
+    "microWoundLexicon": ["血珠", "渗血", "咬唇", "紧咬", "咬破", "血痕", "泪珠", "泪痕"],
+    "propTouchVerbLexicon": ["划", "划过", "贴", "压", "抵", "擦", "抹", "咬", "含", "拂", "刺入", "刺进", "扎入", "扎进", "插入"],
+    "groundActionVerbLexicon": ["捡", "捡起", "拾", "拾起", "弯腰", "俯身", "蹲"],
+    "holdVerbLexicon": ["持", "握", "捏", "攥", "捧", "执"],
+    "passTransferVerbLexicon": ["递", "接", "交给", "塞给", "递上", "接过"],
+    "dropThrowVerbLexicon": ["扔", "抛", "丢", "摔", "掷", "甩"],
+    "tearWipeVerbLexicon": ["撕", "撕开", "撕破", "拭", "拭泪", "抹泪", "擦泪"],
+    "intenseExprLexicon": ["怒目", "冷笑", "咬牙", "泪崩", "哽咽", "颤抖", "死死盯", "瞪"],
+    "pourSplashVerbLexicon": ["泼", "泼洒", "倾倒", "浇", "淋", "洒向", "倒向", "倒在", "泼在", "浇在"],
+    "graspBodyVerbLexicon": ["抱", "搂", "拽", "抓袖", "拉住", "按住", "扼", "掐"],
+    "writeVerbLexicon": ["写字", "抄书", "书写", "落笔", "运笔", "题字", "题写"],
+    "doorVerbLexicon": ["推门", "开门", "关门", "掩门", "踹门", "破门"],
+    "surfaceLocusLexicon": ["案上", "桌上", "纸上", "书上", "膝上", "砚边", "卷上"],
+    "thresholdLocusLexicon": ["门边", "门外", "门内", "门槛", "门口", "门缝", "廊外"],
+    "pourTargetLexicon": ["脸上", "身上", "地上", "脚边", "案上", "桌上", "衣襟", "袖"],
+    "slotMatrix": [
+      {
+        "id": "dual_contact_role_xor",
+        "findingId": "DEX-LIT-CONTACT-XOR",
+        "severityOnCu": "BLOCK",
+        "severityElse": "BLOCK",
+        "whenAllFamilies": ["touch_face", "micro_wound"],
+        "requireAnySlots": ["contactRoleXor"],
+        "message": "脸部道具触碰与口部微创同镜须拆镜（颊触/口创分镜），禁止仅用互斥句洗绿；missingSlots含contactRoleXor；debt.router→split_shot"
+      },
+      {
+        "id": "face_prop_contact",
+        "findingId": "DEX-LIT-CONTACT",
+        "severityOnCu": "BLOCK",
+        "severityElse": "WARN",
+        "whenShot": ["faceCuOrFaceMention", "hasProp"],
+        "requireAnySlots": ["contactStruct", "gripStruct"],
+        "message": "脸部/特写含道具须声明接触或握持落点结构，禁悬浮漂移"
+      },
+      {
+        "id": "ground_action_needs_locus",
+        "findingId": "DEX-LIT-ANCHOR",
+        "severityOnCu": "BLOCK",
+        "severityElse": "BLOCK",
+        "whenFamilies": ["ground_pickup"],
+        "requireAnySlots": ["groundOrPathStruct", "contactStruct"],
+        "message": "捡拾/俯身类须声明地面/路径落点；朝向词不算锚点"
+      },
+      {
+        "id": "micro_wound_needs_locus",
+        "findingId": "DEX-LIT-CONTACT",
+        "severityOnCu": "BLOCK",
+        "severityElse": "WARN",
+        "whenFamilies": ["micro_wound"],
+        "requireAnySlots": ["contactStruct"],
+        "message": "渗血/咬唇等微创须声明身体落点结构"
+      },
+      {
+        "id": "hold_prop_needs_grip",
+        "findingId": "DEX-LIT-ANCHOR",
+        "severityOnCu": "WARN",
+        "severityElse": "WARN",
+        "whenFamilies": ["hold"],
+        "whenShot": ["hasProp"],
+        "requireAnySlots": ["gripStruct", "contactStruct"],
+        "message": "持握类须声明握持落点，禁道具悬空"
+      },
+      {
+        "id": "pass_transfer_needs_locus",
+        "findingId": "DEX-LIT-ANCHOR",
+        "severityOnCu": "WARN",
+        "severityElse": "WARN",
+        "whenFamilies": ["transfer"],
+        "requireAnySlots": ["gripStruct", "contactStruct", "groundOrPathStruct"],
+        "message": "递接/塞入须声明交接落点"
+      },
+      {
+        "id": "drop_throw_needs_locus",
+        "findingId": "DEX-LIT-ANCHOR",
+        "severityOnCu": "BLOCK",
+        "severityElse": "BLOCK",
+        "whenFamilies": ["displace"],
+        "requireAnySlots": ["groundOrPathStruct", "gripStruct", "contactStruct"],
+        "message": "扔抛摔丢须声明落点，禁无方向漂移"
+      },
+      {
+        "id": "tear_wipe_needs_contact",
+        "findingId": "DEX-LIT-CONTACT",
+        "severityOnCu": "BLOCK",
+        "severityElse": "WARN",
+        "whenFamilies": ["tear_wipe"],
+        "requireAnySlots": ["contactStruct", "hasProp"],
+        "message": "撕/拭泪须声明身体落点或明确道具对象"
+      },
+      {
+        "id": "intense_expr_needs_face_atom",
+        "findingId": "DEX-LIT-EXPR",
+        "severityOnCu": "WARN",
+        "severityElse": "WARN",
+        "whenFamilies": ["intense_expr"],
+        "whenShot": ["faceCuOrFaceMention"],
+        "requireAnySlots": ["contactStruct"],
+        "message": "特写强表情须落到眉/眼/唇等部位"
+      },
+      {
+        "id": "pour_splash_needs_target",
+        "findingId": "DEX-LIT-ANCHOR",
+        "severityOnCu": "BLOCK",
+        "severityElse": "BLOCK",
+        "whenFamilies": ["pour_splash"],
+        "requireAnySlots": ["pourTargetStruct", "groundOrPathStruct", "contactStruct"],
+        "message": "泼洒倾倒须声明承受落点"
+      },
+      {
+        "id": "grasp_body_needs_contact",
+        "findingId": "DEX-LIT-CONTACT",
+        "severityOnCu": "BLOCK",
+        "severityElse": "WARN",
+        "whenFamilies": ["grasp"],
+        "requireAnySlots": ["contactStruct", "gripStruct"],
+        "message": "抱拽按掐须声明身体接触落点"
+      },
+      {
+        "id": "write_needs_surface",
+        "findingId": "DEX-LIT-ANCHOR",
+        "severityOnCu": "WARN",
+        "severityElse": "WARN",
+        "whenFamilies": ["write"],
+        "requireAnySlots": ["surfaceStruct", "gripStruct", "hasProp"],
+        "message": "书写/抄书须声明承写面或笔纸物象"
+      },
+      {
+        "id": "door_needs_threshold",
+        "findingId": "DEX-LIT-ANCHOR",
+        "severityOnCu": "WARN",
+        "severityElse": "WARN",
+        "whenFamilies": ["door"],
+        "requireAnySlots": ["thresholdStruct", "gripStruct"],
+        "message": "推门/开门须声明门槛空间"
+      }
+    ],
+    "lookLock": {
+      "whenCharCrefGe": 2,
+      "lineZh": "多角色定妆参考时：身份与服饰以本镜主角主look为准，禁止混用其他角色色系/纹样/领型；场景参考仅借空间光影，不改衣装。",
+      "primaryNameTemplate": "本镜主look以「{NAME}」定妆为准（declare-only，来自VD/绑定点名）。",
+      "note": "compose egress only — never rewrite VD costume; 多参考服饰漂移靠本锁+手改 VD 点名主 look，禁只 regen"
+    },
+    "authorHint": "可拍结构槽：who+action+(prop)+contactStruct+(grip|groundOrPath|surface|threshold)；触面×口创同镜须contactRoleXor互斥或拆；朝向≠锚点；邻镜道具连续见 DEX-PROP-CONT；增强白名单见enhancementFillPolicy；漂移见driftPolicy；缺槽改VD非只regen"
+  },
+  "contactEventPolicy": {
+    "version": "1.0.0",
+    "note": "通用规范：动词∩道具类别名触发；禁休书单例写死；浅痕 alone 不升 contactEvent；隐喻无道具不触发",
+    "vocab": {
+      "contactVerbs": ["划过", "拂过", "贴合", "贴颊", "贴脸", "颊触", "甩至", "擦过", "抵", "压", "贴在", "压在", "抵在", "摩挲", "拭", "抹"],
+      "propClasses": {
+        "paper_doc": {
+          "aliases": ["休书", "婚书", "信笺", "信纸", "纸角", "书信", "纸"],
+          "canonical": "纸角",
+          "sfxHint": "纸页摩擦"
+        },
+        "cloth": {
+          "aliases": ["帕", "手帕", "巾", "袖", "袖口"],
+          "canonical": "帕",
+          "sfxHint": "布料轻擦"
+        },
+        "blade": {
+          "aliases": ["剑", "刀", "刃", "剑锋"],
+          "canonical": "剑锋",
+          "sfxHint": "金属轻触"
+        },
+        "digit_prop": {
+          "aliases": ["扳指", "戒指", "玉佩"],
+          "canonical": "扳指"
+        }
+      },
+      "resultAtomsOnly": ["浅痕", "渗血", "血珠", "面颊浅痕", "浅痕可见"],
+      "metaphorBlocklistHints": ["目光划过", "余光扫过", "眼神掠过"]
+    },
+    "stillMust": ["propInFrame", "contactGeom"],
+    "videoMust": ["executableBeats"],
+    "woundVisibleNotProp": true,
+    "framingPolicy": {
+      "faceCuWithLargeProp": "prefer_prop_corner",
+      "preferLayoutFamily": "insert_hand_or_prop"
+    },
+    "motionBeatTemplates": {
+      "contact_sweep": {
+        "verbs": ["划过", "拂过", "擦过", "甩至", "颊触"],
+        "propClasses": ["paper_doc", "cloth"],
+        "phases": [
+          "0s-{t1}s: {prop}自{locus}侧进入贴合",
+          "{t1}s-{t2}s: {prop}沿{locus}划过",
+          "{t2}s-{dur}s: 停住；{wound}微表情可读"
+        ],
+        "shortDurMaxSec": 1.5,
+        "shortPhases": ["0s-{t1}s: {prop}贴合{locus}", "{t1}s-{dur}s: 停住可读"]
+      },
+      "contact_hold": {
+        "verbs": ["摩挲", "捏", "握"],
+        "propClasses": ["digit_prop", "paper_doc"],
+        "phases": [
+          "0s-{t1}s: 手与{prop}同框贴合",
+          "{t1}s-{dur}s: {prop}微动跟随，禁仅微表情呼吸"
+        ],
+        "shortDurMaxSec": 1.5,
+        "shortPhases": ["0s-{dur}s: 手持{prop}微动跟随"]
+      },
+      "contact_press": {
+        "verbs": ["抵", "压", "贴在", "压在", "抵在"],
+        "propClasses": ["blade", "paper_doc"],
+        "phases": [
+          "0s-{t1}s: {prop}抵近{locus}",
+          "{t1}s-{dur}s: 贴合停住，禁悬空"
+        ],
+        "shortDurMaxSec": 1.5,
+        "shortPhases": ["0s-{dur}s: {prop}贴合{locus}停住"]
+      },
+      "wound_hold": {
+        "verbs": ["咬", "渗"],
+        "propClasses": [],
+        "phases": ["0s-{dur}s: 伤口/渗血可见；无道具划过"]
+      }
+    }
+  }
+}

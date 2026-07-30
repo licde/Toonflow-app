@@ -1,0 +1,100 @@
+{
+  "bundleVersion": "1.0.0",
+  "bundleType": "script",
+  "script": "霜兰令试炼金标。沈清漪簪尖刺入。谢玄辞开口。画外侍女报信。",
+  "meta": { "episodeIndex": 1 },
+  "designBrief": { "B20": ["INF-01", "INF-02"] },
+  "characterDesign": {
+    "assets": [
+      { "code": "CHAR-shenqingyi", "name": "沈清漪", "L0": { "identity": "女主" } },
+      { "code": "CHAR-xiexuanci", "name": "谢玄辞", "L0": { "identity": "男主" } },
+      { "code": "CHAR-shenfu", "name": "沈父", "L0": { "identity": "父" } }
+    ]
+  },
+  "narrativeSelfcheck": { "passed": true, "failedIds": [], "checkedAt": "2026-07-23T12:30:00.000Z" },
+  "modalityPromptAudit": { "IMG": "pass", "VID": "pass", "AUD": "pass", "FX": "pass" },
+  "fxFeasibilityAudit": {
+    "items": [{ "shotIndex": 1, "level": "F0" }, { "shotIndex": 2, "level": "F0" }]
+  },
+  "planData": {
+    "narrativeBrief": {
+      "storyKernel": "霜兰令试炼",
+      "seriesContinuity": "沈清漪已自残取出窥世令。她向谢玄辞摊牌交易霜兰令。暗处身份待揭晓。"
+    },
+    "sceneMeta": [
+      { "sceneRef": 1, "sceneAvTags": "hook,reveal", "fxIntent": { "level": "F0" } },
+      { "sceneRef": 2, "sceneAvTags": "subtext,conflict", "fxIntent": { "level": "F0" } }
+    ],
+    "dialoguePlan": {
+      "lines": [
+        { "lineId": "L1", "speaker": "沈清漪", "text": "霜兰令归我。", "functions": ["deal"] },
+        {
+          "lineId": "L2",
+          "speaker": "谢玄辞",
+          "text": "可以。",
+          "reactionAction": "侧目凝视",
+          "functions": ["accept"]
+        }
+      ]
+    }
+  },
+  "preDesignPack": {
+    "scriptPlan": "",
+    "shots": [
+      {
+        "shotIndex": 1,
+        "clientId": "frost-s1",
+        "duration": 1,
+        "visualDescription": "沈清漪簪尖刺入皮肉。她咬帕强忍。旁人包扎伤口。",
+        "charCodes": ["CHAR-shenqingyi"],
+        "narrative": {
+          "dialogue": { "lines": [{ "lineId": "L1", "speaker": "沈清漪", "text": "霜兰令归我。" }] }
+        },
+        "shotDesign": {
+          "performance": {
+            "microExpression": {
+              "沈清漪": { "eyes": "决绝", "mouthDetail": "咬帕" }
+            }
+          },
+          "lipSyncPolicy": "subtle_natural"
+        }
+      },
+      {
+        "shotIndex": 2,
+        "clientId": "frost-s2",
+        "duration": 3,
+        "visualDescription": "谢玄辞端坐开口道完，听者愣住反应侧目。",
+        "charCodes": ["CHAR-xiexuanci", "CHAR-shenqingyi"],
+        "narrative": {
+          "dialogue": {
+            "lines": [
+              {
+                "lineId": "L2",
+                "speaker": "谢玄辞",
+                "text": "可以。这霜兰令本就是交易筹码，你我今日一诺既定。",
+                "reactionAction": "侧目凝视"
+              }
+            ]
+          }
+        },
+        "shotDesign": {
+          "performance": {
+            "microExpression": {
+              "沈父": { "eyes": "怒视", "mouthDetail": "紧抿" },
+              "谢玄辞": { "eyes": "平静", "mouthDetail": "浅笑" }
+            }
+          }
+        }
+      },
+      {
+        "shotIndex": 3,
+        "clientId": "frost-s3",
+        "duration": 2,
+        "visualDescription": "特写。沈清漪侧耳听，画外音传来：「侍女报信」。（OS）门外脚步。",
+        "charCodes": ["CHAR-shenqingyi"],
+        "narrative": { "dialogue": { "lines": [] }, "voiceIntent": { "type": "os" } },
+        "shotDesign": { "lipSyncPolicy": "subtle_natural" }
+      }
+    ]
+  }
+}

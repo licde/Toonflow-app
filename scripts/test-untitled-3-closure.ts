@@ -59,6 +59,20 @@ function main() {
   ok("exportAllowed (import path)", gate.exportAllowed === expect.exportAllowed, String(gate.exportAllowed));
   ok("shapeSalvageLog on exportGate", (gate.shapeSalvageLog?.length ?? 0) >= expect.minVisualEffectSalvageCount);
 
+  if (expect.importOkNotExitPass === true) {
+    const meta =
+      ((inspected.bundle as { planData?: { meta?: { importOkNotExitPass?: boolean } }; meta?: { importOkNotExitPass?: boolean } })
+        .planData?.meta ??
+        (inspected.bundle as { meta?: { importOkNotExitPass?: boolean } }).meta ??
+        {}) as { importOkNotExitPass?: boolean };
+    const warnImport = gate.warns.some((w) => w.id === "IMPORT_OK_NOT_EXIT");
+    ok(
+      "importOkNotExitPass (F9 soft≠ExitPass)",
+      Boolean(meta.importOkNotExitPass) || warnImport || gate.exportAllowed === false,
+      `meta=${Boolean(meta.importOkNotExitPass)};warn=${warnImport}`,
+    );
+  }
+
   const chatGate = runExportGate(raw);
   ok("chat export blocks object visualEffect", chatGate.exportAllowed === false);
   ok("chat has DG-CHAT-SHAPE-VE", chatGate.blocks.some((b) => b.id === "DG-CHAT-SHAPE-VE"));

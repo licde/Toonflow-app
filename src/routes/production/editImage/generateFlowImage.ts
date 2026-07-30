@@ -58,6 +58,8 @@ export default router.post(
           primaryNextStep: result.primaryNextStep,
           userMessage: result.userMessage,
           ctaLabel: result.ctaLabel,
+          missingSlots: result.missingSlots,
+          irdPrimaryAction: result.irdPrimaryAction,
           composeSources: result.composeSources,
           didSynthesize: result.didSynthesize,
           resolvedQuality: result.resolvedQuality,
@@ -71,6 +73,17 @@ export default router.post(
           parallelM: result.parallelM,
           editStrategy: result.editStrategy,
           vlmError: result.vlmError,
+          pendingHumanRejudge: result.pendingHumanRejudge,
+          infraEditBypassUsed: result.infraEditBypassUsed,
+          // Canvas ops echo — faceCu dropped SCENE / literary intent CTAs
+          sceneRefsDropped: result.sceneRefsDropped,
+          excludeScene: result.excludeScene,
+          bgPolicy: result.bgPolicy,
+          bgPolicyReason: result.bgPolicyReason,
+          settingsDeepLink: result.settingsDeepLink,
+          sheetLeak: result.sheetLeak,
+          blockSilentRegen: result.blockSilentRegen,
+          refreshStoryboardBeforeRegen: result.refreshStoryboardBeforeRegen,
         }),
       );
     } catch (e: any) {
@@ -87,6 +100,11 @@ export default router.post(
           ctaLabel: e?.ctaLabel,
           composeSources: e?.composeSources,
           stillQuality: e?.stillQuality,
+          missingSlots: e?.missingSlots,
+          irdPrimaryAction: e?.irdPrimaryAction,
+          blockSilentRegen: true,
+          refreshStoryboardBeforeRegen: e?.primaryNextStep === "split_shot",
+          settingsDeepLink: e?.settingsDeepLink,
         }),
       );
     }

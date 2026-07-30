@@ -6,7 +6,7 @@
     "DG-MODALITY-MISMATCH",
     "FX-FALSE-GREEN"
   ],
-  "healMinF0Declared": 3,
+  "healMinF0Declared": 2,
   "healUndeclaredEmpty": 0,
-  "note": "b3500a: undeclared no-FX shots must BLOCK; heal declares F0 without inventing fxPrompt; lip-split may shift indexes"
+  "note": "b3500a: Chat BLOCKs undeclared FX; import salvage soft-declares F0 (WARN ≠ ExitPass); heal F0 count may shift after lip-split/autoClose (often 5,12)"
 }

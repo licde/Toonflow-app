@@ -706,6 +706,26 @@ export function runDesignExitGate(
     failedIds.push("DEX-LITERARY-STALE");
   }
 
+  // Cross-ep series continuity (ep≥2) — SH-SERIES-CONT / carry chain
+  try {
+    const { auditSeriesContinuity } =
+      require("../bundle/auditSeriesContinuity") as typeof import("../bundle/auditSeriesContinuity");
+    const sc =
+      (pd.seriesContinuity as Record<string, unknown> | undefined) ??
+      ((pd.narrativeBrief as { seriesContinuity?: Record<string, unknown> } | undefined)?.seriesContinuity);
+    const seriesAudit = auditSeriesContinuity({
+      episodeIndex: getEpisodeIndex(plan),
+      seriesContinuity: sc,
+      continuity: (plan as { continuity?: { prevEpisodeSummary?: string } }).continuity,
+    });
+    for (const f of seriesAudit.findings) {
+      if (f.severity === "BLOCK") failedIds.push(f.id);
+      else warnings.push(`${f.id}:${f.message}`);
+    }
+  } catch {
+    /* optional */
+  }
+
   const self = pd.narrativeSelfcheck as { passed?: boolean; failedIds?: string[] } | undefined;
   if (checklist.forbidFalseGreen && self?.passed === true) {
     if (!checkNarViaDiagnose(pd)) failedIds.push("FALSE_GREEN_SELFCHECK");
@@ -1123,6 +1143,19 @@ export function runDesignExitGate(
         let bad = false;
         for (const s of shots) {
           if (hasOsInNameDisplay(String(s.visualDescription ?? ""))) bad = true;
+          // EMPTY_OS: empty/OS shot must not declare on-cam lip
+          const vd = String(s.visualDescription ?? "");
+          const emptyOrOs = /空镜|无人|（OS）|\(OS\)|画外/.test(vd);
+          const lip = String(
+            (s as { shotDesign?: { lipSyncPolicy?: string }; lipSyncPolicy?: string }).shotDesign
+              ?.lipSyncPolicy ??
+              (s as { lipSyncPolicy?: string }).lipSyncPolicy ??
+              "",
+          );
+          if (emptyOrOs && /on.?cam|口型|lip.?sync|speak/i.test(lip) && !/none|off|禁/i.test(lip)) {
+            bad = true;
+            warnings.push(`DEX-STILL-OS-NAME:empty_os_lip:shot${s.shotIndex ?? "?"}`);
+          }
         }
         for (const l of lines) {
           if (hasOsInNameDisplay(String(l.speaker ?? ""))) bad = true;
@@ -1134,7 +1167,7 @@ export function runDesignExitGate(
           if (hasOsInNameDisplay(String(a.name ?? ""))) bad = true;
         }
         ok = !bad;
-        if (bad) warnings.push("STILL_OS_NAME:画面/CD/speaker含（OS）须裸名");
+        if (bad) warnings.push("STILL_OS_NAME:画面/CD/speaker含（OS）须裸名；空镜/OS禁口型");
         break;
       }
       case "DEX-STILL-FILLER": {
@@ -1147,11 +1180,22 @@ export function runDesignExitGate(
         if (bad) warnings.push("STILL_FILLER:禁对白瞬间神态等无画面填料");
         break;
       }
+      case "DEX-LIT-CONTACT-XOR":
       case "DEX-LIT-CONTACT":
       case "DEX-LIT-ANCHOR":
       case "DEX-LIT-EXPR": {
         const { auditLiteraryDetailQuality } =
           require("../compilers/stillLiteraryDetailQuality") as typeof import("../compilers/stillLiteraryDetailQuality");
+        const { isLitEnhanceDesignHardBlock, resolveLitEnhanceMode } =
+          require("./litEnhancePolicy") as typeof import("./litEnhancePolicy");
+        const litMeta =
+          ((pd.meta as Record<string, unknown>) ?? (plan.meta as Record<string, unknown>) ?? {}) as Record<
+            string,
+            unknown
+          >;
+        // 默认 enforce 硬拦；显式 shadow 仅诊；导入 soft-track 不硬拦；chatStrict 强制硬拦
+        const litHard = isLitEnhanceDesignHardBlock(litMeta) || Boolean(opts?.chatStrict);
+        const litMode = resolveLitEnhanceMode(litMeta);
         const shots = preDesignShots(pd);
         let bad = false;
         for (const s of shots) {
@@ -1169,8 +1213,14 @@ export function runDesignExitGate(
           for (const f of detail.findings) {
             if (f.id !== id) continue;
             if (f.severity === "BLOCK") {
-              bad = true;
-              warnings.push(`${f.id}:${f.ruleId}:shot${s.shotIndex ?? "?"}`);
+              if (litHard) {
+                bad = true;
+                warnings.push(`${f.id}:${f.ruleId}:shot${s.shotIndex ?? "?"}`);
+              } else {
+                warnings.push(
+                  `${f.id}_${litMode.toUpperCase()}:${f.ruleId}:shot${s.shotIndex ?? "?"}（显式shadow/导入soft不硬拦Exit）`,
+                );
+              }
             } else {
               warnings.push(`${f.id}_WARN:${f.ruleId}:shot${s.shotIndex ?? "?"}`);
             }
@@ -1179,8 +1229,42 @@ export function runDesignExitGate(
         ok = !bad;
         break;
       }
+      case "DEX-PROP-IN-FRAME": {
+        const { isContactEventVd, matchContactEventVd, textHasPropInFrame } =
+          require("../compilers/contactEventPolicy") as typeof import("../compilers/contactEventPolicy");
+        const { isLitEnhanceDesignHardBlock, resolveLitEnhanceMode } =
+          require("./litEnhancePolicy") as typeof import("./litEnhancePolicy");
+        const litMeta =
+          ((pd.meta as Record<string, unknown>) ?? (plan.meta as Record<string, unknown>) ?? {}) as Record<
+            string,
+            unknown
+          >;
+        const litHard = isLitEnhanceDesignHardBlock(litMeta) || Boolean(opts?.chatStrict);
+        const litMode = resolveLitEnhanceMode(litMeta);
+        const shots = preDesignShots(pd);
+        let bad = false;
+        for (const s of shots) {
+          // XOR oral child without prop is ok; cheek child / contactEvent must declare prop
+          if (s._contactEventMustProp === false) continue;
+          const vd = String(s.visualDescription ?? "").trim();
+          if (!isContactEventVd(vd) && !s._contactEventMustProp) continue;
+          const m = matchContactEventVd(vd);
+          if (!textHasPropInFrame(vd, m.isContactEvent ? m : null)) {
+            if (litHard) {
+              bad = true;
+              warnings.push(`DEX-PROP-IN-FRAME:propInFrame:shot${s.shotIndex ?? "?"}`);
+            } else {
+              warnings.push(
+                `DEX-PROP-IN-FRAME_${litMode.toUpperCase()}:propInFrame:shot${s.shotIndex ?? "?"}（显式shadow/导入soft不硬拦Exit）`,
+              );
+            }
+          }
+        }
+        ok = !bad;
+        break;
+      }
       case "DEX-PROP-CONT": {
-        const { auditPropContinuity, hydrateShotsPropState } =
+        const { auditPropContinuity, auditPropPoseContinuity, hydrateShotsPropState } =
           require("../compilers/propContinuitySsot") as typeof import("../compilers/propContinuitySsot");
         const intents = (() => {
           try {
@@ -1200,12 +1284,13 @@ export function runDesignExitGate(
             sceneName: String((s as { sceneName?: string }).sceneName ?? (s as { scene?: string }).scene ?? ""),
             transitionType: String((s as { transitionType?: string }).transitionType ?? ""),
             propState: String((s as { propState?: string }).propState ?? ""),
+            propPose: String((s as { propPose?: string }).propPose ?? ""),
             shotSize: String(s.shotSize ?? ""),
             intentPicture: intent?.picture ?? null,
           };
         });
         const hydrated = hydrateShotsPropState(raw);
-        const findings = auditPropContinuity(hydrated);
+        const findings = [...auditPropContinuity(hydrated), ...auditPropPoseContinuity(hydrated)];
         let bad = false;
         for (const f of findings) {
           if (f.severity === "BLOCK") {
@@ -1347,6 +1432,23 @@ export function runDesignExitGate(
         ok = true;
         break;
       }
+      case "DEX-VID-PSEUDO-LINE":
+      case "DEX-VID-VOICE-MODE":
+      case "DEX-VID-BEAT-DUR":
+      case "DEX-VID-MOTION-VERB":
+      case "DEX-VID-INTENT-MAP":
+      case "DEX-VID-CAM-MEDIATE": {
+        try {
+          const { diagnoseVideoIntent } =
+            require("./videoIntentReverse") as typeof import("./videoIntentReverse");
+          const shots = preDesignShots(pd) as Record<string, unknown>[];
+          const d = diagnoseVideoIntent({ shots });
+          ok = !d.findings.some((f) => f.id === id && f.severity === "BLOCK");
+        } catch {
+          ok = true;
+        }
+        break;
+      }
       default:
         // Unknown checklist IDs fail closed when hard viral (kill false green)
         if (hard && checklist.checks[id]?.severity === "BLOCK") {
@@ -1399,6 +1501,46 @@ export function runDesignExitGate(
     /* optional */
   }
 
+  let litDetailOk = true;
+  let litContactXorOk = true;
+  try {
+    const { auditLiteraryDetailQuality } =
+      require("../compilers/stillLiteraryDetailQuality") as typeof import("../compilers/stillLiteraryDetailQuality");
+    for (const s of preDesignShots(pd)) {
+      const a = auditLiteraryDetailQuality({
+        visualDescription: String(s.visualDescription ?? ""),
+        shotSize: String(s.shotSize ?? (s.narrative as { shotSize?: string } | undefined)?.shotSize ?? ""),
+      });
+      for (const f of a.findings) {
+        if (f.severity !== "BLOCK") continue;
+        if (f.id === "DEX-LIT-CONTACT-XOR") litContactXorOk = false;
+        if (
+          f.id === "DEX-LIT-CONTACT" ||
+          f.id === "DEX-LIT-ANCHOR" ||
+          f.id === "DEX-PROP-CONT" ||
+          f.id === "DEX-PROP-IN-FRAME"
+        ) {
+          litDetailOk = false;
+        }
+      }
+    }
+  } catch {
+    /* optional */
+  }
+  try {
+    const { isContactEventVd, matchContactEventVd, textHasPropInFrame } =
+      require("../compilers/contactEventPolicy") as typeof import("../compilers/contactEventPolicy");
+    for (const s of preDesignShots(pd)) {
+      if (s._contactEventMustProp === false) continue;
+      const vd = String(s.visualDescription ?? "").trim();
+      if (!isContactEventVd(vd) && !s._contactEventMustProp) continue;
+      const m = matchContactEventVd(vd);
+      if (!textHasPropInFrame(vd, m.isContactEvent ? m : null)) litDetailOk = false;
+    }
+  } catch {
+    /* optional */
+  }
+
   const score = scoreAdaptationDesign(
     {
       packId: gt.packId,
@@ -1417,6 +1559,8 @@ export function runDesignExitGate(
       contentTranslateExtensibleWithoutDerivation: isExtensibleWithoutDerivation(pd, plan),
       visBeatOk,
       cuCastOk,
+      litDetailOk,
+      litContactXorOk,
     },
     depthCfg.adaptScorePass ?? checklist.adaptScorePass,
   );
@@ -1425,8 +1569,15 @@ export function runDesignExitGate(
     failedIds.push("DEX-ADAPT-SCORE");
   }
 
-  // M0/M12/M10/M18/IRD chain contract audits at SB exit
-  if ((stageId === "SB" || stageId === "designBrief") && hard) {
+  // M0/M12/M10/M18/IRD chain contract audits at SB / designBrief / W3(when shots)
+  const runChainPostLoop =
+    hard &&
+    (stageId === "SB" ||
+      stageId === "designBrief" ||
+      (stageId === "W3" &&
+        (((pd.preDesignPack as { shots?: unknown[] } | undefined)?.shots?.length ?? 0) > 0 ||
+          preDesignShots(pd).length > 0)));
+  if (runChainPostLoop) {
     try {
       const packShots =
         ((pd.preDesignPack as { shots?: Record<string, unknown>[] } | undefined)?.shots ?? []) as Record<
@@ -1464,6 +1615,27 @@ export function runDesignExitGate(
           }
         }
         const intents = getShotDesignIntentsFromPlan(plan);
+        try {
+          const { auditIntentPictureSync, auditShotIntentDecay } =
+            require("./shotDesignIntent") as typeof import("./shotDesignIntent");
+          for (const f of auditIntentPictureSync({ intents, shots: packShots }).findings) {
+            if (f.severity === "BLOCK") failedIds.push(f.id);
+            else warnings.push(`${f.id}:${f.message}`);
+          }
+          for (const f of auditShotIntentDecay({
+            intents,
+            shots: packShots.map((s) => ({
+              shotIndex: Number(s.shotIndex) || undefined,
+              visualDescription: String(s.visualDescription ?? ""),
+              intentVdHash: String((s as { intentVdHash?: string }).intentVdHash ?? ""),
+            })),
+          }).findings) {
+            if (f.severity === "BLOCK") failedIds.push(f.id);
+            else warnings.push(`${f.id}:${f.message}`);
+          }
+        } catch {
+          /* optional */
+        }
         const ird = diagnoseStillIntent(packShots, {
           chatStrict: opts?.chatStrict,
           literaryLocked: isLiteraryLocked(plan),
@@ -1471,7 +1643,34 @@ export function runDesignExitGate(
           meta,
           planData: pd,
         });
+        const { isLitEnhanceDesignHardBlock } =
+          require("./litEnhancePolicy") as typeof import("./litEnhancePolicy");
+        let litHardIrd = isLitEnhanceDesignHardBlock(meta) || Boolean(opts?.chatStrict);
+        // W3 contact signals: upgrade DEX-LIT/PROP to BLOCK (not shadow-soft) when shots declare contact
+        if (stageId === "W3" && !litHardIrd) {
+          try {
+            const { isContactEventVd } =
+              require("../compilers/contactEventPolicy") as typeof import("../compilers/contactEventPolicy");
+            if (packShots.some((s) => isContactEventVd(String(s.visualDescription ?? "")))) {
+              litHardIrd = true;
+            }
+          } catch {
+            /* optional */
+          }
+        }
         for (const f of ird.findings.filter((x) => x.severity === "BLOCK")) {
+          // 显式 shadow / 导入 soft：DEX-LIT-* 诊不断 Exit hard；但禁假绿——记 IMPORT_OK_NOT_EXIT
+          if (!litHardIrd && /^DEX-LIT-/.test(f.id)) {
+            warnings.push(`${f.id}_SOFT:ird:${f.message}`.slice(0, 160));
+            failedIds.push("IMPORT_OK_NOT_EXIT");
+            try {
+              meta.importOkNotExitPass = true;
+              pd.meta = meta;
+            } catch {
+              /* optional */
+            }
+            continue;
+          }
           failedIds.push(f.id);
         }
         if (ird.confirmRequired || meta.irdConfirmRequired) {
@@ -1481,6 +1680,32 @@ export function runDesignExitGate(
     } catch {
       /* optional */
     }
+  }
+
+  // Layout family WARN at SB when seating/confront signals but family=none (practice SPATIAL_LAYOUT)
+  try {
+    const { selectLayoutFamily, loadStillCompositionSpec } =
+      require("../qc/stillCompositionSpec") as typeof import("../qc/stillCompositionSpec");
+    const spec = loadStillCompositionSpec();
+    const sev = spec.freeze?.familyFailDesignExitSeverity ?? (spec.freeze?.familyFailNotDesignExit === false ? "WARN" : "OFF");
+    if (sev !== "OFF" && (stageId === "SB" || stageId === "designBrief" || stageId === "W3")) {
+      for (const s of preDesignShots(pd)) {
+        const vd = String(s.visualDescription ?? "");
+        if (!/(端坐|太师椅|跪于|高坐|低跪|对峙|面对面|左右分立)/.test(vd)) continue;
+        const fam = selectLayoutFamily({
+          visualDescription: vd,
+          shotSize: String(s.shotSize ?? ""),
+          characterCount: Array.isArray(s.charCodes) ? (s.charCodes as string[]).length : undefined,
+        });
+        if (fam.familyId === "none" || !fam.familyId) {
+          const msg = `DEX-LAYOUT-FAMILY:VD有座次/对峙信号但 family=none (${fam.reason ?? ""})`;
+          if (sev === "BLOCK" && hard) failedIds.push("DEX-LAYOUT-FAMILY");
+          else warnings.push(msg.slice(0, 160));
+        }
+      }
+    }
+  } catch {
+    /* optional */
   }
 
   const round = opts?.optimizeRound ?? 0;

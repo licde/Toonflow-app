@@ -67,9 +67,11 @@ rulePackVersion: "2.1.0"
 - composeStillPromptPreview `persist:true` 写库用 `result.composeMode`（禁裸变量 `mode` → `mode is not defined`）
 - VLM 缺 Key：图已出、HQ 未过（≠ preview HTTP 400）
 - DC-01（缺覆盖）、**DC-01-EXTRA（乱入）**；时长噪点如「：3s」属伪台词，导入会剥离，勿当文学台词修
+- **Audio XOR + PromptFidelity**：有词无声 BLOCK；无词有声 strip；禁 trim 多拍假绿；VD/对白变须重编译（`VIDEO-PROMPT-STALE`）
 - **RA×CAM 双轨**：`emotion_hit` 的 RA 写在 **dialoguePlan**；镜侧权威=说话镜+反应镜；禁单镜 onCam+RA
-- **质量同核（BLOCK）**：DEX-QP-02、DEX-LIT-CONTACT、DEX-LIT-ANCHOR、DEX-PROP-CONT、DEX-CAST-ON-DESC、DEX-EMPTY-SHOT-CONSISTENCY、DEX-EXPR-SPEAK、**DEX-ASSET-CREF**、**DEX-SHOT-INTENT**
+- **质量同核（BLOCK）**：DEX-QP-02、DEX-LIT-CONTACT-XOR、DEX-LIT-CONTACT、DEX-LIT-ANCHOR、DEX-PROP-CONT、DEX-CAST-ON-DESC、DEX-EMPTY-SHOT-CONSISTENCY、DEX-EXPR-SPEAK、**DEX-ASSET-CREF**、**DEX-SHOT-INTENT**
 - **文学细节**：缺接触/空间落点 → `hand_edit_vd`（stillIntentOps）；导入 WARN、SB BLOCK；禁 compose 发明落点
+- **视频设计债**：伪台词/错 lip/空 Motion/beat 灌水/运镜越权 → `videoIntentOps`（DEX-VID-*）；导入/touch 同核 until-clear；禁 demote 假绿；`designExitPass≠videoPromptReady`
 - **残句**：A 拆后仍 NAR-14 → 须重设计/显式 splitHint/`Confirm B`；导入 ingest **禁**静默 residual B / 同文唇拆（标 `lipConfirmRequired`）
 - 拆行后须 `confirm_design_split` / Orchestrator（mirror+补缺 lineId），禁止只写 hint
 - VisBeat 与 Orchestrator：先 expanders，再 clause-split，再残句 B（禁双拆打架）
@@ -159,7 +161,7 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 |------|------|
 | visualDescription | 画面主体与动作（供 EN subject / MD-IMG）；**一镜一拍、裸名**；须可拍五元组（见下） |
 
-### 可拍原子（DEX-LIT-CONTACT / DEX-LIT-ANCHOR / DEX-LIT-EXPR）
+### 可拍原子（DEX-LIT-CONTACT-XOR / DEX-LIT-CONTACT / DEX-LIT-ANCHOR / DEX-LIT-EXPR）
 
 大体构图够但描写稀疏 → 静帧漂移。VD 尽量声明：
 
@@ -168,11 +170,14 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 3. **prop** 关键道具  
 4. **contactLocus** 接触落点（颊/唇/指尖…）— 脸特写+道具、渗血/咬唇、拭泪必备  
 5. **spatialOrGrip / groundLocus** 握持或地面锚（手持/地上/脚边…）— 捡拾/持握/递接/抛落必备  
+6. **contactRoleXor** 颊触与口创同镜须互斥句或拆（`纸未入口`/`另镜`）— **≠ audio_xor**  
+7. **woundVisible / propReadable**（增强白名单）触面浅痕可见度、纸面可辨 — 不发明剧情  
 
 **朝向 ≠ 锚点**：`侧脸/正面` 不能顶替 `地上/脚边`（防捡书假绿）。
 
 | 衍生类 | 缺什么会漂 | 闸 |
 |--------|------------|-----|
+| 颊触+口创同镜 | 互斥句或拆镜 | DEX-LIT-CONTACT-XOR |
 | 脸特写+道具 | 接触落点/接触动词 | DEX-LIT-CONTACT |
 | 捡拾/俯身 | 地面/脚边/手触 | DEX-LIT-ANCHOR |
 | 递接/抛落 | 交接或落点 | DEX-LIT-ANCHOR |
@@ -185,8 +190,10 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 | 邻镜道具链 | 消失/瞬变/空降须交待 | DEX-PROP-CONT |
 | 多定妆参考 | 服饰混色 | compose `primaryLookLock`（点名主 look）；VD 勿混写他角色衣装 |
 
-**结构优先**：句式落点（划过X / 从Y / 手持…）为主闸，词表仅 boost。缺槽 → IRD `hand_edit_vd`；可选 `stillIntentOps.suggestFill/applyFill`（flag+Confirm+复检）。  
-**禁只 regen 顶替改 VD**。
+**结构优先**：句式落点（划过X / 从Y / 手持…）为主闸，词表仅 boost。缺槽 → IRD `confirm_enhance` / `hand_edit_vd` / `confirm_split`；可选 `stillIntentOps.suggestFill/applyEnhance`（flag+Confirm/autoMin+复检）。导入可结构软填+demote（`importOk≠designExitPass`）。  
+**可增强**（主体已有）：落点/XOR 互斥句/划过→浅痕可见/纸可读/表情落点。  
+**漂移硬禁**：换主体、新角色、否定核心动作、`literaryLocked` 无 force。  
+**禁只 regen 顶替改 VD**。 VisBeat 只管多拍拆镜，不管文学增强 CTA。
 
 ## 执行步骤
 

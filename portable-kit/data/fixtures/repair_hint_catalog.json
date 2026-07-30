@@ -266,6 +266,14 @@
       "chatTemplate": "【弱静照】质量未达标或缺少首帧。请重出 HQ 静照后再烧视频（不必先改画面描写）。污染壳/XML索要→净洁重编译。深链：toonflow://stage/MD-IMG?trigger=still_firstframe_weak"
     },
     {
+      "id": "RH-VIDEO-PROMPT-STALE",
+      "ruleId": "VIDEO-PROMPT-STALE",
+      "checkIds": ["VIDEO-PROMPT-STALE", "video_prompt_stale"],
+      "symptom": "描写/对白相对编译时 designContentHash 已变，旧视频提示词不可烧",
+      "action": "重编译视频提示词（EN）；禁止用旧 prompt 烧片",
+      "chatTemplate": "【视频词过期·STALE】画面描写或对白已变，请重编译视频提示词后再烧。深链：toonflow://stage/EN?trigger=video_prompt_stale"
+    },
+    {
       "id": "RH-VIDEO-PROMPT-STUB",
       "ruleId": "VP-XML-ASK-STUB",
       "checkIds": ["VP-XML-ASK-STUB", "VP-CROSS-SHOT-SIDECAR", "VP-THIN-SHELL", "video_prompt_stub"],
@@ -411,6 +419,79 @@
       "chatTemplate": "【须重设计】公式已更换。请按新规范重走设计（入口 W1 → 验收 W3 redesignPass：NAR-15/intent 等同核），勿只改旧字段或只点 W1。选项：A 按新规范重设计（推荐） / B 保留旧稿继续补洞（须 acknowledgeKeepLegacy）。entry=W1；accept=W3。"
     },
     {
+      "id": "RH-LIT-CONTACT-XOR",
+      "ruleId": "DEX-LIT-CONTACT-XOR",
+      "checkIds": ["DEX-LIT-CONTACT-XOR", "lit_detail_contact_xor", "contact_role_xor"],
+      "symptom": "颊触与口创同镜未互斥",
+      "action": "手改 VD 补互斥句或拆镜；禁只 regen；禁与 audio_xor 串名",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·接触互斥】缺 contactRoleXor。请写「纸未入口/另镜」或拆颊触与咬唇。禁止只 hq_update。深链：toonflow://stage/SB?trigger=lit_detail_contact_xor"
+    },
+    {
+      "id": "RH-LIT-CONTACT",
+      "ruleId": "DEX-LIT-CONTACT",
+      "checkIds": ["DEX-LIT-CONTACT", "lit_detail_contact"],
+      "symptom": "脸特写/微创缺接触落点结构",
+      "action": "手改 VD 补接触结构（划过X/贴在Y）；禁只 regen；可选 stillIntentOps suggestFill+Confirm",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·接触】缺 contactStruct。请手改 visualDescription（例：纸角划过面颊 / 婚书别名同 paper_doc）。禁止只 hq_update。深链：toonflow://stage/SB?trigger=lit_detail_contact"
+    },
+    {
+      "id": "RH-STILL-PROP-IN-FRAME",
+      "ruleId": "DEX-PROP-IN-FRAME",
+      "checkIds": ["DEX-PROP-IN-FRAME", "propInFrame", "still_prop_missing", "contact_prop_missing"],
+      "symptom": "接触事件镜静帧无道具入画（浅痕≠道具）",
+      "action": "重出含道具接触的静照；Confirm enhance 补 prop+geom；禁只改视频词；禁浅痕顶替",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【接触事件·道具入画】VD 为道具接触事件但静帧缺道具。须重出带道具接触静照（propInFrame+contactGeom）；浅痕≠道具。深链：toonflow://stage/MD-IMG?trigger=still_prop_missing"
+    },
+    {
+      "id": "RH-VID-CONTACT-BEATS",
+      "ruleId": "VID-CONTACT-BEATS",
+      "checkIds": ["vid_contact_beats", "motion_contact_phases", "executableBeats"],
+      "symptom": "接触事件 Motion 不可执行（单句微表情或脏 -:）",
+      "action": "重编译视频提示词；分相 Motion（进入/划过/停住）；禁微表情呼吸洗淡",
+      "forbidRegenWithoutDescFix": false,
+      "chatTemplate": "【接触事件·可执行节拍】Motion 须 ≥2 相含接触动词。请重编译提示词。深链：toonflow://stage/EN?trigger=vid_contact_beats"
+    },
+    {
+      "id": "RH-STILL-VIDEO-CONTACT-HANDOFF",
+      "ruleId": "STILL-CONTACT-HANDOFF",
+      "checkIds": ["STILL-CONTACT-HANDOFF", "still_video_contact_handoff"],
+      "symptom": "接触 VD ∩ 静帧无道具仍点烧",
+      "action": "先重出带道具静照再烧；禁止只 soft 视频词",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【静→视接触衔接】须重出含道具接触的静照后再生成视频。深链：toonflow://stage/MD-IMG?trigger=still_video_contact_handoff"
+    },
+
+    {
+      "id": "RH-LIT-ANCHOR",
+      "ruleId": "DEX-LIT-ANCHOR",
+      "checkIds": ["DEX-LIT-ANCHOR", "lit_detail_anchor"],
+      "symptom": "捡拾/持握/抛落缺空间或握持锚",
+      "action": "手改 VD 补地面/握持/门槛等结构槽；朝向≠锚点；禁只 regen",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·锚点】缺 groundOrPath/grip 等。请补「从地面捡起」「手持贴在胸前」等。禁止只 regen。深链：toonflow://stage/SB?trigger=lit_detail_anchor"
+    },
+    {
+      "id": "RH-LIT-EXPR",
+      "ruleId": "DEX-LIT-EXPR",
+      "checkIds": ["DEX-LIT-EXPR", "lit_detail_expr"],
+      "symptom": "特写强表情无眉眼唇落点",
+      "action": "手改 VD 落到眉/眼/唇",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·表情】特写强表情须落到眉/眼/唇。手改 VD。深链：toonflow://stage/SB?trigger=lit_detail_expr"
+    },
+    {
+      "id": "RH-PROP-CONT",
+      "ruleId": "DEX-PROP-CONT",
+      "checkIds": ["DEX-PROP-CONT", "prop_continuity"],
+      "symptom": "邻镜道具消失/瞬变/空降未交待",
+      "action": "导入：propState 声明式顺延至检测无 BLOCK；精品仍可手改 VD 交待离手。禁发明新道具改 VD；禁只 regen",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【道具连续】邻镜道具链。①导入已尝试 propState 顺延（不改 VD）。②仍红或要精品：手改交待放下/撕毁/仍持。禁止静默发明道具。深链：toonflow://stage/SB?trigger=prop_continuity"
+    },
+    {
       "id": "RH-FALSE_GREEN",
       "ruleId": "FALSE_GREEN_SELFCHECK",
       "checkIds": ["FALSE_GREEN_SELFCHECK", "DG-NAR-SELFCHECK", "self_report_mismatch"],
@@ -477,10 +558,10 @@
     {
       "id": "RH-DC-01-EXTRA",
       "ruleId": "DC-01-EXTRA",
-      "checkIds": ["DC-01-EXTRA"],
+      "checkIds": ["DC-01-EXTRA", "H3"],
       "symptom": "shots 台词乱入（不在 script∪plan）",
-      "action": "删多余行或回写 plan/script",
-      "chatTemplate": "【DC-01-EXTRA】分镜出现 script∪plan 没有的台词（乱入）。删除或对齐 plan。若样例为「：3s」/时长元数据，删除该伪台词行即可。reverseTarget=SB。"
+      "action": "同核清零：噪点剥离 + 文学 EXTRA 镜像 dialoguePlan 至检测 PASS；不可愈→正推重设计。禁 WARN/demote 顶债。",
+      "chatTemplate": "【DC-01-EXTRA】分镜台词不在 script∪plan。①时长/冒号汤→删伪台词。②文学句→服务端同核 absorb 进 dialoguePlan 至 EXTRA=0。③不能自动愈→SB 重设计。禁止用软 WARN 顶过检。reverseTarget=SB。"
     },
     {
       "id": "RH-VID-INHERIT-COMPOSITION",
@@ -875,9 +956,41 @@
       "id": "RH-NO-LIP-DIALOGUE",
       "ruleId": "NO-LIP-DIALOGUE",
       "checkIds": ["NO-LIP-DIALOGUE"],
-      "symptom": "出镜对白镜含 no lip sync",
-      "action": "去掉 no lip；改 lipSyncPolicy；OS/VO 不强制口型",
-      "chatTemplate": "【NO-LIP】有出镜对白禁止 no lip sync（OS/VO 可允许；空 policy 自动升 subtle）。深链：toonflow://stage/EN?trigger=no_lip_dialogue"
+      "symptom": "出镜对白镜含 no lip sync / lipSyncPolicy=none|silent",
+      "action": "导入/愈：升 subtle_natural 并剥 videoPrompt「no lip sync」；OS/VO 不强制口型",
+      "chatTemplate": "【NO-LIP】有出镜对白禁止 none/silent。服务端同核升 subtle_natural；OS/VO 可 none。深链：toonflow://stage/EN?trigger=no_lip_dialogue"
+    },
+    {
+      "id": "RH-VID-PSEUDO-LINE",
+      "ruleId": "DEX-VID-PSEUDO-LINE",
+      "checkIds": ["DEX-VID-PSEUDO-LINE", "DUR-PAD"],
+      "symptom": "台词槽/Audio 含 2s、冒号汤等时长伪台词",
+      "action": "stripDurationOnlyDialogueLines；关口型；videoIntentOps Confirm；导入 until-clear",
+      "chatTemplate": "【视频·伪台词】禁止把时长 token 当对白。请清 lines/Audio 冒号汤，关口型同步。深链：toonflow://stage/SB?trigger=vid_pseudo_line"
+    },
+    {
+      "id": "RH-VID-VOICE-MODE",
+      "ruleId": "DEX-VID-VOICE-MODE",
+      "checkIds": ["DEX-VID-VOICE-MODE"],
+      "symptom": "无出镜对白却 lip/口型开",
+      "action": "voiceIntent=none；剥「口型同步开启」；或补文学台词",
+      "chatTemplate": "【视频·声口模态】无对白禁止口型。请 videoIntentOps 确认关闭口型或补台词。深链：toonflow://stage/SB?trigger=vid_voice_mode"
+    },
+    {
+      "id": "RH-VID-BEAT-DUR",
+      "ruleId": "DEX-VID-BEAT-DUR",
+      "checkIds": ["DEX-VID-BEAT-DUR", "DUR-PAD"],
+      "symptom": "缺 beatDuration 或无依据抬长灌水",
+      "action": "写作者节拍秒；禁 silent 抬到 4/6；对白才允许 lipMin 抬",
+      "chatTemplate": "【视频·节拍时长】请声明 beatDuration（事件镜常用 1–2s）。禁止无信息灌水。深链：toonflow://stage/SB?trigger=vid_beat_duration"
+    },
+    {
+      "id": "RH-VID-CAM-MEDIATE",
+      "ruleId": "DEX-VID-CAM-MEDIATE",
+      "checkIds": ["DEX-VID-CAM-MEDIATE", "PR-CAM-01", "DC-09"],
+      "symptom": "viral 冲击运镜无法落到当前厂商白名单",
+      "action": "viral_motion_mediate 降级合法词；不可映则 Confirm；按 vendor 扩自由度",
+      "chatTemplate": "【视频·运镜调解】冲击意图须调解为厂商可过运镜，禁止 silent 删 retention。深链：toonflow://stage/EN?trigger=vid_cam_mediate"
     },
     {
       "id": "RH-SFX-UNBACKED",
@@ -886,6 +999,62 @@
       "symptom": "sfx:<> 字面无交付",
       "action": "补 audioCue 真源或 adapter；无 adapter≠满分",
       "chatTemplate": "【SFX】字面 sfx:<> 不算交付。深链：toonflow://stage/SB?trigger=sfx_unbacked"
+    },
+    {
+      "id": "RH-VID-FIDELITY",
+      "ruleId": "DEX-VID-FIDELITY",
+      "checkIds": ["DEX-VID-FIDELITY", "DEX-VID-LIT-SURVIVE", "DEX-VID-SHOT-SIZE", "DEX-VID-MOTION-TEMPLATE", "DEX-VID-SECTION-GLUE"],
+      "symptom": "烧前五段 prompt 未命中设计意图（VD/景别/Motion 模板/段完整性等）",
+      "action": "重编译视频提示词；按 fidelity items 逐项修复；禁幽灵烧片",
+      "chatTemplate": "【视频·设计意图】五段 prompt 与设计包不一致。请重编译或手改 VD 后 Confirm。深链：toonflow://stage/EN?trigger=vid_fidelity"
+    },
+    {
+      "id": "RH-VID-SHOT-SIZE",
+      "ruleId": "DEX-VID-SHOT-SIZE",
+      "checkIds": ["DEX-VID-SHOT-SIZE"],
+      "symptom": "设计 CU/特写 未进入 Camera 段",
+      "action": "补 narrative.shotSize 或重编译 spine；Camera 须含特写",
+      "chatTemplate": "【视频·景别】设计为特写但 Camera 未落 CU。请重编译或手改 VD 景别。深链：toonflow://stage/SB?trigger=vid_shot_size"
+    },
+    {
+      "id": "RH-VID-MOTION-TEMPLATE",
+      "ruleId": "DEX-VID-MOTION-TEMPLATE",
+      "checkIds": ["DEX-VID-MOTION-TEMPLATE", "VP-MOTION-TEMPLATE"],
+      "symptom": "Motion 段裸 -: 或缺 0s-Ns: 时长模板",
+      "action": "repairVideoPromptForDesignIntent fix_motion_template；重编译 spine",
+      "chatTemplate": "【视频·Motion 模板】Motion 须 0s-Ns: 动词。请重编译视频提示词。深链：toonflow://stage/EN?trigger=vid_motion_template"
+    },
+    {
+      "id": "RH-VID-SECTION-GLUE",
+      "ruleId": "DEX-VID-SECTION-GLUE",
+      "checkIds": ["DEX-VID-SECTION-GLUE", "VP-SECTION-GLUE"],
+      "symptom": "五段段头粘连在同一行",
+      "action": "normalizeFiveSectionNewlines；finalize/sanitize 幂等重跑",
+      "chatTemplate": "【视频·段完整性】五段须独立换行。请重编译视频提示词。深链：toonflow://stage/EN?trigger=vid_section_glue"
+    },
+    {
+      "id": "RH-VID-FX-F0-ECHO",
+      "ruleId": "DEX-VID-FX-F0-ECHO",
+      "checkIds": ["DEX-VID-FX-F0-ECHO"],
+      "symptom": "F0 无特效等级被当作散文 echo 进 Audio/Narrative",
+      "action": "strip F0 echo；fxPrompt 仅作等级 token",
+      "chatTemplate": "【视频·F0】F0=无特效，不得写入 prompt 散文。请重编译。深链：toonflow://stage/EN?trigger=vid_fx_f0_echo"
+    },
+    {
+      "id": "RH-SFX-SCENE-MISMATCH",
+      "ruleId": "SFX-SCENE-MISMATCH",
+      "checkIds": ["SFX-SCENE-MISMATCH", "av_scene_sfx"],
+      "symptom": "sceneName 与 SFX 场域 token 不一致（如寝殿 vs 祠堂环境音）",
+      "action": "对齐 sound.sfx 与 sceneName/avCausality；design heal 或手改",
+      "chatTemplate": "【场域·SFX】环境音与场景名不一致。请回 SB 对齐 sound.sfx。深链：toonflow://stage/SB?trigger=sfx_scene_mismatch"
+    },
+    {
+      "id": "RH-LIT-CONTACT-XOR-VID",
+      "ruleId": "DEX-LIT-CONTACT-XOR",
+      "checkIds": ["DEX-LIT-CONTACT-XOR", "lit_contact_xor"],
+      "symptom": "VD 含双接触互斥（颊触+口创）仍尝试单镜烧片",
+      "action": "Confirm 智能拆镜；颊触镜 + 口创镜分镜；禁同镜洗绿",
+      "chatTemplate": "【双接触·拆镜】文学双接触须拆镜。请 Confirm 拆镜后重出静照再烧。深链：toonflow://stage/SB?trigger=lit_contact_xor"
     }
   ]
 }

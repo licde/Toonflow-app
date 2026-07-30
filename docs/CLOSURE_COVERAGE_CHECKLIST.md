@@ -14,7 +14,7 @@ Mark before release. Mapped from full closed-loop plan tracks.
 | C08 | T3 | FT/RV table + routing drift + rePush paths | [x] |
 | C09 | T3 | skipPreflight lock; parentRef; oss/queue | [x] |
 | C10 | T4 | continuity writeback; BP; videoDesc authority | [x] |
-| C11 | T5 | I1–I20 / lines↔audio / shape B20 B23 | [partial] |
-| C12 | T6 | derive UX; F9–F18; RulePanel | [partial] |
+| C11 | T5 | I1–I20 / lines↔audio / shape B20 B23 | [partial] — practice wave: AUD-LIT batch parity + PROMPT-AUD matrix; full I1–I20 DEFER |
+| C12 | T6 | derive UX; F9–F18; RulePanel | [x] — RulePanel W93 Confirm/Apply + presentationFork; DebtBar 保留镜级 IRD |
 | C13 | T7 | E2E journey + expanded closure-suite | [x] |
 | C14 | T8 | FE vitest/playwright smoke | [x] |

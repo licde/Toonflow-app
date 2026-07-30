@@ -138,9 +138,55 @@ export async function dryRun(
   const storyboardRows = await db("o_storyboard")
     .where({ scriptId: pkg.scriptId, projectId: pkg.projectId })
     .select("id", "filePath", "shouldGenerateImage");
-  const touched = touchModality({ ...pkg, shots: pkg.shots }, config, profile);
+  const touchedBase = touchModality({ ...pkg, shots: pkg.shots }, config, profile);
+  let touched = touchedBase;
   const blueprint = (await loadProjectBlueprint(db, pkg.projectId)) ?? {};
-  const planData = blueprint.planData as import("./bundle/types").ScriptBundle["planData"] | undefined;
+  let planData = blueprint.planData as import("./bundle/types").ScriptBundle["planData"] | undefined;
+
+  // Homology until-clear before H3: F0 + absorb literary EXTRA / strip noise
+  try {
+    const { episodePackageToScriptBundle } = await import("./detection/preflightProduction");
+    const { softHealTouchHomology } = await import("./heal/touchHomologyHeal");
+    const { saveProjectBlueprint } = await import("./storage/episodePackageStore");
+    let workingPkg: EpisodePackage = { ...pkg, shots: touched };
+    const preShots =
+      (blueprint.preDesignPack as { shots?: PreDesignShot[] } | undefined)?.shots ??
+      (blueprint.preDesign as { shots?: PreDesignShot[] } | undefined)?.shots;
+    if (preShots?.length) {
+      workingPkg = hydratePackageFromPreDesign(workingPkg, preShots, {});
+    }
+    const mini = episodePackageToScriptBundle(workingPkg, script, { planData });
+    if (preShots?.length && mini.preDesignPack) {
+      (mini.preDesignPack as { shots: unknown }).shots = preShots;
+    }
+    const heal = softHealTouchHomology(mini);
+    planData = mini.planData ?? planData;
+    if (heal.absorbed > 0 || heal.strippedNoise > 0 || heal.f0Declared.length) {
+      const nextBp = {
+        ...blueprint,
+        fxFeasibilityAudit: (mini as { fxFeasibilityAudit?: unknown }).fxFeasibilityAudit,
+        preDesignPack: mini.preDesignPack ?? blueprint.preDesignPack,
+        planData: {
+          ...((blueprint.planData as object) ?? {}),
+          ...((mini.planData as object) ?? {}),
+          dialoguePlan:
+            (mini.planData as { dialoguePlan?: unknown } | undefined)?.dialoguePlan ??
+            (blueprint.planData as { dialoguePlan?: unknown } | undefined)?.dialoguePlan,
+        },
+      };
+      await saveProjectBlueprint(db, pkg.projectId, nextBp);
+      const cleaned =
+        (mini.preDesignPack as { shots?: PreDesignShot[] } | undefined)?.shots ?? [];
+      if (cleaned.length) {
+        workingPkg = hydratePackageFromPreDesign(workingPkg, cleaned, {});
+        await saveEpisodePackage(db, workingPkg);
+        touched = workingPkg.shots;
+      }
+    }
+  } catch {
+    /* best-effort homology */
+  }
+
   const report = validatePackage({ ...pkg, shots: touched }, config, script, storyboardRows, {
     planData,
     storyboardIds: opts?.storyboardIds,
@@ -206,6 +252,7 @@ export async function syncFromFlowData(db: Knex, input: BuildPackageInput): Prom
     for (const r of rows) {
       if (r.shotIndex != null && r.level) fxByShotIndex[r.shotIndex] = String(r.level).toUpperCase();
     }
+    // SSOT: blueprint.preDesignPack dialogue/FX wins over flow-derived package (防 sync 回污)
     pkg = hydratePackageFromPreDesign(pkg, preShots, { sceneColorLock, fxByShotIndex });
   }
 

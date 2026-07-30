@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "shot1Stub": true,
+  "shot2Stub": true,
+  "bind0": "[intent intent-1] 开篇强冲突 | 画面=沈母高位摔杯 | 景别=中景 | 剪=开场强刺激切入 | 5s | peak=PEAK-sc1-fall",
+  "bind1": "[intent intent-2] 权力座次 | 画面=端坐太师椅摩挲扳指 | 景别=中景 | 剪=切 | 声=说教 | 5s | peak=PEAK-sc2-seat"
+}

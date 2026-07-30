@@ -46,6 +46,7 @@ import {
   isT3Bundle,
   resolveImportMergeStrategy,
 } from "./importHelpers";
+import { allowPreserveMediaCountMismatch, detectImportSmartExpand } from "./importMergeCountGate";
 import {
   seedAssetsFromBundle,
   linkPanelsToAssets,
@@ -385,6 +386,11 @@ export function buildDryRunSummary(
     Boolean(bMeta?.irdConfirmRequired);
   if (irdConfirm) {
     warnings.push("【IRD-CONFIRM】存在 mustSplit/多拍待确认；深链 SB VisBeat Confirm，禁止当设计已闭合");
+  }
+  if (bMeta?.litDebtImportPending || bMeta?.litDebtPrimaryAction) {
+    warnings.push(
+      `【文学债须设计确认】${String(bMeta.litDebtCta || bMeta.litDebtPrimaryAction || "confirm_split")}；可导入≠设计Exit已过`,
+    );
   }
   if (bMeta?.importOkNotExitPass || bMeta?.importDiagnoseOnly) {
     warnings.push("importOk≠designExitPass：形态适配/自报绿≠契约已修");
@@ -730,30 +736,29 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
       const rawN = prep.shotCounts?.rawShotCount ?? incomingN;
       const diagnoseOnly =
         Boolean(prep.shotCounts?.diagnoseOnly) && !opts.forceExpand;
-      // 作者镜稳定（未再拆）：以作者包为 SSOT，允许库内膨胀行缩回（170→16）
-      const authorStable =
-        diagnoseOnly && rawN > 0 && incomingN === rawN;
-      const inflateRisk =
-        (rawN > 0 && incomingN >= Math.max(rawN * 2, rawN + 8)) ||
-        (Boolean(prep.shotCounts?.expandApplied) && incomingN !== rawN);
-      if (existingN > 0 && incomingN !== existingN) {
-        if (authorStable) {
-          // recovery path — continue; media by clientId only
-          const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
-          bMeta.mergeCountAuthorSSot = true;
-          bMeta.mergeCountNote = `preserveMedia: 库内 ${existingN} → 作者 ${incomingN}（diagnose-only SSOT）`;
-        } else if (inflateRisk && !opts.forceExpand && !opts.acknowledgeKeepLegacy) {
-          throw Object.assign(new Error("IMPORT-MERGE-COUNT"), {
-            code: "IMPORT-MERGE-COUNT",
-            message: `preserveMedia/分层合并行数不一致：库内 ${existingN} / 作者 ${rawN} / 待写入 ${incomingN}。请 replaceAll、确认 forceExpand，或对齐镜数后再导。`,
-          });
-        } else if (!authorStable && !opts.forceExpand && !opts.acknowledgeKeepLegacy) {
-          // 中间态（如待写入既≠作者又≠库）：仍挡，避免错位保媒体
-          throw Object.assign(new Error("IMPORT-MERGE-COUNT"), {
-            code: "IMPORT-MERGE-COUNT",
-            message: `preserveMedia/分层合并行数不一致：库内 ${existingN} / 作者 ${rawN} / 待写入 ${incomingN}。请 replaceAll、确认 forceExpand，或对齐镜数后再导。`,
-          });
-        }
+      // 导入轨智拆（XOR/oneBeat/CU-CAST 等）在 exportGate salvage 后发生，prep.expandApplied 仍可能为 false
+      const importSmartExpand = detectImportSmartExpand(bundle, linkedPanels, prep.shapeSalvageLog);
+      const gate = allowPreserveMediaCountMismatch({
+        existingN,
+        incomingN,
+        rawN,
+        diagnoseOnly,
+        expandAppliedPrepare: Boolean(prep.shotCounts?.expandApplied),
+        forceExpand: opts.forceExpand,
+        acknowledgeKeepLegacy: opts.acknowledgeKeepLegacy,
+        importSmartExpand,
+      });
+      if (!gate.allow) {
+        throw Object.assign(new Error("IMPORT-MERGE-COUNT"), {
+          code: "IMPORT-MERGE-COUNT",
+          message: `preserveMedia/分层合并行数不一致：库内 ${existingN} / 作者 ${rawN} / 待写入 ${incomingN}。请 replaceAll、确认 forceExpand，或对齐镜数后再导。`,
+        });
+      }
+      if (gate.note) {
+        const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+        if (/diagnose-only/.test(gate.note)) bMeta.mergeCountAuthorSSot = true;
+        if (/智拆后/.test(gate.note)) bMeta.mergeCountSmartExpand = true;
+        bMeta.mergeCountNote = gate.note;
       }
       const merged = await mergeFlowData(existingFlow, { storyboard: linkedPanels }, mergeStrategy);
       panelsToSync = merged.storyboard as StoryboardPanelInput[];
@@ -782,10 +787,12 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
     const packShotN = bundle.preDesignPack.shots?.length ?? 0;
     const expanded =
       Boolean((bundle as { _importSplitExpanded?: boolean })._importSplitExpanded) ||
+      Boolean((bundle as { meta?: { importSplitExpanded?: boolean } }).meta?.importSplitExpanded) ||
       panelsToSync.some(
         (p) =>
           Boolean((p as { _stillBeatSplitId?: string })._stillBeatSplitId) ||
-          Boolean((p as { _visualSplitId?: string })._visualSplitId),
+          Boolean((p as { _visualSplitId?: string })._visualSplitId) ||
+          Boolean((p as { _litXorSplitId?: string })._litXorSplitId),
       );
     if (expanded && packShotN > 0 && sync.panels.length !== packShotN) {
       (bundle as { importSplitSyncFailed?: boolean }).importSplitSyncFailed = true;
@@ -984,8 +991,16 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
           recapHint: wb.recapHint,
           prevEpisodeSummary: wb.prevEpisodeSummary,
           nextEpisodeKey: wb.targetKey,
+          seriesContinuitySeed: wb.seriesContinuitySeed,
         },
       };
+      // Also index by next episode key for hydrate on epN+1 resolve
+      if (wb.targetKey && wb.seriesContinuitySeed) {
+        (bp as { seriesContinuityByEpisode?: Record<string, unknown> }).seriesContinuityByEpisode = {
+          ...((bp as { seriesContinuityByEpisode?: Record<string, unknown> }).seriesContinuityByEpisode ?? {}),
+          [wb.targetKey]: wb.seriesContinuitySeed,
+        };
+      }
       await saveProjectBlueprint(db, opts.projectId, bp);
     }
   } catch {
@@ -1343,6 +1358,19 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
         /* optional */
       }
     }
+    // 智拆扩行：dryRun 明示 preserveMedia 不需 forceExpand（与写库门对齐）
+    {
+      const liveShots = (prep.bundle.preDesignPack?.shots ?? []) as StoryboardPanelInput[];
+      const smart = detectImportSmartExpand(prep.bundle, liveShots, prep.shapeSalvageLog);
+      const postN = liveShots.length;
+      const authorN = prep.shotCounts?.rawShotCount ?? postN;
+      if (smart && postN > 0 && authorN > 0 && postN !== authorN) {
+        summary.warnings = [
+          ...(summary.warnings ?? []),
+          `【导入智拆】作者 ${authorN} → 待写入 ${postN}：preserveMedia 按 clientId 保媒体（无须 forceExpand；importOk≠designExitPass）`,
+        ];
+      }
+    }
   } else {
     const bundle = kind === "legacy" ? normalizeLegacyFlowData(bundleObj) : { flowData: (bundleObj as unknown as EpisodeBundle).flowData, meta: {} };
     summary = buildDryRunSummary({ flowData: bundle.flowData, meta: bundle.meta } as EpisodeBundle, { ...opts, validateOnly: true }, !predicted.wouldCreate, {
@@ -1356,6 +1384,16 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
     tier,
     shapeSalvageLog: prep.shapeSalvageLog,
     shapeSalvageSummary: formatShapeSalvageSummary(prep.shapeSalvageLog),
+    irdConfirmRequired: Boolean(
+      summary.irdConfirmRequired ||
+        (prep.bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired ||
+        (prep.bundle.meta as { irdConfirmRequired?: boolean } | undefined)?.irdConfirmRequired,
+    ),
+    litDebtPrimaryAction: String(
+      (prep.bundle.meta as { litDebtPrimaryAction?: string } | undefined)?.litDebtPrimaryAction ?? "",
+    ) || undefined,
+    litDebtCta: String((prep.bundle.meta as { litDebtCta?: string } | undefined)?.litDebtCta ?? "") || undefined,
+    designExitIncomplete: exportGate.designExitIncomplete,
     exportGate: {
       exportAllowed: exportGate.exportAllowed,
       closureSnapshot: exportGate.closureSnapshot,
@@ -1368,8 +1406,8 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
       repairHints: exportGate.repairHints,
       missingFieldReport: exportGate.missingFieldReport,
       missingFieldSummary: exportGate.missingFieldSummary,
-      shapeSalvageLog: prep.shapeSalvageLog,
-      shapeSalvageSummary: formatShapeSalvageSummary(prep.shapeSalvageLog),
+      shapeSalvageLog: exportGate.shapeSalvageLog ?? prep.shapeSalvageLog,
+      shapeSalvageSummary: formatShapeSalvageSummary(exportGate.shapeSalvageLog ?? prep.shapeSalvageLog),
       rePushPlan: exportGate.inspected?.rePushPlan ?? [],
     },
     previewStatusLine: exportGate.previewStatusLine,

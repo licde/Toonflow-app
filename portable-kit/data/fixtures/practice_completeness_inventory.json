@@ -1,0 +1,332 @@
+{
+  "version": "1.0.0",
+  "description": "Practice Completeness Ladder — each class must satisfy declare/mount/hard/untilClear/feBlock/noEscape. Key is optional: absent ⇒ L0-only + unmeasured, never fake hq_ok/videoPass.",
+  "ladder": ["declare", "mount", "hard", "untilClear", "feBlock", "noEscape"],
+  "keyPolicy": {
+    "required": false,
+    "absent": "L0_only_unmeasured_no_fake_pass",
+    "present": "L1_must_for_declared_must_dims"
+  },
+  "classes": [
+    {
+      "id": "BG_READABLE",
+      "declare": ["identity:background_readable", "still_literary_fidelity_checklist.json"],
+      "mount": ["literaryFidelityChecklist", "stillRepairRoute"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "no_hq_ok_without_visualPass_or_L0_bg; no_drop_scene_ref_as_sole_heal",
+      "l0Always": true,
+      "l1WhenKey": true
+    },
+    {
+      "id": "PAPER_DOC_READABLE",
+      "declare": ["lit:prop_readable", "contactEventPolicy.paper_doc"],
+      "mount": ["literaryFidelityChecklist", "stillLiteraryIntentSsot"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "paper_doc_alias_auto_lifts_prop_readable; no_hq_ok_on_blank_paper",
+      "l0Always": true,
+      "l1WhenKey": true
+    },
+    {
+      "id": "PROP_IN_FRAME",
+      "declare": ["DEX-PROP-IN-FRAME"],
+      "mount": ["design_gate_mount_matrix", "design_exit_checklist"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "import_soft_fill_neq_pass; no_hq_ok_without_prop"
+    },
+    {
+      "id": "CONTACT_GEOM",
+      "declare": ["contactGeom", "DEX-LIT-CONTACT"],
+      "mount": ["design_gate_mount_matrix", "stillLitHqGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "scar_only_neq_prop"
+    },
+    {
+      "id": "CONTACT_MOTION_BEATS",
+      "declare": ["VID-CONTACT-BEATS", "motionBeatTemplates"],
+      "mount": ["design_gate_mount_matrix", "quality_matrix"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "unmeasured_must_dim_forbids_videoPass",
+      "l1WhenKey": true
+    },
+    {
+      "id": "STILL_CONTACT_HANDOFF",
+      "declare": ["STILL-CONTACT-HANDOFF"],
+      "mount": ["design_gate_mount_matrix", "quality_matrix"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "preBurn_BLOCK_without_prop_still"
+    },
+    {
+      "id": "SPATIAL_LAYOUT",
+      "declare": ["still_composition_spec", "spatialRelation"],
+      "mount": ["designExitGate_SB_WARN", "composeStill"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "family_none_with_seating_signal_warns_at_SB"
+    },
+    {
+      "id": "SHEET_LEAK",
+      "declare": ["sheetLeak", "single_frame"],
+      "mount": ["stillVisualFidelityLoop", "stillFirstFrameGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "sheetLeak_blocks_burn_first_frame"
+    },
+    {
+      "id": "STILL_HQ_EGRESS",
+      "declare": ["hqRequiresVisualPass", "quality_state_matrix"],
+      "mount": ["stillVisualFidelityLoop", "stillFirstFrameGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "image_produced_neq_hq_ok; key_absent_neq_must_configure"
+    },
+    {
+      "id": "VIDEO_STALE_WRITEBACK",
+      "declare": ["VIDEO-PROMPT-STALE", "shotChainContract"],
+      "mount": ["generateVideo", "forwardStaleCascade"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "no_clear_videoStale_without_track_prompt_writeback"
+    },
+    {
+      "id": "DESIGN_CHAIN_CONTRACT",
+      "declare": ["DESIGN-LOSS", "CHAIN-BEAT", "DEX-CAM-FIT", "DEX-INTENT-PIC", "IRD-CONFIRM"],
+      "mount": ["design_gate_mount_matrix", "designExitGate_W3_post_loop"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "W3_runs_chain_post_loop_when_shots_present"
+    },
+    {
+      "id": "IDENTITY_PLATE",
+      "declare": ["deferredStill", "identityPlate", "still_identity_doctrine"],
+      "mount": ["assetCrefBind", "exportGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "deferredStill_neq_prop_still; turnaround_neq_narrative_still"
+    },
+    {
+      "id": "DURATION_NAR14",
+      "declare": ["NAR-14", "NAR-14-RESIDUAL", "LIP-01"],
+      "mount": ["design_gate_mount_matrix", "durationHygiene"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "raise_only_x_episode_cap_precheck_on_split"
+    },
+    {
+      "id": "HUMAN_REJUDGE_MODE",
+      "declare": ["humanRejudgeFidelity", "draft_vs_hq_update"],
+      "mount": ["humanRejudgeFidelity", "batchGenerateImage"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "rejudge_pass_requires_visualPassAt; undo_clears_not_fakes_pass"
+    },
+    {
+      "id": "HUMAN_REJUDGE_NO_KEY",
+      "declare": ["quality_state_matrix.keyPolicy", "stillQualityUserMessage"],
+      "mount": ["generateFlowImageCore", "batchGenerateImage", "stillRepairRoute"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "key_absent_neq_must_configure; flow_batch_single_parity"
+    },
+    {
+      "id": "VIDEO_HUMAN_REJUDGE",
+      "declare": ["motionPassAt", "humanRejudgeFidelity.video"],
+      "mount": ["humanRejudgeFidelity", "postBurnRuntime"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "no_key_videoPass_without_motionPass_or_human"
+    },
+    {
+      "id": "STILL_POSE_HANDOFF",
+      "declare": ["contactStartState", "stillPoseAnchor", "stillVideoPoseHandoff"],
+      "mount": ["contactEventPolicy", "compileVideoPromptSpine", "generateVideo"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "motion_ne_must_contradict_still_pose"
+    },
+    {
+      "id": "PROP_POSE_CHAIN",
+      "declare": ["propPose", "propPoseTransition", "propContinuitySsot"],
+      "mount": ["propContinuitySsot", "designExitGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "cross_shot_geom_jump_BLOCK_or_declare"
+    },
+    {
+      "id": "RECIPE_COLLISION",
+      "declare": ["lit_enhance_recipe_collision.json"],
+      "mount": ["composeStill", "stillLitHqGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "collision_BLOCK_not_silent_drop"
+    },
+    {
+      "id": "MOUTH_LIP_HANDOFF",
+      "declare": ["STILL-MOUTH-HANDOFF", "NO-LIP-DIALOGUE", "LIP-01"],
+      "mount": ["stillMouthVideoHandoff", "generateVideo"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "closed_mouth_still_ne_lip_burn"
+    },
+    {
+      "id": "AUDIO_LITERARY_XOR",
+      "declare": ["AUD-LIT-L0", "AUD-VOICE-BIND", "CHAT-AUD-01"],
+      "mount": ["generateVideo", "batchGenerateVideo"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "batch_single_audio_parity"
+    },
+    {
+      "id": "CONTACT_ROLE_XOR",
+      "declare": ["DEX-LIT-CONTACT-XOR", "lit_detail_contact_xor"],
+      "mount": ["designExitGate", "videoDesignIntentFidelity"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "xor_survives_to_video_prompt"
+    },
+    {
+      "id": "PROMPT_FIDELITY",
+      "declare": ["PROMPT-FIDELITY", "VP-THIN-SHELL"],
+      "mount": ["shotChainContract", "assertVideoPromptReady"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "stub_shell_ne_burn"
+    },
+    {
+      "id": "EMPTY_OS_ENSEMBLE",
+      "declare": ["empty_or_os", "ensemble_4plus", "DEX-STILL-OS-NAME"],
+      "mount": ["stillIntentPolicy", "stillCompositionSpec"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "os_no_lip; ensemble_no_stageA"
+    },
+    {
+      "id": "IMPORT_SOFT_ESCAPE",
+      "declare": ["importOkNotExitPass", "litEnhancePolicy"],
+      "mount": ["exportGate", "designExitGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "import_soft_ne_designExitPass"
+    },
+    {
+      "id": "DRAFT_VS_HQ",
+      "declare": ["skipVlmOnDraft", "stillFirstFrameGate"],
+      "mount": ["stillFirstFrameGate", "generateFlowImageCore"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "draft_ne_first_frame_burn"
+    },
+    {
+      "id": "QC_SOFT_DELIVER",
+      "declare": ["qcSoftDeliver", "videoPass"],
+      "mount": ["qcSoftDeliver", "checkVideoStateList"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "playable_ne_videoPass_without_badge"
+    },
+    {
+      "id": "SCENE_FX_CONTINUITY",
+      "declare": ["DEX-CUT-01", "SFX-UNBACKED", "sceneColorLock"],
+      "mount": ["propContinuitySsot", "videoDesignIntentFidelity"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "scene_sfx_coherence"
+    },
+    {
+      "id": "INTENT_PIC_SYNC",
+      "declare": ["DEX-INTENT-PIC", "sync_intent_picture"],
+      "mount": ["stillIntentReverse", "designExitGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "picture_vd_same_core"
+    },
+    {
+      "id": "INTENT_DECAY",
+      "declare": ["DEX-SHOT-INTENT", "shot_intent_decay"],
+      "mount": ["shotDesignIntent", "designExitGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "vd_change_resync_sidecar"
+    },
+    {
+      "id": "AV_CAUSALITY_SURVIVAL",
+      "declare": ["avCausality", "videoDesignIntentFidelity"],
+      "mount": ["compileVideoPromptSpine", "adaptBurnFromDesign"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "visualPeak_audioBeat_in_spine"
+    },
+    {
+      "id": "REPAIR_CONFIDENCE",
+      "declare": ["repair_confidence_ladder.json"],
+      "mount": ["stillIntentReverse", "selfHealOrchestrator"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "high_confidence_auto_apply"
+    },
+    {
+      "id": "CASCADE_INVALIDATION",
+      "declare": ["forwardStaleCascade", "quality_state_matrix"],
+      "mount": ["humanRejudgeFidelity", "stillIntentOps"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "apply_rejudge_must_cascade_videoStale"
+    },
+    {
+      "id": "VIRD_APPLY",
+      "declare": ["videoIntentReverse", "adaptBurnFromDesign"],
+      "mount": ["adaptBurnFromDesign", "generateVideo"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "fidelity_fail_recompile_or_block"
+    },
+    {
+      "id": "EPISODE_STILL_READINESS",
+      "declare": ["episodeStillReadiness", "track_still_matrix"],
+      "mount": ["batchGenerateVideo", "exportGate"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "track_contact_weak_blocks_batch_burn"
+    }
+  ]
+}

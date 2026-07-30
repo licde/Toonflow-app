@@ -86,6 +86,21 @@ export function auditModalityChainGaps(bundle: ScriptBundle, tier: "T1" | "T2" |
         });
       }
     }
+
+    // F14: dialogue shot missing audioPrompt — WARN at audit; burn path hard-gates separately
+    const dial = shot.narrative?.dialogue?.lines ?? [];
+    const hasDial = Array.isArray(dial) && dial.some((l) => String(typeof l === "string" ? l : l?.text ?? "").trim());
+    if (hasDial && !String(shot.generation?.audioPrompt ?? "").trim()) {
+      gaps.push({
+        id: "MOD-03",
+        severity: "WARN",
+        message: "台词镜缺 generation.audioPrompt",
+        chainId: "modality_feasibility",
+        trigger: "modality_aud_missing",
+        field: "generation.audioPrompt",
+        shotIndex: idx,
+      });
+    }
   });
 
   debut?.items?.forEach((item, i) => {

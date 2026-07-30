@@ -6,8 +6,10 @@ import type {
   InspectBundleResult,
   RepairHint,
   RePushPlanItem,
+  SmartDesignProposal,
 } from "../types/closure";
 import { CLOSURE_DIMENSION_LABELS } from "../types/closure";
+import { forkLabel as forkLabelText } from "../types/closure";
 
 const props = defineProps<{
   result: InspectBundleResult | null;
@@ -16,6 +18,8 @@ const props = defineProps<{
   exportAllowed?: boolean | null;
   /** Full one-copy repair brief from exportGate */
   chatRepairText?: string;
+  /** IC-02 / W93 smart proposals awaiting Confirm */
+  smartDesignProposals?: SmartDesignProposal[] | null;
 }>();
 
 const emit = defineEmits<{
@@ -25,6 +29,11 @@ const emit = defineEmits<{
   applyDc01SoftPatch: [];
   /** CTA: POST /api/scriptAgent/setEmotionNormProfile applyStructureHeal */
   applyEmotionStructureHeal: [];
+  /** CTA: POST /api/scriptAgent/smartProposalOps { action: confirm|reject|apply } */
+  confirmSmartProposal: [payload: { proposalId: string; fork?: string }];
+  rejectSmartProposal: [payload: { proposalId: string }];
+  applySmartProposals: [];
+  presentationFork: [payload: { proposalId: string; fork: string }];
 }>();
 
 const activeTab = ref<ClosureDimension>("dc");
@@ -82,10 +91,20 @@ function checkClass(c: ClosureCheck): string {
 }
 
 function forkLabel(fork: RePushPlanItem["presentationFork"]): string {
-  if (fork === "fork-A") return "改剧本";
-  if (fork === "fork-B") return "改分镜";
-  return "";
+  return forkLabelText(fork);
 }
+
+const pendingProposals = computed(() => {
+  const fromProp = props.smartDesignProposals ?? [];
+  const fromResult = (props.result as InspectBundleResult & { smartDesignProposals?: SmartDesignProposal[] } | null)
+    ?.smartDesignProposals ?? [];
+  const list = fromProp.length ? fromProp : fromResult;
+  return list.filter((p) => p.status === "pending_user_confirm" || p.status === "confirmed");
+});
+
+const confirmedCount = computed(
+  () => pendingProposals.value.filter((p) => p.status === "confirmed").length,
+);
 
 /** Never show bare dialogue_hash_mismatch→SB as the only UI copy. */
 function rePushLabel(p: RePushPlanItem): string {
@@ -230,6 +249,49 @@ function onCopyFullBrief() {
       </div>
     </section>
 
+    <section v-if="pendingProposals.length" class="rule-panel__section">
+      <h4>智能提案 Confirm（W93）</h4>
+      <p class="rule-panel__dc01-msg">须先确认路径，再一键 apply 写库；未 Confirm 禁止假绿出站。</p>
+      <div v-for="sp in pendingProposals" :key="sp.id || sp.ruleId" class="rule-panel__repush">
+        <div>
+          <strong>{{ sp.ruleId }}</strong>
+          <span> · {{ sp.proposal }}</span>
+          <span class="rule-panel__fork">{{ sp.status }} → {{ sp.targetStage }}</span>
+        </div>
+        <div v-if="sp.presentationFork?.length" class="rule-panel__fork-row">
+          <button
+            v-for="f in sp.presentationFork"
+            :key="f.fork"
+            type="button"
+            class="rule-panel__copy-primary"
+            @click="emit('presentationFork', { proposalId: sp.id || sp.ruleId, fork: f.fork }); emit('confirmSmartProposal', { proposalId: sp.id || sp.ruleId, fork: f.fork })"
+          >
+            {{ f.label }}
+          </button>
+        </div>
+        <div v-else class="rule-panel__fork-row">
+          <button
+            type="button"
+            class="rule-panel__copy-primary"
+            @click="emit('confirmSmartProposal', { proposalId: sp.id || sp.ruleId })"
+          >
+            Confirm
+          </button>
+          <button type="button" @click="emit('rejectSmartProposal', { proposalId: sp.id || sp.ruleId })">
+            拒绝
+          </button>
+        </div>
+      </div>
+      <button
+        v-if="confirmedCount"
+        type="button"
+        class="rule-panel__copy-primary"
+        @click="emit('applySmartProposals')"
+      >
+        Apply 已确认提案写库（{{ confirmedCount }}）
+      </button>
+    </section>
+
     <section v-if="result.rePushPlan?.length" class="rule-panel__section">
       <h4>回推计划</h4>
       <div v-for="(p, i) in result.rePushPlan" :key="i" class="rule-panel__repush">
@@ -277,4 +339,5 @@ function onCopyFullBrief() {
 .rule-panel__section { margin-top: 16px; }
 .rule-panel__hint-card, .rule-panel__repush { border: 1px solid #f0f0f0; padding: 10px; border-radius: 6px; margin-bottom: 8px; }
 .rule-panel__fork { margin-left: 8px; color: #722ed1; font-size: 12px; }
+.rule-panel__fork-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 </style>

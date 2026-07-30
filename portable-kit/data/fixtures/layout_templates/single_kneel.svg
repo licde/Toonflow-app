@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="576" height="1024" viewBox="0 0 576 1024">
+  <rect width="576" height="1024" fill="#2a2a2a"/>
+  <ellipse cx="288" cy="520" rx="44" ry="50" fill="#b0b0b0"/>
+  <rect x="244" y="564" width="88" height="100" rx="18" fill="#a0a0a0"/>
+  <ellipse cx="288" cy="690" rx="80" ry="24" fill="#707070"/>
+  <text x="288" y="980" text-anchor="middle" fill="#555" font-size="20" font-family="sans-serif">layout:single_kneel</text>
+</svg>

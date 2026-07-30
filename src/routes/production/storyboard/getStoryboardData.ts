@@ -3,6 +3,7 @@ import u from "@/utils";
 import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { stillApiFieldsFromReason } from "@/ruleEngine/compilers/stillQuality";
 const router = express.Router();
 
 export default router.post(
@@ -34,6 +35,8 @@ export default router.post(
           prompt: i.prompt,
           state: i.state,
           src: i.filePath ? await u.oss.getSmallImageUrl(i.filePath!) : "",
+          reason: i.reason ?? "",
+          ...stillApiFieldsFromReason(i.reason),
         };
       }),
     );

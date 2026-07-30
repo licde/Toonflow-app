@@ -69,6 +69,18 @@
       "note": "特写×出镜≥2：VD只点名一人→slice_cast降人数（禁拆镜Confirm）；多人同框意图→auto split；歧义 Confirm；chatStrict 禁静默拆；导入 demote；禁只 regen"
     },
     {
+      "trigger": "lit_detail_contact_xor",
+      "ruleIds": ["DEX-LIT-CONTACT-XOR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["智能拆镜（颊触镜+口创镜）", "Confirm 手改 VD"],
+      "defaultAction": "confirmClusterSplit",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "split > XOR soft；禁止互斥句洗绿；导入智拆同源；debt.router lit_contact_xor→split_shot；contact_role_xor≠audio_xor；禁塌 batch_still；missingSlots=contactRoleXor"
+    },
+    {
       "trigger": "lit_detail_contact",
       "ruleIds": ["DEX-LIT-CONTACT"],
       "reverseTarget": "SB",
@@ -79,6 +91,42 @@
       "forbidRegenWithoutDescFix": true,
       "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
       "note": "declare-only：禁 compose/Edit 发明落点；多参考服饰混用靠 primaryLookLock egress"
+    },
+    {
+      "trigger": "still_prop_missing",
+      "ruleIds": ["DEX-PROP-IN-FRAME", "STILL-CONTACT-HANDOFF"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["重出带道具接触静照", "Confirm enhance 补 prop+geom", "禁只改视频词"],
+      "defaultAction": "regen_storyboard_hq",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["storyboard.stillPrompt", "preDesignPack.shots[].visualDescription"],
+      "note": "contactEvent ∧ prop missing；wound≠prop；soft-allow 不得冒充 videoPass"
+    },
+    {
+      "trigger": "vid_contact_beats",
+      "ruleIds": ["VID-CONTACT-BEATS"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["重编译分相 Motion", "禁微表情呼吸洗淡"],
+      "defaultAction": "recompileVideoPrompt",
+      "forbidRegenWithoutDescFix": false,
+      "authoritativeFields": ["generation.compiled.video", "o_videoTrack.prompt"],
+      "note": "executableBeats ≥2 相含接触动词"
+    },
+    {
+      "trigger": "still_video_contact_handoff",
+      "ruleIds": ["STILL-CONTACT-HANDOFF"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["重出含道具接触静照后再烧"],
+      "defaultAction": "regen_storyboard_hq",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["storyboard.stillPrompt"],
+      "note": "对称 still_mouth_handoff"
     },
     {
       "trigger": "lit_detail_anchor",
@@ -126,7 +174,7 @@
       "defaultAction": "batchStillHq",
       "forbidRegenWithoutDescFix": false,
       "authoritativeFields": ["preDesignPack.shots[].generation.imagePrompt"],
-      "note": "Alias of still_firstframe_weak — DepthPolicy 须命中本行，禁止落 INFRA；CTA=batch_still"
+      "note": "Alias of still_firstframe_weak — DepthPolicy 须命中本行，禁止落 INFRA；CTA=batch_still。PROMPT-VID-FIRSTFRAME: 首位帧缺失须路由 MD（generationFeedback category=missing_reference）"
     },
     {
       "trigger": "series_continuity_shape",
@@ -163,6 +211,15 @@
       "note": "提示词须覆盖 VD 锚点；禁 freeform 跳过 Shot List"
     },
     {
+      "trigger": "video_prompt_stale",
+      "ruleIds": ["VIDEO-PROMPT-STALE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["重编译视频提示词"],
+      "note": "VD/对白相对 designContentHash 已变；须重编译后再烧，禁旧 prompt 幽灵"
+    },
+    {
       "trigger": "dur_desync",
       "ruleIds": ["DUR-DESYNC"],
       "reverseTarget": "SB",
@@ -183,11 +240,12 @@
     },
     {
       "trigger": "dialogue_extra",
-      "ruleIds": ["DC-01-EXTRA"],
+      "ruleIds": ["DC-01-EXTRA", "H3"],
       "reverseTarget": "SB",
       "forwardStages": ["SB"],
       "repairPriority": "P1",
-      "note": "台词乱入：删多余或对齐 plan；时长噪点（：3s）由 DC 过滤/删除，勿当台词"
+      "defaultAction": "softHealTouchHomology",
+      "note": "正推未愈 BLOCK 重设计；导入/触达同核 absorb+strip until EXTRA=0；禁 demote/WARN 顶债；时长噪点剥离"
     },
     {
       "trigger": "vid_inherit_composition",
@@ -408,8 +466,10 @@
       "reverseTarget": "EN",
       "forwardStages": ["SB", "EN", "MD-VID"],
       "repairPriority": "P0",
-      "presentationFork": ["去掉 no lip sync", "改 lipSyncPolicy 为 dialogue_native/subtle"],
-      "authoritativeFields": ["preDesignPack.shots[].shotDesign.lipSyncPolicy", "o_videoTrack.prompt"]
+      "defaultAction": "softHealNoLipDialogue",
+      "presentationFork": ["服务端升 subtle_natural", "去掉 no lip sync"],
+      "authoritativeFields": ["preDesignPack.shots[].shotDesign.lipSyncPolicy", "o_videoTrack.prompt"],
+      "note": "出镜对白 none/silent→subtle_natural until-clear；OS/VO 可 silent"
     },
     {
       "trigger": "sfx_unbacked",
@@ -1508,6 +1568,103 @@
         "MD"
       ],
       "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_pseudo_line",
+      "ruleIds": ["DEX-VID-PSEUDO-LINE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN", "MD"],
+      "repairPriority": "P0",
+      "defaultAction": "softHealVideoHomology",
+      "note": "until-clear strip 伪台词；禁 demote"
+    },
+    {
+      "trigger": "vid_voice_mode",
+      "ruleIds": ["DEX-VID-VOICE-MODE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0",
+      "defaultAction": "softHealVideoHomology"
+    },
+    {
+      "trigger": "vid_beat_duration",
+      "ruleIds": ["DEX-VID-BEAT-DUR", "DUR-PAD"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_motion_verb",
+      "ruleIds": ["DEX-VID-MOTION-VERB"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "vid_intent_map",
+      "ruleIds": ["DEX-VID-INTENT-MAP"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_cam_mediate",
+      "ruleIds": ["DEX-VID-CAM-MEDIATE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD", "SB"],
+      "repairPriority": "P0",
+      "defaultAction": "viralMotionMediate"
+    },
+    {
+      "trigger": "vid_fidelity",
+      "ruleIds": ["DEX-VID-FIDELITY", "DEX-VID-LIT-SURVIVE", "DEX-VID-SHOT-SIZE", "DEX-VID-MOTION-TEMPLATE", "DEX-VID-SECTION-GLUE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "SB"],
+      "repairPriority": "P0",
+      "defaultAction": "recompileVideoPrompt"
+    },
+    {
+      "trigger": "vid_shot_size",
+      "ruleIds": ["DEX-VID-SHOT-SIZE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_motion_template",
+      "ruleIds": ["DEX-VID-MOTION-TEMPLATE", "VP-MOTION-TEMPLATE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN"],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_section_glue",
+      "ruleIds": ["DEX-VID-SECTION-GLUE", "VP-SECTION-GLUE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "vid_fx_f0_echo",
+      "ruleIds": ["DEX-VID-FX-F0-ECHO"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "SB"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "sfx_scene_mismatch",
+      "ruleIds": ["SFX-SCENE-MISMATCH"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "lit_contact_xor",
+      "ruleIds": ["DEX-LIT-CONTACT-XOR", "lit_contact_xor"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD"],
+      "repairPriority": "P0",
+      "defaultAction": "confirmSplitShot"
     }
   ],
   "maxRounds": 3

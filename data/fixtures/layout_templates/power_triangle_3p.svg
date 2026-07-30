@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="576" height="1024" viewBox="0 0 576 1024">
+  <rect width="576" height="1024" fill="#2a2a2a"/>
+  <ellipse cx="288" cy="260" rx="44" ry="52" fill="#9a9a9a"/>
+  <rect x="248" y="310" width="80" height="120" rx="14" fill="#8a8a8a"/>
+  <ellipse cx="160" cy="560" rx="36" ry="42" fill="#a0a0a0"/>
+  <rect x="130" y="600" width="60" height="110" rx="10" fill="#909090"/>
+  <ellipse cx="420" cy="580" rx="34" ry="40" fill="#b0b0b0"/>
+  <rect x="392" y="618" width="56" height="100" rx="10" fill="#a0a0a0"/>
+  <text x="288" y="980" text-anchor="middle" fill="#555" font-size="18" font-family="sans-serif">layout:power_triangle_3p</text>
+</svg>

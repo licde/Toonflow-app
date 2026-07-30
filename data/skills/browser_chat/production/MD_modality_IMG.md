@@ -31,6 +31,7 @@ subject, scene, composition, lighting, style, negative, cref, identity
 - 有出脸须 CHAR + 定妆真图（设计期可 stub+`assetCrefPlan` 延期；DEX-ASSET-CREF → `asset_cref`）；preview≡generate 同核，预览假绿不代替 generate BLOCK
 - identity 与 BP L0.gender 一致（identityAudit）
 - 保真环失败标 `fidelityFailed` → 禁作视频首帧（`still_firstframe_dirty`）
+- 接触事件 VD ∩ 静帧无道具 → 禁 hq_ok / 禁作首帧（`still_prop_missing`）；浅痕≠道具；CTA「重出带道具静照」
 
 ## Agnes VendorPack
 
@@ -52,8 +53,11 @@ BP L0 → SB charCodes/type → EN subject → MD-IMG imagePrompt
 | cast_on_desc_missing | SB |
 | asset_cref | AS |
 | still_firstframe_dirty | SB → MD-IMG |
+| still_prop_missing | MD-IMG（重出带道具静照；禁只改视频词） |
 | qp02_visual_short | SB |
-| lit_detail_contact / lit_detail_anchor / lit_detail_expr | SB（补落点/部位，禁只 regen） |
+| lit_detail_contact_xor | SB（颊触≠口含：互斥句或拆镜；可 `confirm_enhance`；≠audio_xor；禁只 regen） |
+| lit_detail_contact / lit_detail_anchor / lit_detail_expr | SB（补落点/部位或批准增强；禁只 regen） |
+| prop_continuity | SB（邻镜道具链；拆后 xorSplit 可豁免） |
 | cref 无法解析 | EN → BP |
 | identity 与 VID/AUD 冲突 | EN 全模态重 compile |
 | PURE 词缺失 | EN 前置 negative |

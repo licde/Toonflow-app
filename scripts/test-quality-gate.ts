@@ -205,8 +205,8 @@ function ok(label: string, cond: boolean, detail = "") {
   ok("FX empty burn path PASS", checkFxGrade({ fxPrompt: "", shotIndex: 1 }) == null);
   ok("FX F0 PASS", checkFxGrade({ fxPrompt: "", fxFeasibility: "F0", shotIndex: 1 }) == null);
   ok(
-    "FX undeclared WARN at export",
-    checkFxGrade({ fxPrompt: "", shotIndex: 1, warnUndeclared: true })?.severity === "WARN",
+    "FX undeclared BLOCK at export",
+    checkFxGrade({ fxPrompt: "", shotIndex: 1, warnUndeclared: true })?.severity === "BLOCK",
   );
   ok("FX F5 BLOCK", checkFxGrade({ fxPrompt: "不可行", fxFeasibility: "F5", shotIndex: 2 })?.severity === "BLOCK");
   const emptyBurn = qualityGate(

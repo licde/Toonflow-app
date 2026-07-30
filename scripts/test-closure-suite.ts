@@ -54,6 +54,11 @@ const cmds = [
   "test:asset-still-runner",
   "test:still-visual-fidelity",
   "test:still-quality-closed-loop",
+  "test:ep01-quality-loop",
+  "test:frost-import-hardening",
+  "test:still-cheek-contact-chain",
+  "test:literary-intent-survive",
+  "test:video-quality-chain",
   "test:full-runtime-matrix",
 ];
 

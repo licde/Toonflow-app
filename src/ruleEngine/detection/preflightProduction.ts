@@ -13,6 +13,7 @@ import { runPrValidator } from "../validators/prValidator";
 import { filterRegistryEntries, loadDetectionRegistry, type DetectionModality, type DetectionResult, type DetectionStage } from "./types";
 import { ensureClosureRegistry, runGenerationClosureViaRegistry, runIntelligentClosureViaRegistry } from "../closure/registerHandlers";
 import { runClosureLevel } from "../closure/ClosureRegistry";
+import { asDialogueLineObjects } from "../design/dialogueCoverage";
 
 export interface PreflightProductionInput {
   projectId: number;
@@ -79,11 +80,9 @@ export function episodePackageToScriptBundle(pkg: EpisodePackage, script: string
             const m = part.match(/^([^：:]{1,20})[：:]\s*(.*)$/);
             return m ? { speaker: m[1].trim(), text: m[2] } : { text: part };
           });
-        } else if (s.narrative.lines?.trim()) {
-          lines = s.narrative.lines.split(/\n+/).map((part) => {
-            const m = part.match(/^([^：:]{1,20})[：:]\s*(.*)$/);
-            return m ? { speaker: m[1].trim(), text: m[2] } : { text: part };
-          });
+        } else {
+          const fallback = asDialogueLineObjects(s.narrative.lines);
+          if (fallback.length) lines = fallback;
         }
         const charCodes = (s.narrative.assetCodes ?? []).filter((c) => /^CHAR-/i.test(c));
         // 1-based mirror for PR messages / UI (#n); package.index is 0-based
@@ -327,40 +326,105 @@ export async function runProductionPreflight(
     await saveEpisodePackage(db, pkg);
   }
 
-  let shots = pkg.shots;
-  // undefined = all shots; [] / ids = only those (empty ⇒ skip shot-level production checks)
   const filteredScope = input.storyboardIds != null;
+
+  let planData = (blueprint.planData as ScriptBundle["planData"]) ?? undefined;
+  const designBrief =
+    (blueprint.designBrief as ScriptBundle["designBrief"]) ??
+    (blueprint as { designBrief?: ScriptBundle["designBrief"] }).designBrief;
+  const characters = (blueprint as { characters?: ScriptBundle["characters"] }).characters;
+
+  // Homology until-clear on FULL package BEFORE designClosure (no stale DC toast)
+  let workingBundle = episodePackageToScriptBundle(pkg, script, {
+    planData,
+    designBrief,
+    characters,
+  });
+  if (preShots?.length && workingBundle.preDesignPack) {
+    (workingBundle.preDesignPack as { shots: unknown }).shots = preShots;
+  }
+  try {
+    const { softHealTouchHomology } =
+      require("../heal/touchHomologyHeal") as typeof import("../heal/touchHomologyHeal");
+    const heal = softHealTouchHomology(workingBundle);
+    planData = workingBundle.planData ?? planData;
+    if (heal.absorbed > 0 || heal.strippedNoise > 0 || heal.f0Declared.length) {
+      const { saveProjectBlueprint, saveEpisodePackage, loadEpisodePackage } =
+        await import("../storage/episodePackageStore");
+      const bp = (await loadProjectBlueprint(db, input.projectId)) ?? {};
+      await saveProjectBlueprint(db, input.projectId, {
+        ...bp,
+        fxFeasibilityAudit: (workingBundle as { fxFeasibilityAudit?: unknown }).fxFeasibilityAudit,
+        preDesignPack: workingBundle.preDesignPack ?? bp.preDesignPack,
+        planData: {
+          ...((bp.planData as object) ?? {}),
+          ...((workingBundle.planData as object) ?? {}),
+          dialoguePlan:
+            (workingBundle.planData as { dialoguePlan?: unknown } | undefined)?.dialoguePlan ??
+            (bp.planData as { dialoguePlan?: unknown } | undefined)?.dialoguePlan,
+        },
+      });
+      const cleaned =
+        (workingBundle.preDesignPack as { shots?: import("../bundle/types").PreDesignShot[] } | undefined)
+          ?.shots ?? [];
+      if (cleaned.length) {
+        const fresh = (await loadEpisodePackage(db, input.projectId, input.scriptId)) ?? pkg;
+        pkg = hydratePackageFromPreDesign(fresh, cleaned, {
+          fxByShotIndex: fxByShotFromAudit(
+            (workingBundle as { fxFeasibilityAudit?: unknown }).fxFeasibilityAudit ??
+              blueprint.fxFeasibilityAudit,
+          ),
+        });
+        await saveEpisodePackage(db, pkg);
+        workingBundle = episodePackageToScriptBundle(pkg, script, {
+          planData,
+          designBrief,
+          characters,
+        });
+        if (workingBundle.preDesignPack) {
+          (workingBundle.preDesignPack as { shots: unknown }).shots = cleaned;
+        }
+      }
+    }
+  } catch {
+    /* optional */
+  }
+
+  let shots = pkg.shots;
   if (filteredScope) {
     const idSet = new Set(input.storyboardIds);
     shots = shots.filter((s) => s.storyboardId != null && idSet.has(s.storyboardId));
   }
 
-  const planData = (blueprint.planData as ScriptBundle["planData"]) ?? undefined;
-  const designBrief =
-    (blueprint.designBrief as ScriptBundle["designBrief"]) ??
-    (blueprint as { designBrief?: ScriptBundle["designBrief"] }).designBrief;
   const bundle = episodePackageToScriptBundle({ ...pkg, shots }, script, {
     planData,
     designBrief,
-    characters: (blueprint as { characters?: ScriptBundle["characters"] }).characters,
+    characters,
   });
-  const gapResult: BundleGapAuditResult = auditAllBundleGaps(bundle, tier);
-  const prItems = runPrValidator(bundle, config.speechSpeed);
+  workingBundle = {
+    ...workingBundle,
+    ...bundle,
+    planData: workingBundle.planData ?? planData,
+    preDesignPack: workingBundle.preDesignPack ?? bundle.preDesignPack,
+  };
+
+  const gapResult: BundleGapAuditResult = auditAllBundleGaps(workingBundle, tier);
+  const prItems = runPrValidator(workingBundle, config.speechSpeed);
 
   ensureClosureRegistry();
-  const dc = runDesignClosureDryRun(bundle, {
+  const dc = runDesignClosureDryRun(workingBundle, {
     scope: filteredScope
       ? { mode: "filtered", storyboardIds: input.storyboardIds }
       : { mode: "full" },
   });
-  const pc = runProductionClosureDryRunForTier(bundle, tier === "T1" ? "T2" : tier);
+  const pc = runProductionClosureDryRunForTier(workingBundle, tier === "T1" ? "T2" : tier);
   const gc = runGenerationClosureViaRegistry({
     genError: "",
     sfRound: 0,
     probeDuration: 0,
     probeHasAudio: false,
   });
-  const ic = runIntelligentClosureViaRegistry(bundle);
+  const ic = runIntelligentClosureViaRegistry(workingBundle);
 
   const detectionResults: DetectionResult[] = [
     ...gapToResults(gapResult.allGaps, registryIds),
@@ -398,7 +462,7 @@ export async function runProductionPreflight(
   const scope = filteredScope
     ? { mode: "filtered" as const, storyboardIds: input.storyboardIds }
     : { mode: "full" as const };
-  let workingBundle = bundle;
+
   let precheckLoop = runPrecheckLoop({
     bundle: workingBundle,
     scope,
@@ -434,7 +498,7 @@ export async function runProductionPreflight(
             workingBundle = episodePackageToScriptBundle(fresh, script, {
               planData,
               designBrief,
-              characters: (blueprint as { characters?: ScriptBundle["characters"] }).characters,
+              characters,
             });
             precheckLoop = runPrecheckLoop({
               bundle: workingBundle,

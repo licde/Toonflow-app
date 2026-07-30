@@ -293,25 +293,71 @@ export function qualityGate(bundle: ScriptBundle, opts: QualityGateOptions): Qua
 
   // Dialogue coverage (DC-01) — respect filtered soft policy via report only on full
   if ((stage === "export" || stage === "preflight") && !filtered) {
+    // Homology belt: until-clear F0 + absorb EXTRA before BLOCK
+    try {
+      const { softHealTouchHomology } =
+        require("../heal/touchHomologyHeal") as typeof import("../heal/touchHomologyHeal");
+      softHealTouchHomology(bundle);
+      const nextShots = (bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[];
+      if (nextShots.length) {
+        shots.length = 0;
+        shots.push(...nextShots);
+      }
+    } catch {
+      try {
+        const { stripNonLiteraryDialogueFromShots } =
+          require("../design/dialogueCoverage") as typeof import("../design/dialogueCoverage");
+        const dlg = stripNonLiteraryDialogueFromShots(shots);
+        if (dlg.stripped > 0 && bundle.preDesignPack) {
+          (bundle.preDesignPack as { shots: unknown }).shots = dlg.shots;
+          shots.length = 0;
+          shots.push(...dlg.shots);
+        }
+      } catch {
+        /* optional */
+      }
+    }
     const report = dialogueCoverageReport({
       script: bundle.script ?? "",
       shots,
       planData: bundle.planData,
     });
     if (!report.ok) {
-      push({
-        id: report.extraCount > 0 && report.missingCount === 0 ? "DC-01-EXTRA" : "DC-01",
-        severity: "BLOCK",
-        message: formatDialogueCoverageMessage(report),
-        evidence: {
-          missingKeys: report.missingKeys.slice(0, 10),
-          missingCount: report.missingCount,
-          extraKeys: report.extraKeys.slice(0, 10),
-          extraCount: report.extraCount,
-          repairReasons: report.missingCount === 1 ? ["unique_missing_line"] : [],
-        },
-        softPatch: report.missingCount > 0 && report.extraCount === 0,
-      });
+      const noiseOnlyExtra =
+        report.extraCount > 0 &&
+        report.missingCount === 0 &&
+        report.extraKeys.every((k) => {
+          try {
+            const { isNonLiteraryDialogueKey } =
+              require("../design/dialogueCoverage") as typeof import("../design/dialogueCoverage");
+            return isNonLiteraryDialogueKey(k);
+          } catch {
+            return false;
+          }
+        });
+      if (noiseOnlyExtra) {
+        /* healed — do not push BLOCK */
+      } else {
+        push({
+          id: report.extraCount > 0 && report.missingCount === 0 ? "DC-01-EXTRA" : "DC-01",
+          severity: "BLOCK",
+          message: formatDialogueCoverageMessage(report),
+          evidence: {
+            missingKeys: report.missingKeys.slice(0, 10),
+            missingCount: report.missingCount,
+            extraKeys: report.extraKeys.slice(0, 10),
+            extraCount: report.extraCount,
+            repairReasons:
+              report.missingCount === 1
+                ? ["unique_missing_line"]
+                : report.extraCount > 0
+                  ? ["absorb_literary_extra", "strip_dialogue_noise"]
+                  : [],
+          },
+          // EXTRA residual after absorb = hard; missing-only may soft_patch
+          softPatch: report.missingCount > 0 && report.extraCount === 0,
+        });
+      }
     }
   }
 

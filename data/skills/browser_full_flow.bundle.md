@@ -10,7 +10,7 @@ supersedes: design_flow.bundle.md v1.1
 
 # Browser Chat 全流程 · 优化版 v2.1.0
 
-> 生成时间：2026-07-24T14:04:14.250Z · rulePack 2.1.0 · tier T3 · 勿手改，改源 skill 后重跑 `yarn bundle:browser-full-flow`
+> 生成时间：2026-07-27T14:09:51.105Z · rulePack 2.1.0 · tier T3 · 勿手改，改源 skill 后重跑 `yarn bundle:browser-full-flow`
 > 说明：**Chat bundle ≠ 后端 API**。改 skill/fixture 才需本命令；改 `src/ruleEngine` TS 需重启服务，不会体现在本文件。
 
 ## §0 用法·红线
@@ -231,8 +231,10 @@ Fixtures：`unified_closure_matrix.json`、`design_closure_checklist.json`、`mu
 5. **契约对齐**：`adaptationMatrixStructured` 与 API `confirmMatrixChoices` Zod 同构
 6. **设计拆分闭环（v2.1 design-gate）**：决策树见 `W3_script` / `corridor_SB`；Confirm=`designSplitOps`；残句=`nar14_residual`（重设计∪导入B）；反推修好后必须 `forwardReentry`；深链见 chatRepairText
 6b. **换公式**：`DEX-LITERARY-STALE` → 按新规范重设计（或 `acknowledgeKeepLegacy`）；Chat 写权威，导入只补充
-7. **静帧 Identity 闭环**：casting 裸名权威 + multiFace 谓词 + egress 同谓词首帧闸；DEX-STILL-* WARN→chatRepair；反推 `still_firstframe_dirty`→SB→stale→MD-IMG；禁动词表白名单主修
+7. **静帧 Identity 闭环**：casting 裸名权威 + multiFace 谓词 + egress 同谓词首帧闸；DEX-STILL-* 设计强契约 BLOCK（导入 demote）；含 **CU×cast** `still_cu_cast`；反推 `still_firstframe_*` / `still_onebeat_multi` / `img_still_weak` 同源；禁只 regen；Chat/Exit/IRD/Compose 同核
 8. **QP-02 可拍描写闭环**：设计 DEX-QP-02 ≡ export QP-02；CHAT-SB 同核；导入仅溯源补写；深链 SB；minChars 为防空壳底线
+8b. **文学结构槽 / 道具连续**：DEX-LIT-*（含 CONTACT-XOR）/ DEX-PROP-CONT 设计强契约；IRD `confirm_enhance` / `hand_edit_vd` / `confirm_split`；增强白名单 Confirm/autoMin+复检（flag）；导入结构软填+demote（`importOk≠designExitPass`）
+8c. **视频设计 IRD（VIRD）**：DEX-VID-*（伪台词/voice/beatDuration/Motion 动词/intent map/运镜调解）；`videoIntentOps` Confirm；烧片 soleAuthor+scrub 同源；导入/touch `softHealVideoHomology` until-clear；`designExitPass≠videoPromptReady`；SVQ 未测 → `human_review`（skip≠pass）
 9. **冻结**：禁止静默发明 splitHint/reactionAction；B 须真实反应镜才绑 hint；静帧禁只 regen 假闭环；禁发明 visualDescription 占位
 10. **DEX-CAM-FIT 硬约束**：plan 可写 reactionAction（NAR-15）；shots **禁止**单镜口播+反应；须已拆说话镜+反应镜；服务器愈仅兜底，Chat 下次仍须权威形；禁假绿
 
@@ -1102,10 +1104,11 @@ ep1 前 30s **最多 1 条**核心 info 释放；禁止连续猜谜。
 
 ### W13 画面可拍
 
-- △ 描写「人怎么干」：动作、表情、环境、光线
+- △ 描写「人怎么干」：动作、表情、环境、光线 — 落地 SB 时须可拍结构槽（who/action/object/contact|spatial）
 - 禁镜头技术括注（如「全景·缓推·6秒」）
 - 禁小说化描写与冗长心理独白
 - 竖屏适配：人物居中，无横向全景
+- 邻镜道具去向须可交待（放下/仍持/撕毁）；细节闸在 SB：`DEX-LIT-*` / `DEX-PROP-CONT`
 
 ## 执行步骤
 
@@ -1363,14 +1366,17 @@ shotSize、cameraMovement、lightingSetup、compiledPrompt。
 - **导入**：已有 `preDesignPack.shots` 时默认 **diagnose-only**（禁 IRD/cam/oneBeat 静默再拆 16→170）；`forceExpand` 才 apply；dryRun 须展示 **postHeal 镜数**（作者→愈后）与**非法同文占比**
 - **一镜一画面（语义强制）**：连续≥3 归一化同文 VD（**有对白也算**）→ `DEX-DUP-VD` BLOCK；禁止「同文口型复用」当设计；超 vendor/多句 → Confirm 语义拆（子镜须景别/运镜/`intent.picture` 相对父镜可区分）或改短，**禁止**指望导入静默拆成同文 N 镜
 - **DEX-DUP-VD / DEX-DIRTY-STILL-PROMPT / DEX-HAND-LIP**：同文连镜、手+眼同帧、文学体裸 `--cref CHAR`/`--sref SCENE`、手镜 lip≠none → BLOCK；composed prompt **尾** IR 码除外
-- **配方智能适配（≠改设计）**：分镜 VD/景别/intent 是 SSOT；compose 按镜型适配（手 CU/道具 CU/OS/空镜禁硬注正脸·全员必须出现·口型话术）；**禁止**把配方句回写 `visualDescription`。真脏手+脸 → Chat BLOCK + VisBeat Confirm 拆；导入与设计 **同核智能拆**；残留才 soft（`importOk≠designExitPass`），禁静默同文拆手脸
+- **配方智能适配（≠改设计）**：分镜 VD/景别/intent 是 SSOT；compose 按镜型适配（手 CU **仅**显式手部特写；座次/中景/权力反差 **压过** 摩挲扳指动作，禁手CU禁出脸对撞）；**特写×出镜≥2**：VD 只点名一人 → **降出场人数+裁主角 cref**（禁拆镜 Confirm）；VD 多人同框意图 → `still_cu_cast` 智能拆；成稿泄漏「仅N人」同核；禁【Edit焦点】文学洗绿；Edit 反拼版用短锁（`*_EDIT_ZH`），接触几何/主look优先于拼版句；文学意图原子（端坐太师椅/抄书等）须在 compose/首烧/Edit 存活；**禁止**把配方句回写 `visualDescription`。真脏手+脸 → Chat BLOCK + VisBeat Confirm 拆；导入与设计 **同核智能拆/降人数**（非仅软过）；残留才 `importOk≠designExitPass` / Confirm，禁静默同文拆手脸
+- **PROMPT-FIDELITY / 文学存活**：HQ 座次镜缺抄书/太师椅等 → 不过绿；Edit 焦点只追加，禁掏空文学基底
 - **`importOk≠designExitPass`**：导入可进仓 ≠ 设计闭合；禁止只改 `modalityPromptAudit` / `narrativeSelfcheck.passed`
 - composeStillPromptPreview `persist:true` 写库用 `result.composeMode`（禁裸变量 `mode` → `mode is not defined`）
 - VLM 缺 Key：图已出、HQ 未过（≠ preview HTTP 400）
-- NAR-14/15（plan 有 RA；shots 同 lineId；**speak 镜禁止塞 RA**）、DC-01（缺覆盖）、**DC-01-EXTRA（乱入）**、DEX-CAM-FIT（双镜形）、DEX-DC-ALIGN、DEX-SPEAKER-BARE、DC-16 预检
+- DC-01（缺覆盖）、**DC-01-EXTRA（乱入）**；时长噪点如「：3s」属伪台词，导入会剥离，勿当文学台词修
+- **Audio XOR + PromptFidelity**：有词无声 BLOCK；无词有声 strip；禁 trim 多拍假绿；VD/对白变须重编译（`VIDEO-PROMPT-STALE`）
 - **RA×CAM 双轨**：`emotion_hit` 的 RA 写在 **dialoguePlan**；镜侧权威=说话镜+反应镜；禁单镜 onCam+RA
-- **质量同核（BLOCK）**：DEX-QP-02、DEX-CAST-ON-DESC、DEX-EMPTY-SHOT-CONSISTENCY、DEX-EXPR-SPEAK、**DEX-ASSET-CREF**、**DEX-SHOT-INTENT**
-- 出站前 L2 `healShotQuality`（CAST/EMPTY 可置信则愈）；愈后 `cascadeForwardStale`；chatStrict 仅 propose
+- **质量同核（BLOCK）**：DEX-QP-02、DEX-LIT-CONTACT-XOR、DEX-LIT-CONTACT、DEX-LIT-ANCHOR、DEX-PROP-CONT、DEX-CAST-ON-DESC、DEX-EMPTY-SHOT-CONSISTENCY、DEX-EXPR-SPEAK、**DEX-ASSET-CREF**、**DEX-SHOT-INTENT**
+- **文学细节**：缺接触/空间落点 → `hand_edit_vd`（stillIntentOps）；导入 WARN、SB BLOCK；禁 compose 发明落点
+- **视频设计债**：伪台词/错 lip/空 Motion/beat 灌水/运镜越权 → `videoIntentOps`（DEX-VID-*）；导入/touch 同核 until-clear；禁 demote 假绿；`designExitPass≠videoPromptReady`
 - **残句**：A 拆后仍 NAR-14 → 须重设计/显式 splitHint/`Confirm B`；导入 ingest **禁**静默 residual B / 同文唇拆（标 `lipConfirmRequired`）
 - 拆行后须 `confirm_design_split` / Orchestrator（mirror+补缺 lineId），禁止只写 hint
 - VisBeat 与 Orchestrator：先 expanders，再 clause-split，再残句 B（禁双拆打架）
@@ -1412,7 +1418,7 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 3. OS/VO/系统音单独标注 `type`（`os` / `vo`）— **禁止** `speaker: "沈清漪（OS）"`；speaker 只写本名，画外用 type
 4. **禁止** `--cref SCENE-*`：角色用 `--cref CHAR-*`，场景用 `--sref SCENE-*`
 5. **CastingSheet**：身份以 CD/`charCodes`/`--cref` 为准；描写点名**智能绑定**既有 CD/资产（唯一命中补码；歧义拒绑；无资产 stub+保留名）。**禁剥名**；`visualDescription` **禁止当作自由 NER 造名源**（见 `docs/PRODUCTION_PILLARS.md`）
-6. **静帧 Identity（DEX-STILL-*）**：一镜一可静帧拍；人名裸名禁`（OS）`；禁「对白瞬间神态」填料；多拍 → **DEX-STILL-ONEBEAT BLOCK**（智能拆或 Confirm）
+6. **静帧 Identity（DEX-STILL-*）**：一镜一可静帧拍；人名裸名禁`（OS）`；禁「对白瞬间神态」填料；多拍 → **DEX-STILL-ONEBEAT BLOCK**（智能拆或 Confirm）；**特写×多人 → DEX-STILL-CU-CAST BLOCK**（反应特写+场面镜；导入不硬拦）
 7. 出口前人工核对台词数 ≥ 剧本可枚举句数
 8. **口型闸**：仅出镜对白强制 lip；`type:os|vo` 可 no lip；空 `lipSyncPolicy` ≠ silent 假阳
 
@@ -1438,7 +1444,12 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 - **反例**：描写写「沈清漪」但 `charCodes: []` → `DEX-CAST-ON-DESC`（唯一 CD 可智能绑；歧义拒绑保留名）
 - **正例（无图）**：点名保留「沈清漪」进 characters；**禁假 --cref**；有定妆图再挂 cref
 - **反例**：有脸/CHAR 无本镜绑且无法 stub 入册 → `DEX-ASSET-CREF`（深链 AS）；仅 stub 无真图时 **AS/compose** 仍 BLOCK
-- 首帧脏/多拍反推：`still_firstframe_dirty` → **智能拆镜**（优先）或改单拍描写 → stale → MD-IMG；**禁止只 regen**
+- 首帧反推分流：
+  - `still_firstframe_dirty` → 假双脸/多拍：**智能拆镜**（优先）或改单拍描写 → stale → MD-IMG；**禁止只 regen**
+  - `still_firstframe_stale` → 描写已变：改 VD 后重出 HQ
+  - `still_firstframe_weak` → 弱静照/缺 visualPass：`batch_still` 重出（勿先逼改 VD）
+  - `dirty_still_prompt` → 真手+脸同帧：改 VD / VisBeat 拆；非 seating+扳指动作误脏
+  - 视频污染壳（XML 索要 / 跨镜 PEAK / EN QF）→ sanitize 后重编译本镜
 - 描写过短反推：`qp02_visual_short` → SB 重写 `visualDescription`；导入不发明占位
 
 ### 智能拆 · Chat/exit 矩阵
@@ -1453,7 +1464,41 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
 
 | 字段 | 说明 |
 |------|------|
-| visualDescription | 画面主体与动作（供 EN subject / MD-IMG）；**一镜一拍、裸名** |
+| visualDescription | 画面主体与动作（供 EN subject / MD-IMG）；**一镜一拍、裸名**；须可拍五元组（见下） |
+
+### 可拍原子（DEX-LIT-CONTACT-XOR / DEX-LIT-CONTACT / DEX-LIT-ANCHOR / DEX-LIT-EXPR）
+
+大体构图够但描写稀疏 → 静帧漂移。VD 尽量声明：
+
+1. **who** 主体裸名  
+2. **action** 已声明动词（禁运行时发明）  
+3. **prop** 关键道具  
+4. **contactLocus** 接触落点（颊/唇/指尖…）— 脸特写+道具、渗血/咬唇、拭泪必备  
+5. **spatialOrGrip / groundLocus** 握持或地面锚（手持/地上/脚边…）— 捡拾/持握/递接/抛落必备  
+6. **contactRoleXor** 颊触与口创同镜须互斥句或拆（`纸未入口`/`另镜`）— **≠ audio_xor**  
+7. **woundVisible / propReadable**（增强白名单）触面浅痕可见度、纸面可辨 — 不发明剧情  
+
+**朝向 ≠ 锚点**：`侧脸/正面` 不能顶替 `地上/脚边`（防捡书假绿）。
+
+| 衍生类 | 缺什么会漂 | 闸 |
+|--------|------------|-----|
+| 颊触+口创同镜 | 互斥句或拆镜 | DEX-LIT-CONTACT-XOR |
+| 脸特写+道具 | 接触落点/接触动词 | DEX-LIT-CONTACT |
+| 捡拾/俯身 | 地面/脚边/手触 | DEX-LIT-ANCHOR |
+| 递接/抛落 | 交接或落点 | DEX-LIT-ANCHOR |
+| 微创/撕拭 | 部位或道具对象 | DEX-LIT-CONTACT |
+| 特写强表情 | 眉/眼/唇 | DEX-LIT-EXPR (WARN) |
+| 泼洒倾倒 | 脸上/身上/地上等承受点 | DEX-LIT-ANCHOR |
+| 抱拽按掐 | 腕/袖/肩/喉等接触 | DEX-LIT-CONTACT |
+| 书写/抄书 | 案上/纸上或笔纸物象 | DEX-LIT-ANCHOR (WARN) |
+| 推门/开门 | 门边/门外/门口 | DEX-LIT-ANCHOR (WARN) |
+| 邻镜道具链 | 消失/瞬变/空降须交待 | DEX-PROP-CONT |
+| 多定妆参考 | 服饰混色 | compose `primaryLookLock`（点名主 look）；VD 勿混写他角色衣装 |
+
+**结构优先**：句式落点（划过X / 从Y / 手持…）为主闸，词表仅 boost。缺槽 → IRD `confirm_enhance` / `hand_edit_vd` / `confirm_split`；可选 `stillIntentOps.suggestFill/applyEnhance`（flag+Confirm/autoMin+复检）。导入可结构软填+demote（`importOk≠designExitPass`）。  
+**可增强**（主体已有）：落点/XOR 互斥句/划过→浅痕可见/纸可读/表情落点。  
+**漂移硬禁**：换主体、新角色、否定核心动作、`literaryLocked` 无 force。  
+**禁只 regen 顶替改 VD**。 VisBeat 只管多拍拆镜，不管文学增强 CTA。
 
 ## 执行步骤
 
@@ -3613,6 +3658,7 @@ subject, scene, composition, lighting, style, negative, cref, identity
 - 有出脸须 CHAR + 定妆真图（设计期可 stub+`assetCrefPlan` 延期；DEX-ASSET-CREF → `asset_cref`）；preview≡generate 同核，预览假绿不代替 generate BLOCK
 - identity 与 BP L0.gender 一致（identityAudit）
 - 保真环失败标 `fidelityFailed` → 禁作视频首帧（`still_firstframe_dirty`）
+- 接触事件 VD ∩ 静帧无道具 → 禁 hq_ok / 禁作首帧（`still_prop_missing`）；浅痕≠道具；CTA「重出带道具静照」
 
 ## Agnes VendorPack
 
@@ -3634,7 +3680,11 @@ BP L0 → SB charCodes/type → EN subject → MD-IMG imagePrompt
 | cast_on_desc_missing | SB |
 | asset_cref | AS |
 | still_firstframe_dirty | SB → MD-IMG |
+| still_prop_missing | MD-IMG（重出带道具静照；禁只改视频词） |
 | qp02_visual_short | SB |
+| lit_detail_contact_xor | SB（颊触≠口含：互斥句或拆镜；可 `confirm_enhance`；≠audio_xor；禁只 regen） |
+| lit_detail_contact / lit_detail_anchor / lit_detail_expr | SB（补落点/部位或批准增强；禁只 regen） |
+| prop_continuity | SB（邻镜道具链；拆后 xorSplit 可豁免） |
 | cref 无法解析 | EN → BP |
 | identity 与 VID/AUD 冲突 | EN 全模态重 compile |
 | PURE 词缺失 | EN 前置 negative |
@@ -3678,8 +3728,11 @@ motion, camera, duration, lipSync, identity, fx
 - V9 duration 与 SB 一致（1–30s）；高情绪对白须 **emotionHold** 预留（可读进 Camera）
 - QF-VIEW / QF-DUR 运镜词；裸秒 `2s,3s` 须收敛为单一 `duration Ns`（quality 单源）
 - 有**出镜**对白须 lipSync 关键词；**禁止**显式 `no lip sync` / `lipSyncPolicy=none|silent`（NO-LIP-DIALOGUE → `no_lip_dialogue`）。**OS/VO 不强制口型**；空 policy 自动升 subtle（≠ silent 假阳）
+- **Audio XOR**：设计确认无对白时剥孤儿口播（`AUD-ORPHAN-SPEECH`）；有对白须 `audioPrompt`（`CHAT-AUD-01`）
+- **PromptFidelity / stale**：视频词须覆盖 VD 锚点（`PROMPT-FIDELITY`）；`designContentHash` 漂移 → `VIDEO-PROMPT-STALE` 重编译再烧
 - burn 读 policy：`shotDesign` → `narrative` → `shot` →（出镜）默认 subtle
 - 静帧闭口 ∩ 强口型（仅出镜）：mouth handoff soft 一次后复检，仍冲突 BLOCK（`still_mouth_handoff`）
+- 接触事件 ∩ 静帧无道具：contact handoff **BLOCK**（`still_prop_missing` / `STILL-CONTACT-HANDOFF`）；浅痕≠道具；禁 soft-allow；须重出带道具静照后再烧
 - 镜/倒影描写须 anti-warp（禁 funhouse 变形）
 - `sfx:<>` 须有 `audioCue`/intent 真源；无 SfxSynthPort ≠ 音效满分（`sfx_unbacked`）
 - fx 同镜 ≤F3（PR-07）
@@ -3688,7 +3741,7 @@ motion, camera, duration, lipSync, identity, fx
 
 | 项 | 规则 |
 |----|------|
-| 首位帧 | AG-GATE-01：referenceImage 或分镜图；脏静帧禁烧（`still_firstframe_dirty`） |
+| 首位帧 | AG-GATE-01：referenceImage 或分镜图；脏静帧禁烧（分流：`still_firstframe_dirty` / `_stale` / `_weak` / `dirty_still_prompt`） |
 | 运动 | motion-from-frame 白名单 |
 | 原生语音 | generate_audio=true + dialogue-native |
 | 表情 | QF-EXPR-06 禁改面部 |
@@ -3711,6 +3764,8 @@ SB duration/type → EN compile → 分镜图 → MD-VID videoPrompt → singleI
 | video_first_frame_missing | MD → EN | P0 |
 | still_firstframe_dirty | SB → MD-IMG | P0 |
 | still_mouth_handoff | EN / SB | P0 |
+| still_prop_missing | MD-IMG / SB | P0 |
+| still_video_contact_handoff | MD-IMG → EN | P0 |
 | no_lip_dialogue | EN | P0 |
 | sfx_unbacked | SB | P1 |
 | svq_motion_fail（含镜面） | EN | P1 |
@@ -10804,24 +10859,32 @@ Slot 定义 SSOT：`data/fixtures/modality_prompt_slots.json`（skills / compile
   - **DEX-CAM-FIT**（BLOCK · SB）：**Chat 硬约束** — `reactionAction` 写在 dialoguePlan；shots **禁止**单镜 onCam 对白+reactionAction（或 VD「开口…反应」）。权威形=说话镜+反应镜两镜；禁「听者反应特写」。服务器 untilClear 仅兜底；**chatStrict 未拆不得假绿**。深链 `cam_fit`（RH-DEX-CAM-FIT：下次写权威形；本包勿手拆已愈项）
   - **DEX-NAR-14/15**：**优先**按标点拆成多条 `lines`（分句 ≤15）；`emotion_hit` **必须**同写 `reactionAction`（**plan**；shots 已拆双镜后 speak 行无 reactionAction）。决策树：标点→A；**残句无标点→must 重设计或 Confirm B**；VisBeat→C。
   - **二次修复必再入编排**：改完字段后须 `designSplitOps.forwardReentry` / tool `design_split_forward_reentry`，或 SB `setStepStatus` heal（会自动 SplitOrchestrator mirror + 残句 B）。**禁止只改 plan 不 mirror**，否则镜级 NAR-15 / DC-01 会二次爆。
-  - **NAR-14「可不手改」仅当 A 拆净或已 B 绑 hint**；残句进【须手改】。导入与设计 **同核** `runSplitOrchestrator`（高置信 auto / 低置信 Confirm）；禁静默同文克隆；残留才 stamp；真实反应镜存在才可绑 splitHint（禁静默发明）。
+  - **NAR-14「可不手改」仅当 A 拆净或已 B 绑 hint**；残句进【须手改】。导入与设计 **同核** `runSplitOrchestrator`（高置信 auto / 低置信 Confirm）；禁静默同文克隆；残留才 stamp `lipConfirmRequired`；真实反应镜存在才可绑 splitHint（禁静默发明）。
   - **契约不符＝重设计**：deep link `nar14_residual` → W3；禁止只改 `narrativeSelfcheck.passed`（服务器会覆写）。
   - **DEX-DC-01 / DC-01-EXTRA / DEX-DC-ALIGN**：缺覆盖=DC-01；乱入=EXTRA；`lineId` ⊆ shots；拆行后缺镜行 → Confirm/Orchestrator
   - **DEX-SPEAKER-BARE**：speaker 裸名；禁 OS/VO 后缀；禁 APP/UI 作说话人
-  - **DEX-STILL-ONEBEAT**（**BLOCK**）：visualDescription 一镜一可静帧拍。多拍 → 智能拆镜（簪刺金样三镜 / splitPlan）或 Confirm；首帧脏 → `still_firstframe_dirty`：优先智能拆，或 SB 改单拍 → stale → 重出；禁只 regen（RH-STILL-FIRSTFRAME）
+  - **DEX-STILL-ONEBEAT**（**BLOCK**）：visualDescription 一镜一可静帧拍。多拍 → 智能拆镜或 Confirm；首帧分流：`still_firstframe_dirty`（假双脸/多拍）/ `still_firstframe_stale`（描写漂移）/ `still_firstframe_weak`（弱静照→batch_still）/ `dirty_still_prompt`（真手+脸）；禁只 regen（RH-STILL-FIRSTFRAME / RH-STILL-WEAK / RH-STILL-STALE）
+  - **DEX-STILL-CU-CAST**（**BLOCK**，导入 demote）：特写/近景 × 出镜≥2 → **文学单人特写优先降出场人数**（slice_cast，禁拆镜 Confirm）；多人同框意图 → 智能拆（反应特写+场面镜）或 Confirm；深链 `still_cu_cast`（RH-STILL-CU-CAST）；禁 silent single_hero 洗绿 / 只 regen
+  - **DEX-STILL-OS-NAME / DEX-STILL-FILLER**（设计期 **BLOCK**，导入 soft demote）：禁（OS）人名与「对白瞬间神态」填料
+  - **弱静帧别名**：`img_still_weak` ≡ `still_firstframe_weak` → MD-IMG `batch_still`（禁落 INFRA）
+  - **VLM 基建**：缺 Key → evidence=`vlm_infra` / `pendingHumanRejudge`；CTA 配 Key；人审可过但记 `humanOverride:vlm_infra`
   - **DEX-STILL-OS-NAME / FILLER**（WARN）：人名裸名禁（OS）；禁「对白瞬间神态」
   - **DEX-QP-02 / QP-02**（BLOCK）：画面描写空/过短/抽象无物象 — 与 export 同核；须 SB 重设计。深链 `qp02_visual_short`。minChars 仅防空壳底线
+  - **DEX-LIT-CONTACT-XOR / CONTACT / ANCHOR / PROP-CONT**（BLOCK）：可拍结构槽、颊触≠口含互斥、邻镜道具连续 — `confirm_enhance` / 手改 VD / 拆镜；禁只 regen；深链 `lit_detail_contact_xor` / `lit_detail_*` / `prop_continuity`；导入 soft demote ≠ ExitPass
   - **DEX-CAST-ON-DESC**（BLOCK）：描写点名须进 `charCodes`（与 DEX-CAST-CODES 分立）。**智能绑定**：CD/资产唯一命中可自动补码+cref；歧义拒绑保留姓名；CD 无则 orphan stub（仍 BLOCK export 假绿）。**禁剥名**、禁自由 NER 造角。深链 `cast_on_desc_missing`（RH-CAST-ON-DESC）
   - **DEX-EMPTY-SHOT-CONSISTENCY**（BLOCK）：空镜声明不得与人名/出脸/codes 并存。深链 `empty_shot_conflict`（RH-EMPTY-SHOT）；forbidRegenWithoutDescFix。compose 出站禁再叠「正脸清晰」
   - **DEX-EXPR-SPEAK**（BLOCK）：高强度**出镜**对白须 `microExpression`+`lipSyncPolicy`；OS/VO 不强制口型闸。禁默认表演假过。深链 `expr_speak_missing`（RH-EXPR-SPEAK）
   - **DEX-ASSET-CREF**（BLOCK · AS；SB 可 stub 延期）：出脸/`CHAR-*` 须本镜绑；SB 可用 stub+`assetCrefPlan` 过设计闸，AS/compose 须定妆真图。禁止假 `--cref`/假绿。深链 `asset_cref`（RH-ASSET-CREF → AS）
   - **designBrief 同挂 EMPTY/EXPR/CAST**（与 SB 同核）：不得提前出站绕开 SB
   - **NO-LIP-DIALOGUE**（BLOCK · EN/MD-VID）：**出镜对白**禁止显式 `lipSyncPolicy=none/silent` 与提示词 `no lip sync`。空 policy → 自动升 `subtle_natural`（≠假阳）。**仅 OS/VO 的镜允许 no lip**。深链 `no_lip_dialogue`（RH-NO-LIP-DIALOGUE）
+  - **Audio XOR / PromptFidelity（M1–M7）**：乱入=`DC-01-EXTRA`；有词无声=`CHAT-AUD-01` BLOCK；无词有声=`AUD-ORPHAN-SPEECH` strip（`dialogueLines:[]` 确认静音）；锚点未覆盖=`PROMPT-FIDELITY`；多拍禁 trim=`DEX-STILL-ONEBEAT`；VD/对白漂移=`VIDEO-PROMPT-STALE`（须重编译）。CI：`test:dialogue-audio-loop` / `test:prompt-fidelity-loop`
   - **STILL-MOUTH-HANDOFF**：静帧闭口 ∩ 视频强口型（仅出镜对白）→ soft 一次后须复检；仍冲突 **BLOCK**（禁 silent soft 假愈）。深链 `still_mouth_handoff`
+  - **STILL-CONTACT-HANDOFF / DEX-PROP-IN-FRAME**：接触事件 VD（动词∩道具类别名）∩ 静帧无道具（浅痕≠道具）→ **BLOCK** 重出带道具静照；禁 soft-allow 冒充可烧、禁只改视频词。深链 `still_prop_missing` / `still_video_contact_handoff`
   - **SFX-UNBACKED**（WARN）：字面 `sfx:<>` 无 adapter / 无 `audioCue` 真源 ≠ 音效满分。深链 `sfx_unbacked`（RH-SFX-UNBACKED）。DEX-SFX-BRIDGE 禁逼造假意图
   - **镜面**：描写含镜/倒影须 anti-warp；成片变形 → `svq_motion_fail`
   - **emotionHold**：对白高情绪须时长预留可读；不足并 `lip_duration_short`
-  - **静帧脏禁烧**：保真环失败 / 无 visualPass → `still_firstframe_dirty`；禁脏首帧续烧
+  - **静帧脏禁烧**：保真环失败且设计缺口 → `still_firstframe_dirty`；仅弱图/无 visualPass → `still_firstframe_weak`（重出 HQ）；禁脏首帧续烧
+  - **视频污染壳**：XML 索要 / 跨镜 PEAK sidecar / EN QF → sanitize + preferCompile 重编（RH-VIDEO-PROMPT-STUB）
   - **DEX-CUT-01 / DEX-CAM-XSHOT**（WARN）：邻镜硬切/运镜突变，与 export 同核
   - **DEX-DC-16**：`designBrief.B6.characters` 每人必须进 `characterDesign.assets`（code/name/`L0.identity`）；禁仅 stub（如「侍女」）
   - **DEX-FX-F0**：无特效镜写 `visualEffect: "F0"`（或 fxLevel/fxFeasibility F0）；有特效写散文 `generation.fxPrompt`。禁止 `modalityPromptAudit.FX=pass` 却全空
@@ -10843,6 +10906,7 @@ SSOT：`data/fixtures/still_video_quality_doctrine.json` + `reverse_route_table.
 | 有脸无定妆计划 | DEX-ASSET-CREF | `asset_cref` | SB 可 stub 延期；AS 补定妆真图 |
 | 出镜对白+no lip | NO-LIP-DIALOGUE | `no_lip_dialogue` | 改 policy；OS 不强制；空 policy 升 subtle |
 | 闭口静帧强口型 | mouth handoff | `still_mouth_handoff` | 改静帧口型或 EN 口型强度 |
+| 接触事件缺道具静帧 | contact handoff | `still_prop_missing` | 重出带道具静照；禁只改视频词 |
 | 假 sfx:<> | SFX-UNBACKED | `sfx_unbacked` | 补 audioCue 真源；无 adapter≠满分 |
 | 脏静帧烧视频 | still detect | `still_firstframe_dirty` | hq_update 重出后再烧 |
 
@@ -10883,6 +10947,9 @@ export JSON → `POST /api/ruleEngine/exportGate` → `exportAllowed=true` 且�
     "emotion_clarity": "must",
     "motion_fidelity": "must",
     "audio_mood": "must",
+    "lit_detail": "must",
+    "lit_contact_xor": "must",
+    "litDimNote": "must when measured (VD/flags); unmeasured → skip not unknown",
     "cam_variety": "optional",
     "retention_hook": "optional",
     "packaging": "optional",
@@ -10899,6 +10966,9 @@ export JSON → `POST /api/ruleEngine/exportGate` → `exportAllowed=true` 且�
     "DEX-CUT-01": { "severity": "WARN", "stages": ["SB"], "trigger": "cut01_adjacent" },
     "DEX-CAM-XSHOT": { "severity": "WARN", "stages": ["SB"], "trigger": "cam_xshot" },
     "DEX-QP-02": { "severity": "BLOCK", "stages": ["SB", "designBrief"], "trigger": "qp02_visual_short" },
+    "DEX-LIT-CONTACT": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "lit_detail_contact" },
+    "DEX-LIT-CONTACT-XOR": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "lit_detail_contact_xor", "note": "≠audio_xor" },
+    "DEX-LIT-ANCHOR": { "severity": "BLOCK", "stages": ["SB", "designBrief", "W3"], "trigger": "lit_detail_anchor" },
     "NO-LIP-DIALOGUE": { "severity": "BLOCK", "stages": ["EN", "MD-VID"], "trigger": "no_lip_dialogue" },
     "SFX-UNBACKED": { "severity": "WARN", "stages": ["EN", "MD-VID"], "trigger": "sfx_unbacked" },
     "MIRROR-WARP": { "severity": "WARN", "stages": ["EN", "MD-VID"], "trigger": "svq_motion_fail" }
@@ -10913,7 +10983,9 @@ export JSON → `POST /api/ruleEngine/exportGate` → `exportAllowed=true` 且�
     "cam_variety": "emotion_structure",
     "retention_hook": "retention_opening_missing",
     "packaging": "packaging_end_preview",
-    "vis_beat": "visual_multi_beat"
+    "vis_beat": "visual_multi_beat",
+    "lit_detail": "lit_detail_contact",
+    "lit_contact_xor": "lit_detail_contact_xor"
   },
   "healLayers": {
     "L1": "healViralDesignRouter",
@@ -11104,6 +11176,94 @@ rulePackVersion: 2.0.1
       "note": "正推 DEX-STILL-ONEBEAT ↔ 反推同核 expandStillOneBeat/splitPlan；高置信 auto；低置信 Confirm；禁 soft_patch 顶拆"
     },
     {
+      "trigger": "still_cu_cast",
+      "ruleIds": ["DEX-STILL-CU-CAST"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["按文学意图降出场人数（单人特写）", "智能拆：反应特写+场面镜", "改景别为中景同框", "Confirm"],
+      "defaultAction": "sliceCastOrConfirmSplit",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": [
+        "preDesignPack.shots[].visualDescription",
+        "preDesignPack.shots[].shotSize",
+        "preDesignPack.shots[].charCodes"
+      ],
+      "note": "特写×出镜≥2：VD只点名一人→slice_cast降人数（禁拆镜Confirm）；多人同框意图→auto split；歧义 Confirm；chatStrict 禁静默拆；导入 demote；禁只 regen"
+    },
+    {
+      "trigger": "lit_detail_contact_xor",
+      "ruleIds": ["DEX-LIT-CONTACT-XOR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["智能拆镜（颊触镜+口创镜）", "Confirm 手改 VD"],
+      "defaultAction": "confirmClusterSplit",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "split > XOR soft；禁止互斥句洗绿；导入智拆同源；debt.router lit_contact_xor→split_shot；contact_role_xor≠audio_xor；禁塌 batch_still；missingSlots=contactRoleXor"
+    },
+    {
+      "trigger": "lit_detail_contact",
+      "ruleIds": ["DEX-LIT-CONTACT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补接触落点（颊/唇/指尖等）", "拆镜若多拍混写", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "declare-only：禁 compose/Edit 发明落点；多参考服饰混用靠 primaryLookLock egress"
+    },
+    {
+      "trigger": "lit_detail_anchor",
+      "ruleIds": ["DEX-LIT-ANCHOR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补空间/握持/地面落点（地上/手持/膝前）", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "捡拾/持握/递接/抛落无锚点→静帧漂移；朝向≠锚点；禁只 hq_update"
+    },
+    {
+      "trigger": "lit_detail_expr",
+      "ruleIds": ["DEX-LIT-EXPR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P2",
+      "presentationFork": ["补眉/眼/唇落点", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "特写强表情无部位→脸部漂移；WARN 默认，禁只 regen"
+    },
+    {
+      "trigger": "prop_continuity",
+      "ruleIds": ["DEX-PROP-CONT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补离手/去向/来源交待", "写 propState→", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription", "preDesignPack.shots[].propState"],
+      "note": "邻镜道具消失/瞬变/空降；CUT-01 不管道具；禁发明专名；导入 demote"
+    },
+    {
+      "trigger": "img_still_weak",
+      "ruleIds": ["IMG-STILL-QA"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["hq_update 重出静照"],
+      "defaultAction": "batchStillHq",
+      "forbidRegenWithoutDescFix": false,
+      "authoritativeFields": ["preDesignPack.shots[].generation.imagePrompt"],
+      "note": "Alias of still_firstframe_weak — DepthPolicy 须命中本行，禁止落 INFRA；CTA=batch_still"
+    },
+    {
       "trigger": "series_continuity_shape",
       "ruleIds": ["SH-SERIES-CONT", "SCHEMA_SHAPE", "SCHEMA_SHAPE_BLOCK", "SH-BRIEF-STRING", "SH-SCENE-AV-TAGS", "SH-MICRO-EXPR"],
       "reverseTarget": "AS",
@@ -11138,6 +11298,15 @@ rulePackVersion: 2.0.1
       "note": "提示词须覆盖 VD 锚点；禁 freeform 跳过 Shot List"
     },
     {
+      "trigger": "video_prompt_stale",
+      "ruleIds": ["VIDEO-PROMPT-STALE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["重编译视频提示词"],
+      "note": "VD/对白相对 designContentHash 已变；须重编译后再烧，禁旧 prompt 幽灵"
+    },
+    {
       "trigger": "dur_desync",
       "ruleIds": ["DUR-DESYNC"],
       "reverseTarget": "SB",
@@ -11158,11 +11327,20 @@ rulePackVersion: 2.0.1
     },
     {
       "trigger": "dialogue_extra",
-      "ruleIds": ["DC-01-EXTRA"],
+      "ruleIds": ["DC-01-EXTRA", "H3"],
       "reverseTarget": "SB",
       "forwardStages": ["SB"],
       "repairPriority": "P1",
-      "note": "台词乱入：删多余或对齐 plan"
+      "defaultAction": "softHealTouchHomology",
+      "note": "正推未愈 BLOCK 重设计；导入/触达同核 absorb+strip until EXTRA=0；禁 demote/WARN 顶债；时长噪点剥离"
+    },
+    {
+      "trigger": "vid_inherit_composition",
+      "ruleIds": ["VID-INHERIT-COMPOSITION"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "note": "静帧构图/人数/家具锚未闭合，禁绿继承视频"
     },
     {
       "trigger": "chain_beat",
@@ -11223,7 +11401,7 @@ rulePackVersion: 2.0.1
       "reverseTarget": "SB",
       "forwardStages": ["SB", "AS", "MD-IMG"],
       "repairPriority": "P0",
-      "presentationFork": ["改 VD 为一镜一拍", "合并同文镜", "手镜 lip=none", "剥裸 cref/sref"],
+      "presentationFork": ["改 VD 为一镜一拍", "VisBeat Confirm 拆手/脸（禁同文脸镜）", "手镜 lip=none", "剥裸 cref/sref", "配方适配≠回写 VD"],
       "defaultAction": "handEditVisualDescription",
       "forbidRegenWithoutDescFix": true,
       "authoritativeFields": [
@@ -11231,7 +11409,7 @@ rulePackVersion: 2.0.1
         "preDesignPack.shots[].generation.imagePrompt",
         "preDesignPack.shots[].shotDesign.lipSyncPolicy"
       ],
-      "note": "脏静帧契约：回 SB 改 JSON 字段；深链勿走 INFRA chat_repair 空跳"
+      "note": "脏静帧契约：真手+脸 Chat BLOCK；导入 strip soft 不静默拆；compose 配方按镜型适配禁硬注正脸；深链勿走 INFRA chat_repair 空跳"
     },
     {
       "trigger": "aud_speak_react",
@@ -11247,7 +11425,7 @@ rulePackVersion: 2.0.1
     },
     {
       "trigger": "still_firstframe_dirty",
-      "ruleIds": ["STILL-FIRSTFRAME-DIRTY", "STILL-FIRSTFRAME-STALE", "IMG-CREF-CHAR", "DC-16", "DEX-STILL-ONEBEAT", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER"],
+      "ruleIds": ["STILL-FIRSTFRAME-DIRTY", "IMG-CREF-CHAR", "DC-16", "DEX-STILL-ONEBEAT", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER"],
       "reverseTarget": "SB",
       "forwardStages": ["SB", "AS", "MD-IMG", "EN"],
       "repairPriority": "P0",
@@ -11255,7 +11433,42 @@ rulePackVersion: 2.0.1
       "defaultAction": "confirmClusterSplit",
       "forbidRegenWithoutDescFix": true,
       "authoritativeFields": ["preDesignPack.shots[].visualDescription", "characterDesign.assets[].name"],
-      "note": "多拍/脏首帧：优先智能拆镜（still_onebeat/splitPlan）回写 shots；或手改单拍描写→stale→MD-IMG；禁止只 regen"
+      "note": "假双脸/OS名/多拍：优先智能拆镜；禁止只 regen。真手+脸走 dirty_still_prompt；弱静照走 still_firstframe_weak；描写漂移走 still_firstframe_stale"
+    },
+    {
+      "trigger": "still_firstframe_stale",
+      "ruleIds": ["STILL-FIRSTFRAME-STALE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["确认/改 visualDescription", "stale 作废后重出 HQ"],
+      "defaultAction": "handEditVisualDescription",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "画面描写已变，旧静照作废；改 VD 后再 MD-IMG，禁止拿旧图烧视频"
+    },
+    {
+      "trigger": "still_firstframe_weak",
+      "ruleIds": ["STILL-FIRSTFRAME-WEAK", "STILL-FIRSTFRAME-MISSING"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["hq_update 重出静照"],
+      "defaultAction": "batchStillHq",
+      "forbidRegenWithoutDescFix": false,
+      "authoritativeFields": ["preDesignPack.shots[].generation.imagePrompt"],
+      "note": "弱静照/缺 visualPass/缺首帧：CTA=重出 HQ（batch_still），不要先逼用户改 VD；设计层缺口仍走 still_firstframe_dirty"
+    },
+    {
+      "trigger": "video_prompt_stub",
+      "ruleIds": ["VP-XML-ASK-STUB", "VP-CROSS-SHOT-SIDECAR", "VP-THIN-SHELL"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["sanitize 剥壳", "compileVideoPromptSpine 本镜重编"],
+      "defaultAction": "recompileVideoPrompt",
+      "forbidRegenWithoutDescFix": false,
+      "note": "薄壳/XML/跨镜PEAK：有 VD∥对白则 spine 治愈落库；仅真双空才 BLOCK。sidecar 仅本镜且在 assert 前"
     },
     {
       "trigger": "lip_duration_short",
@@ -11269,10 +11482,11 @@ rulePackVersion: 2.0.1
     {
       "trigger": "still_mouth_handoff",
       "ruleIds": ["STILL-MOUTH-HANDOFF", "GEN-01"],
-      "reverseTarget": "EN",
-      "forwardStages": ["SB", "EN", "MD-VID"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG", "EN", "MD-VID"],
       "repairPriority": "P1",
-      "defaultAction": "soft_patch"
+      "defaultAction": "regen_storyboard_hq",
+      "note": "强口型闭口静照：先重出静照(MD-IMG)+EN lipSyncPolicy；禁止只 soft_patch 视频假绿；防口型死循环须双推"
     },
     {
       "trigger": "qp02_visual_short",
@@ -11339,8 +11553,10 @@ rulePackVersion: 2.0.1
       "reverseTarget": "EN",
       "forwardStages": ["SB", "EN", "MD-VID"],
       "repairPriority": "P0",
-      "presentationFork": ["去掉 no lip sync", "改 lipSyncPolicy 为 dialogue_native/subtle"],
-      "authoritativeFields": ["preDesignPack.shots[].shotDesign.lipSyncPolicy", "o_videoTrack.prompt"]
+      "defaultAction": "softHealNoLipDialogue",
+      "presentationFork": ["服务端升 subtle_natural", "去掉 no lip sync"],
+      "authoritativeFields": ["preDesignPack.shots[].shotDesign.lipSyncPolicy", "o_videoTrack.prompt"],
+      "note": "出镜对白 none/silent→subtle_natural until-clear；OS/VO 可 silent"
     },
     {
       "trigger": "sfx_unbacked",
@@ -12439,6 +12655,52 @@ rulePackVersion: 2.0.1
         "MD"
       ],
       "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_pseudo_line",
+      "ruleIds": ["DEX-VID-PSEUDO-LINE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN", "MD"],
+      "repairPriority": "P0",
+      "defaultAction": "softHealVideoHomology",
+      "note": "until-clear strip 伪台词；禁 demote"
+    },
+    {
+      "trigger": "vid_voice_mode",
+      "ruleIds": ["DEX-VID-VOICE-MODE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0",
+      "defaultAction": "softHealVideoHomology"
+    },
+    {
+      "trigger": "vid_beat_duration",
+      "ruleIds": ["DEX-VID-BEAT-DUR", "DUR-PAD"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_motion_verb",
+      "ruleIds": ["DEX-VID-MOTION-VERB"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "vid_intent_map",
+      "ruleIds": ["DEX-VID-INTENT-MAP"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_cam_mediate",
+      "ruleIds": ["DEX-VID-CAM-MEDIATE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD", "SB"],
+      "repairPriority": "P0",
+      "defaultAction": "viralMotionMediate"
     }
   ],
   "maxRounds": 3
@@ -12796,6 +13058,94 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
       "note": "正推 DEX-STILL-ONEBEAT ↔ 反推同核 expandStillOneBeat/splitPlan；高置信 auto；低置信 Confirm；禁 soft_patch 顶拆"
     },
     {
+      "trigger": "still_cu_cast",
+      "ruleIds": ["DEX-STILL-CU-CAST"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["按文学意图降出场人数（单人特写）", "智能拆：反应特写+场面镜", "改景别为中景同框", "Confirm"],
+      "defaultAction": "sliceCastOrConfirmSplit",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": [
+        "preDesignPack.shots[].visualDescription",
+        "preDesignPack.shots[].shotSize",
+        "preDesignPack.shots[].charCodes"
+      ],
+      "note": "特写×出镜≥2：VD只点名一人→slice_cast降人数（禁拆镜Confirm）；多人同框意图→auto split；歧义 Confirm；chatStrict 禁静默拆；导入 demote；禁只 regen"
+    },
+    {
+      "trigger": "lit_detail_contact_xor",
+      "ruleIds": ["DEX-LIT-CONTACT-XOR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["智能拆镜（颊触镜+口创镜）", "Confirm 手改 VD"],
+      "defaultAction": "confirmClusterSplit",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "split > XOR soft；禁止互斥句洗绿；导入智拆同源；debt.router lit_contact_xor→split_shot；contact_role_xor≠audio_xor；禁塌 batch_still；missingSlots=contactRoleXor"
+    },
+    {
+      "trigger": "lit_detail_contact",
+      "ruleIds": ["DEX-LIT-CONTACT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补接触落点（颊/唇/指尖等）", "拆镜若多拍混写", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "declare-only：禁 compose/Edit 发明落点；多参考服饰混用靠 primaryLookLock egress"
+    },
+    {
+      "trigger": "lit_detail_anchor",
+      "ruleIds": ["DEX-LIT-ANCHOR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补空间/握持/地面落点（地上/手持/膝前）", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "捡拾/持握/递接/抛落无锚点→静帧漂移；朝向≠锚点；禁只 hq_update"
+    },
+    {
+      "trigger": "lit_detail_expr",
+      "ruleIds": ["DEX-LIT-EXPR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P2",
+      "presentationFork": ["补眉/眼/唇落点", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "特写强表情无部位→脸部漂移；WARN 默认，禁只 regen"
+    },
+    {
+      "trigger": "prop_continuity",
+      "ruleIds": ["DEX-PROP-CONT"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["补离手/去向/来源交待", "写 propState→", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription", "preDesignPack.shots[].propState"],
+      "note": "邻镜道具消失/瞬变/空降；CUT-01 不管道具；禁发明专名；导入 demote"
+    },
+    {
+      "trigger": "img_still_weak",
+      "ruleIds": ["IMG-STILL-QA"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["hq_update 重出静照"],
+      "defaultAction": "batchStillHq",
+      "forbidRegenWithoutDescFix": false,
+      "authoritativeFields": ["preDesignPack.shots[].generation.imagePrompt"],
+      "note": "Alias of still_firstframe_weak — DepthPolicy 须命中本行，禁止落 INFRA；CTA=batch_still"
+    },
+    {
       "trigger": "series_continuity_shape",
       "ruleIds": ["SH-SERIES-CONT", "SCHEMA_SHAPE", "SCHEMA_SHAPE_BLOCK", "SH-BRIEF-STRING", "SH-SCENE-AV-TAGS", "SH-MICRO-EXPR"],
       "reverseTarget": "AS",
@@ -12830,6 +13180,15 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
       "note": "提示词须覆盖 VD 锚点；禁 freeform 跳过 Shot List"
     },
     {
+      "trigger": "video_prompt_stale",
+      "ruleIds": ["VIDEO-PROMPT-STALE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["重编译视频提示词"],
+      "note": "VD/对白相对 designContentHash 已变；须重编译后再烧，禁旧 prompt 幽灵"
+    },
+    {
       "trigger": "dur_desync",
       "ruleIds": ["DUR-DESYNC"],
       "reverseTarget": "SB",
@@ -12850,11 +13209,20 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     },
     {
       "trigger": "dialogue_extra",
-      "ruleIds": ["DC-01-EXTRA"],
+      "ruleIds": ["DC-01-EXTRA", "H3"],
       "reverseTarget": "SB",
       "forwardStages": ["SB"],
       "repairPriority": "P1",
-      "note": "台词乱入：删多余或对齐 plan"
+      "defaultAction": "softHealTouchHomology",
+      "note": "正推未愈 BLOCK 重设计；导入/触达同核 absorb+strip until EXTRA=0；禁 demote/WARN 顶债；时长噪点剥离"
+    },
+    {
+      "trigger": "vid_inherit_composition",
+      "ruleIds": ["VID-INHERIT-COMPOSITION"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "note": "静帧构图/人数/家具锚未闭合，禁绿继承视频"
     },
     {
       "trigger": "chain_beat",
@@ -12915,7 +13283,7 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
       "reverseTarget": "SB",
       "forwardStages": ["SB", "AS", "MD-IMG"],
       "repairPriority": "P0",
-      "presentationFork": ["改 VD 为一镜一拍", "合并同文镜", "手镜 lip=none", "剥裸 cref/sref"],
+      "presentationFork": ["改 VD 为一镜一拍", "VisBeat Confirm 拆手/脸（禁同文脸镜）", "手镜 lip=none", "剥裸 cref/sref", "配方适配≠回写 VD"],
       "defaultAction": "handEditVisualDescription",
       "forbidRegenWithoutDescFix": true,
       "authoritativeFields": [
@@ -12923,7 +13291,7 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
         "preDesignPack.shots[].generation.imagePrompt",
         "preDesignPack.shots[].shotDesign.lipSyncPolicy"
       ],
-      "note": "脏静帧契约：回 SB 改 JSON 字段；深链勿走 INFRA chat_repair 空跳"
+      "note": "脏静帧契约：真手+脸 Chat BLOCK；导入 strip soft 不静默拆；compose 配方按镜型适配禁硬注正脸；深链勿走 INFRA chat_repair 空跳"
     },
     {
       "trigger": "aud_speak_react",
@@ -12939,7 +13307,7 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     },
     {
       "trigger": "still_firstframe_dirty",
-      "ruleIds": ["STILL-FIRSTFRAME-DIRTY", "STILL-FIRSTFRAME-STALE", "IMG-CREF-CHAR", "DC-16", "DEX-STILL-ONEBEAT", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER"],
+      "ruleIds": ["STILL-FIRSTFRAME-DIRTY", "IMG-CREF-CHAR", "DC-16", "DEX-STILL-ONEBEAT", "DEX-STILL-OS-NAME", "DEX-STILL-FILLER"],
       "reverseTarget": "SB",
       "forwardStages": ["SB", "AS", "MD-IMG", "EN"],
       "repairPriority": "P0",
@@ -12947,7 +13315,42 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
       "defaultAction": "confirmClusterSplit",
       "forbidRegenWithoutDescFix": true,
       "authoritativeFields": ["preDesignPack.shots[].visualDescription", "characterDesign.assets[].name"],
-      "note": "多拍/脏首帧：优先智能拆镜（still_onebeat/splitPlan）回写 shots；或手改单拍描写→stale→MD-IMG；禁止只 regen"
+      "note": "假双脸/OS名/多拍：优先智能拆镜；禁止只 regen。真手+脸走 dirty_still_prompt；弱静照走 still_firstframe_weak；描写漂移走 still_firstframe_stale"
+    },
+    {
+      "trigger": "still_firstframe_stale",
+      "ruleIds": ["STILL-FIRSTFRAME-STALE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["确认/改 visualDescription", "stale 作废后重出 HQ"],
+      "defaultAction": "handEditVisualDescription",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription"],
+      "note": "画面描写已变，旧静照作废；改 VD 后再 MD-IMG，禁止拿旧图烧视频"
+    },
+    {
+      "trigger": "still_firstframe_weak",
+      "ruleIds": ["STILL-FIRSTFRAME-WEAK", "STILL-FIRSTFRAME-MISSING"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["hq_update 重出静照"],
+      "defaultAction": "batchStillHq",
+      "forbidRegenWithoutDescFix": false,
+      "authoritativeFields": ["preDesignPack.shots[].generation.imagePrompt"],
+      "note": "弱静照/缺 visualPass/缺首帧：CTA=重出 HQ（batch_still），不要先逼用户改 VD；设计层缺口仍走 still_firstframe_dirty"
+    },
+    {
+      "trigger": "video_prompt_stub",
+      "ruleIds": ["VP-XML-ASK-STUB", "VP-CROSS-SHOT-SIDECAR", "VP-THIN-SHELL"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["sanitize 剥壳", "compileVideoPromptSpine 本镜重编"],
+      "defaultAction": "recompileVideoPrompt",
+      "forbidRegenWithoutDescFix": false,
+      "note": "薄壳/XML/跨镜PEAK：有 VD∥对白则 spine 治愈落库；仅真双空才 BLOCK。sidecar 仅本镜且在 assert 前"
     },
     {
       "trigger": "lip_duration_short",
@@ -12961,10 +13364,11 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
     {
       "trigger": "still_mouth_handoff",
       "ruleIds": ["STILL-MOUTH-HANDOFF", "GEN-01"],
-      "reverseTarget": "EN",
-      "forwardStages": ["SB", "EN", "MD-VID"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG", "EN", "MD-VID"],
       "repairPriority": "P1",
-      "defaultAction": "soft_patch"
+      "defaultAction": "regen_storyboard_hq",
+      "note": "强口型闭口静照：先重出静照(MD-IMG)+EN lipSyncPolicy；禁止只 soft_patch 视频假绿；防口型死循环须双推"
     },
     {
       "trigger": "qp02_visual_short",
@@ -13031,8 +13435,10 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
       "reverseTarget": "EN",
       "forwardStages": ["SB", "EN", "MD-VID"],
       "repairPriority": "P0",
-      "presentationFork": ["去掉 no lip sync", "改 lipSyncPolicy 为 dialogue_native/subtle"],
-      "authoritativeFields": ["preDesignPack.shots[].shotDesign.lipSyncPolicy", "o_videoTrack.prompt"]
+      "defaultAction": "softHealNoLipDialogue",
+      "presentationFork": ["服务端升 subtle_natural", "去掉 no lip sync"],
+      "authoritativeFields": ["preDesignPack.shots[].shotDesign.lipSyncPolicy", "o_videoTrack.prompt"],
+      "note": "出镜对白 none/silent→subtle_natural until-clear；OS/VO 可 silent"
     },
     {
       "trigger": "sfx_unbacked",
@@ -14131,6 +14537,52 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
         "MD"
       ],
       "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_pseudo_line",
+      "ruleIds": ["DEX-VID-PSEUDO-LINE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN", "MD"],
+      "repairPriority": "P0",
+      "defaultAction": "softHealVideoHomology",
+      "note": "until-clear strip 伪台词；禁 demote"
+    },
+    {
+      "trigger": "vid_voice_mode",
+      "ruleIds": ["DEX-VID-VOICE-MODE"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0",
+      "defaultAction": "softHealVideoHomology"
+    },
+    {
+      "trigger": "vid_beat_duration",
+      "ruleIds": ["DEX-VID-BEAT-DUR", "DUR-PAD"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_motion_verb",
+      "ruleIds": ["DEX-VID-MOTION-VERB"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P1"
+    },
+    {
+      "trigger": "vid_intent_map",
+      "ruleIds": ["DEX-VID-INTENT-MAP"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "EN"],
+      "repairPriority": "P0"
+    },
+    {
+      "trigger": "vid_cam_mediate",
+      "ruleIds": ["DEX-VID-CAM-MEDIATE"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD", "SB"],
+      "repairPriority": "P0",
+      "defaultAction": "viralMotionMediate"
     }
   ],
   "maxRounds": 3
@@ -14498,7 +14950,7 @@ IC dryRun：intelligent_closure_checklist.json
       ],
       "symptom": "镜时长/多句同镜口型冲突",
       "action": "needsSplit|lipOver→Confirm拆镜；仅canSilentRaise→设计侧抬时（导入仅兜底）",
-      "chatTemplate": "【LIP双轨】①多句同镜/超厂商上限：须 Confirm 设计拆分（confirmClusterSplit|forwardReentry），禁止只写 prose hint / 禁止把 reactionAction 当 splitHint。②仅时长偏短且可无感抬时：设计侧调 duration（autoClose/export 会抬）；导入仅历史残留兜底，不得以「导入一键完善」替代设计出口。深链：toonflow://stage/SB?trigger=pr_lip_duration"
+      "chatTemplate": "【LIP双轨】①多句同镜/超厂商上限：设计不过绿，须 Confirm 语义拆（confirmClusterSplit|forwardReentry）；导入不静默同文拆、亦不因本项硬拦导入。②仅时长偏短且可无感抬时：设计侧调 duration（autoClose/export 会抬）；导入 raise 仅兜底。深链：toonflow://stage/SB?trigger=pr_lip_duration"
     },
     {
       "id": "RH-LIP-MULTI",
@@ -14528,15 +14980,54 @@ IC dryRun：intelligent_closure_checklist.json
       "ruleId": "STILL-FIRSTFRAME-DIRTY",
       "checkIds": [
         "STILL-FIRSTFRAME-DIRTY",
-        "STILL-FIRSTFRAME-STALE",
         "DEX-STILL-ONEBEAT",
         "DEX-STILL-OS-NAME",
         "DEX-STILL-FILLER",
         "still_firstframe_dirty"
       ],
-      "symptom": "静照假双脸/OS名/描写已变却烧旧图",
+      "symptom": "假双脸/OS名/多拍脏首帧（非弱图、非真手+脸）",
       "action": "智能拆镜（splitPlan/still_onebeat）或改单拍描写→stale→MD-IMG；禁止只regen",
-      "chatTemplate": "【静帧Identity·反推】脏首帧/DEX-STILL-ONEBEAT：①优先智能拆镜（一镜一拍；簪刺样本→prop_insert渗血 / reaction浅笑 / reveal匕首）；②或手改 visualDescription 为单拍裸名；③改后旧静照作废再 MD-IMG。禁止只 regen。高置信 exit 可 auto apply；低置信 Confirm。深链：toonflow://stage/SB?trigger=still_firstframe_dirty"
+      "chatTemplate": "【静帧Identity·反推】假双脸/DEX-STILL-ONEBEAT：①优先智能拆镜；②或手改 visualDescription 为单拍裸名；③改后旧静照作废再 MD-IMG。禁止只 regen。真手+脸→RH-DIRTY-STILL；弱静照→RH-STILL-WEAK；描写漂移→RH-STILL-STALE。深链：toonflow://stage/SB?trigger=still_firstframe_dirty"
+    },
+    {
+      "id": "RH-STILL-CU-CAST",
+      "ruleId": "DEX-STILL-CU-CAST",
+      "checkIds": ["DEX-STILL-CU-CAST", "still_cu_cast"],
+      "symptom": "特写/近景与出镜≥2人同镜冲突",
+      "action": "智能拆：反应特写+场面中景；或改景别；Confirm；禁止 silent 洗绿/只 regen",
+      "chatTemplate": "【CU×人数·DEX-STILL-CU-CAST】特写不能硬塞多人同框。①文学已是单人特写→按意图降出场人数（绑定主角定妆，不拆镜）；②真多人同框意图→确认智能拆（反应特写+场面镜）或改中景。导入不硬拦；设计期须过绿。深链：toonflow://stage/SB?trigger=still_cu_cast"
+    },
+    {
+      "id": "RH-STILL-STALE",
+      "ruleId": "STILL-FIRSTFRAME-STALE",
+      "checkIds": ["STILL-FIRSTFRAME-STALE", "still_firstframe_stale"],
+      "symptom": "画面描写已变更，旧静照哈希不匹配",
+      "action": "改/确认 visualDescription 后重出 HQ；禁止拿旧图烧视频",
+      "chatTemplate": "【静帧过期·STALE】描写已变，旧静照作废。请改 VD 后 MD-IMG 重出再烧。深链：toonflow://stage/SB?trigger=still_firstframe_stale"
+    },
+    {
+      "id": "RH-STILL-WEAK",
+      "ruleId": "STILL-FIRSTFRAME-WEAK",
+      "checkIds": ["STILL-FIRSTFRAME-WEAK", "STILL-FIRSTFRAME-MISSING", "still_firstframe_weak"],
+      "symptom": "弱静照/缺 visualPass/缺首帧（设计层无缺口）",
+      "action": "hq_update / batch_still 重出静照；勿先逼改 VD",
+      "chatTemplate": "【弱静照】质量未达标或缺少首帧。请重出 HQ 静照后再烧视频（不必先改画面描写）。污染壳/XML索要→净洁重编译。深链：toonflow://stage/MD-IMG?trigger=still_firstframe_weak"
+    },
+    {
+      "id": "RH-VIDEO-PROMPT-STALE",
+      "ruleId": "VIDEO-PROMPT-STALE",
+      "checkIds": ["VIDEO-PROMPT-STALE", "video_prompt_stale"],
+      "symptom": "描写/对白相对编译时 designContentHash 已变，旧视频提示词不可烧",
+      "action": "重编译视频提示词（EN）；禁止用旧 prompt 烧片",
+      "chatTemplate": "【视频词过期·STALE】画面描写或对白已变，请重编译视频提示词后再烧。深链：toonflow://stage/EN?trigger=video_prompt_stale"
+    },
+    {
+      "id": "RH-VIDEO-PROMPT-STUB",
+      "ruleId": "VP-XML-ASK-STUB",
+      "checkIds": ["VP-XML-ASK-STUB", "VP-CROSS-SHOT-SIDECAR", "VP-THIN-SHELL", "video_prompt_stub"],
+      "symptom": "视频词含「请提供分镜 XML」索要壳 / 薄壳空Visual/裸mff/有对白却无对白 / 跨镜 PEAK / EN QF 壳",
+      "action": "有设计料则 compileVideoPromptSpine 治愈落库；真缺 VD 与对白才 BLOCK；禁止只 regen",
+      "chatTemplate": "【视频词薄壳】若本镜已有画面描写/对白，系统应自动重编译治愈。仅双空时请补设计后再编译。深链：toonflow://stage/EN?trigger=video_prompt_stub"
     },
     {
       "id": "RH-QP-16",
@@ -14676,6 +15167,51 @@ IC dryRun：intelligent_closure_checklist.json
       "chatTemplate": "【须重设计】公式已更换。请按新规范重走设计（入口 W1 → 验收 W3 redesignPass：NAR-15/intent 等同核），勿只改旧字段或只点 W1。选项：A 按新规范重设计（推荐） / B 保留旧稿继续补洞（须 acknowledgeKeepLegacy）。entry=W1；accept=W3。"
     },
     {
+      "id": "RH-LIT-CONTACT-XOR",
+      "ruleId": "DEX-LIT-CONTACT-XOR",
+      "checkIds": ["DEX-LIT-CONTACT-XOR", "lit_detail_contact_xor", "contact_role_xor"],
+      "symptom": "颊触与口创同镜未互斥",
+      "action": "手改 VD 补互斥句或拆镜；禁只 regen；禁与 audio_xor 串名",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·接触互斥】缺 contactRoleXor。请写「纸未入口/另镜」或拆颊触与咬唇。禁止只 hq_update。深链：toonflow://stage/SB?trigger=lit_detail_contact_xor"
+    },
+    {
+      "id": "RH-LIT-CONTACT",
+      "ruleId": "DEX-LIT-CONTACT",
+      "checkIds": ["DEX-LIT-CONTACT", "lit_detail_contact"],
+      "symptom": "脸特写/微创缺接触落点结构",
+      "action": "手改 VD 补接触结构（划过X/贴在Y）；禁只 regen；可选 stillIntentOps suggestFill+Confirm",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·接触】缺 contactStruct。请手改 visualDescription（例：休书纸角划过面颊）。禁止只 hq_update。深链：toonflow://stage/SB?trigger=lit_detail_contact"
+    },
+    {
+      "id": "RH-LIT-ANCHOR",
+      "ruleId": "DEX-LIT-ANCHOR",
+      "checkIds": ["DEX-LIT-ANCHOR", "lit_detail_anchor"],
+      "symptom": "捡拾/持握/抛落缺空间或握持锚",
+      "action": "手改 VD 补地面/握持/门槛等结构槽；朝向≠锚点；禁只 regen",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·锚点】缺 groundOrPath/grip 等。请补「从地面捡起」「手持贴在胸前」等。禁止只 regen。深链：toonflow://stage/SB?trigger=lit_detail_anchor"
+    },
+    {
+      "id": "RH-LIT-EXPR",
+      "ruleId": "DEX-LIT-EXPR",
+      "checkIds": ["DEX-LIT-EXPR", "lit_detail_expr"],
+      "symptom": "特写强表情无眉眼唇落点",
+      "action": "手改 VD 落到眉/眼/唇",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【文学细节·表情】特写强表情须落到眉/眼/唇。手改 VD。深链：toonflow://stage/SB?trigger=lit_detail_expr"
+    },
+    {
+      "id": "RH-PROP-CONT",
+      "ruleId": "DEX-PROP-CONT",
+      "checkIds": ["DEX-PROP-CONT", "prop_continuity"],
+      "symptom": "邻镜道具消失/瞬变/空降未交待",
+      "action": "导入：propState 声明式顺延至检测无 BLOCK；精品仍可手改 VD 交待离手。禁发明新道具改 VD；禁只 regen",
+      "forbidRegenWithoutDescFix": true,
+      "chatTemplate": "【道具连续】邻镜道具链。①导入已尝试 propState 顺延（不改 VD）。②仍红或要精品：手改交待放下/撕毁/仍持。禁止静默发明道具。深链：toonflow://stage/SB?trigger=prop_continuity"
+    },
+    {
       "id": "RH-FALSE_GREEN",
       "ruleId": "FALSE_GREEN_SELFCHECK",
       "checkIds": ["FALSE_GREEN_SELFCHECK", "DG-NAR-SELFCHECK", "self_report_mismatch"],
@@ -14729,7 +15265,7 @@ IC dryRun：intelligent_closure_checklist.json
       "checkIds": ["PROMPT-FIDELITY"],
       "symptom": "image/video 提示词未覆盖设计锚点",
       "action": "改 VD 或重编译提示词，禁 freeform 跳过 Shot List",
-      "chatTemplate": "【PROMPT-FIDELITY】提示词须覆盖 visualDescription 锚点。回 SB 改描写或重跑 compose/finalize，禁止另编故事。reverseTarget=SB。"
+      "chatTemplate": "【PROMPT-FIDELITY】提示词须覆盖 visualDescription 文学意图原子（端坐/太师椅/抄书/座次等）。回 SB 改描写或重跑 compose；Edit 焦点只追加缺失项，禁止掏空文学基底假绿。reverseTarget=SB。"
     },
     {
       "id": "RH-DEX-CAM-FIT",
@@ -14742,10 +15278,18 @@ IC dryRun：intelligent_closure_checklist.json
     {
       "id": "RH-DC-01-EXTRA",
       "ruleId": "DC-01-EXTRA",
-      "checkIds": ["DC-01-EXTRA"],
+      "checkIds": ["DC-01-EXTRA", "H3"],
       "symptom": "shots 台词乱入（不在 script∪plan）",
-      "action": "删多余行或回写 plan/script",
-      "chatTemplate": "【DC-01-EXTRA】分镜出现 script∪plan 没有的台词（乱入）。删除或对齐 plan。reverseTarget=SB。"
+      "action": "同核清零：噪点剥离 + 文学 EXTRA 镜像 dialoguePlan 至检测 PASS；不可愈→正推重设计。禁 WARN/demote 顶债。",
+      "chatTemplate": "【DC-01-EXTRA】分镜台词不在 script∪plan。①时长/冒号汤→删伪台词。②文学句→服务端同核 absorb 进 dialoguePlan 至 EXTRA=0。③不能自动愈→SB 重设计。禁止用软 WARN 顶过检。reverseTarget=SB。"
+    },
+    {
+      "id": "RH-VID-INHERIT-COMPOSITION",
+      "ruleId": "VID-INHERIT-COMPOSITION",
+      "checkIds": ["VID-INHERIT-COMPOSITION"],
+      "symptom": "静帧缺出镜人数契约或座次/家具锚未进提示，却要烧视频",
+      "action": "回 MD-IMG 按 LayoutFamily 重烧静帧；确认仅N人与太师椅/蒲团等锚；禁止带病继承",
+      "chatTemplate": "【VID-INHERIT-COMPOSITION】静帧构图/人数未闭合，禁止烧视频。请高质量重出静照后再触达。深链：toonflow://stage/MD-IMG?trigger=vid_inherit_composition"
     },
     {
       "id": "RH-CHAIN-BEAT",
@@ -15116,7 +15660,7 @@ IC dryRun：intelligent_closure_checklist.json
       "id": "RH-DIRTY-STILL",
       "ruleId": "DEX-DIRTY-STILL-PROMPT",
       "checkIds": ["DEX-DIRTY-STILL-PROMPT", "DEX-DUP-VD", "DEX-HAND-LIP", "VID-INHERIT-DIRTY-STILL"],
-      "symptom": "手+眼同帧 / 连续同文 VD（有对白也算） / 文学体裸 cref·sref / 手镜口型 / 脏静帧烧视频",
+      "symptom": "手+眼同帧 / 连续同文 VD（有对白也算） / 文学体裸 cref·sref / 手镜口型 / 脏静帧烧视频；或配方未按镜型适配硬加正脸/全员必须出现",
       "action": "回 SB 改一镜一画面（景别/运镜/intent.picture）；真手+脸→VisBeat Confirm 拆（禁同文脸镜）；手镜 lip=none；配方层智能适配≠改设计 VD；超 vendor→Confirm 语义拆或改短",
       "chatTemplate": "【一镜一画面·脏静帧】真手+脸同写=Chat 不过绿，须 SB 改 VD 或 Confirm 拆手/脸（禁同文脸镜、禁导入静默拆）。手 CU 配方不得硬注正脸/权力位正脸/脸型微表情/全员必须出现。配方适配≠回写 visualDescription。importOk≠designExitPass。深链：toonflow://stage/SB?trigger=dirty_still_prompt"
     },
@@ -15132,9 +15676,41 @@ IC dryRun：intelligent_closure_checklist.json
       "id": "RH-NO-LIP-DIALOGUE",
       "ruleId": "NO-LIP-DIALOGUE",
       "checkIds": ["NO-LIP-DIALOGUE"],
-      "symptom": "出镜对白镜含 no lip sync",
-      "action": "去掉 no lip；改 lipSyncPolicy；OS/VO 不强制口型",
-      "chatTemplate": "【NO-LIP】有出镜对白禁止 no lip sync（OS/VO 可允许；空 policy 自动升 subtle）。深链：toonflow://stage/EN?trigger=no_lip_dialogue"
+      "symptom": "出镜对白镜含 no lip sync / lipSyncPolicy=none|silent",
+      "action": "导入/愈：升 subtle_natural 并剥 videoPrompt「no lip sync」；OS/VO 不强制口型",
+      "chatTemplate": "【NO-LIP】有出镜对白禁止 none/silent。服务端同核升 subtle_natural；OS/VO 可 none。深链：toonflow://stage/EN?trigger=no_lip_dialogue"
+    },
+    {
+      "id": "RH-VID-PSEUDO-LINE",
+      "ruleId": "DEX-VID-PSEUDO-LINE",
+      "checkIds": ["DEX-VID-PSEUDO-LINE", "DUR-PAD"],
+      "symptom": "台词槽/Audio 含 2s、冒号汤等时长伪台词",
+      "action": "stripDurationOnlyDialogueLines；关口型；videoIntentOps Confirm；导入 until-clear",
+      "chatTemplate": "【视频·伪台词】禁止把时长 token 当对白。请清 lines/Audio 冒号汤，关口型同步。深链：toonflow://stage/SB?trigger=vid_pseudo_line"
+    },
+    {
+      "id": "RH-VID-VOICE-MODE",
+      "ruleId": "DEX-VID-VOICE-MODE",
+      "checkIds": ["DEX-VID-VOICE-MODE"],
+      "symptom": "无出镜对白却 lip/口型开",
+      "action": "voiceIntent=none；剥「口型同步开启」；或补文学台词",
+      "chatTemplate": "【视频·声口模态】无对白禁止口型。请 videoIntentOps 确认关闭口型或补台词。深链：toonflow://stage/SB?trigger=vid_voice_mode"
+    },
+    {
+      "id": "RH-VID-BEAT-DUR",
+      "ruleId": "DEX-VID-BEAT-DUR",
+      "checkIds": ["DEX-VID-BEAT-DUR", "DUR-PAD"],
+      "symptom": "缺 beatDuration 或无依据抬长灌水",
+      "action": "写作者节拍秒；禁 silent 抬到 4/6；对白才允许 lipMin 抬",
+      "chatTemplate": "【视频·节拍时长】请声明 beatDuration（事件镜常用 1–2s）。禁止无信息灌水。深链：toonflow://stage/SB?trigger=vid_beat_duration"
+    },
+    {
+      "id": "RH-VID-CAM-MEDIATE",
+      "ruleId": "DEX-VID-CAM-MEDIATE",
+      "checkIds": ["DEX-VID-CAM-MEDIATE", "PR-CAM-01", "DC-09"],
+      "symptom": "viral 冲击运镜无法落到当前厂商白名单",
+      "action": "viral_motion_mediate 降级合法词；不可映则 Confirm；按 vendor 扩自由度",
+      "chatTemplate": "【视频·运镜调解】冲击意图须调解为厂商可过运镜，禁止 silent 删 retention。深链：toonflow://stage/EN?trigger=vid_cam_mediate"
     },
     {
       "id": "RH-SFX-UNBACKED",

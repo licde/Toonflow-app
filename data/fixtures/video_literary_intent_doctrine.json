@@ -1,0 +1,83 @@
+{
+  "version": "1.0.0",
+  "description": "Video literary intent SSOT — mirror still IntentClassifier. Design decisions locked; extend via JSON.",
+  "designDecisions": {
+    "soleAuthor": "compileVideoPromptSpine — only five-section body author; dialect/vendor/sidecar are adapters",
+    "tripleWrite": "dual-write generation.videoPrompt + generation.compiled.video (same hash); o_videoTrack.prompt is burn cache; hash mismatch forces recompile",
+    "durationPrecedence": "required = max(authorDuration, lipMin, emotionFloor) → vendor snap → write shot.duration + Camera text + sidecar durationCapSec; never silent default 5s when author present",
+    "stillToVideoIntent": "persist stillIntentClass on still compose; video hydrate inherits then classifyVideoIntent derives; no invent",
+    "literaryDetailInherit": "still literaryDetailQuality atoms (contact/ground/surface/contactRoleXor/woundVisible/propReadable) already in VD must survive into spine Visual; never invent loci at video compile; XOR 互斥字面与浅痕可见度须原样继承；sparse VD → reverse SB hand_edit_vd/confirm_enhance before burn",
+    "viralSidecarOrder": "bind inside spine BEFORE assertVideoPromptReady; never appendViral after QF/assert",
+    "llmRole": "LLM must not author five-section body by default; only when context insufficient (no VD and no dialogue) AND seed stub; output must re-assert",
+    "thinShellRh": "VP-THIN-SHELL → trigger video_prompt_stub (recompile this shot; forbid regen-only)",
+    "feWriteback": "updateVideoPrompt rejects stub/thin shell or forces spine recompile; manualOverride.video for intentional hand edits"
+  },
+  "coverageBoundary": "declared videoIntentClasses + safe degrade for unknown; never invent literary predicates",
+  "videoIntentClasses": [
+    "speak_lip",
+    "prop_cu",
+    "react_silent",
+    "empty_os",
+    "fx_peak",
+    "unknown"
+  ],
+  "stillToVideoMap": {
+    "hand_cu_explicit": "prop_cu",
+    "prop_cu": "prop_cu",
+    "empty_or_os": "empty_os",
+    "seating_power_mid": "speak_lip",
+    "confront_mid": "speak_lip",
+    "ecu_face": "react_silent",
+    "ensemble": "speak_lip",
+    "unknown": "unknown"
+  },
+  "intentPolicyMatrix": {
+    "speak_lip": {
+      "motionDefault": "静止持镜",
+      "cameraMotion": "静止",
+      "audioMode": "dialogue_lip",
+      "preferShotSizeFromDesign": true
+    },
+    "prop_cu": {
+      "motionDefault": "微动作跟随",
+      "cameraMotion": "轻微运镜",
+      "audioMode": "dialogue_or_ambient",
+      "forceShotSize": "特写",
+      "preferShotSizeFromDesign": true
+    },
+    "react_silent": {
+      "motionDefault": "微表情呼吸",
+      "cameraMotion": "轻微运镜",
+      "audioMode": "ambient",
+      "preferShotSizeFromDesign": true
+    },
+    "empty_os": {
+      "motionDefault": "缓推",
+      "cameraMotion": "缓推",
+      "audioMode": "os_or_ambient",
+      "preferShotSizeFromDesign": true
+    },
+    "fx_peak": {
+      "motionDefault": "事件拍点",
+      "cameraMotion": "轻微运镜",
+      "audioMode": "sfx_peak",
+      "preferShotSizeFromDesign": true
+    },
+    "unknown": {
+      "motionDefault": "轻微跟随",
+      "cameraMotion": "轻微运镜",
+      "audioMode": "dialogue_or_ambient",
+      "preferShotSizeFromDesign": true
+    }
+  },
+  "contactEventPolicy": {
+    "version": "1.0.0",
+    "note": "同源 still contactEventPolicy：react_silent 命中接触事件时 Motion 用 executableBeats，禁塌微表情呼吸",
+    "inheritFromStillDoctrine": true,
+    "overlay": {
+      "react_silent": "when contactEvent → buildContactEventMotionBeats; never sole 微表情呼吸"
+    },
+    "videoMust": ["executableBeats"],
+    "sfxAvWarn": true
+  }
+}

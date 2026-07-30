@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "cases": {
+    "powerMid": {
+      "intentClass": "seating_power_mid",
+      "dirty": false
+    },
+    "handDirty": true,
+    "bind": {
+      "high": "沈母周氏",
+      "low": "沈清瓷"
+    },
+    "firstframe": {
+      "powerOk": true,
+      "handTrigger": "dirty_still_prompt"
+    },
+    "weak": {
+      "next": "batch_still",
+      "trigger": "still_firstframe_weak"
+    },
+    "video": {
+      "changes": [
+        "strip_en_qf_shell",
+        "camera_duration_4"
+      ],
+      "stub": true
+    }
+  }
+}

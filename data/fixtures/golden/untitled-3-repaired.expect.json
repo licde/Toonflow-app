@@ -1,7 +1,9 @@
 {
   "tier": "T3",
-  "exportAllowed": true,
+  "exportAllowed": false,
+  "importOkNotExitPass": true,
   "mustSalvageRuleIds": ["SH-VISUAL-EFFECT-OBJ"],
   "minVisualEffectSalvageCount": 6,
-  "mustNotBlockIds": ["DG-NAR-SELFCHECK", "DG-LINKAGE-FALSE-GREEN", "DG-MODALITY-MISMATCH", "LIP-01", "SCHEMA_SHAPE_BLOCK"]
+  "mustNotBlockIds": ["DG-NAR-SELFCHECK", "LIP-01", "SCHEMA_SHAPE_BLOCK"],
+  "notes": "F9: import soft warehouse OK (importOkNotExitPass) ≠ designExitPass/exportAllowed；DG-LINKAGE/MODALITY 等设计债仍可 BLOCK Exit"
 }
