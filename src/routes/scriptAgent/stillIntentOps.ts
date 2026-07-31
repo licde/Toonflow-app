@@ -156,10 +156,38 @@ export default router.post(
         planData: pd,
         intents,
       });
+      // V5-10: auto-build smartDesignProposals for RulePanel when debt present
+      let smartDesignProposals: unknown[] | undefined;
+      try {
+        const codes = diagnose.irdProvenance?.codes ?? [];
+        if (codes.length || !diagnose.ok) {
+          const { stampSmartDesignProposals } =
+            require("@/ruleEngine/design/smartProposalMerger") as typeof import("@/ruleEngine/design/smartProposalMerger");
+          const failed =
+            codes.length > 0
+              ? codes
+              : diagnose.primaryAction && diagnose.primaryAction !== "none"
+                ? [String(diagnose.primaryAction)]
+                : ["IRD-CONFIRM"];
+          smartDesignProposals = stampSmartDesignProposals(plan as Record<string, unknown>, failed, {
+            reverseTarget: "SB",
+            reasons: Object.fromEntries(
+              failed.map((id) => [id, diagnose.ctaLabel || `静帧意图：${diagnose.primaryAction}`]),
+            ),
+          });
+          pd.smartDesignProposals = smartDesignProposals;
+          plan.planData = pd;
+          (plan as { smartDesignProposals?: unknown }).smartDesignProposals = smartDesignProposals;
+          if (action === "diagnose") await savePlan(projectId, row, plan);
+        }
+      } catch {
+        /* optional stamp */
+      }
       return res.json(
         success({
           action,
           ...diagnose,
+          smartDesignProposals,
           packageVersion: peekPackageVersion(shotsFromPlan(plan)),
           a11yAnnounce:
             diagnose.primaryAction === "presentation_fork"
@@ -210,9 +238,31 @@ export default router.post(
         });
       }
       if (literaryLocked && !forceApply) {
+        const { buildLitFillSuggestions } =
+          require("@/ruleEngine/design/literaryDetailLlmFill") as typeof import("@/ruleEngine/design/literaryDetailLlmFill");
+        const sugPreview = buildLitFillSuggestions({
+          shots: shotsFromPlan(plan),
+          shotIndex,
+          literaryDetailLlmFill: literaryDetailLlmFill ?? Boolean((meta as { literaryDetailLlmFill?: boolean }).literaryDetailLlmFill),
+          intentVisualEnhance: intentVisualEnhance ?? Boolean((meta as { intentVisualEnhance?: boolean }).intentVisualEnhance),
+          chatStrict,
+          literaryLocked: true,
+          importTrack: isImport,
+          confidence,
+          meta,
+        });
+        meta.litEnhanceLockedPending = sugPreview.suggestions.length > 0;
+        meta.irdLiteraryLocked = true;
+        pd.meta = meta;
+        plan.planData = pd;
+        await savePlan(projectId, row, plan);
         return res.status(400).json({
-          message: "literaryLocked: 禁静默增强改 VD",
+          message: "literaryLocked: 禁静默增强改 VD；可 Confirm/forceApply 或仅写 sidecar 元数据",
           code: "IRD-LITERARY-LOCKED",
+          ok: false,
+          primaryAction: "confirm_enhance",
+          suggestions: sugPreview.suggestions,
+          refused: ["literaryLocked"],
         });
       }
       const { applyLitFillToShots, buildLitFillSuggestions } =
@@ -297,6 +347,7 @@ export default router.post(
       await savePlan(projectId, row, plan);
 
       let exitReassert: unknown;
+      let designExitOk = true;
       try {
         const { runDesignExitGate } =
           require("@/ruleEngine/design/designExitGate") as typeof import("@/ruleEngine/design/designExitGate");
@@ -304,8 +355,19 @@ export default router.post(
           chatStrict,
           forceExpand: false,
         });
+        designExitOk = Boolean((exitReassert as { ok?: boolean })?.ok);
       } catch {
         /* optional */
+      }
+
+      let syncResult: unknown;
+      if (syncStoryboard !== false && scriptId) {
+        try {
+          const panels = preDesignShotsToPanels(applied.shots as PreDesignShot[], { enrichFromDesign: true });
+          syncResult = await syncStoryboardToDb(u.db, projectId, scriptId, panels, { preserveMedia: true });
+        } catch {
+          /* best-effort */
+        }
       }
 
       return res.json(
@@ -313,15 +375,25 @@ export default router.post(
           action: act,
           applied: applied.applied,
           refused: applied.refused,
-          ok: applied.ok,
+          ok: applied.applied.length > 0 && applied.ok && designExitOk,
+          literaryLocked,
+          code: applied.applied.length === 0 && applied.refused.includes("literaryLocked")
+            ? "IRD-LITERARY-LOCKED"
+            : applied.applied.length === 0
+              ? "IRD-NO-APPLY"
+              : undefined,
           demoted: applied.demoted,
           importOkNotExitPass: Boolean(isImport && applied.ok),
           packageVersion: peekPackageVersion(applied.shots),
           exitReassert,
+          exitGate: exitReassert,
+          designExitPass: designExitOk,
+          designExitRequired: !designExitOk,
+          syncResult,
           forceHandEdit: Boolean(meta.litEnhanceForceHandEdit),
-          a11yAnnounce: applied.ok
-            ? "已应用文学细节增强并标记静照过期"
-            : "增强未全部通过复检",
+          a11yAnnounce: designExitOk
+            ? `已应用增强；designExit 已过`
+            : `已应用增强；designExit 未过绿`,
         }),
       );
     };
@@ -513,6 +585,9 @@ export default router.post(
           designExitGate,
           designExitOk,
           designExitRequired: !designExitOk,
+          exitReassert: designExitGate,
+          exitGate: designExitGate,
+          designExitPass: designExitOk,
           a11yAnnounce: designExitOk
             ? `已应用 ${applied.applied.length} 条 IRD 补丁；designExit 已过`
             : `已应用 ${applied.applied.length} 条 IRD 补丁；designExit 未过绿，请继续智能设计/Confirm`,

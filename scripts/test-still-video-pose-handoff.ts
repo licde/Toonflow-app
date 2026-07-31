@@ -35,6 +35,6 @@ const gate = assertStillVideoPoseHandoff({
   stillPrompt: "休书已贴颊",
   stillMeta: { stillPoseAnchor: { state: "at_locus", prop: "休书", locus: "面颊" } },
 });
-ok(!gate.ok && gate.severity === "WARN", "pose mismatch warns");
+ok(!gate.ok && gate.severity === "BLOCK", "pose mismatch BLOCKs (V5-D)");
 
 console.log("\ntest:still-video-pose-handoff OK");

@@ -30,10 +30,6 @@ export function parseVideoErrorReason(raw: string | null | undefined): Record<st
   }
 }
 
-/**
- * Legacy contact false-green: videoPass=true while motion_fidelity/lit skipped.
- * Read-path reconcile → qcWeak + human_review (homology postBurnRuntime contactUnmeasured).
- */
 export function reconcileLegacyContactQc(
   parsed: Record<string, unknown> | null,
   opts?: { visualDescription?: string | null },
@@ -81,22 +77,61 @@ export function reconcileLegacyContactQc(
   };
 }
 
+/** Pose mismatch / contact debt / qcWeak structure — never quality pass; soft deliver + human_review (G13). */
+export function reconcileQcWeakStructure(
+  parsed: Record<string, unknown> | null,
+  opts?: { visualDescription?: string | null },
+): Record<string, unknown> | null {
+  const base = reconcileLegacyContactQc(parsed, opts);
+  if (!base) return null;
+  const code = String(base.code ?? "");
+  const blob = `${code} ${base.userMessage ?? ""} ${JSON.stringify(base.findings ?? [])}`;
+  const poseMismatch =
+    code === "STILL-VIDEO-POSE-MISMATCH" ||
+    /pose.*mismatch|静帧.*Motion.*进入|STILL-VIDEO-POSE/i.test(blob);
+  const contactDebt =
+    base.qcWeak === true ||
+    base.primaryNextStep === "human_review" ||
+    /CONTACT|propInFrame|contactBeats|motion_fidelity|lit_contact/i.test(blob);
+  if (!poseMismatch && !contactDebt) return base;
+  if (base.videoPass === true || (base.postBurn as { videoPass?: boolean } | undefined)?.videoPass === true) {
+    return {
+      ...base,
+      videoPass: false,
+      qcWeak: true,
+      primaryNextStep: "human_review",
+      userMessage: String(
+        base.userMessage ||
+          (poseMismatch
+            ? "静帧/视频姿态不一致（进入 vs 贴颊）；须重编译 Motion 或重出静照，生成成功≠质检通过"
+            : "接触/QC 结构债未清；生成成功≠质检通过，须人审"),
+      ),
+      honestSoftDeliver: true,
+    };
+  }
+  if (!base.primaryNextStep) {
+    return { ...base, primaryNextStep: "human_review", qcWeak: true };
+  }
+  return base;
+}
+
 function softDeliverFromParsed(parsed: Record<string, unknown> | null): boolean {
-  if (!parsed) return false;
-  if (parsed.qcWeak === true) return true;
-  const pb = parsed.postBurn as Record<string, unknown> | undefined;
-  if (pb?.videoPass === false || parsed.videoPass === false) {
+  const reconciled = reconcileQcWeakStructure(parsed);
+  if (!reconciled) return false;
+  if (reconciled.qcWeak === true) return true;
+  const pb = reconciled.postBurn as Record<string, unknown> | undefined;
+  if (pb?.videoPass === false || reconciled.videoPass === false) {
     return isQcSoftDeliver({
       videoPass: false,
-      primaryNextStep: String(parsed.primaryNextStep ?? pb?.primaryNextStep ?? ""),
-      failDims: (parsed.failDims ?? pb?.failDims) as Array<{ id?: string }> | undefined,
+      primaryNextStep: String(reconciled.primaryNextStep ?? pb?.primaryNextStep ?? ""),
+      failDims: (reconciled.failDims ?? pb?.failDims) as Array<{ id?: string }> | undefined,
     });
   }
-  if (parsed.primaryNextStep || pb?.primaryNextStep) {
+  if (reconciled.primaryNextStep || pb?.primaryNextStep) {
     return isQcSoftDeliver({
       videoPass: false,
-      primaryNextStep: String(parsed.primaryNextStep ?? pb?.primaryNextStep ?? ""),
-      failDims: (parsed.failDims ?? pb?.failDims) as Array<{ id?: string }> | undefined,
+      primaryNextStep: String(reconciled.primaryNextStep ?? pb?.primaryNextStep ?? ""),
+      failDims: (reconciled.failDims ?? pb?.failDims) as Array<{ id?: string }> | undefined,
     });
   }
   return false;
@@ -113,11 +148,12 @@ export function isSoftDeliveredVideoRow(row: {
   const parsed = reconcileLegacyContactQc(parseVideoErrorReason(row.errorReason), {
     visualDescription: row.visualDescription,
   });
+  const reconciled = reconcileQcWeakStructure(parsed, { visualDescription: row.visualDescription });
   if (row.state === "生成成功" || row.state === "已完成") {
-    return softDeliverFromParsed(parsed);
+    return softDeliverFromParsed(reconciled);
   }
   if (row.state === "质检未过") {
-    return softDeliverFromParsed(parsed);
+    return softDeliverFromParsed(reconciled);
   }
   return false;
 }
@@ -141,7 +177,7 @@ export function flattenQcDebtForFe(
   parsed: Record<string, unknown> | null | undefined,
   opts?: { visualDescription?: string | null },
 ) {
-  const reconciled = reconcileLegacyContactQc(parsed ?? null, opts);
+  const reconciled = reconcileQcWeakStructure(parsed ?? null, opts);
   if (!reconciled) return {};
   const pb = reconciled.postBurn as Record<string, unknown> | undefined;
   return {

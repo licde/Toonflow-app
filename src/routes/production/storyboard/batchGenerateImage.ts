@@ -55,12 +55,48 @@ export default router.post(
     if (!storyboardIds || storyboardIds.length === 0) return res.status(400).send(error("storyboardIds不能为空"));
     let finalStoryboardIds: number[] = storyboardIds || [];
 
+    // V5-N11b: skipPreflight must never bypass lit/contact/weak still debt
+    if (skipPreflight) {
+      const rows = await u
+        .db("o_storyboard")
+        .where({ projectId, scriptId })
+        .whereIn("id", finalStoryboardIds)
+        .select("id", "reason", "prompt");
+      const dirty = rows.filter((r) => {
+        const reason =
+          typeof r.reason === "string"
+            ? (() => {
+                try {
+                  return JSON.parse(r.reason);
+                } catch {
+                  return {};
+                }
+              })()
+            : (r.reason as Record<string, unknown>) ?? {};
+        const sq = String(reason.stillQuality ?? "");
+        const vd = String(reason.visualDescription ?? r.prompt ?? "");
+        return (
+          /weak|unmeasured|draft|contact|lit_debt|sheetLeak/i.test(sq) ||
+          /贴颊|贴脸|摩挲|扳指|接触/.test(vd)
+        );
+      });
+      if (dirty.length) {
+        return res.status(400).send(
+          error("skipPreflight 不得绕过接触/弱图/文学债镜（V5-N11b）", {
+            code: "SKIP-PREFLIGHT-FORBIDDEN",
+            dirtyStoryboardIds: dirty.map((d) => d.id),
+            primaryNextStep: "human_review",
+            ctaLabel: "人审或修 VD 后再生成",
+          }),
+        );
+      }
+    }
     const gate = await runPreflightGate(u.db, {
       projectId,
       scriptId,
       storyboardIds: finalStoryboardIds,
       modality: "IMG",
-      skipPreflight,
+      skipPreflight: Boolean(skipPreflight),
     });
     if (!gate.allowed) {
       return res.status(400).send(
@@ -381,7 +417,8 @@ export default router.post(
         .map((c) => String(c.code).toUpperCase());
       const identitySlots = buildIdentitySlots({
         charCodes: imagedCodes,
-        sceneCode: composed.excludeScene ? null : (composeCtx.sceneCode ?? null),
+        sceneCode:
+          composed.excludeScene && !composed.keepSoftEnvRef ? null : (composeCtx.sceneCode ?? null),
       });
       const designFields = extractDesignFields({
         modality: "image",
@@ -472,7 +509,10 @@ export default router.post(
             });
             const reboundSlots = buildIdentitySlots({
               charCodes: bind.orderedCodes.length ? bind.orderedCodes : imagedCodes,
-              sceneCode: composedForPipe.excludeScene ? null : (composeCtx.sceneCode ?? null),
+              sceneCode:
+                composedForPipe.excludeScene && !composedForPipe.keepSoftEnvRef
+                  ? null
+                  : (composeCtx.sceneCode ?? null),
             });
             pipeline = runStillPromptPipeline({
               composed: composedForPipe,
@@ -488,31 +528,162 @@ export default router.post(
             let vendorPrompt = pipeline.egressPrompt;
             const pol = precheckContentPolicy(vendorPrompt);
             if (pol.hasSensitiveTerms) vendorPrompt = pol.softenedPrompt;
-            let referenceList = await buildReferenceListForStoryboard(
+            const { resolvePropSoftCodes } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+            const propCodes = resolvePropSoftCodes({
+              contract: composedForPipe.generationContract,
+              visualDescription: literaryDesc,
+            });
+            const builtRefs = await buildReferenceListForStoryboard(
               u.db,
               projectId,
               item.id!,
               vendorPrompt,
               bind.orderedCodes.length ? bind.orderedCodes : imagedCodes,
               bind.orderedCodes.length ? bind.orderedCodes : imagedCodes,
-              { excludeScene: Boolean(composedForPipe.excludeScene) },
-            ).then((b) => {
-              // Cap already in builder; surface turnaround for short locks
-              if (b.turnaroundCrefUsed && !/四视图仅借身份|单镜头成片/.test(vendorPrompt.slice(-80))) {
-                try {
-                  const {
-                    STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH,
-                    STILL_SINGLE_FRAME_LOCK_EDIT_ZH,
-                  } = require("@/ruleEngine/compilers/stillFirstFrameLiterarySsot") as typeof import("@/ruleEngine/compilers/stillFirstFrameLiterarySsot");
-                  vendorPrompt = `${String(vendorPrompt).trim()}。${STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH}${STILL_SINGLE_FRAME_LOCK_EDIT_ZH}`;
-                } catch {
-                  /* optional */
-                }
+              {
+                excludeScene: Boolean(composedForPipe.excludeScene),
+                softEnvRef: Boolean(composedForPipe.keepSoftEnvRef),
+                propSoftCodes: propCodes,
+              },
+            );
+            let referenceList = builtRefs.referenceList;
+            if (builtRefs.turnaroundCrefUsed && !/四视图仅借身份|单镜头成片/.test(vendorPrompt.slice(-80))) {
+              try {
+                const {
+                  STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH,
+                  STILL_SINGLE_FRAME_LOCK_EDIT_ZH,
+                } = require("@/ruleEngine/compilers/stillFirstFrameLiterarySsot") as typeof import("@/ruleEngine/compilers/stillFirstFrameLiterarySsot");
+                vendorPrompt = `${String(vendorPrompt).trim()}。${STILL_SHEET_AS_IDENTITY_ONLY_EDIT_ZH}${STILL_SINGLE_FRAME_LOCK_EDIT_ZH}`;
+              } catch {
+                /* optional */
               }
-              return b.referenceList;
-            });
+            }
             if (!referenceList.length && !composedForPipe.excludeScene) {
               referenceList = await buildReferenceListFromAssetIds(u.db, assetIds);
+            }
+            // Path parity with canvas: event prop plate synth + hard gate + face-bias
+            try {
+              const {
+                objectiveNeedsPropPlate,
+                cropIdentityPlateToFaceBias,
+                synthesizePropSoftPlate,
+                resolvePropPlateLabel,
+                decideEventPlateGate,
+              } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+              const eventObj = objectiveNeedsPropPlate(
+                (composedForPipe.generationContract as { objectiveClass?: string } | undefined)?.objectiveClass,
+              );
+              let propPresent = Boolean(builtRefs.propSoftKept);
+              const softPresent = Boolean(builtRefs.softEnvKept);
+              if (eventObj && referenceList[0]?.base64) {
+                const face = await cropIdentityPlateToFaceBias(referenceList[0].base64);
+                if (face.cropped && face.base64) {
+                  referenceList[0] = { type: "image" as const, base64: face.base64 };
+                }
+              }
+              let synthesizedProp = false;
+              if (eventObj && !propPresent) {
+                const label = resolvePropPlateLabel({
+                  contract: composedForPipe.generationContract ?? null,
+                  visualDescription: literaryDesc,
+                });
+                const synth = await synthesizePropSoftPlate({
+                  propClassId: label.propClassId,
+                  canonical: label.canonical,
+                  glyphText: label.glyphText,
+                  softPlateHint: label.softPlateHint,
+                });
+                if (synth.base64) {
+                  const softTail = softPresent && referenceList.length >= 2 ? referenceList.splice(-1, 1) : [];
+                  if (referenceList.length >= 1) referenceList.splice(1, 0, { type: "image", base64: synth.base64 });
+                  else referenceList.push({ type: "image", base64: synth.base64 });
+                  referenceList.push(...softTail);
+                  propPresent = true;
+                  synthesizedProp = true;
+                  const formBits = (composedForPipe.generationContract?.mustShowFacts ?? [])
+                    .filter((f: { id: string }) => f.id === "prop_form" || f.id === "prop_glyph" || f.id === "prop_pose")
+                    .map((f: { text: string }) => f.text)
+                    .slice(0, 3);
+                  vendorPrompt = `${formBits.join("。")}。${label.canonical}须清晰入画（薄纸片软板，非书）。${vendorPrompt}`;
+                }
+              }
+              const gate = decideEventPlateGate({
+                contract: composedForPipe.generationContract ?? null,
+                keepSoftEnvRef: composedForPipe.keepSoftEnvRef,
+                propPlatePresent: propPresent,
+                softEnvPlatePresent: softPresent,
+                allowSynthesizeProp: true,
+                synthesizedPropApplied: synthesizedProp || propPresent,
+              });
+              if (!gate.allowVendor) {
+                throw Object.assign(new Error(gate.userMessage || "DEX-PROP-PLATE-MISSING"), {
+                  code: gate.code || "DEX-PROP-PLATE-MISSING",
+                  primaryNextStep: gate.primaryNextStep || "batch_still",
+                  userMessage: gate.userMessage,
+                  ctaLabel: gate.ctaLabel,
+                  missingSlots: gate.missingSlots,
+                });
+              }
+              if (gate.softEnvMissing && gate.userMessage) {
+                vendorPrompt = `${gate.userMessage}。禁止灰棚/白棚空白背景。${vendorPrompt}`;
+              }
+              // Continuity-aware refs + 图N binding
+              const {
+                applyContinuityAwareRefBudget,
+                buildEventRefOrdinalBinding,
+              } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+              const tagged = referenceList.map((r, i) => {
+                let role: "identity" | "propSoft" | "softEnv" = "identity";
+                if (eventObj && i === 1) role = "propSoft";
+                else if (composedForPipe.keepSoftEnvRef && i === referenceList.length - 1 && i > 0)
+                  role = "softEnv";
+                return { type: "image" as const, base64: r.base64, role };
+              });
+              const continuity =
+                (composedForPipe as { softEnvContinuity?: "must" | "optional" | "none" }).softEnvContinuity ??
+                (composedForPipe.keepSoftEnvRef ? "must" : "none");
+              const chosen = await applyContinuityAwareRefBudget({
+                refs: tagged,
+                propRequired: eventObj,
+                maxSlots: 3,
+                softEnvContinuity: continuity,
+                allowPixelBake: false,
+              });
+              if (chosen.droppedSoftEnv && continuity === "must") {
+                vendorPrompt = `软环境为连贯性必须但槽位不足；禁止灰棚白棚。${vendorPrompt}`;
+              }
+              referenceList = chosen.refs.map((r) => ({ type: "image" as const, base64: r.base64 }));
+              const thin = (composedForPipe.generationContract?.mustShowFacts ?? []).some(
+                (f: { id: string }) => f.id === "prop_form",
+              );
+              const bindZh = buildEventRefOrdinalBinding({
+                roles: chosen.roles,
+                propRequired: eventObj,
+                thinSheets: thin,
+                softEnvBakedIntoIdentity: chosen.softEnvBakedIntoIdentity,
+              });
+              if (bindZh && !/参考绑定：/.test(vendorPrompt)) {
+                vendorPrompt = `${String(vendorPrompt).trim()}。${bindZh}`;
+              }
+              {
+                const { stripOrphanSceneSref } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+                vendorPrompt = stripOrphanSceneSref(vendorPrompt, {
+                  softEnvIndependentSlot: chosen.roles.includes("softEnv") && !chosen.softEnvBakedIntoIdentity,
+                  softEnvBakedIntoIdentity: chosen.softEnvBakedIntoIdentity,
+                });
+              }
+              try {
+                const { lintStillPromptBody } = await import("@/ruleEngine/compilers/stillPromptLint");
+                vendorPrompt = lintStillPromptBody({
+                  prompt: vendorPrompt,
+                  visualDescription: literaryDesc,
+                }).prompt;
+              } catch {
+                /* optional */
+              }
+            } catch (plateErr: unknown) {
+              if (plateErr && typeof plateErr === "object" && "code" in plateErr) throw plateErr;
+              /* optional plate module */
             }
             let editStrategy: string | undefined;
             let layoutTemplateId: string | undefined;

@@ -113,7 +113,22 @@ export async function resolveContext(
 }
 
 export async function resolveContextFromScriptBundle(db: Knex, projectId: number, scriptId: number, bundle: ScriptBundle): Promise<ResolvedContext> {
-  const seriesCont = (bundle as ScriptBundle & { seriesContinuity?: Record<string, unknown> }).seriesContinuity;
+  // V5-09: hydrate seriesContinuity from blueprint writeback before merge
+  try {
+    const { loadProjectBlueprint } = require("../storage/episodePackageStore") as typeof import("../storage/episodePackageStore");
+    const { hydrateSeriesContinuityFromBlueprint } =
+      require("./continuityWriteback") as typeof import("./continuityWriteback");
+    const bp = (await loadProjectBlueprint(db, projectId)) ?? {};
+    const planView = bundle as unknown as Record<string, unknown>;
+    hydrateSeriesContinuityFromBlueprint(planView, bp as Record<string, unknown>, bundle.meta?.episodeKey);
+  } catch {
+    /* optional */
+  }
+
+  const seriesCont =
+    (bundle as ScriptBundle & { seriesContinuity?: Record<string, unknown> }).seriesContinuity ??
+    ((bundle.planData as { narrativeBrief?: { seriesContinuity?: Record<string, unknown> } } | undefined)?.narrativeBrief
+      ?.seriesContinuity as Record<string, unknown> | undefined);
   const mergedContinuity: ScriptBundleContinuity = {
     ...(typeof bundle.continuity === "object" && bundle.continuity ? bundle.continuity : {}),
   };

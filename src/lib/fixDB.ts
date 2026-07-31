@@ -48,10 +48,32 @@ export default async (knex: Knex): Promise<void> => {
     state: "生成失败",
     errorReason: "软件退出导致失败",
   });
-  await db("o_storyboard").where("state", "生成中").update({
-    state: "生成失败",
-    reason: "软件退出导致失败",
-  });
+  // Preserve stillQuality / literaryDescHash etc. — never wipe JSON reason with plain string
+  {
+    const { mergeReasonMeta } = await import("@/ruleEngine/compilers/stillQuality");
+    const stuck = await db("o_storyboard").where("state", "生成中").select("id", "reason");
+    for (const row of stuck) {
+      await db("o_storyboard")
+        .where({ id: row.id })
+        .update({
+          state: "生成失败",
+          reason: mergeReasonMeta(row.reason, { message: "软件退出导致失败" }),
+        });
+    }
+  }
+  // o_videoTrack: clear stuck 生成中 without wiping designContentHash / burnAllowed
+  {
+    const { mergeTrackReasonMeta } = await import("@/ruleEngine/qc/persistVideoTrackPromptHash");
+    const stuckTracks = await db("o_videoTrack").where("state", "生成中").select("id", "reason");
+    for (const row of stuckTracks) {
+      await db("o_videoTrack")
+        .where({ id: row.id })
+        .update({
+          state: "生成失败",
+          reason: mergeTrackReasonMeta(row.reason, { message: "软件退出导致失败" }),
+        });
+    }
+  }
   await db("o_video").where("state", "生成中").update({
     state: "生成失败",
     errorReason: "软件退出导致失败",

@@ -42,27 +42,36 @@ function lipLineFromPolicy(policy: string, hasDialogue: boolean): string | undef
   return "subtle lip sync, natural mouth movement";
 }
 
-/** Collapse bare `2s` / `3s` tokens (not part of duration N s) to a single duration. */
+/** Collapse bare `2s` / `3s` tokens (not part of duration N s, not Motion beat `0s-Ns:`). G3: preserve beat clocks. */
 export function dedupeBareSeconds(prompt: string, preferSec?: number): { prompt: string; changes: string[] } {
   const changes: string[] = [];
   let p = String(prompt ?? "");
   const bare: number[] = [];
-  const re = /(?:^|[^A-Za-z0-9])(\d{1,2})s\b/gi;
+  const re = /(?:^|[^A-Za-z0-9.\-])(\d{1,2})s\b/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(p))) {
     const start = m.index + (m[0].length - String(m[1]).length - 1);
-    const before = p.slice(Math.max(0, start - 10), start);
+    const before = p.slice(Math.max(0, start - 12), start);
     if (/duration\s*$/i.test(before)) continue;
+    // Motion beat range: 0s-0.5s or 0.5s-1.4s — never strip
+    if (/\d(?:\.\d+)?s\s*-\s*$/i.test(before) || /^-\d/.test(p.slice(start + String(m[1]).length + 1))) continue;
+    if (/\d(?:\.\d+)?s-$/i.test(before)) continue;
     bare.push(Number(m[1]));
   }
   if (bare.length <= 1 && preferSec == null) return { prompt: p, changes };
   if (bare.length >= 2 || (bare.length >= 1 && preferSec != null)) {
     const secs = bare.filter((n) => Number.isFinite(n) && n > 0 && n <= 30);
     const pick = preferSec != null ? preferSec : secs.length ? Math.max(...secs) : undefined;
-    p = p.replace(/(?:^|[^A-Za-z0-9])(\d{1,2})s\b/gi, (full, _n, offset) => {
-      const before = p.slice(Math.max(0, offset - 10), offset);
+    p = p.replace(/(?:^|[^A-Za-z0-9.\-])(\d{1,2})s\b/gi, (full, n, offset) => {
+      const before = p.slice(Math.max(0, offset - 12), offset);
       if (/duration\s*$/i.test(before)) return full;
-      return full.slice(0, full.length - String(_n).length - 1);
+      if (/\d(?:\.\d+)?s\s*-\s*$/i.test(before) || /\d(?:\.\d+)?s-$/i.test(before)) return full;
+      const after = p.slice(offset + full.length, offset + full.length + 8);
+      if (/^-\d/.test(after) || /^-\d/.test(full.slice(full.indexOf(n) + String(n).length + 1))) return full;
+      // Keep tokens that are left side of beat: "0s-0.5s"
+      const absStart = offset + (full.length - String(n).length - 1);
+      if (p.slice(absStart + String(n).length + 1, absStart + String(n).length + 2) === "-") return full;
+      return full.slice(0, full.length - String(n).length - 1);
     });
     changes.push("dedupe_bare_sec");
     if (pick != null && !/duration\s*\d+/i.test(p)) {

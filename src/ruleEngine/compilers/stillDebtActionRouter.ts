@@ -38,12 +38,13 @@ export type StillDebtRouteResult = {
 };
 
 const PRIORITY: StillDebtKind[] = [
-  "vlm_key_missing",
   "lit_contact_xor",
   "cast_multi_on_face_cu",
   "sheet_layout_leak",
   "contact_prop_missing",
   "weak_prop",
+  // G0: Key annotate last — never preempt structure debt
+  "vlm_key_missing",
 ];
 
 function blockFor(step: BurnNextStep, userMessage: string, sources: string[]): StillDebtRouteResult {
@@ -93,22 +94,8 @@ export function routeStillDebtAction(input: {
   }
 
   const err = String(input.vlmErrorCode || input.vlmError || "");
-  if (/VLM_API_KEY_MISSING|缺少API\s*Key|api\s*key/i.test(err)) {
-    const primary = buildPrimaryBlock("chat_repair", {
-      stage: "prompt",
-      userMessageOverride: "视觉评审缺少 API Key；诚实弱通过，禁止无评审长烧 Edit",
-    });
-    return {
-      kind: "vlm_key_missing",
-      action: "stop_fidelity_honest",
-      primaryNextStep: primary.primaryNextStep,
-      ctaLabel: "去配置火山引擎 API Key",
-      userMessage: primary.userMessage,
-      sources: [...sources, "debt.vlmKeyMissing"],
-      stopFidelityBurn: true,
-      missingSlots: ["vlmApiKey"],
-    };
-  }
+  // G0: do not early-return on Key — structure debt first; Key only annotate if nothing else
+  const keyAbsent = /VLM_API_KEY_MISSING|缺少API\s*Key|api\s*key/i.test(err);
 
   const vd = String(input.visualDescription ?? "").trim();
   const sz = String(input.shotSize ?? "");
@@ -319,6 +306,19 @@ export function routeStillDebtAction(input: {
       sources: [...sources, "debt.enhanceLit"],
       stopFidelityBurn: false,
       missingSlots: ["contact"],
+    };
+  }
+
+  // G0: Key-absent alone — annotate optional diagnostic; never primary CTA「去配置 Key」/ missingSlots vlmApiKey
+  if (keyAbsent) {
+    return {
+      kind: "vlm_key_missing",
+      action: "pass",
+      primaryNextStep: "batch_still",
+      ctaLabel: "",
+      userMessage: "像素诊断 Key 可选；结构债已过则按 L0/启发式继续（Key 不挡质量流）",
+      sources: [...sources, "debt.vlmKeyOptionalAnnotate"],
+      stopFidelityBurn: false,
     };
   }
 

@@ -11,7 +11,7 @@
     {
       "id": "BG_READABLE",
       "declare": ["identity:background_readable", "still_literary_fidelity_checklist.json"],
-      "mount": ["literaryFidelityChecklist", "stillRepairRoute"],
+      "mount": ["literaryFidelityChecklist", "stillRepairRoute", "untilClearRuntime"],
       "hard": true,
       "untilClear": true,
       "feBlock": true,
@@ -42,7 +42,7 @@
     {
       "id": "CONTACT_GEOM",
       "declare": ["contactGeom", "DEX-LIT-CONTACT"],
-      "mount": ["design_gate_mount_matrix", "stillLitHqGate"],
+      "mount": ["literaryFidelityChecklist", "stillRepairRoute", "untilClearRuntime"],
       "hard": true,
       "untilClear": true,
       "feBlock": true,
@@ -74,7 +74,17 @@
       "hard": true,
       "untilClear": true,
       "feBlock": true,
-      "noEscape": "family_none_with_seating_signal_warns_at_SB"
+      "noEscape": "family_none_with_seating_signal_warns_at_SB",
+      "notes": "G1/G6: compose consumes spatialRelation axis/anchors as 站位；缺失时 designExit WARN"
+    },
+    {
+      "id": "AUDIO_DESIGN_BEAT",
+      "declare": ["avCausality.audioBeat", "sceneMeta.audioBeat", "MOD-03"],
+      "mount": ["compileVideoPromptSpine", "designExitGate"],
+      "hard": false,
+      "untilClear": true,
+      "feBlock": false,
+      "noEscape": "ambient-only Audio must inject design audioBeat when present; self-report ≠ pass"
     },
     {
       "id": "SHEET_LEAK",

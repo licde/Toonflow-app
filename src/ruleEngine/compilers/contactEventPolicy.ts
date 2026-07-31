@@ -282,16 +282,22 @@ export function buildContactEventMotionBeats(input: {
   visualDescription: string;
   durationSec: number;
   woundVisible?: boolean;
+  stillPrompt?: string | null;
   stillPoseAnchor?: { state?: ContactStartState; prop?: string; locus?: string } | null;
   contactStartState?: ContactStartState | null;
 }): { body: string; templateId: string; from: "contactEvent"; phases: number } | null {
   const m = matchContactEventVd(input.visualDescription);
   if (!m.isContactEvent || !m.templateId) return null;
   const policy = loadContactEventPolicy();
+  // G3: prefer stillPrompt+anchor over VD-only infer (avoids default entering when still at_locus)
   const startState =
     input.contactStartState ??
     input.stillPoseAnchor?.state ??
-    inferContactStartStateFromStill({ visualDescription: input.visualDescription }).state;
+    inferContactStartStateFromStill({
+      visualDescription: input.visualDescription,
+      stillPrompt: input.stillPrompt,
+      stillMeta: input.stillPoseAnchor ? { stillPoseAnchor: input.stillPoseAnchor } : null,
+    }).state;
   let templateId = m.templateId;
   if (startState === "at_locus" || startState === "held_mid") {
     templateId = policy.motionBeatTemplates.contact_hold ? "contact_hold" : m.templateId;
@@ -423,6 +429,50 @@ export function stripContactSweepClauses(vd: string, match: ContactEventMatch): 
 
 function escapeReg(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Cross-propClass anti-substitution lines for GenerationContract.
+ * Driven by vocab (other classes' aliases + non-class handheld distractors) — no shot-specific names.
+ */
+export function buildCrossClassAntiSubstitutions(
+  propClassId: string | null | undefined,
+  propCanonical?: string | null,
+): string[] {
+  if (!propClassId) return [];
+  const policy = loadContactEventPolicy();
+  const own = new Set(
+    (policy.vocab.propClasses[propClassId]?.aliases ?? []).map((a) => String(a).trim()).filter(Boolean),
+  );
+  const foreign: string[] = [];
+  for (const [id, def] of Object.entries(policy.vocab.propClasses)) {
+    if (id === propClassId) continue;
+    for (const a of def.aliases ?? []) {
+      const t = String(a ?? "").trim();
+      if (t && !own.has(t)) foreign.push(t);
+    }
+  }
+  // Handheld distractors not registered as contact propClasses (cref soup)
+  for (const extra of ["折扇", "团扇", "扇", "伞", "杯", "盏"]) {
+    if (!own.has(extra) && !foreign.includes(extra)) foreign.push(extra);
+  }
+  const ban = [...new Set(foreign)].slice(0, 6);
+  if (!ban.length) return [];
+  const prop =
+    String(propCanonical ?? "").trim() ||
+    policy.vocab.propClasses[propClassId]?.canonical ||
+    "本镜道具";
+  return [`禁止以${ban.join("/")}替代${prop}`];
+}
+
+/** Aliases for the matched prop class (canonical first) — for readable atom checks. */
+export function propClassAliases(propClassId: string | null | undefined): string[] {
+  if (!propClassId) return [];
+  const policy = loadContactEventPolicy();
+  const def = policy.vocab.propClasses[propClassId];
+  if (!def) return [];
+  const list = [def.canonical, ...(def.aliases ?? [])].map((a) => String(a ?? "").trim()).filter(Boolean);
+  return [...new Set(list)].sort((a, b) => b.length - a.length);
 }
 
 /** Pose at still capture time — drives Motion template selection. */

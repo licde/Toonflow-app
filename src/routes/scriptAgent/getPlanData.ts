@@ -70,6 +70,19 @@ export default router.post(
     if (mig.migrated) {
       await u.db("o_agentWorkData").where({ id: row.id }).update({ data: JSON.stringify(data) });
     }
+    // V5-09: hydrate cross-ep seriesContinuity from blueprint on load
+    try {
+      const { loadProjectBlueprint } =
+        require("@/ruleEngine/storage/episodePackageStore") as typeof import("@/ruleEngine/storage/episodePackageStore");
+      const { hydrateSeriesContinuityFromBlueprint } =
+        require("@/ruleEngine/bundle/continuityWriteback") as typeof import("@/ruleEngine/bundle/continuityWriteback");
+      const bp = (await loadProjectBlueprint(u.db, projectId)) ?? {};
+      if (hydrateSeriesContinuityFromBlueprint(data, bp as Record<string, unknown>)) {
+        await u.db("o_agentWorkData").where({ id: row.id }).update({ data: JSON.stringify(data), updateTime: Date.now() });
+      }
+    } catch {
+      /* optional */
+    }
     syncPackIdAliases(data);
     data.script = await u.db("o_script").where({ projectId }).select("id", "name", "content");
     (data as { emotionNorm?: unknown }).emotionNorm = getEmotionNormFromPlan(data);

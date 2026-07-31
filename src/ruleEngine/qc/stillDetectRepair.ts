@@ -194,6 +194,30 @@ export function assertStillDetectForBurn(input: {
     const forceEdit = litDebt || irdAct === "hand_edit_vd";
     const toDesign =
       forceEdit || irdAct === "confirm_split" || irdAct === "apply_auto" || irdAct === "hand_edit_vd";
+    let debtCta: { primaryNextStep: "batch_still" | "chat_repair" | "split_shot"; ctaLabel: string } | null =
+      null;
+    if (!toDesign && !forceEdit) {
+      try {
+        const { runUntilClearDetect, untilClearBurnCta } =
+          require("../quality/untilClearRuntime") as typeof import("../quality/untilClearRuntime");
+        const findings = runUntilClearDetect({
+          phase: "video_burn",
+          visualDescription: vd,
+          shotSize,
+          stillQuality: degraded ?? input.stillQuality,
+          visualPass: input.stillMeta?.visualPass,
+          visualPassAt: input.stillMeta?.visualPassAt,
+          fidelityItems: (input.stillMeta?.fidelityItems ?? []).map((i) => ({
+            id: i.id,
+            pass: i.pass !== false,
+            fixHint: i.fixHint,
+          })),
+        });
+        if (findings.length) debtCta = untilClearBurnCta(findings);
+      } catch {
+        /* optional */
+      }
+    }
     return {
       ok: false,
       severity: "BLOCK",
@@ -202,7 +226,9 @@ export function assertStillDetectForBurn(input: {
         ? litDebtMessage(missingSlots)
         : toDesign
           ? "静帧质量未达标且检出设计码；请 stillIntentOps"
-          : "静帧质量未达标（缺 visualPass），请重出 HQ 静照后再烧视频",
+          : debtCta
+            ? `静帧质量未达标（${debtCta.ctaLabel}）`
+            : "静帧质量未达标（缺 visualPass），请重出 HQ 静照后再烧视频",
       reverseTrigger: forceEdit
         ? "lit_detail_anchor"
         : toDesign
@@ -212,7 +238,7 @@ export function assertStillDetectForBurn(input: {
         ? forceEdit || irdAct === "hand_edit_vd"
           ? "chat_repair"
           : "split_shot"
-        : "batch_still",
+        : debtCta?.primaryNextStep ?? "batch_still",
       stillQuality: degraded,
       irdPrimaryAction: forceEdit ? "hand_edit_vd" : irdAct,
       intentClass: intent.intentClass,
@@ -232,7 +258,7 @@ export function assertStillDetectForBurn(input: {
           })()
         : toDesign
           ? undefined
-          : "重出HQ静照",
+          : debtCta?.ctaLabel ?? "重出HQ静照",
     };
   }
   let sheetLeak =

@@ -144,7 +144,18 @@ export async function hydrateComposeStillContext(
     dialogueSpeakers: null,
   };
 
-  if (!input.storyboardId) return ctx;
+  // Canvas / no-storyboard: infer SCENE from prompt sref tokens (path parity with batch)
+  if (!input.storyboardId) {
+    try {
+      const { inferSceneCodeFromText } =
+        require("./shotModalityIntent") as typeof import("./shotModalityIntent");
+      const code = inferSceneCodeFromText(input.rawPrompt);
+      if (code) ctx.sceneCode = code;
+    } catch {
+      /* optional */
+    }
+    return ctx;
+  }
 
   const sb = await db("o_storyboard").where({ id: input.storyboardId }).first();
   if (!sb) return ctx;
@@ -153,6 +164,7 @@ export async function hydrateComposeStillContext(
   ctx.videoDesc = sb.videoDesc ?? null;
   ctx.emotion = sb.emotion ?? null;
   ctx.spatialRelation = sb.spatialRelation ?? null;
+  ctx.colorTemp = (sb as { colorTemp?: string }).colorTemp ?? null;
 
   const scriptId = input.scriptId ?? sb.scriptId;
   if (scriptId) {
@@ -170,6 +182,18 @@ export async function hydrateComposeStillContext(
       }
       if (shot) {
         ctx.visualDescription = (shot.visualDescription as string) ?? ctx.visualDescription ?? null;
+        if (
+          (shot as { _forceComposeParity?: boolean })._forceComposeParity ||
+          (shot as { _forceRefsDelta?: boolean })._forceRefsDelta ||
+          (shot as { _litEnhanceApplied?: boolean })._litEnhanceApplied
+        ) {
+          (ctx as { _forceComposeParity?: boolean; _forceRefsDelta?: boolean; _litEnhanceApplied?: boolean })._forceComposeParity =
+            true;
+          (ctx as { _forceRefsDelta?: boolean })._forceRefsDelta = true;
+          (ctx as { _litEnhanceApplied?: boolean })._litEnhanceApplied = Boolean(
+            (shot as { _litEnhanceApplied?: boolean })._litEnhanceApplied,
+          );
+        }
         if (!ctx.compiledImagePrompt) {
           const gen = shot.generation as { imagePrompt?: string } | undefined;
           if (gen?.imagePrompt?.trim()) ctx.compiledImagePrompt = gen.imagePrompt.trim();
@@ -195,6 +219,14 @@ export async function hydrateComposeStillContext(
         ctx.sceneCode =
           (shot.sceneCode as string) ??
           ((shot as { sceneName?: string }).sceneName ? String((shot as { sceneName?: string }).sceneName) : null);
+        const narrSpatial = (shot.narrative as { spatialRelation?: string } | undefined)?.spatialRelation;
+        if (!ctx.spatialRelation && narrSpatial) ctx.spatialRelation = narrSpatial;
+        if (!ctx.colorTemp) {
+          ctx.colorTemp =
+            ((shot as { colorTemp?: string }).colorTemp ??
+              (shot.narrative as { colorTemp?: string } | undefined)?.colorTemp ??
+              null) as string | null;
+        }
         if (idx > 0 && pkg?.shots?.[idx - 1]) {
           const prev = pkg.shots[idx - 1] as unknown as Record<string, unknown>;
           ctx.neighborShotSize =
@@ -233,6 +265,17 @@ export async function hydrateComposeStillContext(
       }
     } catch {
       /* package optional */
+    }
+    try {
+      const agentRow = await db("o_agentWorkData").where({ projectId: input.projectId, key: "scriptAgent" }).first();
+      const plan = agentRow?.data ? JSON.parse(String(agentRow.data)) : {};
+      const pd = ((plan as { planData?: Record<string, unknown> }).planData ?? plan) as Record<string, unknown>;
+      const vlt =
+        (pd.visualLockTable as { sceneColorLock?: ComposeStillContext["sceneColorLock"] } | undefined) ??
+        ((plan as { visualLockTable?: { sceneColorLock?: ComposeStillContext["sceneColorLock"] } }).visualLockTable);
+      if (vlt?.sceneColorLock) ctx.sceneColorLock = vlt.sceneColorLock;
+    } catch {
+      /* sceneColorLock optional */
     }
   }
 

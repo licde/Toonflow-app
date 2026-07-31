@@ -111,11 +111,20 @@ assert(
 {
   const fs = require("fs");
   const path = require("path");
-  const chunk = path.join(__dirname, "../scripts/web/assets/index-CeueQsUB.js");
-  const txt = fs.readFileSync(chunk, "utf8");
-  assert(txt.includes("重出带道具静照"), "FE chunk 含重出带道具静照");
-  assert(txt.includes("still_prop_missing"), "FE chunk 含 still_prop_missing");
-  assert(txt.includes("STILL-CONTACT"), "FE chunk 含 STILL-CONTACT 捕获");
+  const assetsDir = path.join(__dirname, "../scripts/web/assets");
+  const files = fs.existsSync(assetsDir)
+    ? (fs.readdirSync(assetsDir) as string[]).filter((f) => /^index-.*\.js$/i.test(f))
+    : [];
+  let hit: string | null = null;
+  for (const f of files) {
+    const txt = fs.readFileSync(path.join(assetsDir, f), "utf8");
+    if (txt.includes("重出带道具静照") && txt.includes("still_prop_missing") && txt.includes("STILL-CONTACT")) {
+      hit = f;
+      break;
+    }
+  }
+  assert(Boolean(hit), `FE chunk 含接触 CTA（scanned ${files.length} index-*.js after build:integrate）`);
+  console.log(`✓ FE chunk contact CTA in ${hit}`);
 }
 
 // --- stillRepairRoute contact prop stop ---

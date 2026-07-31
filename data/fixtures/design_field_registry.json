@@ -15,7 +15,8 @@
       "modalities": ["image", "video"],
       "requiredWhen": "hasValue",
       "goldMust": "colorTemp|warm|cool|neutral white",
-      "reverseTrigger": "generation_design_drift"
+      "reverseTrigger": "generation_design_drift",
+      "consume": { "still": true, "videoSpine": true }
     },
     {
       "id": "spatial",
@@ -23,7 +24,8 @@
       "modalities": ["image", "video"],
       "requiredWhen": "hasValue",
       "goldMust": "spatialRelation",
-      "reverseTrigger": "pr_spatial"
+      "reverseTrigger": "pr_spatial",
+      "consume": { "still": true, "videoSpine": true }
     },
     {
       "id": "duration",
@@ -103,7 +105,8 @@
       "modalities": ["video"],
       "requiredWhen": "hasValue",
       "goldMust": "debutBeat:",
-      "reverseTrigger": "packaging_debut_missing"
+      "reverseTrigger": "packaging_debut_missing",
+      "consume": { "still": false, "videoSpine": true }
     },
     {
       "id": "endHook",
@@ -146,12 +149,22 @@
       "reverseTrigger": "pr_spatial"
     },
     {
+      "id": "avCausality",
+      "sources": ["avCausality", "shotDesign.avCausality", "narrative.avCausality"],
+      "modalities": ["video", "image"],
+      "requiredWhen": "hasValue",
+      "goldMust": "音效拍点|visualPeak|audioBeat",
+      "reverseTrigger": "modality_aud_missing",
+      "consume": { "still": false, "videoSpine": true, "audioPrompt": true }
+    },
+    {
       "id": "props",
       "sources": ["propCodes", "narrative.propCodes", "propState", "narrative.propState"],
       "modalities": ["image", "video"],
       "requiredWhen": "hasValue",
       "goldMust": "PROP-|propState|holding",
-      "reverseTrigger": "pr_prop_state"
+      "reverseTrigger": "pr_prop_state",
+      "consume": { "still": true, "videoSpine": true }
     }
   ]
 }

@@ -11,9 +11,12 @@
     "intent_pic",
     "lit_detail_contact",
     "still_prop_missing",
+    "still_video_pose_mismatch",
     "DEX-PROP-IN-FRAME",
     "sync_intent_picture"
   ],
+  "autoApplyMinVideo": 0.7,
+  "assetSoftWarnNote": "ASSET stub/WARN → enqueue batch_still (soft_allow off when Key-absent only)",
   "forkTriggers": [
     "still_cu_cast",
     "lit_detail_contact_xor",

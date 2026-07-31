@@ -211,7 +211,27 @@ export default router.post(
         /* ignore */
       }
       if (rawState === "需完善") burnAllowed = false;
-      if (rawState === "已完成" && burnAllowed === undefined) burnAllowed = true;
+      // 已完成 without explicit meta: default permissive only when still is burn-ready
+      if (rawState === "已完成" && burnAllowed === undefined) {
+        const primarySb = trackStoryboards[0];
+        let stillBurnReady = false;
+        if (primarySb?.reason) {
+          try {
+            const sm =
+              typeof primarySb.reason === "string" && primarySb.reason.trim().startsWith("{")
+                ? JSON.parse(primarySb.reason)
+                : null;
+            stillBurnReady =
+              sm?.stillQuality === "hq_ok" &&
+              sm?.visualPass === true &&
+              !sm?.sheetLeak &&
+              sm?.i2vReady !== false;
+          } catch {
+            stillBurnReady = false;
+          }
+        }
+        burnAllowed = stillBurnReady;
+      }
 
       const trackPrompt = String(item?.prompt || seedVideoPrompt || "").trim();
       // Multi-panel track: pick storyboard whose package VD matches prompt (not arbitrary [0])

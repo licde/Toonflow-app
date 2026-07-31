@@ -15,6 +15,7 @@ import {
   type ShotCompileContext,
 } from "./hydrateShotCompileContext";
 import { assertVideoPromptReady, isVideoPromptThinShell } from "./assertVideoPromptReady";
+import { SILENT_AUDIO_RE } from "./sanitizeVideoPrompt";
 import type { VideoIntentClassification } from "./videoIntentPolicy";
 import { peelLiteraryBody, literaryCjkScore } from "./resolveTrackStoryboard";
 import { seedContradictsDesign } from "./staleSeedDetector";
@@ -28,6 +29,22 @@ function eventPeakFromDesign(ctx: ShotCompileContext): string | null {
   if (beat) return beat.slice(0, 36);
   if (ctx.videoIntent.intentClass === "fx_peak" && raw) return raw.slice(0, 36);
   return null;
+}
+
+function sceneAudioBeatFromCtx(ctx: ShotCompileContext): string | null {
+  const shot = ctx.designShot as Record<string, unknown> | null | undefined;
+  const meta =
+    (shot?.sceneMeta as { audioBeat?: string } | undefined) ??
+    ((shot?.narrative as { sceneMeta?: { audioBeat?: string } } | undefined)?.sceneMeta);
+  const beat = String(meta?.audioBeat ?? "").trim();
+  return beat || null;
+}
+
+function isAudioAmbientOnly(audioBody: string): boolean {
+  const t = String(audioBody ?? "").trim();
+  if (!t) return true;
+  if (/音效：|音效拍点：|"[^"]{2,}"/.test(t)) return false;
+  return SILENT_AUDIO_RE.test(t) || /^无对白[。；;\s]*仅环境音效/.test(t.replace(/\s+/g, ""));
 }
 
 export type SpineCompileInput = {
@@ -134,6 +151,7 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
         visualDescription: ctx.visualDescription,
         durationSec: dur,
         woundVisible: /浅痕|渗血|血珠/.test(ctx.visualDescription),
+        stillPrompt: String(stillMeta.promptUsed ?? stillMeta.stillPrompt ?? ""),
         stillPoseAnchor: stillMeta.stillPoseAnchor as { state?: string } | undefined,
         contactStartState: stillMeta.contactStartState as import("./contactEventPolicy").ContactStartState | undefined,
       });
@@ -243,6 +261,16 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
   }
   if (ctx.avCausality?.audioBeat && !audioBody.includes(ctx.avCausality.audioBeat.slice(0, 12))) {
     audioBody = `${audioBody}\n音效拍点：${ctx.avCausality.audioBeat.slice(0, 40)}`.trim();
+  }
+  // G6: ambient-only Audio → inject design audioBeat when present
+  if (isAudioAmbientOnly(audioBody)) {
+    const designBeat = ctx.avCausality?.audioBeat ?? sceneAudioBeatFromCtx(ctx);
+    if (designBeat && !audioBody.includes(designBeat.slice(0, 8))) {
+      audioBody = `无对白。\n音效拍点：${designBeat.slice(0, 40)}`.trim();
+      if (contactSfx && !audioBody.includes(contactSfx.slice(0, 4))) {
+        audioBody = `${audioBody}\n音效：${contactSfx}`.trim();
+      }
+    }
   }
   if (contactSfx && !audioBody.includes(contactSfx.slice(0, 4))) {
     audioBody = `${audioBody}\n音效：${contactSfx}`.trim();

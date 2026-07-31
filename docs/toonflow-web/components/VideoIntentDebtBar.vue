@@ -64,6 +64,8 @@ import {
   isDesignIntentFidelityDebt,
   shouldOfferVideoHumanRejudge,
   isQcSoftDeliverOnly,
+  isThinVideoPromptStub,
+  spineReady,
   type VideoIrdFinding,
   type DesignIntentFidelityResult,
 } from "@/types/videoIntentOps";
@@ -90,6 +92,8 @@ const props = withDefaults(
     playable?: boolean | null;
     videoPass?: boolean | null;
     motionPassAt?: string | null;
+    /** generation.videoPrompt — thin stub / spineReady gate (G8) */
+    videoPrompt?: string | null;
   }>(),
   {
     title: "视频设计债 · 须 Confirm",
@@ -164,9 +168,15 @@ const showRecompileBeats = computed(
     mergedFindings.value.some((f) => /contact_phases|CONTACT-BEATS|vid_contact/i.test(f.id)),
 );
 
-const explainText = computed(
-  () =>
-    props.explain ||
+const explainText = computed(() => {
+  if (props.explain) return props.explain;
+  if (props.videoPrompt && isThinVideoPromptStub(props.videoPrompt)) {
+    return "generation.videoPrompt 为薄壳 stub（static,duration / 裸 motion-from-frame），须 spine 重编后再烧，stub≠burn-ready。";
+  }
+  if (props.videoPrompt && !spineReady(props.videoPrompt)) {
+    return "videoPrompt 未过 spineReady（需 Visual+Motion 实体/多分相）；禁止当 burn-ready。";
+  }
+  return (
     props.ctaLabel ||
     videoIrdCtaLabel({
       primaryAction: props.primaryAction,
@@ -176,8 +186,9 @@ const explainText = computed(
       code: props.code,
       pixelDimStatus: props.pixelDimStatus,
       qcWeak: props.qcWeak,
-    }),
-);
+    })
+  );
+});
 
 const applyLabel = computed(() =>
   videoIrdCtaLabel({

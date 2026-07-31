@@ -52,6 +52,16 @@ export interface StillQualityMeta {
   audioPassAt?: string;
   videoPass?: boolean;
   videoPassAt?: string;
+  generationContract?: Record<string, unknown>;
+  contractVersion?: string;
+  contractHash?: string;
+  evidenceBoundHash?: string;
+  i2vReady?: boolean;
+  i2vBlockReason?: string;
+  autoRepairStage?: string;
+  autoRepairRound?: number;
+  autoRepairBudgetLeft?: number;
+  handoffReason?: string;
 }
 
 export function stillQualityAllowsBurn(q?: StillQuality | null): boolean {
@@ -301,7 +311,16 @@ export function resolveStillHumanRejudgeOutcome(input: {
   const infraOverride =
     input.prev?.pendingHumanRejudge === true ||
     /VLM_API_KEY_MISSING|vlm_error|vlm_infra/i.test(String((input.prev as { vlmError?: string } | null)?.vlmError ?? ""));
-  const burnOk = modality === "audio" ? allPass : allPass && !hardFail && !sheetLeak;
+  const hasBgItem = input.items.some((i) => /background_readable/i.test(i.id));
+  const bgFail = input.items.some((i) => /background_readable/i.test(i.id) && !i.pass);
+  // Gray studio: missing background_readable checklist item cannot stamp hq_ok (V5_FLOW_IMPL_GAPS)
+  const grayStudioBlock =
+    modality !== "audio" &&
+    (!hasBgItem || bgFail || Boolean((input.prev as { grayStudio?: boolean } | null)?.grayStudio));
+  const burnOk =
+    modality === "audio"
+      ? allPass
+      : allPass && !hardFail && !sheetLeak && !grayStudioBlock;
   if (modality === "audio") {
     return {
       allPass,
@@ -321,14 +340,16 @@ export function resolveStillHumanRejudgeOutcome(input: {
     stillQuality: burnOk ? "hq_ok" : "weak",
     visualPass: burnOk,
     sheetLeak: sheetLeak || hardFail && input.items.some((i) => /single_frame/i.test(i.id) && !i.pass),
-    ctaLabel: burnOk ? "可燃片" : "继续修复",
+    ctaLabel: burnOk ? "可燃片" : grayStudioBlock ? "补灰棚检测后重审" : "继续修复",
     userMessage: burnOk
       ? infraOverride
         ? "人工改判已通过（VLM 基建覆盖）；可燃片，审计见 humanOverride"
         : "人工改判已写入语料"
-      : hardFail || sheetLeak
-        ? "人工改判未过拼版/人数/灰棚硬项；弱图不可作视频首帧"
-        : "人工改判已写入语料（未全过）",
+      : grayStudioBlock
+        ? "人审禁止在缺 background_readable / 灰棚未测时直接 hq_ok；弱图不可作视频首帧"
+        : hardFail || sheetLeak
+          ? "人工改判未过拼版/人数/灰棚硬项；弱图不可作视频首帧"
+          : "人工改判已写入语料（未全过）",
     humanOverride: burnOk ? (infraOverride ? "vlm_infra" : "human_checklist") : undefined,
     infraOverride,
   };

@@ -1,229 +1,568 @@
-<!-- LitDetailDebtBar — FE contract stub (a11y).
-  Wire when primaryAction=hand_edit_vd|confirm_enhance|confirm_split or missingSlots[] from stillIntentOps / burn detect.
-  Primary: enhance approve / hand-edit VD / split. Never sole batch_still while slots open. VisBeat owns split-only UI elsewhere. -->
+<!-- Literary detail debt bar — enhance / split / hand-edit / human rejudge; never sole regen while slots open. -->
+
 <template>
-  <section
-    class="lit-debt"
-    role="region"
-    aria-labelledby="lit-debt-title"
-    :aria-describedby="explainId"
-  >
-    <h3 id="lit-debt-title">{{ title }}</h3>
-    <p :id="explainId" class="lit-debt__explain">{{ explainText }}</p>
-    <ul v-if="slots.length" class="lit-debt__slots" aria-label="缺结构槽">
-      <li v-for="s in slots" :key="s" class="lit-debt__chip">{{ s }}</li>
-    </ul>
-    <p v-if="findingIds.length" class="lit-debt__row">codes: {{ findingIds.join(" · ") }}</p>
-    <div class="lit-debt__actions" role="group" aria-label="文学细节修复">
-      <button
-        v-if="showEnhance"
-        type="button"
-        class="lit-debt__primary"
-        @click="$emit('confirm-enhance')"
-      >
-        {{ enhanceLabel }}
-      </button>
-      <button
-        v-if="showSplit"
-        type="button"
-        class="lit-debt__primary"
-        @click="$emit('confirm-split')"
-      >
-        确认拆镜
-      </button>
-      <button
-        v-if="showRegenPropStill"
-        type="button"
-        class="lit-debt__primary"
-        @click="$emit('batch-still')"
-      >
-        重出带道具静照
-      </button>
-      <button
-        v-if="showHumanRejudge"
-        type="button"
-        class="lit-debt__primary lit-debt__human"
-        @click="$emit('human-rejudge')"
-      >
-        {{ humanRejudgeLabel }}
-      </button>
-      <template v-if="showFork">
-        <button
-          v-for="f in forkChoices"
-          :key="f.fork"
-          type="button"
-          class="lit-debt__primary lit-debt__fork"
-          @click="$emit('presentation-fork', f.fork)"
-        >
-          {{ f.label }}
-        </button>
-      </template>
-      <button
-        v-if="!showFork"
-        type="button"
-        class="lit-debt__primary"
-        @click="$emit('hand-edit-vd')"
-      >
-        {{ handEditLabel }}
-      </button>
-      <button
-        v-if="suggestFillEnabled"
-        type="button"
-        class="lit-debt__secondary"
-        @click="$emit('suggest-fill')"
-      >
-        建议补写（须 Confirm）
-      </button>
-      <button
-        v-if="allowWeakRegen && !slots.length && !showRegenPropStill"
-        type="button"
-        class="lit-debt__ghost"
-        @click="$emit('batch-still')"
-      >
-        仅重出静照（不推荐）
-      </button>
+
+  <section v-if="show" class="lit-debt" role="region" aria-labelledby="lit-debt-title">
+
+    <h4 id="lit-debt-title" class="lit-debt__title">{{ title }}</h4>
+
+    <p class="lit-debt__explain">{{ explainText }}</p>
+
+    <div v-if="slots.length" class="lit-debt__slots" aria-label="缺结构槽">
+
+      <t-tag v-for="s in slots" :key="s" size="small" theme="warning" variant="light">{{ s }}</t-tag>
+
     </div>
+
+    <p v-if="findingIds.length" class="lit-debt__codes">codes: {{ findingIds.join(" · ") }}</p>
+
+    <div class="lit-debt__actions" role="group" aria-label="文学细节修复">
+
+      <t-button
+
+        v-if="showEnhance && !hideEnhance"
+
+        size="small"
+
+        theme="primary"
+
+        @click="$emit('confirm-enhance')"
+
+      >
+
+        {{ enhanceLabel }}
+
+      </t-button>
+
+      <t-button v-if="showSplit" size="small" theme="primary" @click="$emit('confirm-split')">
+
+        确认拆镜
+
+      </t-button>
+
+      <t-button
+
+        v-if="showRegenPropStill"
+
+        size="small"
+
+        theme="warning"
+
+        @click="$emit('batch-still')"
+
+      >
+
+        {{ regenPropLabel }}
+
+      </t-button>
+
+      <t-button
+
+        v-if="showHumanRejudge"
+
+        size="small"
+
+        theme="success"
+
+        variant="outline"
+
+        @click="$emit('human-rejudge')"
+
+      >
+
+        {{ humanRejudgeLabel }}
+
+      </t-button>
+
+      <template v-if="showFork">
+
+        <t-button
+
+          v-for="f in forkChoices"
+
+          :key="f.fork"
+
+          size="small"
+
+          theme="primary"
+
+          variant="outline"
+
+          @click="$emit('presentation-fork', f.fork)"
+
+        >
+
+          {{ f.label }}
+
+        </t-button>
+
+      </template>
+
+      <t-button
+
+        v-if="!showFork"
+
+        size="small"
+
+        theme="primary"
+
+        variant="outline"
+
+        @click="$emit('hand-edit-vd')"
+
+      >
+
+        {{ handEditLabel }}
+
+      </t-button>
+
+      <t-button
+
+        v-if="suggestFillEnabled"
+
+        size="small"
+
+        theme="default"
+
+        variant="outline"
+
+        @click="$emit('suggest-fill')"
+
+      >
+
+        建议补写（须 Confirm）
+
+      </t-button>
+
+      <t-button
+
+        v-if="allowWeakRegen && !slots.length && !showRegenPropStill"
+
+        size="small"
+
+        theme="default"
+
+        variant="text"
+
+        @click="$emit('batch-still')"
+
+      >
+
+        仅重出静照（不推荐）
+
+      </t-button>
+
+    </div>
+
   </section>
+
 </template>
 
+
+
 <script setup lang="ts">
+
 import { computed } from "vue";
+
 import {
+
   flattenMissingSlots,
+
   irdCtaLabel,
+
   isEnhanceAction,
+
+  isLitDebtStillMeta,
+
   isSplitAction,
+
   type IrdFinding,
+
   type IrdPrimaryAction,
-} from "../types/stillIntentOps";
-import { humanRejudgePrimaryCta, shouldOfferHumanRejudge, type StillMeta } from "../types/stillQuality";
+
+} from "@/types/stillIntentOps";
+
+import { humanRejudgePrimaryCta, shouldOfferHumanRejudge, resolveStillDebtSemantics, type StillMeta } from "@/types/stillQuality";
+
+
 
 const props = withDefaults(
+
   defineProps<{
+
     explain?: string;
+
     title?: string;
+
     primaryAction?: IrdPrimaryAction | string;
+
+    primaryNextStep?: string;
+
     missingSlots?: string[];
+
     findings?: IrdFinding[];
-    /** When literaryDetailLlmFill / intentVisualEnhance flag on */
+
     suggestFillEnabled?: boolean;
-    /** Hide enhance CTA for rollback */
+
     hideEnhance?: boolean;
-    /** Only show regen as ghost — never primary while slots open */
+
     allowWeakRegen?: boolean;
-    /** Still meta for Key-optional human rejudge path */
+
     stillMeta?: StillMeta | null;
-    /** designDebt blocks human rejudge until IRD fills slots */
+
+    stillQuality?: string | null;
+
     designDebtBlock?: boolean;
+
     ctaLabel?: string;
-    /** Med-confidence presentation fork choices from IRD */
+
     presentationFork?: { fork: string; label: string }[] | null;
+
   }>(),
+
   {
-    suggestFillEnabled: false,
+
+    title: "文学细节未过 · 须补描写",
+
+    suggestFillEnabled: true,
+
     hideEnhance: false,
-    allowWeakRegen: false,
+
+    allowWeakRegen: true,
+
     designDebtBlock: false,
+
   },
+
 );
+
+
 
 defineEmits<{
+
   (e: "hand-edit-vd"): void;
+
   (e: "suggest-fill"): void;
+
   (e: "confirm-enhance"): void;
+
   (e: "confirm-split"): void;
+
   (e: "batch-still"): void;
+
   (e: "human-rejudge"): void;
+
   (e: "presentation-fork", fork: string): void;
+
 }>();
 
+
+
 const slots = computed(() => {
+
   const fromProp = (props.missingSlots ?? []).filter(Boolean);
+
   if (fromProp.length) return fromProp;
+
   return flattenMissingSlots(props.findings);
+
 });
+
+
 
 const findingIds = computed(() =>
+
   [...new Set((props.findings ?? []).filter((f) => f.severity === "BLOCK").map((f) => f.id))],
+
 );
+
+
 
 const showHumanRejudge = computed(
+
   () => !props.designDebtBlock && shouldOfferHumanRejudge(props.stillMeta ?? null),
+
 );
 
-const humanRejudgeLabel = computed(() =>
-  humanRejudgePrimaryCta(props.stillMeta ?? null),
-);
+
+
+const humanRejudgeLabel = computed(() => humanRejudgePrimaryCta(props.stillMeta ?? null));
+
+
 
 const showFork = computed(
+
   () =>
-    props.primaryAction === "presentation_fork" ||
-    (props.presentationFork?.length ?? 0) > 0,
+
+    props.primaryAction === "presentation_fork" || (props.presentationFork?.length ?? 0) > 0,
+
 );
+
+
 
 const forkChoices = computed(() => {
+
   if (props.presentationFork?.length) return props.presentationFork;
+
   return [
+
     { fork: "fork-A", label: "改 W3 △ 叙事描述" },
+
     { fork: "fork-B", label: "改 SB spatialRelation 镜级" },
+
   ];
+
 });
+
+
+
+const show = computed(
+
+  () =>
+
+    isLitDebtStillMeta({
+
+      primaryNextStep: props.primaryNextStep,
+
+      irdPrimaryAction: props.primaryAction,
+
+      missingSlots: slots.value,
+
+      ctaLabel: props.ctaLabel,
+
+    }) ||
+
+    (props.stillQuality === "weak" && slots.value.length > 0) ||
+
+    showHumanRejudge.value ||
+
+    showFork.value,
+
+);
+
+
 
 const showEnhance = computed(
+
   () =>
+
     !props.hideEnhance &&
+
     (isEnhanceAction(props.primaryAction) ||
+
       slots.value.some((s) => /contact|grip|xor|wound|propReadable|propInFrame|contactGeom/i.test(s))),
+
 );
+
+
 
 const showSplit = computed(
+
   () =>
+
     isSplitAction(props.primaryAction) ||
+
     findingIds.value.includes("DEX-LIT-CONTACT-XOR") ||
+
     slots.value.includes("contactRoleXor"),
+
 );
+
+
+
+const debtSemantics = computed(() => resolveStillDebtSemantics(props.stillMeta ?? null));
 
 const showRegenPropStill = computed(
+
   () =>
+
     slots.value.includes("propInFrame") ||
+
     slots.value.includes("contactGeom") ||
+
+    slots.value.includes("prop_form") ||
+
     findingIds.value.includes("DEX-PROP-IN-FRAME") ||
-    findingIds.value.includes("STILL-CONTACT-HANDOFF"),
+
+    findingIds.value.includes("STILL-CONTACT-HANDOFF") ||
+
+    findingIds.value.includes("PROP-FORM") ||
+
+    debtSemantics.value.kind === "prop_form" ||
+
+    debtSemantics.value.kind === "prop_plate",
+
 );
+
+const regenPropLabel = computed(() =>
+  debtSemantics.value.kind === "prop_form"
+    ? "重出形态静照"
+    : debtSemantics.value.kind === "prop_plate"
+      ? "挂道具板后再生成"
+      : "重出带道具静照",
+);
+
+
 
 const enhanceLabel = computed(() =>
+
   irdCtaLabel({
+
     primaryAction: props.primaryAction === "apply_auto_enhance" ? "apply_auto_enhance" : "confirm_enhance",
+
     missingSlots: slots.value,
+
   }),
+
 );
+
+
 
 const handEditLabel = computed(() =>
+
   props.ctaLabel && !isEnhanceAction(props.primaryAction)
+
     ? props.ctaLabel
+
     : irdCtaLabel({ primaryAction: "hand_edit_vd", missingSlots: slots.value }),
+
 );
 
+
+
 const explainText = computed(() => {
+
   if (props.explain) return props.explain;
+
   if (showFork.value) {
+
     return "中置信智能修复：请先选择 fork-A（改叙事）或 fork-B（改镜级构图），禁止空跳手改。";
+
   }
+
   if (props.designDebtBlock) {
+
     return "设计债未清（缺 propInFrame/contactGeom 等）；请先 IRD/手改 VD，再人审。人审不能跳过设计债。";
+
   }
+
+  if (debtSemantics.value.kind === "prop_form" || debtSemantics.value.kind === "prop_plate") {
+    return debtSemantics.value.explain;
+  }
+
+  if (debtSemantics.value.kind === "key_unmeasured" && showHumanRejudge.value) {
+    return debtSemantics.value.explain;
+  }
+
   if (showHumanRejudge.value) {
-    return "诊断 Key 可选。当前未测·弱图非失败；主路径为人审通过（未测·非失败），Key 仅作可选增强。";
+
+    return "诊断 Key 可选（不挡质量流）。结构债未清禁升 hq；像素未测≠结构已过。Key 仅作可选像素增强。";
+
   }
+
   if (showRegenPropStill.value) {
+
     return "接触事件须道具入画（propInFrame+contactGeom）；浅痕≠道具。请批准增强补道具句，或重出带道具静照；禁止只改视频词。";
+
   }
+
+  if (
+    /lit_contact_mouth_ban|mouthBan/i.test(String(props.reverseTrigger ?? props.code ?? "")) ||
+    slots.value.some((s) => /mouthBan|禁口含/i.test(s))
+  ) {
+    return "接触主题胶水：compose 须含「禁口含/禁纸入口/仅落点触」HARD；缺则增强或手改 VD，禁止只 regen。";
+  }
+
   if (slots.value.includes("contactRoleXor")) {
-    return "颊触与口创同镜须互斥句或拆镜；可批准增强补 contactRoleXor，或手改 VD。禁止只 hq_update。";
+
+    return "颊触与口创同镜须互斥句或拆镜；可批准增强补 contactRoleXor，或手改 VD。补全后可继续生成。";
+
   }
+
   if (slots.value.length) {
-    return `缺结构槽 ${slots.value.join("/")}。可批准增强或手改 visualDescription；禁止只 hq_update。`;
+
+    return `缺结构槽 ${slots.value.join("/")}。可「应用补全」按反推契约补描写，或手改 visualDescription；补全后可继续生成。`;
+
   }
-  return "文学细节/道具契约未过。请增强或手改 VD；禁止只 regen。";
+
+  return "文学细节/道具契约未过。请增强或手改 VD；补全后可继续生成（Key 可选不挡生成）。";
+
 });
+
 </script>
+
+
+
+<style scoped>
+
+.lit-debt {
+
+  margin-top: 8px;
+
+  padding: 8px 10px;
+
+  border: 1px solid #f5c6a0;
+
+  background: #fff8f0;
+
+  border-radius: 4px;
+
+}
+
+.lit-debt__title {
+
+  margin: 0 0 4px;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+}
+
+.lit-debt__explain {
+
+  margin: 0 0 6px;
+
+  font-size: 12px;
+
+  line-height: 1.4;
+
+  color: #666;
+
+}
+
+.lit-debt__codes {
+
+  margin: 0 0 6px;
+
+  font-size: 11px;
+
+  color: #b54708;
+
+}
+
+.lit-debt__slots {
+
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 4px;
+
+  margin-bottom: 8px;
+
+}
+
+.lit-debt__actions {
+
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+}
+
+</style>
+
+

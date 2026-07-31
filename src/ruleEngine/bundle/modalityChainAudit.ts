@@ -45,8 +45,8 @@ export function auditModalityChainGaps(bundle: ScriptBundle, tier: "T1" | "T2" |
       if (hasDialogue && !shot.generation?.audioPrompt?.trim()) {
         gaps.push({
           id: "MOD-03",
-          severity: "WARN",
-          message: "W3 audioBeat 有但台词镜无 audioPrompt",
+          severity: "BLOCK",
+          message: "W3 audioBeat 有但台词镜无 audioPrompt（关键槽 BLOCK）",
           chainId: "modality_feasibility",
           trigger: "modality_aud_missing",
           field: "generation.audioPrompt",
@@ -63,8 +63,8 @@ export function auditModalityChainGaps(bundle: ScriptBundle, tier: "T1" | "T2" |
     if (shot.visualEffect?.trim() && !fxProse) {
       gaps.push({
         id: "MOD-02",
-        severity: "WARN",
-        message: "SB visualEffect 有但无 generation.fxPrompt 散文（audit item 不能代替槽）",
+        severity: "BLOCK",
+        message: "SB visualEffect 有但无 generation.fxPrompt 散文（关键槽 BLOCK）",
         chainId: "modality_feasibility",
         trigger: "modality_fx_missing",
         field: "generation.fxPrompt",
@@ -87,14 +87,14 @@ export function auditModalityChainGaps(bundle: ScriptBundle, tier: "T1" | "T2" |
       }
     }
 
-    // F14: dialogue shot missing audioPrompt — WARN at audit; burn path hard-gates separately
     const dial = shot.narrative?.dialogue?.lines ?? [];
-    const hasDial = Array.isArray(dial) && dial.some((l) => String(typeof l === "string" ? l : l?.text ?? "").trim());
+    const hasDial =
+      Array.isArray(dial) && dial.some((l) => String(typeof l === "string" ? l : l?.text ?? "").trim());
     if (hasDial && !String(shot.generation?.audioPrompt ?? "").trim()) {
       gaps.push({
         id: "MOD-03",
-        severity: "WARN",
-        message: "台词镜缺 generation.audioPrompt",
+        severity: "BLOCK",
+        message: "台词镜缺 generation.audioPrompt（V5-N11c 关键槽 BLOCK）",
         chainId: "modality_feasibility",
         trigger: "modality_aud_missing",
         field: "generation.audioPrompt",

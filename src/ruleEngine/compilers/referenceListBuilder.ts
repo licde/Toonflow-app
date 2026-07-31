@@ -132,6 +132,17 @@ export async function resolveCrefCodesToAssetIds(
   return { assetIds: uniqueIds, warnings };
 }
 
+function isSceneAssetRow(a: { type?: string; remark?: string; name?: string }): boolean {
+  const m = String(a.remark ?? "").match(/(?:assetCode|charCode):([A-Za-z]+-[A-Za-z0-9]+)/i);
+  const code = m?.[1]?.toUpperCase() ?? "";
+  return (
+    a.type === "scene" ||
+    /^SCENE-/i.test(code) ||
+    /scene|场景/i.test(String(a.type ?? "")) ||
+    /scene|场景/i.test(String(a.name ?? ""))
+  );
+}
+
 export async function mergeAssociateAssetIds(
   db: Knex,
   projectId: number,
@@ -140,11 +151,16 @@ export async function mergeAssociateAssetIds(
   charCodes: string[] = [],
   codeToId?: Record<string, number>,
   preferredOrder?: string[],
-  opts?: { excludeScene?: boolean },
-): Promise<{ assetIds: number[]; warnings: ReferenceWarning[] }> {
+  opts?: { excludeScene?: boolean; softEnvRef?: boolean; propSoftCodes?: string[] },
+): Promise<{ assetIds: number[]; warnings: ReferenceWarning[]; softEnvAssetId?: number; propSoftAssetId?: number }> {
   const refs = parsePromptRefs(prompt);
-  const codes = [...new Set([...charCodes, ...refs.crefs, ...refs.srefs])].filter((c) => {
-    if (opts?.excludeScene && /^SCENE-/i.test(c)) return false;
+  const softEnv = Boolean(opts?.softEnvRef);
+  // soft_env: keep SCENE codes in resolve so we can append one soft plate later
+  const propSoft = (opts?.propSoftCodes ?? []).filter(
+    (c) => /^PROP-/i.test(c) || /纸|信|文书|帕|巾|剑|刀|扳指|戒指|玉佩|道具/.test(c),
+  );
+  const codes = [...new Set([...charCodes, ...refs.crefs, ...refs.srefs, ...propSoft])].filter((c) => {
+    if (opts?.excludeScene && !softEnv && /^SCENE-/i.test(c)) return false;
     return true;
   });
   const order = preferredOrder?.length
@@ -171,27 +187,44 @@ export async function mergeAssociateAssetIds(
   }
 
   let finalIds = orderedIds;
+  let softEnvAssetId: number | undefined;
+  let propSoftAssetId: number | undefined;
   if (opts?.excludeScene && finalIds.length) {
     const rows = await db("o_assets")
       .whereIn("id", finalIds)
       .select("id", "type", "remark", "name");
-    const sceneIds = new Set<number>();
+    const sceneIds: number[] = [];
+    const sceneSet = new Set<number>();
+    const propRows: Array<{ id: number; name?: string }> = [];
     for (const a of rows as Array<{ id: number; type?: string; remark?: string; name?: string }>) {
-      const m = String(a.remark ?? "").match(/(?:assetCode|charCode):([A-Za-z]+-[A-Za-z0-9]+)/i);
-      const code = m?.[1]?.toUpperCase() ?? "";
-      const isScene =
-        a.type === "scene" ||
-        /^SCENE-/i.test(code) ||
-        /scene|场景/i.test(String(a.type ?? "")) ||
-        /scene|场景/i.test(String(a.name ?? ""));
-      if (isScene) sceneIds.add(a.id);
+      if (isSceneAssetRow(a)) {
+        sceneSet.add(a.id);
+        sceneIds.push(a.id);
+      }
+      if (/prop|道具|纸|文书|帕|巾|剑|刀|扳指|戒指/i.test(`${a.type ?? ""}${a.remark ?? ""}${a.name ?? ""}`)) {
+        propRows.push(a);
+      }
     }
-    finalIds = finalIds.filter((id) => !sceneIds.has(id));
+    finalIds = finalIds.filter((id) => !sceneSet.has(id));
+    // PROP soft plate after identity, before soft env
+    if (propRows.length || propSoft.length) {
+      propSoftAssetId = propRows[0]?.id;
+      if (propSoftAssetId && !finalIds.includes(propSoftAssetId)) {
+        finalIds.push(propSoftAssetId);
+      }
+    }
+    // soft_env: one SCENE plate after identity (禁灰棚；禁建立镜头抢戏)
+    if (softEnv && sceneIds.length) {
+      softEnvAssetId = sceneIds[0];
+      finalIds.push(softEnvAssetId);
+    }
   }
 
   return {
     assetIds: finalIds,
     warnings: resolved.warnings,
+    softEnvAssetId,
+    propSoftAssetId,
   };
 }
 
@@ -264,11 +297,13 @@ export async function buildReferenceListForStoryboard(
   prompt: string,
   charCodes: string[] = [],
   preferredOrder?: string[],
-  opts?: { excludeScene?: boolean },
+  opts?: { excludeScene?: boolean; softEnvRef?: boolean; propSoftCodes?: string[] },
 ): Promise<{
   referenceList: { type: "image"; base64: string }[];
   warnings: ReferenceWarning[];
   sceneRefsDropped?: number;
+  softEnvKept?: boolean;
+  propSoftKept?: boolean;
   /** True when at least one character cref is a turnaround/四视图 sheet */
   turnaroundCrefUsed?: boolean;
 }> {
@@ -281,6 +316,14 @@ export async function buildReferenceListForStoryboard(
           assetCodes: [...charCodes, ...parsePromptRefs(prompt).crefs].filter((c) => /^CHAR-/i.test(c)),
         }).orderedCodes;
   const beforeCount = (assetRows as number[]).length;
+  const softEnv = Boolean(opts?.softEnvRef);
+  const { resolvePropSoftCodes } = require("./eventPlateReadiness") as typeof import("./eventPlateReadiness");
+  const propSoftCodes =
+    opts?.propSoftCodes ??
+    resolvePropSoftCodes({
+      visualDescription: prompt,
+      contract: null,
+    });
   const merged = await mergeAssociateAssetIds(
     db,
     projectId,
@@ -289,7 +332,7 @@ export async function buildReferenceListForStoryboard(
     charCodes,
     undefined,
     order,
-    { excludeScene: opts?.excludeScene },
+    { excludeScene: opts?.excludeScene, softEnvRef: softEnv, propSoftCodes },
   );
 
   // Keep 四视图 as identity cref; warn so compose can tighten single-frame lock (no-VLM path)
@@ -374,19 +417,40 @@ export async function buildReferenceListForStoryboard(
       }
     }
   }
+  const softEnvKept = Boolean(merged.softEnvAssetId);
+  const propSoftKept = Boolean(merged.propSoftAssetId);
   const sceneRefsDropped =
     opts?.excludeScene && beforeCount > merged.assetIds.length
       ? beforeCount - merged.assetIds.length
       : opts?.excludeScene
-        ? Math.max(0, beforeCount - merged.assetIds.length)
+        ? Math.max(0, beforeCount - (softEnvKept ? merged.assetIds.length - 1 : merged.assetIds.length))
         : 0;
-  // Face CU / excludeScene: at most one cropped identity plate (never multi-cref collage)
+  // Face CU / excludeScene: 1 identity (+ optional prop soft + softEnv). Never multi-char collage.
   if (opts?.excludeScene && referenceList.length > 1) {
-    sheetWarnings.push({
-      code: "faceCuCap",
-      message: `特写仅保留1张身份板（丢弃${referenceList.length - 1}张额外参考）`,
-    });
-    referenceList.splice(1);
+    let cap = 1;
+    if (propSoftKept) cap += 1;
+    if (softEnv && softEnvKept) cap += 1;
+    if (referenceList.length > cap) {
+      sheetWarnings.push({
+        code: softEnvKept ? "faceCuSoftEnvCap" : "faceCuCap",
+        message: softEnvKept
+          ? `特写保留身份板${propSoftKept ? "+道具板" : ""}+软环境板（丢弃${referenceList.length - cap}张额外参考）`
+          : `特写仅保留1张身份板（丢弃${referenceList.length - 1}张额外参考）`,
+      });
+      referenceList.splice(cap);
+    } else if (softEnvKept) {
+      sheetWarnings.push({
+        code: "softEnvKept",
+        message: "特写保留软环境场景板（非建立镜头抢戏）",
+      });
+    }
   }
-  return { referenceList, warnings: sheetWarnings, sceneRefsDropped, turnaroundCrefUsed };
+  return {
+    referenceList,
+    warnings: sheetWarnings,
+    sceneRefsDropped,
+    softEnvKept,
+    propSoftKept,
+    turnaroundCrefUsed,
+  };
 }

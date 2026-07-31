@@ -86,11 +86,17 @@ function ensureCarryInfo(plan: Record<string, unknown>, notes: string[]): void {
     /* fall through */
   }
   if (!cont.carryInfoIds?.length) {
-    cont.carryInfoIds = ["carry_prev_hook"];
-    cont.empathyShift = cont.empathyShift || "上集钩兑现→本集加压";
-    pd.seriesContinuity = cont;
+    // V5-04: never invent carry_prev_hook — that false-greens DEX-CAUSAL-EP
+    const meta = ((pd.meta as Record<string, unknown>) ??= {});
+    meta.seriesCarryMissing = true;
+    meta.importOkNotExitPass = true;
+    pd.meta = meta;
+    pd.seriesContinuity = {
+      ...cont,
+      empathyShift: cont.empathyShift || "上集钩兑现→本集加压（缺 carryInfoIds·须写回/hydrate）",
+    };
     plan.planData = pd;
-    notes.push("E: epN+ 补 carryInfo/empathyShift");
+    notes.push("E: epN+ 缺 carryInfoIds — WARN only（禁 invent carry_prev_hook）");
   }
 }
 

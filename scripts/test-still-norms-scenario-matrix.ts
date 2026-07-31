@@ -9,6 +9,9 @@ import { routeStillDebtAction } from "../src/ruleEngine/compilers/stillDebtActio
 import { assertStillFirstFrameContract } from "../src/ruleEngine/qc/stillFirstFrameGate";
 import { routeStillRepair } from "../src/ruleEngine/qc/stillRepairRoute";
 import { homologizeStillPromptForStore } from "../src/ruleEngine/compilers/stillPromptHomology";
+import { lintStillPromptBody } from "../src/ruleEngine/compilers/stillPromptLint";
+import { deriveGenerationContract } from "../src/ruleEngine/design/deriveGenerationContract";
+import { assessStillVideoReadiness } from "../src/ruleEngine/qc/stillVideoReadiness";
 import { runImportLitDebtHygiene } from "../src/ruleEngine/design/importLitDebtHygiene";
 import { VLM_API_KEY_MISSING } from "../src/ruleEngine/qc/vlmKeyResolve";
 
@@ -18,6 +21,16 @@ function ok(name: string, cond: boolean, detail?: string) {
     process.exit(1);
   }
   console.log("ok", name);
+}
+
+// --- face CU: soft_env when SCENE linked ---
+{
+  const p = resolveStillBgPolicy({
+    description: "特写。沈清漪侧脸，休书纸角划过面颊。",
+    shotSize: "特写",
+    hasSceneLink: true,
+  });
+  ok("CU soft_env ref", p.keepSoftEnvRef === true && p.bgMode === "soft_env");
 }
 
 // --- face CU: excludeScene + soft bg (no temple invite) ---
@@ -96,9 +109,11 @@ function ok(name: string, cond: boolean, detail?: string) {
     qualityMode: "hq_update",
   });
   ok("compose cheek ok", r.ok, r.blockReason);
-  ok("compose literary first", /^特写/.test(String(r.prompt ?? "")), String(r.prompt).slice(0, 40));
+  ok("compose objective first", /贴合|道具入画|休书必须清晰入画可读/.test(String(r.prompt ?? "")), String(r.prompt).slice(0, 80));
   ok("compose look anchor", /本镜主look/.test(String(r.prompt ?? "")) || (r.sources ?? []).includes("look.anchor.faceCu"), JSON.stringify(r.sources));
   ok("compose excludeScene", r.excludeScene === true);
+  ok("compose prompt lint exported", Array.isArray(r.promptLintConflicts));
+  ok("compose generation contract exported", Boolean(r.generationContract?.contractHash));
 }
 
 // --- compose XOR refuse ---
@@ -149,7 +164,12 @@ function ok(name: string, cond: boolean, detail?: string) {
     vlmErrorCode: VLM_API_KEY_MISSING,
     visualDescription: "特写。沈清漪侧脸。",
   });
-  ok("no-VLM stopFidelityBurn", debt.stopFidelityBurn === true && debt.action === "stop_fidelity_honest");
+  // G0: Key optional — annotate only; do not stop structure/L0 path or fidelity burn budget
+  ok(
+    "no-VLM key optional annotate",
+    debt.kind === "vlm_key_missing" && debt.stopFidelityBurn === false && debt.action === "pass",
+    JSON.stringify(debt),
+  );
 }
 
 // --- import XOR smart split + stale ---
@@ -194,6 +214,41 @@ function ok(name: string, cond: boolean, detail?: string) {
   ok("FF blocks sheetLeak", ff.ok === false && ff.code === "STILL-FIRSTFRAME-WEAK");
 }
 
+{
+  const lint = lintStillPromptBody({
+    prompt: "特写。沈清漪侧脸。正脸朝向镜头。不可读则拆持物镜+反应镜。禁口含；禁纸入口；仅颊触非口含。禁口含；禁纸入口；仅颊触非口含。",
+  });
+  ok("prompt lint strips flow sentence", !/拆持物镜/.test(lint.prompt), lint.prompt);
+  ok("prompt lint strips front-face conflict", !/正脸朝向镜头/.test(lint.prompt), lint.prompt);
+}
+
+{
+  const ff = assertStillFirstFrameContract({
+    stillPrompt: "特写。沈清漪侧脸，休书纸角划过面颊。沈母站立完整立像抢占半幅画面。",
+    literaryDesc: "特写。沈清漪侧脸，休书纸角划过面颊。沈母站立。",
+    stillFilePath: "/tmp/x.jpg",
+    stillQuality: "hq_ok",
+    requireStill: true,
+  });
+  ok("FF blocks secondary dominance", ff.ok === false && ff.sceneDominanceFail === true, JSON.stringify(ff));
+}
+
+{
+  const contract = deriveGenerationContract({
+    visualDescription: "特写。沈清漪侧脸，休书纸角划过面颊。",
+    shotSize: "特写",
+    characterNames: ["沈清漪", "沈母"],
+  });
+  ok("contract objective contact geom", contract.objectiveClass === "contact_geom", JSON.stringify(contract));
+  const ready = assessStillVideoReadiness({
+    stillQuality: "hq_ok",
+    visualPass: true,
+    fidelityItems: [{ id: "contact_geom", pass: true }],
+    promptUsed: "特写。纸角贴颊。",
+  });
+  ok("i2v readiness pass", ready.i2vReady === true, JSON.stringify(ready));
+}
+
 // --- look + wound L0 atoms (design intent survive; cheek-only, no oral XOR) ---
 {
   const r = composeStillPrompt({
@@ -205,6 +260,45 @@ function ok(name: string, cond: boolean, detail?: string) {
   ok("wound cheek compose ok", r.ok, r.blockReason);
   ok("wound atom in prompt", /浅痕/.test(String(r.prompt ?? "")), String(r.prompt).slice(0, 100));
   ok("look anchor in prompt", /本镜主look/.test(String(r.prompt ?? "")), String(r.sources));
+}
+
+// --- foundation guard: compress must not drop basics ---
+{
+  const r = composeStillPrompt({
+    visualDescription:
+      "特写。沈清漪侧脸，休书纸角划过面颊。纸未入口；仅颊触非口含。禁口含；禁纸入口。",
+    shotSize: "特写",
+    characters: [{ name: "沈清漪", code: "CHAR-SHENQINGYI", hasImage: true, kind: "role" }],
+    qualityMode: "hq_update",
+  });
+  ok("foundation compose ok", r.ok, r.blockReason);
+  ok("foundation compose keeps mouth xor", /禁口含/.test(String(r.prompt ?? "")), String(r.prompt).slice(0, 120));
+  ok("foundation compose contact first", /纸角|贴颊|划过接触|贴合/.test(String(r.prompt ?? "")), String(r.prompt).slice(0, 120));
+  ok(
+    "foundation compose sources",
+    (r.sources ?? []).some((s) => String(s).startsWith("foundation.") || String(s).startsWith("objective.")),
+    JSON.stringify(r.sources),
+  );
+}
+
+{
+  const { decideAutoRepairPolicy, slotsAreEnhanceable } =
+    require("../src/ruleEngine/quality/autoRepairPolicy") as typeof import("../src/ruleEngine/quality/autoRepairPolicy");
+  ok("slots enhanceable contact", slotsAreEnhanceable(["contactGeom", "propInFrame"]));
+  const ar = decideAutoRepairPolicy({
+    repairIrdPrimaryAction: "hand_edit_vd",
+    missingSlots: ["contactGeom", "propInFrame"],
+    keyMissing: true,
+    fidelityStopReason: "vlm_error",
+  });
+  ok("autoRepair lit enhanceable allows regen", ar.allowSilentRegen === true, JSON.stringify(ar));
+  ok("autoRepair preferLitEnhance", ar.preferLitEnhance === true, JSON.stringify(ar));
+  const arKey = decideAutoRepairPolicy({
+    keyMissing: true,
+    fidelityStopReason: "vlm_error",
+    visualPass: false,
+  });
+  ok("autoRepair keyMissing allows regen", arKey.allowSilentRegen === true, JSON.stringify(arKey));
 }
 
 console.log("OK still-norms-scenario-matrix");

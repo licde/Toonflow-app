@@ -78,6 +78,18 @@ export default router.post(
           // Canvas ops echo — faceCu dropped SCENE / literary intent CTAs
           sceneRefsDropped: result.sceneRefsDropped,
           excludeScene: result.excludeScene,
+          keepSoftEnvRef: result.keepSoftEnvRef,
+          propPlateMissing: result.propPlateMissing,
+          synthesizedPropPlate: result.synthesizedPropPlate,
+          softEnvBakedIntoIdentity: result.softEnvBakedIntoIdentity,
+          softEnvContinuity: result.softEnvContinuity,
+          softEnvMissingHonest: result.softEnvMissingHonest,
+          droppedSoftEnv: result.droppedSoftEnv,
+          propSource: result.propSource,
+          refsRoles: result.refsRoles,
+          vendorCalled: result.vendorCalled,
+          vendorMs: result.vendorMs,
+          bgMode: result.bgMode,
           bgPolicy: result.bgPolicy,
           bgPolicyReason: result.bgPolicyReason,
           settingsDeepLink: result.settingsDeepLink,
@@ -89,21 +101,53 @@ export default router.post(
     } catch (e: any) {
       const errMsg = u.error(e).message;
       const feedback = e?.feedback;
+      const envelope = (() => {
+        try {
+          const { buildStillErrorEnvelope, shouldLatchBlockSilentRegen } =
+            require("@/ruleEngine/compilers/stillErrorEnvelope") as typeof import("@/ruleEngine/compilers/stillErrorEnvelope");
+          const env = buildStillErrorEnvelope({
+            code: e?.code,
+            errMsg,
+            feedbackCategory: feedback?.category,
+            feedbackRuleId: feedback?.ruleId,
+          });
+          return {
+            ...env,
+            blockSilentRegen: shouldLatchBlockSilentRegen({
+              primaryNextStep: e?.primaryNextStep ?? env.primaryNextStep,
+              code: e?.code ?? env.code,
+              missingSlots: e?.missingSlots,
+              irdPrimaryAction: e?.irdPrimaryAction,
+              errMsg,
+            }),
+          };
+        } catch {
+          return {
+            code: e?.code,
+            primaryNextStep: e?.primaryNextStep ?? "retry_shot",
+            userMessage: e?.userMessage ?? errMsg,
+            ctaLabel: e?.ctaLabel ?? "重试生图",
+            blockSilentRegen: false,
+          };
+        }
+      })();
       res.status(400).send(
-        error(errMsg, {
+        error(envelope.userMessage || errMsg, {
           feedback,
           suggestedPrompt: feedback?.suggestedPrompt ?? e?.suggestedPrompt,
           rePushPlan: e?.rePushPlan ?? [],
-          code: e?.code,
-          primaryNextStep: e?.primaryNextStep,
-          userMessage: e?.userMessage ?? errMsg,
-          ctaLabel: e?.ctaLabel,
+          code: envelope.code ?? e?.code,
+          primaryNextStep: envelope.primaryNextStep,
+          userMessage: envelope.userMessage,
+          ctaLabel: envelope.ctaLabel,
           composeSources: e?.composeSources,
           stillQuality: e?.stillQuality,
           missingSlots: e?.missingSlots,
           irdPrimaryAction: e?.irdPrimaryAction,
-          blockSilentRegen: true,
-          refreshStoryboardBeforeRegen: e?.primaryNextStep === "split_shot",
+          propPlateMissing: e?.propPlateMissing,
+          // Vendor/transient → false so FE Generate stays clickable
+          blockSilentRegen: envelope.blockSilentRegen,
+          refreshStoryboardBeforeRegen: envelope.primaryNextStep === "split_shot",
           settingsDeepLink: e?.settingsDeepLink,
         }),
       );

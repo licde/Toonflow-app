@@ -22,6 +22,7 @@ export default router.post(
   validateFields({
     storyboardId: z.number(),
     description: z.string().optional(),
+    undo: z.boolean().optional(),
     items: z
       .array(
         z.object({
@@ -31,7 +32,7 @@ export default router.post(
           fixHint: z.string().optional(),
         }),
       )
-      .min(1),
+      .optional(),
     expected: z
       .array(z.object({ id: z.string(), pass: z.boolean() }))
       .optional(),
@@ -41,7 +42,101 @@ export default router.post(
   }),
   async (req, res) => {
     try {
-      const { storyboardId, description, items, expected, modality, videoId, trackId } = req.body;
+      const { storyboardId, description, items, expected, modality, videoId, trackId, undo } = req.body;
+
+      // V5-N11d: undo restores weak + clears videoPass (symmetric to pass)
+      if (undo) {
+        const rowU = await u.db("o_storyboard").where({ id: storyboardId }).first();
+        if (!rowU) return res.status(404).send(error("分镜不存在"));
+        const prevU = parseStillMetaFromReason(rowU.reason);
+        await u.db("o_storyboard").where({ id: storyboardId }).update({
+          reason: mergeReasonMeta(rowU.reason, {
+            stillQuality: "weak",
+            visualPass: false,
+            visualPassAt: undefined,
+            burnReady: false,
+            humanOverride: false,
+            humanOverrideAt: undefined,
+            pendingHumanRejudge: true,
+            videoPass: false,
+            videoStale: true,
+            primaryNextStep: "human_review",
+            ctaLabel: "人审已撤销 · 恢复弱图",
+            userMessage: "人审撤销：已恢复 weak 并清除 videoPass",
+            humanRejudgeUndoneAt: new Date().toISOString(),
+          }),
+        });
+        try {
+          const sb = await u.db("o_storyboard").where({ id: storyboardId }).select("trackId").first();
+          const tid = Number(trackId ?? sb?.trackId ?? 0);
+          if (tid > 0) {
+            await u.db("o_videoTrack").where({ id: tid }).update({ videoStale: true });
+            const videos = await u.db("o_video").where({ trackId: tid }).select("id", "errorReason");
+            for (const v of videos) {
+              let er: Record<string, unknown> = {};
+              try {
+                er =
+                  typeof v.errorReason === "string" && v.errorReason.trim().startsWith("{")
+                    ? JSON.parse(v.errorReason)
+                    : {};
+              } catch {
+                er = {};
+              }
+              await u.db("o_video").where({ id: v.id }).update({
+                errorReason: JSON.stringify({
+                  ...er,
+                  videoPass: false,
+                  videoStale: true,
+                  qcWeak: true,
+                  primaryNextStep: "human_review",
+                  humanRejudgeUndoneAt: new Date().toISOString(),
+                }),
+              });
+            }
+          }
+          if (videoId) {
+            const vRow = await u.db("o_video").where({ id: videoId }).first();
+            if (vRow) {
+              let er: Record<string, unknown> = {};
+              try {
+                er =
+                  typeof vRow.errorReason === "string" && vRow.errorReason.trim().startsWith("{")
+                    ? JSON.parse(vRow.errorReason)
+                    : {};
+              } catch {
+                er = {};
+              }
+              await u.db("o_video").where({ id: videoId }).update({
+                errorReason: JSON.stringify({
+                  ...er,
+                  videoPass: false,
+                  qcWeak: true,
+                  primaryNextStep: "human_review",
+                  humanRejudgeUndoneAt: new Date().toISOString(),
+                }),
+              });
+            }
+          }
+        } catch {
+          /* cascade best-effort */
+        }
+        return res.status(200).send(
+          success({
+            undone: true,
+            stillQuality: "weak",
+            videoPass: false,
+            visualPass: false,
+            pendingHumanRejudge: true,
+            previousCorpusId: prevU?.humanRejudgeCorpusId,
+            a11yAnnounce: "人审已撤销；已恢复弱图并清除 videoPass",
+          }),
+        );
+      }
+
+      if (!items || !Array.isArray(items) || items.length < 1) {
+        return res.status(400).send(error("items 至少一条（或传 undo:true）"));
+      }
+
       const row = await u.db("o_storyboard").where({ id: storyboardId }).first();
       if (!row) return res.status(404).send(error("分镜不存在"));
       const prev = parseStillMetaFromReason(row.reason);

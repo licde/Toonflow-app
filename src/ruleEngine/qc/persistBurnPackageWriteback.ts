@@ -4,6 +4,7 @@
 import type { Knex } from "knex";
 import { loadEpisodePackage, saveEpisodePackage } from "../storage/episodePackageStore";
 import { buildShotChainContract } from "../quality/shotChainContract";
+import { deriveSuccessPattern } from "../quality/successPatternLibrary";
 
 export async function writebackBurnVideoToPackage(input: {
   db: Knex;
@@ -29,6 +30,7 @@ export async function writebackBurnVideoToPackage(input: {
   compiled.hash = input.promptHash;
   gen.compiled = compiled;
   let designContentHash: string | undefined;
+  let successPattern: Record<string, unknown> | undefined;
   try {
     const merged = {
       ...shot,
@@ -36,6 +38,12 @@ export async function writebackBurnVideoToPackage(input: {
       generation: gen,
     };
     designContentHash = buildShotChainContract(merged).designContentHash;
+    successPattern = deriveSuccessPattern({
+      visualDescription: String((shot as { visualDescription?: string }).visualDescription ?? ""),
+      objectiveClass: String((input.shotMeta as { generationContract?: { objectiveClass?: string } } | null)?.generationContract?.objectiveClass ?? ""),
+      promptHash: input.promptHash,
+      contractHash: String((input.shotMeta as { contractHash?: string } | null)?.contractHash ?? ""),
+    });
   } catch {
     /* optional */
   }
@@ -43,6 +51,7 @@ export async function writebackBurnVideoToPackage(input: {
     ...shot,
     duration: input.durationSec,
     generation: gen,
+    ...(successPattern ? { successPattern } : {}),
     ...(designContentHash ? { designContentHash } : {}),
   } as never;
   await saveEpisodePackage(input.db, pkg);

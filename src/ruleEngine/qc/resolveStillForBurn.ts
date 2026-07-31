@@ -146,14 +146,38 @@ export async function resolveStillForBurn(input: {
   return { filePath: "", prompt: "", resolveSource: "none" };
 }
 
-/** VLM infra miss must not forever-block burn when a still file already exists. */
+/** True when gap is only missing diagnostic Key (not vendor/poll failure). G0: never softAllow quality. */
+export function isStillKeyAbsentOnly(meta: Record<string, unknown> | null | undefined): boolean {
+  if (!meta) return false;
+  const err = String(meta.vlmError ?? "");
+  const keyMiss = /VLM_API_KEY_MISSING|缺少API\s*Key|缺少可用的视觉评审/i.test(err);
+  if (!keyMiss) return false;
+  // True vendor infra (timeout/429) is not key-only
+  if (/timeout|ECONNRESET|429|TLS|vendor/i.test(err) && !/VLM_API_KEY_MISSING/.test(err)) return false;
+  return true;
+}
+
+/** VLM infra miss — vendor/poll/draft skip. Key-absent alone is NOT softAllow-eligible (G0). */
 export function isStillVlmInfraGap(meta: Record<string, unknown> | null | undefined): boolean {
   if (!meta) return false;
-  if (meta.pendingHumanRejudge === true) return true;
+  // G0: Key-only → not an infra soft-allow gap
+  if (isStillKeyAbsentOnly(meta) && meta.infraEditBypassUsed !== true) {
+    const stop = String(meta.fidelityStopReason ?? "");
+    // pendingHumanRejudge from Key-miss alone should not softAllow burn
+    if (stop === "vlm_error" || /VLM_API_KEY_MISSING/.test(String(meta.vlmError ?? ""))) {
+      return false;
+    }
+  }
   if (meta.infraEditBypassUsed === true) return true;
   const stop = String(meta.fidelityStopReason ?? "");
-  if (stop === "vlm_error" || stop === "disabled" || stop === "skipped_draft") return true;
+  if (stop === "disabled" || stop === "skipped_draft") return true;
+  if (stop === "vlm_error") {
+    // vendor error without key-only
+    if (!isStillKeyAbsentOnly(meta)) return true;
+    return false;
+  }
   const err = String(meta.vlmError ?? "");
-  if (/VLM_API_KEY_MISSING|vlm_error|缺少可用的视觉评审/i.test(err)) return true;
+  if (/timeout|ECONNRESET|429|TLS|vendor_passthrough/i.test(err)) return true;
+  if (meta.pendingHumanRejudge === true && !isStillKeyAbsentOnly(meta)) return true;
   return false;
 }

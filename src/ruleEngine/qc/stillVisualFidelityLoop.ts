@@ -92,7 +92,9 @@ export function stillHqRequiresVisualPass(config?: StillVisualFidelityLoopConfig
   return (config ?? loadStillVisualFidelityLoopConfig()).hqRequiresVisualPass !== false;
 }
 
-/** Historical hq_ok without visualPassAt → treat as weak for burn when required. */
+/** Historical hq_ok without visualPassAt → treat as weak for burn when required.
+ * G0: Key absence must NOT skip degrade — only humanOverride / true measured pass keep hq_ok.
+ */
 export function degradeHqWithoutVisualPass(meta: {
   stillQuality?: string | null;
   visualPassAt?: string | null;
@@ -101,21 +103,14 @@ export function degradeHqWithoutVisualPass(meta: {
   infraEditBypassUsed?: boolean | null;
   fidelityStopReason?: string | null;
   vlmError?: string | null;
+  humanOverride?: boolean | string | null;
 } | null): "hq_ok" | "weak" | "missing" | null {
   if (!meta) return null;
-  // VLM infra gap: still file may be usable — do not forever-block burn as "weak"
-  if (
-    meta.pendingHumanRejudge === true ||
-    meta.infraEditBypassUsed === true ||
-    meta.fidelityStopReason === "vlm_error" ||
-    meta.fidelityStopReason === "disabled" ||
-    /VLM_API_KEY_MISSING|缺少可用的视觉评审/i.test(String(meta.vlmError ?? ""))
-  ) {
-    return null;
-  }
   if (meta.stillQuality === "missing") return "missing";
   if (meta.stillQuality !== "hq_ok") return (meta.stillQuality as "weak") ?? "weak";
   if (!stillHqRequiresVisualPass()) return "hq_ok";
+  // Human override stamp may keep hq path; Key-absent alone never skips degrade (G0)
+  if (meta.humanOverride && (meta.visualPass === true || meta.visualPassAt)) return "hq_ok";
   if (meta.visualPass === true || meta.visualPassAt) return "hq_ok";
   return "weak";
 }
@@ -329,8 +324,16 @@ async function finishOnVlmInfra(input: {
     fixHintsUsed: fixHintsUsed.length ? fixHintsUsed : undefined,
     editStrategy: infraEditBypassUsed ? hitOnce.strategy : undefined,
     settingsDeepLink,
-    // Infra path: judged items are placeholders — never sticky-false 拼版
-    sheetLeak: false,
+    // G0: keep collage truth from prompt heuristic; never force-clear for Key-absent
+    sheetLeak: (() => {
+      try {
+        const { promptImpliesSheetCollageLeak } =
+          require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
+        return promptImpliesSheetCollageLeak(hitOnce.promptUsed);
+      } catch {
+        return false;
+      }
+    })(),
   };
 }
 

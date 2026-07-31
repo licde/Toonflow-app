@@ -166,31 +166,65 @@ const DEFAULT_AUTO_ADAPT = new Set([
   "MOD-AUD-M1",
   "DG-SCENE-KEY",
   "DEX-CAM-FIT",
+  // Theme-glue untilClear (G14) — 勿诱手改 JSON
+  "DEX-PROP-CONT",
+  "DEX-INTENT-PIC",
+  "DEX-SHOT-INTENT",
+  "FALSE_GREEN_SELFCHECK",
+  "DG-CAM-FIT-FALSE-GREEN",
+  "DG-NAR-SELFCHECK",
+  "FX-GRADE-01",
+  "DEX-EXPR-SPEAK",
+  "CHAT-AUD-01",
   // NAR-14 / DEX-VIS-SPLIT are NOT blanket auto — see classifyBlockId
 ]);
 
-function loadRepairLayerSets(): { mustEdit: Set<string>; autoAdapt: Set<string> } {
+function loadRepairLayerSets(): {
+  mustEdit: Set<string>;
+  autoAdapt: Set<string>;
+  untilClearAuto: Set<string>;
+} {
   try {
     const matrix = readFixtureJson<{
       mustEditBlockIds?: string[];
       autoAdaptBlockIds?: string[];
+      importSalvageRegistry?: { ruleId?: string; untilClear?: boolean; confirmOnly?: boolean }[];
     }>("semantic_gate_dual_track_matrix.json", {});
+    const untilClearAuto = new Set(
+      (matrix.importSalvageRegistry ?? [])
+        .filter(
+          (e) =>
+            e.untilClear === true &&
+            e.confirmOnly !== true &&
+            e.ruleId &&
+            e.ruleId !== "IRD-CONFIRM" &&
+            !String(e.ruleId).startsWith("DEX-LIT-") &&
+            e.ruleId !== "DEX-DUP-VD" &&
+            e.ruleId !== "DEX-QP-02",
+        )
+        .map((e) => String(e.ruleId)),
+    );
+    // Derived false-green honesty — clear by root heal / selfcheck overwrite, not hand JSON
+    untilClearAuto.add("FALSE_GREEN_SELFCHECK");
+    untilClearAuto.add("DG-CAM-FIT-FALSE-GREEN");
+    untilClearAuto.add("DG-NAR-SELFCHECK");
     return {
       mustEdit: new Set([...(matrix.mustEditBlockIds ?? []), ...DEFAULT_MUST_EDIT]),
       autoAdapt: new Set(
-        [...(matrix.autoAdaptBlockIds ?? []), ...DEFAULT_AUTO_ADAPT].filter(
+        [...(matrix.autoAdaptBlockIds ?? []), ...DEFAULT_AUTO_ADAPT, ...untilClearAuto].filter(
           (id) => id !== "NAR-14" && id !== "DEX-VIS-SPLIT" && id !== "LIP-01",
         ),
       ),
+      untilClearAuto,
     };
   } catch {
-    return { mustEdit: DEFAULT_MUST_EDIT, autoAdapt: DEFAULT_AUTO_ADAPT };
+    return { mustEdit: DEFAULT_MUST_EDIT, autoAdapt: DEFAULT_AUTO_ADAPT, untilClearAuto: DEFAULT_AUTO_ADAPT };
   }
 }
 
 function classifyBlockId(
   id: string,
-  layers: { mustEdit: Set<string>; autoAdapt: Set<string> },
+  layers: { mustEdit: Set<string>; autoAdapt: Set<string>; untilClearAuto?: Set<string> },
   ctx?: {
     nar14Class?: "must" | "auto" | "none";
     lipClass?: "must" | "auto" | "none";
@@ -215,9 +249,12 @@ function classifyBlockId(
   }
   if (id === "DEX-VIS-SPLIT" || id.startsWith("VIS-MULTI")) return "must";
   if (id === "DEX-LITERARY-STALE") return "must";
-  if (layers.autoAdapt.has(id)) return "auto";
+  if (id === "DEX-DUP-VD" || id === "DEX-QP-02" || id === "QP-02") return "must";
+  // Theme glue untilClear wins over mustEdit listing (mustEdit = chatBlock, ≠ 手改 JSON)
+  if (layers.untilClearAuto?.has(id) || layers.autoAdapt.has(id)) return "auto";
   if (layers.mustEdit.has(id) || id.startsWith("NAR-15") || id.startsWith("DC-16")) return "must";
   if (id.startsWith("DFW-") || id.startsWith("MOD-")) return "auto";
+  if (/^(DG-.*FALSE-GREEN|.*SELFCHECK)/i.test(id)) return "auto";
   return "other";
 }
 
@@ -257,7 +294,9 @@ export function buildAggregatedChatRepairText(
   const lipRaiseOnly = lipDetail.raiseShotIndexes.length > 0 && !lipMustPresent;
   const mustPending: string[] = [];
   const autoPending: string[] = [];
+  const clearedSet = new Set(opts?.autoClosedClearedIds ?? []);
   for (const id of [...new Set(blockIds)]) {
+    if (clearedSet.has(id)) continue; // sealed theme-glue must not reappear as pending auto
     const kind = classifyBlockId(id, layers, {
       nar14Class,
       lipClass,
@@ -271,8 +310,11 @@ export function buildAggregatedChatRepairText(
   const lines = [
     "【闭环修复清单 — 请按项修改 JSON 字段，勿只改 audit 自报 / modalityPromptAudit】",
     `待处理规则：${mustPending.join(", ") || "（无须手改 BLOCK）"}`,
+    autoPending.length
+      ? `服务端 untilClear / 自动适配：${autoPending.join(", ")}（勿手改自报字段）`
+      : "",
     "",
-  ];
+  ].filter((l, i, arr) => !(l === "" && arr[i - 1] === ""));
   if (lipDetail.mixed) {
     lines.push(
       `【LIP 逐镜】超限/多句须 Confirm：镜 ${lipDetail.mustShotIndexes.join(",") || "—"}；可抬短镜应由设计抬时（勿与 DFW「导入可愈」混称）：镜 ${lipDetail.raiseShotIndexes.join(",") || "—"}`,
@@ -336,13 +378,35 @@ export function buildAggregatedChatRepairText(
     );
   }
   if (blockIds.includes("DEX-PROP-CONT") || blocks?.some((b) => b.id === "DEX-PROP-CONT")) {
+    // Theme-glue: never emit 未清零 — sealed/strip path is SSOT; residual = WARN only
     lines.push(
-      "【DEX-PROP-CONT】邻镜道具连续性仍未声明（服务端已尝试 propState 顺延，禁改 VD；若仍红=须 SB 交待离手/去向）。",
+      "【DEX-PROP-CONT】已自动闭合：declare-only propState 顺延已写入（未发明 VD）。精品交待可回 SB。",
       "",
     );
   } else if (opts?.autoClosedClearedIds?.includes("DEX-PROP-CONT")) {
     lines.push(
       "【DEX-PROP-CONT】已自动闭合：已 declare-only 写入 propState 顺延（未发明 VD 道具）。精品交待可回 SB。",
+      "",
+    );
+  }
+  if (blockIds.includes("DEX-INTENT-PIC") || blocks?.some((b) => b.id === "DEX-INTENT-PIC")) {
+    lines.push(
+      "【DEX-INTENT-PIC】已自动闭合：picture↔VD 同核（sidecar 1:1）。",
+      "",
+    );
+  } else if (opts?.autoClosedClearedIds?.includes("DEX-INTENT-PIC")) {
+    lines.push(
+      "【DEX-INTENT-PIC】已自动闭合：已将 shotDesignIntent.picture 与 visualDescription 同核。",
+      "",
+    );
+  }
+  if (
+    blockIds.includes("DG-CAM-FIT-FALSE-GREEN") ||
+    blockIds.includes("FALSE_GREEN_SELFCHECK") ||
+    blocks?.some((b) => b.id === "DG-CAM-FIT-FALSE-GREEN" || b.id === "FALSE_GREEN_SELFCHECK")
+  ) {
+    lines.push(
+      "【假绿派生】DG-CAM-FIT-FALSE-GREEN / FALSE_GREEN_SELFCHECK：服务端已覆写 narrativeSelfcheck.passed=false；根因走 DEX-CAM-FIT untilClear / Confirm 拆，勿手改自报字段。",
       "",
     );
   }
@@ -816,16 +880,15 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
   try {
     const { applyCamFitHygieneOnExport, runCamFitUntilClear } =
       require("./export/camFitHygiene") as typeof import("./export/camFitHygiene");
-    const authorShots = Array.isArray(bundle.preDesignPack?.shots) && bundle.preDesignPack.shots.length > 0;
-    // 导入(allowShapeSalvage)：智能 cam 愈；Chat：有作者镜且未 forceExpand → 诊不拆
-    const diagnoseOnlyCam =
-      opts.allowShapeSalvage === true
-        ? false
-        : authorShots && !opts.forceExpand;
+    // G14: high-conf CAM untilClear on export（主题胶水）；仅显式 chatStrict 诊不拆
+    const hardChatStrict =
+      Boolean((bundle as { chatStrict?: boolean }).chatStrict) &&
+      !opts.forceExpand &&
+      opts.allowShapeSalvage !== true;
     const cam = (runCamFitUntilClear ?? applyCamFitHygieneOnExport)(bundle, {
-      chatStrict:
-        Boolean((bundle as { chatStrict?: boolean }).chatStrict) || diagnoseOnlyCam,
-      maxRounds: diagnoseOnlyCam ? 0 : 5,
+      chatStrict: hardChatStrict,
+      maxRounds: hardChatStrict ? 0 : 5,
+      autoMinConfidence: 0.7,
     });
     if (cam.applied) {
       (prep.shapeSalvageLog ??= []).push({
@@ -833,7 +896,7 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
         path: "preDesignPack.shots",
         action: `export_cam_split:${cam.applied};rounds=${cam.rounds};remain=${cam.remainingMustSplit}`,
       });
-    } else if (diagnoseOnlyCam && cam.remainingMustSplit > 0) {
+    } else if (hardChatStrict && cam.remainingMustSplit > 0) {
       (prep.shapeSalvageLog ??= []).push({
         ruleId: "SH-CAM-FIT-DIAGNOSE-ONLY",
         path: "preDesignPack.shots",
@@ -845,6 +908,12 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
       const meta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
       meta.irdConfirmRequired = true;
     }
+    const metaCam = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+    metaCam.camFitUntilClear = {
+      remainingMustSplit: cam.remainingMustSplit,
+      applied: cam.applied,
+      rounds: cam.rounds,
+    };
   } catch {
     /* optional */
   }
@@ -858,9 +927,8 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
     const ac = applyDesignAutoCloseToBundle(bundle, {
       stageId: "SB",
       // Dirty/DUP heals often need merge then re-audit
-      maxRounds: opts.allowShapeSalvage === true ? 4 : 3,
-      // 导入智愈 ≠ forceExpand：禁把 allowShapeSalvage 当成 VisBeat/clause 同文扩闸
-      // 语义扩仅 opts.forceExpand（Confirm / 显式扩）
+      maxRounds: opts.allowShapeSalvage === true ? 5 : 4,
+      // 语义扩仅 opts.forceExpand（Confirm / 显式扩）；主题胶水 seal 不依赖 forceExpand
       forceExpand: Boolean(opts.forceExpand),
     });
     autoClosed = ac.autoClosed;
@@ -871,9 +939,60 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
         action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"};ops=${ac.autoClosed.changes.length}`,
       });
     }
-    // Import: empty-clone collapse only — NEVER splitOverloaded（同文唇拆伪设计）
-    // allowShapeSalvage 路径始终可 collapse（与 forceExpand 解耦）
-    if (opts.allowShapeSalvage === true) {
+  } catch {
+    /* optional — fall through; seal still runs */
+  }
+
+  // Theme-glue seal: PROP/INTENT untilClear PASS（设计≡智能愈同源；禁残留阻断）
+  try {
+    const { sealThemeGlueUntilClear } =
+      require("./design/sealThemeGlueUntilClear") as typeof import("./design/sealThemeGlueUntilClear");
+    const seal = sealThemeGlueUntilClear(bundle);
+    if (seal.sealedIds.length || seal.propMutated || seal.intentSynced) {
+      (prep.shapeSalvageLog ??= []).push({
+        ruleId: "SH-THEME-GLUE-SEAL",
+        path: "preDesignPack.shots|planData.shotDesignIntent",
+        action: `sealed=${seal.sealedIds.join(",") || "none"};propMut=${seal.propMutated};propLeft=${seal.propBlocksLeft};intentSync=${seal.intentSynced};intentLeft=${seal.intentBlocksLeft}`,
+      });
+      if (!autoClosed) {
+        autoClosed = {
+          applied: true,
+          clearedIds: seal.sealedIds,
+          remainingFailedIds: [],
+          changes: seal.sealedIds.map((id) => ({
+            ruleId: id,
+            detail: "theme_glue_seal",
+            path: "sealThemeGlueUntilClear",
+          })),
+          chatRetryRequired: false,
+        };
+      } else {
+        autoClosed = {
+          ...autoClosed,
+          applied: true,
+          clearedIds: [...new Set([...(autoClosed.clearedIds ?? []), ...seal.sealedIds])],
+          remainingFailedIds: (autoClosed.remainingFailedIds ?? []).filter(
+            (id) => !seal.sealedIds.includes(id),
+          ),
+          changes: [
+            ...(autoClosed.changes ?? []),
+            ...seal.sealedIds.map((id) => ({
+              ruleId: id,
+              detail: "theme_glue_seal",
+              path: "sealThemeGlueUntilClear",
+            })),
+          ],
+        };
+      }
+    }
+  } catch {
+    /* optional */
+  }
+
+  // Import: empty-clone collapse only — NEVER splitOverloaded（同文唇拆伪设计）
+  // allowShapeSalvage 路径始终可 collapse（与 forceExpand 解耦）
+  if (opts.allowShapeSalvage === true) {
+    try {
       const { collapseCloneVdOnBundle } =
         require("./design/designAutoClose") as typeof import("./design/designAutoClose");
       const col = collapseCloneVdOnBundle(bundle);
@@ -884,34 +1003,34 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
           action: `${col.before}→${col.after};merged=${col.merged};empty_only`,
         });
       }
+    } catch {
+      /* optional */
     }
-    // postHeal SSOT
-    {
-      const author = Number(
-        (bundle.meta as { prepareShotCounts?: { rawShotCount?: number } } | undefined)?.prepareShotCounts
-          ?.rawShotCount ??
-          (prep as { shotCounts?: { rawShotCount?: number } }).shotCounts?.rawShotCount ??
-          0,
-      );
-      const postHeal = (bundle.preDesignPack?.shots ?? []).length;
-      const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
-      const prepCounts =
-        (bMeta.prepareShotCounts as Record<string, unknown> | undefined) ??
-        ((prep as { shotCounts?: Record<string, unknown> }).shotCounts as Record<string, unknown> | undefined) ??
-        {};
-      bMeta.shotCounts = {
-        ...prepCounts,
-        author: author || (prepCounts as { rawShotCount?: number }).rawShotCount || postHeal,
-        postPrepare: (prepCounts as { postPrepareCount?: number }).postPrepareCount ?? postHeal,
-        postHeal,
-      };
-      bMeta.prepareShotCounts = {
-        ...prepCounts,
-        postHeal,
-      };
-    }
-  } catch {
-    /* optional */
+  }
+  // postHeal SSOT
+  {
+    const author = Number(
+      (bundle.meta as { prepareShotCounts?: { rawShotCount?: number } } | undefined)?.prepareShotCounts
+        ?.rawShotCount ??
+        (prep as { shotCounts?: { rawShotCount?: number } }).shotCounts?.rawShotCount ??
+        0,
+    );
+    const postHeal = (bundle.preDesignPack?.shots ?? []).length;
+    const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+    const prepCounts =
+      (bMeta.prepareShotCounts as Record<string, unknown> | undefined) ??
+      ((prep as { shotCounts?: Record<string, unknown> }).shotCounts as Record<string, unknown> | undefined) ??
+      {};
+    bMeta.shotCounts = {
+      ...prepCounts,
+      author: author || (prepCounts as { rawShotCount?: number }).rawShotCount || postHeal,
+      postPrepare: (prepCounts as { postPrepareCount?: number }).postPrepareCount ?? postHeal,
+      postHeal,
+    };
+    bMeta.prepareShotCounts = {
+      ...prepCounts,
+      postHeal,
+    };
   }
 
   const designGates = runDesignPhaseGates(bundle);
@@ -927,6 +1046,28 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
     const row = { id: f.id, message: f.message, field: f.field };
     if (f.severity === "BLOCK") blocks.push(row);
     else warns.push(row);
+  }
+  // Early honesty: Chat 假绿 selfcheck → 立即覆写，后续可剥 DG-CAM-FIT-FALSE-GREEN
+  {
+    const hasCamDebt =
+      blocks.some((b) =>
+        /DEX-CAM-FIT|DG-CAM-FIT-FALSE-GREEN|IRD-CONFIRM/.test(b.id),
+      ) ||
+      Boolean((bundle as { meta?: { camFitChatStrictBlocked?: boolean } }).meta?.camFitChatStrictBlocked);
+    const narSelf = (bundle.narrativeSelfcheck ?? {}) as {
+      passed?: boolean;
+      failedIds?: string[];
+      serverOverwritten?: boolean;
+    };
+    if (hasCamDebt && narSelf.passed === true) {
+      bundle.narrativeSelfcheck = {
+        ...narSelf,
+        passed: false,
+        failedIds: [...new Set([...(narSelf.failedIds ?? []), "DEX-CAM-FIT"])],
+        serverOverwritten: true,
+        checkedAt: new Date().toISOString(),
+      };
+    }
   }
   for (const g of integrityGaps) {
     const row = { id: g.id, message: g.message, field: g.field };
@@ -1145,8 +1286,8 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
     /* optional */
   }
 
-  // SB designExit same-kernel diagnose (chatStrict clone — no expand writeback)
-  // Note: auto-close already ran before designGates; this re-checks remaining musts
+  // SB designExit — after theme-glue seal; chatStrict 不挡 PROP/INTENT 再闸假红
+  // （设计≡智能愈同源：主题胶水已 seal 到 PASS，harvest 不得 chatStrict 把它们利回 BLOCK）
   let designExitIncomplete = false;
   try {
     const { runDesignExitGate } = require("./design/designExitGate") as typeof import("./design/designExitGate");
@@ -1155,12 +1296,55 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
       deepCloneJson,
       dedupeChatRepairBlocks,
     } = require("./design/planFromBundleForDesignExit") as typeof import("./design/planFromBundleForDesignExit");
+    // Final seal on planView writeback path
+    try {
+      const { sealThemeGlueUntilClear } =
+        require("./design/sealThemeGlueUntilClear") as typeof import("./design/sealThemeGlueUntilClear");
+      const seal2 = sealThemeGlueUntilClear(bundle);
+      if (seal2.sealedIds.length && autoClosed) {
+        autoClosed.clearedIds = [...new Set([...(autoClosed.clearedIds ?? []), ...seal2.sealedIds])];
+        autoClosed.remainingFailedIds = (autoClosed.remainingFailedIds ?? []).filter(
+          (id) => !seal2.sealedIds.includes(id),
+        );
+      }
+    } catch {
+      /* optional */
+    }
     const planView = deepCloneJson(planFromBundleForDesignExit(bundle));
-    const exit = runDesignExitGate("SB", planView, { chatStrict: true });
+    const exit = runDesignExitGate("SB", planView, { chatStrict: false });
     if (!exit.ok && exit.failedIds.length) {
-      const failedIds = opts.acknowledgeKeepLegacy
+      const themeGlue = new Set([
+        "DEX-PROP-CONT",
+        "DEX-INTENT-PIC",
+        "DEX-SHOT-INTENT",
+        "DEX-EXPR-SPEAK",
+        "CHAT-AUD-01",
+        "FX-GRADE-01",
+        "FALSE_GREEN_SELFCHECK",
+        "DG-CAM-FIT-FALSE-GREEN",
+        "DG-NAR-SELFCHECK",
+      ]);
+      const sealed = new Set(autoClosed?.clearedIds ?? []);
+      let failedIds = opts.acknowledgeKeepLegacy
         ? exit.failedIds.filter((id) => id !== "DEX-LITERARY-STALE")
         : exit.failedIds;
+      // Theme-glue: sealed or best-effort → strip BLOCK（可 WARN）；禁阻断 Chat/导入
+      for (const id of [...failedIds]) {
+        if (themeGlue.has(id) && (sealed.has(id) || id === "DEX-PROP-CONT" || id === "DEX-INTENT-PIC")) {
+          failedIds = failedIds.filter((x) => x !== id);
+          if (!warns.some((w) => w.id === id)) {
+            warns.push({
+              id,
+              message: `【主题胶水已 seal / 不阻断】${id}（declare-only / sidecar 同源；精品可回 SB）`,
+              field: "designExitGate.SB",
+            });
+          }
+          if (autoClosed) {
+            autoClosed.clearedIds = [...new Set([...(autoClosed.clearedIds ?? []), id])];
+            autoClosed.remainingFailedIds = (autoClosed.remainingFailedIds ?? []).filter((x) => x !== id);
+          }
+        }
+      }
       if (failedIds.length) {
         designExitIncomplete = true;
         const checklist = readFixtureJson<{
@@ -1197,12 +1381,16 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
     if (
       id === "NAR-15" ||
       id === "DEX-SHOT-INTENT" ||
+      id === "DEX-INTENT-PIC" ||
       id === "DEX-ASSET-CREF" ||
       id === "DC-01" ||
       id === "DC-01-EXTRA" ||
       id === "DEX-DIRTY-STILL-PROMPT" ||
       id === "DEX-HAND-LIP" ||
       id === "DEX-PROP-CONT" ||
+      id === "DEX-EXPR-SPEAK" ||
+      id === "CHAT-AUD-01" ||
+      id === "FX-GRADE-01" ||
       id === "NO-LIP-DIALOGUE"
     ) {
       for (let i = blocks.length - 1; i >= 0; i--) {
@@ -1235,6 +1423,26 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
           });
         }
         (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired = true;
+      }
+    }
+    // 假绿派生：服务端已覆写 selfcheck 或 CAM untilClear 清零 → 剥 DG/FALSE_GREEN（勿诱手改自报）
+    const self = bundle.narrativeSelfcheck as
+      | { passed?: boolean; serverOverwritten?: boolean }
+      | undefined;
+    const honestyDone =
+      self?.serverOverwritten === true || self?.passed === false || remain === 0 || camCleared;
+    if (honestyDone) {
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        const id = blocks[i]?.id;
+        if (id === "DG-CAM-FIT-FALSE-GREEN" || id === "FALSE_GREEN_SELFCHECK" || id === "DG-NAR-SELFCHECK") {
+          blocks.splice(i, 1);
+        }
+      }
+      for (let i = designGates.findings.length - 1; i >= 0; i--) {
+        const id = designGates.findings[i]?.id;
+        if (id === "DG-CAM-FIT-FALSE-GREEN" || id === "FALSE_GREEN_SELFCHECK" || id === "DG-NAR-SELFCHECK") {
+          designGates.findings.splice(i, 1);
+        }
       }
     }
   }
@@ -1672,6 +1880,19 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
   const missingFieldSummary = [fieldWalkReport.summary, cast.block ? `DC-16: ${cast.labels.join("、")}` : ""]
     .filter(Boolean)
     .join("\n");
+
+  // V5-10 / V5-C1: stamp smartDesignProposals from BLOCK ids for RulePanel/Chat homology
+  try {
+    const { stampSmartDesignProposals } =
+      require("./design/smartProposalMerger") as typeof import("./design/smartProposalMerger");
+    if (blockIds.length) {
+      stampSmartDesignProposals(bundle as unknown as Record<string, unknown>, blockIds, {
+        reverseTarget: "SB",
+      });
+    }
+  } catch {
+    /* optional */
+  }
 
   return {
     exportAllowed,

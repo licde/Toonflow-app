@@ -69,6 +69,30 @@
       "note": "特写×出镜≥2：VD只点名一人→slice_cast降人数（禁拆镜Confirm）；多人同框意图→auto split；歧义 Confirm；chatStrict 禁静默拆；导入 demote；禁只 regen"
     },
     {
+      "trigger": "still_video_pose_mismatch",
+      "ruleIds": ["STILL-VIDEO-POSE-MISMATCH"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG", "EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["重编译 Motion（贴颊禁进入）", "重出静照对齐 stillPoseAnchor", "手改 VD"],
+      "defaultAction": "recompileVideoPrompt",
+      "forbidRegenWithoutDescFix": false,
+      "authoritativeFields": ["generation.compiled.video", "storyboard.stillPrompt", "stillPoseAnchor"],
+      "note": "静帧 at_locus vs Motion 进入 BLOCK；regen Motion 或 MD-IMG 静照后再烧"
+    },
+    {
+      "trigger": "lit_contact_mouth_ban",
+      "ruleIds": ["DEX-LIT-CONTACT", "DEX-LIT-CONTACT-XOR"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["compose 禁口含/仅颊触", "拆镜颊触+口创", "Confirm 手改 VD"],
+      "defaultAction": "handEditVd",
+      "forbidRegenWithoutDescFix": true,
+      "authoritativeFields": ["preDesignPack.shots[].visualDescription", "generation.imagePrompt"],
+      "note": "contact mouth-ban theme glue；禁口含须进 still compose VD"
+    },
+    {
       "trigger": "lit_detail_contact_xor",
       "ruleIds": ["DEX-LIT-CONTACT-XOR"],
       "reverseTarget": "SB",

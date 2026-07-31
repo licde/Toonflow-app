@@ -432,3 +432,14 @@ export function buildCastCardinalityFidelityItem(names: string[]): {
 export function readRefSlotDoctrineSlice(): StillRefSlotDoctrineSlice {
   return readFixtureJson<StillRefSlotDoctrineSlice>("still_identity_doctrine.json", {});
 }
+
+/**
+ * Event-shot refs SSOT bridge (identity → propSoft → softEnv).
+ * Cap≤2 keeps propSoft over softEnv — see eventPlateReadiness.applyEventRefSlotBudget.
+ */
+export {
+  applyEventRefSlotBudget,
+  buildEventRefOrdinalBinding,
+  assertEventRefContract,
+  type EventRefRole,
+} from "./eventPlateReadiness";

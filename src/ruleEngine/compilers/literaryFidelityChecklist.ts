@@ -417,9 +417,10 @@ export function buildLiteraryFidelityChecklist(input: {
           items.push({
             id: gid,
             kind: "composition",
-            mustTokens: [],
+            // G2: L0 must survive mouth-ban HARD belt (tokens match compose inject)
+            mustTokens: ["禁口含", "禁纸入口", `仅${locus}触`],
             vlmQuestion: STILL_CONTACT_GEOM_VLM_TEMPLATE.replace(/\{LOCUS\}/g, locus),
-            healInject: STILL_CONTACT_GEOM_HEAL_TEMPLATE.replace(/\{LOCUS\}/g, locus),
+            healInject: `${STILL_CONTACT_GEOM_HEAL_TEMPLATE.replace(/\{LOCUS\}/g, locus)}；禁口含；禁纸入口；仅${locus}触非口含`,
             strengthenKey: keys.composition ?? "composition",
             strengthenValue: `geom_${locus}`,
           });
@@ -569,7 +570,14 @@ export function assertLiteraryFidelity(
     const ok =
       item.who && item.kind !== "composition" && item.kind !== "atmosphere"
         ? whoNearTokens(text, item.who, item.mustTokens, window)
-        : item.mustTokens.every((t) => !t || text.includes(t));
+        : item.mustTokens.every((t) => {
+            if (!t) return true;
+            if (text.includes(t)) return true;
+            // Homology aliases for contact_geom L0
+            if (t === "禁纸入口" && /纸未入口/.test(text)) return true;
+            if (/^仅.+触$/.test(t) && /仅颊触/.test(text) && /面颊|颊/.test(t + text)) return true;
+            return false;
+          });
     if (ok) passed.push(item);
     else missing.push(item);
   }

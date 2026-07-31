@@ -1,12 +1,14 @@
 /**
  * yarn test:smart-proposal-merge
  * W93: build → confirm(+fork) → mergeConfirmed → patches applied; pending blocks IC-02.
+ * V5-10: stampSmartDesignProposals preserves applied + adds pending debt.
  */
 import {
   buildSmartProposalsFromTriggers,
   confirmSmartProposal,
   hasUnconfirmedProposals,
   mergeConfirmedProposals,
+  stampSmartDesignProposals,
   type SmartProposal,
 } from "@/ruleEngine/design/smartProposalMerger";
 import type { ScriptBundle } from "@/ruleEngine/bundle/types";
@@ -74,8 +76,24 @@ const vp = String(
 ok("patch wrote videoPrompt", /contact at locus/.test(vp), vp.slice(0, 80));
 ok("fixPlan items", merged.fixPlanItems.length >= 2);
 
+// V5-10: stamp from failedIds preserves applied + adds pending
+const planStamp: Record<string, unknown> = {
+  smartDesignProposals: merged.proposals,
+  planData: { smartDesignProposals: merged.proposals },
+};
+const stamped = stampSmartDesignProposals(planStamp, ["DEX-LIT-CONTACT", "IRD-CONFIRM"]);
+ok("stamp keeps applied", stamped.some((p) => p.status === "applied"));
+ok(
+  "stamp adds pending debt",
+  stamped.some((p) => p.trigger === "DEX-LIT-CONTACT" && p.status === "pending_user_confirm"),
+);
+ok(
+  "stamp mirrored planData",
+  Array.isArray((planStamp.planData as { smartDesignProposals?: unknown[] }).smartDesignProposals),
+);
+
 if (failed) {
   console.error(`\n${failed} test:smart-proposal-merge FAILED`);
   process.exit(1);
 }
-console.log("\n=== test:smart-proposal-merge OK ===");
+console.log("\ntest:smart-proposal-merge OK");

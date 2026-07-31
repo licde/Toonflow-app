@@ -302,6 +302,9 @@ export function applyLitFillToShots(input: {
       visualDescription: next,
       _litEnhanceApplied: true,
       _litEnhanceAt: new Date().toISOString(),
+      // Enhance writeback must force next still gen through compose+form+refs (no isomorphic empty loop)
+      _forceComposeParity: true,
+      _forceRefsDelta: true,
     };
     applied.push(fill.shotIndex);
   }

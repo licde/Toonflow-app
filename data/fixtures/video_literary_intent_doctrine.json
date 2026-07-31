@@ -29,6 +29,9 @@
     "confront_mid": "speak_lip",
     "ecu_face": "react_silent",
     "ensemble": "speak_lip",
+    "action_primary_mid": "react_silent",
+    "ots_mid": "react_silent",
+    "reaction_mid": "react_silent",
     "unknown": "unknown"
   },
   "intentPolicyMatrix": {

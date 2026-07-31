@@ -4,6 +4,7 @@
  */
 import { stripStaleBindingFromPrevious, previousBodyIsSheetLockSoup } from "./composeStillPrompt";
 import { normalizeStillEgressPrompt, demoteSheetLockSoup } from "./stillEgressNormalize";
+import { lintStillPromptBody } from "./stillPromptLint";
 
 export function homologizeStillPromptForStore(prompt: string): {
   prompt: string;
@@ -45,6 +46,20 @@ export function homologizeStillPromptForStore(prompt: string): {
   if (norm.changed) {
     notes.push(...norm.notes);
     next = norm.prompt;
+  }
+
+  const linted = lintStillPromptBody({ prompt: next });
+  if (linted.prompt !== next) {
+    notes.push(...linted.conflicts.map((c) => `lint:${c.id}`));
+    next = linted.prompt;
+  }
+  // ENG_ONLY belt: engineering cluster tokens must never persist into stored egress
+  if (/force_compose|delta_hash|hash_or_refs|inject_cross_class_anti_sub|regen_with_structure/i.test(next)) {
+    const again = lintStillPromptBody({ prompt: next });
+    if (again.prompt !== next) {
+      notes.push("lint:ENG_ONLY_retry");
+      next = again.prompt;
+    }
   }
 
   // Never leave lock residue leading the body

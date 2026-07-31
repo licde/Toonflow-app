@@ -14,7 +14,10 @@ import {
   mergeConfirmedProposals,
   type SmartProposal,
 } from "@/ruleEngine/design/smartProposalMerger";
-import { cascadeForwardStale } from "@/ruleEngine/quality/forwardStaleCascade";
+import {
+  applyCascadeAndReGate,
+  syncShotsToStoryboardDb,
+} from "@/ruleEngine/design/applyIntentWriteback";
 
 const router = express.Router();
 
@@ -61,14 +64,17 @@ export default router.post(
       )
       .optional(),
     scriptId: z.number().optional(),
+    syncStoryboard: z.boolean().optional(),
   }),
   async (req, res) => {
-    const { projectId, action, proposalId, fork, triggers } = req.body as {
+    const { projectId, action, proposalId, fork, triggers, scriptId, syncStoryboard } = req.body as {
       projectId: number;
       action: "list" | "build" | "confirm" | "reject" | "apply";
       proposalId?: string;
       fork?: string;
       triggers?: { trigger: string; reverseTarget?: string; ruleId?: string; reason?: string; shotIndex?: number }[];
+      scriptId?: number;
+      syncStoryboard?: boolean;
     };
 
     const { row, plan } = await loadPlan(projectId);
@@ -118,22 +124,21 @@ export default router.post(
       Object.assign(plan, merged.bundle);
       setProposals(plan, merged.proposals);
 
-      // Cascade stale on shots after merge write
-      try {
-        const shots = (merged.bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[];
-        if (shots.length) {
-          const cascaded = cascadeForwardStale({ shots, forwardStages: ["SB", "MD-IMG", "EN"] });
-          const pd = ((plan.planData as Record<string, unknown>) ??= {});
-          const pack = ((pd.preDesignPack as Record<string, unknown>) ??= {});
-          pack.shots = cascaded.shots;
-          pd.preDesignPack = pack;
-          plan.planData = pd;
-        }
-      } catch {
-        /* optional cascade */
-      }
-
+      const shots = (merged.bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[];
+      const wb = applyCascadeAndReGate({ plan, shots });
+      writeShotsViaPlan(plan, wb.shots);
       await savePlan(projectId, row, plan);
+
+      let syncedStoryboard = false;
+      const scriptId = Number((req.body as { scriptId?: number }).scriptId ?? 0);
+      if (scriptId > 0 && wb.shots.length) {
+        syncedStoryboard = await syncShotsToStoryboardDb({
+          db: u.db,
+          projectId,
+          scriptId,
+          shots: wb.shots,
+        });
+      }
 
       return res.json(
         success({
@@ -141,7 +146,14 @@ export default router.post(
           merged: merged.merged,
           appliedIds: merged.appliedIds,
           fixPlanItems: merged.fixPlanItems,
-          note: "confirmed proposals merged + persisted to o_agentWorkData; re-run designExit before export",
+          exitGate: wb.exitGate,
+          exitReassert: wb.exitGate,
+          designExitPass: wb.designExitPass,
+          cascade: wb.cascade,
+          syncedStoryboard,
+          note: wb.designExitPass
+            ? "proposals applied + exitGate ok"
+            : "proposals applied but designExit still fail — importOk≠designExitPass",
         }),
       );
     }
@@ -149,3 +161,11 @@ export default router.post(
     return res.status(400).json(error("unknown action"));
   },
 );
+
+function writeShotsViaPlan(plan: Record<string, unknown>, shots: Record<string, unknown>[]) {
+  const pd = ((plan.planData as Record<string, unknown>) ??= {});
+  const pack = ((pd.preDesignPack as Record<string, unknown>) ??= {});
+  pack.shots = shots;
+  pd.preDesignPack = pack;
+  plan.planData = pd;
+}

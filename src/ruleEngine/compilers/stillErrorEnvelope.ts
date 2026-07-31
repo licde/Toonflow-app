@@ -20,6 +20,10 @@ export function buildStillErrorEnvelope(input: {
   const code = String(input.code ?? "").toUpperCase();
   const cat = String(input.feedbackCategory ?? input.feedbackRuleId ?? "").toLowerCase();
   const msg = String(input.errMsg ?? "");
+  const isTimeout = /timeout|ECONNABORTED/i.test(msg);
+  const isNetwork = /ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|网络错误/i.test(msg);
+  const is4xx = /\b40\d\b|invalid api|unauthorized|forbidden|bad request/i.test(msg);
+  const is5xx = /\b50\d\b|server error|upstream/i.test(msg);
 
   if (code === "IMG-CREF-CHAR" || code === "IMG-CREF" || cat.includes("cref") || /定妆|参考图缺失|identity/i.test(msg)) {
     const primary = buildPrimaryBlock("batch_still", {
@@ -60,6 +64,90 @@ export function buildStillErrorEnvelope(input: {
     };
   }
 
+  if (code === "DEX-PROP-PLATE-MISSING" || /道具参考板|PROP soft|propSoftPlate/i.test(msg)) {
+    const primary = buildPrimaryBlock("batch_still", {
+      stage: "prompt",
+      userMessageOverride:
+        msg || "接触/道具事件缺道具参考板；请挂 PROP 资产或允许结构合成软板后再生成",
+    });
+    return {
+      code: "DEX-PROP-PLATE-MISSING",
+      primaryNextStep: primary.primaryNextStep,
+      userMessage: primary.userMessage,
+      ctaLabel: primary.ctaLabel || "挂道具板后再生成",
+    };
+  }
+
+  // Structure / prop form debt — regen with form (not Key install)
+  if (
+    code === "PROP-FORM" ||
+    code === "DEX-PROP-FORM" ||
+    /卷棒|纸卷|薄纸片形态|prop_form|形态债|抵颏冒充/i.test(msg)
+  ) {
+    const primary = buildPrimaryBlock("batch_still", {
+      stage: "prompt",
+      userMessageOverride:
+        msg || "道具形态未按契约（须展开薄纸片/禁卷棒抵颏）；请重出静照，勿当作 Key 未测",
+    });
+    return {
+      code: code || "PROP-FORM",
+      primaryNextStep: primary.primaryNextStep,
+      userMessage: primary.userMessage,
+      ctaLabel: "重出形态静照",
+    };
+  }
+
+  // Code-first only: vendor/errMsg often embeds full prompt (含「软环境」) — never regex-hijack.
+  if (code === "SOFT-ENV-PLATE-MISSING" || code === "SOFT-ENV-BAKE-FAILED") {
+    const primary = buildPrimaryBlock("batch_still", {
+      stage: "prompt",
+      userMessageOverride:
+        msg ||
+        (code === "SOFT-ENV-BAKE-FAILED"
+          ? "软环境连贯性烘焙失败；请补场景板后重试"
+          : "软环境 SCENE 板未挂上；成图易灰棚，建议补场景软板后再生成"),
+    });
+    return {
+      code: code === "SOFT-ENV-BAKE-FAILED" ? "SOFT-ENV-BAKE-FAILED" : "SOFT-ENV-PLATE-MISSING",
+      primaryNextStep: primary.primaryNextStep,
+      // Soft-env is continuity debt — never imply hard Generate brick in CTA alone
+      userMessage: primary.userMessage,
+      ctaLabel: code === "SOFT-ENV-BAKE-FAILED" ? "补场景软板后重试" : "补场景软板",
+    };
+  }
+
+  // Key-optional unmeasured — never imply "no literary constraints written"
+  if (
+    code === "KEY-UNMEASURED" ||
+    code === "KEY_OPTIONAL" ||
+    /Key未测|像素未测|keyOptional|未装 Key/i.test(msg)
+  ) {
+    const primary = buildPrimaryBlock("retry_shot", {
+      stage: "qc",
+      userMessageOverride:
+        msg || "像素诊断 Key 未装/未测（可选）。文学与形态约束仍有效；请人审或装 Key，勿当作缺约束",
+    });
+    return {
+      code: "KEY-UNMEASURED",
+      primaryNextStep: primary.primaryNextStep,
+      userMessage: primary.userMessage,
+      ctaLabel: "人审通过（未测）",
+    };
+  }
+
+  if (code === "STILL-NO-VENDOR" || /未调用供应商|空转旧图|vendorCalled=false/i.test(msg)) {
+    const primary = buildPrimaryBlock("retry_shot", {
+      stage: "prompt",
+      userMessageOverride: msg || "未真实调用出图供应商（疑似空转旧图）；请重试生图",
+    });
+    return {
+      code: "STILL-NO-VENDOR",
+      primaryNextStep: primary.primaryNextStep,
+      userMessage: primary.userMessage,
+      ctaLabel: "重试生图",
+    };
+  }
+
   if (code === "QP-02" || /可拍画面|画面描述|visual body|qp-02/i.test(msg)) {
     const primary = buildPrimaryBlock("chat_repair", {
       stage: "prompt",
@@ -88,14 +176,29 @@ export function buildStillErrorEnvelope(input: {
 
   if (
     cat === "vendor_passthrough" ||
+    cat === "network_timeout" ||
+    cat === "network_error" ||
+    cat === "vendor_4xx" ||
+    cat === "vendor_5xx" ||
     cat.includes("vendor") ||
     code.startsWith("VENDOR") ||
-    /timeout|rate.?limit|502|503|ECONN|供应商|vendor|模型/i.test(msg)
+    /timeout|rate.?limit|502|503|ECONN|供应商|vendor|模型|image queue input|download input image|upload image queue/i.test(
+      msg,
+    )
   ) {
     const summary = msg.replace(/\s+/g, " ").trim().slice(0, 80) || "未知错误";
+    const prefix = isTimeout
+      ? "供应商超时"
+      : isNetwork
+        ? "供应商网络错误"
+        : is4xx
+          ? "供应商请求错误"
+          : is5xx
+            ? "供应商服务错误"
+            : "供应商返回错误";
     const primary = buildPrimaryBlock("retry_shot", {
       stage: "prompt",
-      userMessageOverride: `供应商返回错误：${summary}。请稍后重试或换模型`,
+      userMessageOverride: `${prefix}：${summary}。请稍后重试或换模型`,
     });
     return {
       code: code.startsWith("VENDOR") ? code : "VENDOR",
@@ -115,6 +218,19 @@ export function buildStillErrorEnvelope(input: {
       primaryNextStep: primary.primaryNextStep,
       userMessage: primary.userMessage,
       ctaLabel: primary.ctaLabel,
+    };
+  }
+
+  if (code === "AUTO-REPAIR") {
+    const primary = buildPrimaryBlock("soft_patch", {
+      stage: "prompt",
+      userMessageOverride: msg || "系统正在自动修复首帧质量，请稍后重试视频生成",
+    });
+    return {
+      code: "AUTO-REPAIR",
+      primaryNextStep: "soft_patch",
+      userMessage: primary.userMessage,
+      ctaLabel: "自动修复中",
     };
   }
 
@@ -145,4 +261,30 @@ export function buildStillErrorEnvelope(input: {
     userMessage: primary.userMessage,
     ctaLabel: primary.ctaLabel,
   };
+}
+
+/**
+ * Only latch FE silent-regen block for structural split on the SAME shot.
+ * Key-optional / lit enhance / chat_repair / regen_hq must NOT brick Generate.
+ */
+export function shouldLatchBlockSilentRegen(input: {
+  primaryNextStep?: string | null;
+  code?: string | null;
+  missingSlots?: string[] | null;
+  irdPrimaryAction?: string | null;
+  errMsg?: string | null;
+}): boolean {
+  const step = String(input.primaryNextStep ?? "");
+  const code = String(input.code ?? "").toUpperCase();
+  const msg = String(input.errMsg ?? "");
+  if (step === "retry_shot" || step === "soft_patch" || step === "regen_storyboard_hq" || step === "batch_still") {
+    return false;
+  }
+  if (code === "VENDOR" || code.startsWith("VENDOR")) return false;
+  if (/image queue input|download input image|upload image queue|timeout|ECONN|502|503|rate.?limit/i.test(msg)) {
+    return false;
+  }
+  // Only confirm_split / split_shot hard-latches
+  if (input.irdPrimaryAction === "confirm_split" || step === "split_shot") return true;
+  return false;
 }

@@ -291,8 +291,11 @@ export function routeStillRepair(input: {
     else identityHits++;
   }
 
-  // Background fails only matter when keep policy
-  if (input.bgPolicy && input.bgPolicy !== "keep") bgHits = 0;
+  // Background fails: under demote/drop still heal VD-named atmosphere (烛火等) — 禁零化 untilClear
+  if (input.bgPolicy && input.bgPolicy !== "keep") {
+    const atmFail = failed.some((f) => /atmosphere|烛|背景可辨|background_readable/i.test(`${f.id}${f.fixHint ?? ""}`));
+    if (!atmFail) bgHits = 0;
+  }
 
   // Action/fight family=none — never lock bad still as layout_preserve
   let actionNoLayout = false;

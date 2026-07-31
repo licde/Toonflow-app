@@ -13,7 +13,12 @@ type TableName = keyof DB & string;
 type RowType<TName extends TableName> = DB[TName];
 
 const dbPath = getPath("db2.sqlite");
-console.log("数据库目录:", dbPath);
+const quietDbLog =
+  process.env.TOONFLOW_QUIET_DB === "1" ||
+  process.env.VITEST === "true" ||
+  process.env.NODE_ENV === "test" ||
+  /\b(test:|scripts[/\\]test-|[/\\]test-[^/\\]+\.ts\b)/i.test(process.argv.join(" "));
+if (!quietDbLog) console.log("数据库目录:", dbPath);
 const dbDir = path.dirname(dbPath);
 
 // 确保数据库目录存在
@@ -32,9 +37,16 @@ const db = knex({
     filename: dbPath,
   },
   useNullAsDefault: true,
+  pool: { min: 0, max: 10 },
 });
 
+const keepDb =
+  process.env.TOONFLOW_KEEP_DB === "1" ||
+  /test-(import|full-runtime|bundle-roundtrip|rule-engine|e2e|gen-api)/i.test(process.argv.join(" "));
+
 (async () => {
+  // Unit goldens that only import utils transitively: skip eager open so Node can exit
+  if (quietDbLog && !keepDb) return;
   await initDB(db);
   await fixDB(db);
   if (process.env.NODE_ENV == "dev") initKnexType(db);
@@ -45,6 +57,20 @@ dbClient.schema = db.schema;
 export default dbClient;
 
 export { db };
+
+/** Allow scripts/tests to release better-sqlite3 so Node can exit. */
+export async function destroyDb(): Promise<void> {
+  await db.destroy();
+}
+
+if (quietDbLog || process.env.TOONFLOW_DESTROY_DB_ON_EXIT === "1") {
+  const shutdown = () => {
+    void db.destroy().catch(() => undefined);
+  };
+  process.once("beforeExit", shutdown);
+  process.once("SIGINT", shutdown);
+  process.once("SIGTERM", shutdown);
+}
 
 async function initKnexType(knexDb: any) {
   const { Client } = await import("@rmp135/sql-ts");

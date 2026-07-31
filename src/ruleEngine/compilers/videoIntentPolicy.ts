@@ -163,7 +163,17 @@ export function classifyVideoIntent(input: {
     }
   }
 
-  // Prefer content-derived when strong; else inherit
+  // Prefer content-derived when strong; else inherit.
+  // Literary-led: still action/OTS/reaction/seating must not be wiped by dialogue seed alone.
+  const PROTECTED_STILL = new Set([
+    "action_primary_mid",
+    "ots_mid",
+    "reaction_mid",
+    "seating_power_mid",
+    "confront_mid",
+    "empty_or_os",
+    "ecu_face",
+  ]);
   let intentClass: VideoIntentClass = derived;
   if (derived === "unknown" && inherited) {
     intentClass = inherited;
@@ -172,12 +182,31 @@ export function classifyVideoIntent(input: {
     // Hand/prop CU with dialogue → prop_cu keeps framing, audio still lip via audioMode
     intentClass = "prop_cu";
     reasons.push("prop_cu_over_speak");
+  } else if (
+    inherited &&
+    derived === "speak_lip" &&
+    input.stillIntentClass &&
+    PROTECTED_STILL.has(String(input.stillIntentClass)) &&
+    mapStillToVideo(input.stillIntentClass) &&
+    mapStillToVideo(input.stillIntentClass) !== "speak_lip"
+  ) {
+    // Dialogue seed must not override protected still literary classes (action/OTS/reaction/…)
+    intentClass = mapStillToVideo(input.stillIntentClass)!;
+    reasons.push("inherit_protect_over_speak");
   } else if (inherited && derived === "unknown") {
     intentClass = inherited;
   } else if (inherited && !hasDial && (derived === "fx_peak" || derived === "speak_lip")) {
     // Stale track seed (F0/fx_peak blob, pseudo dial) must not override package intentClass
     intentClass = inherited;
     reasons.push("persisted_over_stale_seed");
+  } else if (
+    inherited &&
+    inherited === "empty_os" &&
+    derived === "speak_lip"
+  ) {
+    // OS/empty + pseudo-dialogue residue → keep empty_os
+    intentClass = "empty_os";
+    reasons.push("empty_os_over_pseudo_dial");
   }
 
   if (intentClass === "unknown") reasons.push("unknown_safe_degrade");

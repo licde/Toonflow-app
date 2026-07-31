@@ -9,6 +9,8 @@ export type ShotDesignPurpose = "爆点兑现" | "钩子" | "共鸣" | "信息" 
 export type ShotDesignIntent = {
   intentId?: string;
   sceneRef?: number | string;
+  /** Mirror preDesignPack shotIndex for INTENT-PIC homology */
+  shotIndex?: number;
   purpose: ShotDesignPurpose;
   emotionGoal: string;
   picture: string;
@@ -53,11 +55,18 @@ export function auditIntentPictureSync(input: {
   shots: { shotIndex?: number; visualDescription?: string | null }[];
 }): { ok: boolean; findings: { id: string; severity: "BLOCK" | "WARN"; message: string; shotIndex?: number }[] } {
   const findings: { id: string; severity: "BLOCK" | "WARN"; message: string; shotIndex?: number }[] = [];
-  for (const intent of input.intents) {
-    const idx = Number((intent as { shotIndex?: number }).shotIndex ?? intent.sceneRef) || 0;
-    const shot =
-      input.shots.find((s) => Number(s.shotIndex) === idx) ||
-      (idx > 0 ? input.shots[idx - 1] : undefined);
+  const homologous = input.intents.length === input.shots.length && input.shots.length > 0;
+  for (let i = 0; i < input.intents.length; i++) {
+    const intent = input.intents[i]!;
+    const idx =
+      Number((intent as { shotIndex?: number }).shotIndex ?? intent.sceneRef) ||
+      (i + 1);
+    // Prefer array-index homology after cam/lip expand (duplicate shotIndex is common)
+    const shot = homologous
+      ? input.shots[i]
+      : input.shots.find((s) => Number(s.shotIndex) === idx) ||
+        (idx > 0 ? input.shots[idx - 1] : undefined) ||
+        input.shots[i];
     const vd = String(shot?.visualDescription ?? "").trim();
     const pic = String(intent.picture ?? "").trim();
     if (!pic || !vd) continue;
@@ -67,12 +76,72 @@ export function auditIntentPictureSync(input: {
       findings.push({
         id: "DEX-INTENT-PIC",
         severity: "BLOCK",
-        message: `镜${idx || "?"} intent.picture 与 VD 不同核`,
-        shotIndex: idx || undefined,
+        message: `镜${Number(shot?.shotIndex) || idx || "?"} intent.picture 与 VD 不同核`,
+        shotIndex: Number(shot?.shotIndex) || idx || undefined,
       });
     }
   }
   return { ok: findings.length === 0, findings };
+}
+
+/** Theme-glue untilClear: sidecar picture ← VD for all INTENT-PIC findings (禁发明 VD). */
+export function syncIntentPicturesFromShots(input: {
+  intents: ShotDesignIntent[];
+  shots: { shotIndex?: number; visualDescription?: string | null }[];
+}): { intents: ShotDesignIntent[]; synced: number } {
+  const intents = input.intents.map((x) => ({ ...x }));
+  let synced = 0;
+  const homologous = intents.length === input.shots.length && input.shots.length > 0;
+  // Homology pass: 1:1 by array index first (handles duplicate shotIndex after expand)
+  if (homologous) {
+    for (let i = 0; i < intents.length; i++) {
+      const intent = intents[i]!;
+      const shot = input.shots[i]!;
+      const vd = String(shot.visualDescription ?? "").trim();
+      const idx = Number(shot.shotIndex) || i + 1;
+      if (!vd) continue;
+      if (String(intent.picture ?? "").trim() !== vd.slice(0, 240)) {
+        intent.picture = vd.slice(0, 240);
+        synced += 1;
+      }
+      (intent as { shotIndex?: number }).shotIndex = idx;
+      if (!intent.sceneRef) intent.sceneRef = idx;
+    }
+    return { intents, synced };
+  }
+  const audit = auditIntentPictureSync({ intents, shots: input.shots });
+  for (const f of audit.findings) {
+    if (f.severity !== "BLOCK") continue;
+    const idx = Number(f.shotIndex) || 0;
+    const shot =
+      input.shots.find((s) => Number(s.shotIndex) === idx) ||
+      (idx > 0 ? input.shots[idx - 1] : undefined);
+    const vd = String(shot?.visualDescription ?? "").trim();
+    if (!vd || !idx) continue;
+    const intent =
+      intents.find((i) => Number((i as { shotIndex?: number }).shotIndex) === idx) ||
+      intents.find((i) => String(i.sceneRef) === String(idx)) ||
+      intents[idx - 1];
+    if (!intent) continue;
+    intent.picture = vd.slice(0, 240);
+    (intent as { shotIndex?: number }).shotIndex = idx;
+    if (!intent.sceneRef) intent.sceneRef = idx;
+    synced += 1;
+  }
+  // Also fill missing picture from VD when intent exists but picture empty
+  for (let i = 0; i < intents.length; i++) {
+    const intent = intents[i]!;
+    const idx = Number((intent as { shotIndex?: number }).shotIndex ?? intent.sceneRef) || i + 1;
+    const shot =
+      input.shots.find((s) => Number(s.shotIndex) === idx) || input.shots[i];
+    const vd = String(shot?.visualDescription ?? "").trim();
+    if (vd && !String(intent.picture ?? "").trim()) {
+      intent.picture = vd.slice(0, 240);
+      (intent as { shotIndex?: number }).shotIndex = idx;
+      synced += 1;
+    }
+  }
+  return { intents, synced };
 }
 
 /** INTENT_DECAY — VD hash changed after sidecar stamped → must re-sync. */

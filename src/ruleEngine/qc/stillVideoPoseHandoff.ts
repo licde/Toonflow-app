@@ -20,6 +20,8 @@ export function assertStillVideoPoseHandoff(input: {
   visualDescription?: string | null;
   stillMeta?: Record<string, unknown> | null;
   stillPrompt?: string | null;
+  /** Burned / compiled video prompt — G3: gate must read Motion, not only VD */
+  videoPrompt?: string | null;
   /** Design-declared start state when present */
   contactStartState?: ContactStartState | null;
 }): {
@@ -45,17 +47,21 @@ export function assertStillVideoPoseHandoff(input: {
     source: metaAnchor?.source ?? "inferred",
   };
 
+  const motionBlob = String(input.videoPrompt ?? "");
   const vdImpliesEnter =
     /自.*侧进入|进入贴合|甩至|递向|从.*侧/.test(vd) && !/已贴|贴合停|持稳|微划/.test(vd);
+  const motionImpliesEnter =
+    /自.*侧进入|进入贴合|甩至|递向|从.*侧/.test(motionBlob) && !/已贴|贴合停|持稳|微划/.test(motionBlob);
   const stillAtLocus = anchor.state === "at_locus" || anchor.state === "held_mid";
 
-  if (stillAtLocus && vdImpliesEnter && declared !== "entering") {
+  if (stillAtLocus && (vdImpliesEnter || motionImpliesEnter) && declared !== "entering") {
     return {
       ok: false,
-      severity: "WARN",
+      severity: "BLOCK",
       code: "STILL-VIDEO-POSE-MISMATCH",
-      message:
-        "静帧姿态已与接触部位贴合，但设计/运动仍描述「进入」；须重编译 Motion（at_locus 模板）或改 VD",
+      message: motionImpliesEnter
+        ? "静帧已贴合，但 Motion/videoPrompt 仍写「进入」；须重编译 at_locus Motion（G3 BLOCK）"
+        : "静帧姿态已与接触部位贴合，但设计/运动仍描述「进入」；须重编译 Motion（at_locus 模板）或改 VD（V5-D BLOCK）",
       stillPoseAnchor: anchor,
       primaryNextStep: "chat_repair",
     };

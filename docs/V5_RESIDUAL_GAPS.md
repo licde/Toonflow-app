@@ -1,30 +1,42 @@
 # v5 残余缺口计划（F1–F14 之后）
 
 > 范围：主闭环 F1–F14 + night 已绿后的残余假绿 / 契约漂移 / 产品深化。  
-> 本轮（2026-07-29）已落地：RulePanel W93 Confirm/Apply、smartProposal 全量 merge 写库、跨集 SH-SERIES-CONT 写回+hydrate+audit。
+> 更新：2026-07-30 — **G0–G15 主题胶水自愈**落地（Key 不挡质量流；compose 禁口含 HARD；Motion at_locus；soft_deliver 诚实；智能修复扩域）。
 
-## 本轮已关（原 DEFER → MVP）
+## 本轮已关
 
 | 项 | 落地 |
 |----|------|
-| RulePanel / derive UX | Confirm/Reject/Apply + presentationFork CTA；C12 → [x] |
-| smartProposalMerger | `mergeConfirmedProposals` 写 patch + fixPlan；`POST /api/scriptAgent/smartProposalOps` |
+| RulePanel / derive UX | Confirm/Reject/Apply + presentationFork；C12 → [x] |
+| smartProposalMerger | `mergeConfirmedProposals` + `stampSmartDesignProposals`；`POST /api/scriptAgent/smartProposalOps` |
 | 跨集系列 | `buildSeriesContinuitySeed` / hydrate / `auditSeriesContinuity`；blueprint `seriesContinuityByEpisode` |
+| **V5-01** | apply 末尾 `applyCascadeAndReGate`；响应带 `exitGate`/`exitReassert`；禁假绿 |
+| **V5-04** | `ensureCarryInfo` 禁止 invent `carry_prev_hook` 过 DEX-CAUSAL |
+| **V5-09** | `hydrateSeriesContinuityFromBlueprint` 于 getPlanData/resolveContext |
+| **V5-10** | diagnose / exportGate / setStepStatus / SelfHeal 自动 stamp `smartDesignProposals` |
+| **V5-11** | IRD/VIRD/smartProposal apply → cascade + syncStoryboard + 清 videoPass |
+| **V5-C1** | `audit:v5-contract-ci` + skill-matrix；exportGate stamp 与 Chat 同核 |
+| **V5-C2** | SelfHeal → `applyDesignAutoCloseToBundle` + mid-conf proposals（禁双轨空转） |
+| **V5-D** | pose handoff still-at-locus+「进入」→ BLOCK；MOD-02/03 空槽 BLOCK |
+| **V5-N11b/d** | `skipPreflight` 禁绕 lit/contact；人审 `undo` 恢复 weak+清 videoPass |
+| **V5-02/05/08** | `data/fixtures/v5_contract_hashes.json` + `yarn audit:v5-contract-ci` |
+| **G0–G15** | Key 解耦；compose HARD+stillPoseAnchor 写回；Motion 同源；导入/autoClose 扩域；FE stub≠burn；ASSET stub→enqueue；`yarn test:g-smart-theme-glue` |
+| **G-checklist** | PROP-CONT/INTENT-PIC/假绿派生进 autoAdapt（勿诱手改 JSON）；export CAM 高置信 untilClear；自报覆写后剥 DG-CAM-FIT-FALSE-GREEN；`yarn test:g-checklist-theme-glue` |
 
-## v5 仍须盯的假绿 / 漂移
+## Web 仓（V5-W / N1 / N2 / N5 / N11a）
 
-| ID | 缺口 | 风险 | 建议 Wave |
-|----|------|------|-----------|
-| V5-01 | smartProposal `apply` 未强制 `runDesignExitGate` 再闸 | apply 后假绿 export | 在 apply 响应附 `exitGate.ok`；FE 禁跳过 |
-| V5-02 | RulePanel 在 Toonflow-web 生产仓需复制同步 | 契约漂移 | 发布 checklist：copy docs/toonflow-web/* |
-| V5-03 | C11 I1–I20 全音频形态仍 partial | 口型/OS 边角假绿 | 按形态矩阵逐项挂载，勿一次装全 |
-| V5-04 | `ensureCarryInfo` 仍可 invent `carry_prev_hook` | 跨集因果纸面过站 | 仅当无 writeback seed 时 WARN，禁止 silent invent 过 DEX-CAUSAL |
-| V5-05 | runtimeGapRegistry ~46 接线 RED | 偶发路径空洞 | 零增守护：night 跑 gap count baseline |
-| V5-06 | adaptation/retention/viral Smart 域仍弱 | 导出 WARN 可过 | 非视频主链；另立项 |
-| V5-07 | VisBeat enforce 全量 / Expression 全环 | 表演层假绿 | 与 IRD fork 合并验收 |
-| V5-08 | portable-kit 全量镜像未每次同步 | kit 漂移 | F6 golden 变更时 copy；CI hash |
+生产仓 `Toonflow-web`：RulePanel W93、DebtBar 人审/fork/split、soft_defer 诚实 toast、`shouldBlockSilentStillRegen`、`exitReassert` 处理；`build:integrate` 同步 app `data/web`。
 
-## 衍生闭环（做了 A 会触发 B）
+## 诚实 DEFER（P2 另项）
+
+| ID | 缺口 |
+|----|------|
+| V5-03 | C11 I1–I20 全音频形态 |
+| V5-06 | adaptation/retention/viral Smart 全域 |
+| V5-07 | VisBeat enforce 全量 / Expression 全环 |
+| — | OCR 休书、云端 VLM、全家族 SVG |
+
+## 衍生闭环
 
 ```mermaid
 flowchart LR
@@ -33,19 +45,24 @@ flowchart LR
   reGate -->|fail| rulePanel[RulePanel_W93]
   writeback[continuityWriteback] --> hydrate[epN1_hydrate]
   hydrate --> causal[DEX-CAUSAL-EP]
+  selfHeal[SelfHeal] --> autoClose[IRD_autoClose]
+  autoClose -->|remain| proposals[smartDesignProposals]
 ```
 
-## 建议执行序
+## 验收命令
 
-1. **V5-01** apply→exitGate 硬再闸（半日）  
-2. **V5-04** 禁 invent carry 假绿（半日）  
-3. **V5-02** web 仓同步 + smoke（半日）  
-4. **V5-05** gap baseline CI（半日）  
-5. V5-03 / V5-06 / V5-07 单独立项  
+```bash
+yarn test:g-smart-theme-glue
+yarn test:g-checklist-theme-glue
+yarn test:smart-proposal-merge
+yarn test:series-continuity
+yarn test:still-video-pose-handoff
+yarn test:contact-event-loop
+yarn audit:v5-contract-ci
+yarn test:video-quality-chain
+```
 
-## 非目标（继续诚实 DEFER）
-
-- OCR 休书正文识别  
-- 云端 VLM 厂商选型  
-- 全家族 layout SVG  
-- Chat browser_full_flow 全 skill 路径重验  
+> 2026-07-30：`test:video-quality-chain` 已绿；FE chunk 断言改为扫描 `scripts/web/assets/index-*.js`（不再钉死 vite hash）。  
+> 2026-07-30：`yarn test:video-quality-chain:night` **EXIT:0**（closure-shape-suite + audit:closure-gaps + verify:shot-783 + verify:track-1784325819186）。  
+> 2026-07-30：G 波次 — 主题胶水 untilClear + Key 不挡质量流；见 `yarn test:g-smart-theme-glue`。  
+> 2026-07-30：闭环清单诚实 — PROP-CONT/INTENT-PIC/假绿派生≠须手改 JSON；见 `yarn test:g-checklist-theme-glue`。

@@ -627,9 +627,11 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
       }),
     );
   }
-  if (assetClosure.stubCount > 0) {
-    throw new Error(`ASSET_STUB_QUALITY_BLOCK: ${assetClosure.stubCount} stub-quality assets`);
-  }
+  // G1: ASSET stub = soft WARN → enqueue batch_still（禁硬阻断导入；importOk≠designExitPass）
+  const assetStubWarn =
+    assetClosure.stubCount > 0
+      ? `ASSET_STUB_QUALITY: ${assetClosure.stubCount} stub-quality assets → enqueue batch_still`
+      : undefined;
 
   // Main CHAR (CD) + SCENE (lock) must be in codeToId after hydrate
   const missingMainCodes: string[] = [];
@@ -679,9 +681,14 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
     speakerWarns: [
       ...(assetSeed.speakerWarns ?? speakerOrphans.map((s) => `speaker_orphan:${s.name}:${s.code}`)),
       ...b6CoverageWarns,
+      ...(assetStubWarn ? [assetStubWarn] : []),
+      ...assetClosure.warnings.filter((w) => /ASSET_STUB/.test(w)),
     ],
     b6CoverageWarns,
-    ok: assetClosure.stubCount === 0 && assetClosure.stillMissing.length === 0 && missingMainCodes.length === 0,
+    // stub soft-allow: import may proceed; FE/selfHeal enqueue batch_still
+    ok: assetClosure.stillMissing.length === 0 && missingMainCodes.length === 0,
+    primaryNextStep: assetClosure.stubCount > 0 ? ("batch_still" as const) : undefined,
+    softWarn: Boolean(assetStubWarn),
   };
   const ruleConsistencyGaps = auditRuleConsistency(bundle, assetSeed.codeToId);
   const integrityGaps = auditBundleIntegrity(bundle);

@@ -39,17 +39,105 @@ export interface StillMeta {
   /** generateFlowImage ops echo — faceCu dropped SCENE refs */
   sceneRefsDropped?: number;
   excludeScene?: boolean;
+  keepSoftEnvRef?: boolean;
+  bgMode?: "keep_plate" | "soft_env" | "atmosphere_only";
   bgPolicy?: string;
   bgPolicyReason?: string;
+  /** Import soft ≠ design exit pass — show in DebtBar */
+  importOkNotExit?: boolean;
   settingsDeepLink?: string;
-  /** Key optional — absent ⇒ unmeasured, not must-configure */
-  keyOptional?: boolean;
-  /** unmeasured | measured_fail | measured_pass */
-  pixelDimStatus?: "unmeasured" | "measured_fail" | "measured_pass" | string;
   /** BE hint: FE must not silent re-POST generate */
   blockSilentRegen?: boolean;
   /** After split_shot: reload panels before generating children */
   refreshStoryboardBeforeRegen?: boolean;
+  /** Key optional — absent ⇒ unmeasured, not must-configure */
+  keyOptional?: boolean;
+  /** unmeasured | measured_fail | measured_pass */
+  pixelDimStatus?: "unmeasured" | "measured_fail" | "measured_pass" | string;
+  promptLintConflicts?: string[];
+  promptProvenance?: Array<{ source: string; note?: string }>;
+  evidenceTtlMs?: number;
+  evidenceHash?: string;
+  contractVersion?: string;
+  contractHash?: string;
+  contactGeomEvidence?: Record<string, unknown>;
+  propReadableEvidence?: Record<string, unknown>;
+  poseEvidence?: Record<string, unknown>;
+  roleScopeEvidence?: Record<string, unknown>;
+  sceneDominanceEvidence?: Record<string, unknown>;
+  i2vReady?: boolean;
+  i2vBlockReason?: string;
+  autoRepairStage?: string;
+  autoRepairRound?: number;
+  autoRepairBudgetLeft?: number;
+  handoffReason?: string;
+  /** Event refs echo */
+  refsRoles?: string[];
+  propPlateMissing?: boolean;
+  synthesizedPropPlate?: boolean;
+  softEnvMissingHonest?: boolean;
+  softEnvBakedIntoIdentity?: boolean;
+  softEnvContinuity?: "must" | "optional" | "none" | string;
+  propSource?: string;
+  vendorCalled?: boolean;
+  vendorMs?: number;
+  /** Structure form miss vs Key-unmeasured — FE must not collapse */
+  debtKind?: "prop_form" | "prop_plate" | "soft_env" | "key_unmeasured" | "lit_slot" | string;
+}
+
+/** Split structure/form debt vs Key-optional unmeasured (never「要素未见=没写约束」). */
+export function resolveStillDebtSemantics(meta: StillMeta | null | undefined): {
+  kind: "prop_form" | "prop_plate" | "soft_env" | "key_unmeasured" | "lit_slot" | "none";
+  ctaLabel: string;
+  explain: string;
+} {
+  if (!meta) return { kind: "none", ctaLabel: "", explain: "" };
+  const slots = meta.missingSlots ?? [];
+  const blob = `${meta.userMessage ?? ""} ${meta.ctaLabel ?? ""} ${slots.join(" ")}`;
+  if (meta.keyOptional || meta.pixelDimStatus === "unmeasured") {
+    if (!slots.some((s) => /prop|contact|form|glyph|softEnv/i.test(s)) && !/卷棒|薄纸|形态|道具板/.test(blob)) {
+      return {
+        kind: "key_unmeasured",
+        ctaLabel: humanRejudgePrimaryCta(meta),
+        explain: "像素诊断 Key 未装/未测（可选）。文学与形态约束仍有效；请人审或装 Key，勿当作缺约束。",
+      };
+    }
+  }
+  if (meta.propPlateMissing || slots.some((s) => /propSoft|propPlate/i.test(s)) || /道具参考板|PROP soft/i.test(blob)) {
+    return {
+      kind: "prop_plate",
+      ctaLabel: "挂道具板后再生成",
+      explain: "接触/道具事件缺道具参考板；请挂 PROP 或允许结构合成软板。",
+    };
+  }
+  if (/卷棒|纸卷|prop_form|形态|抵颏/.test(blob) || slots.some((s) => /prop_form|form/i.test(s))) {
+    return {
+      kind: "prop_form",
+      ctaLabel: "重出形态静照",
+      explain: "道具形态未按契约（须展开薄纸片/禁卷棒抵颏）；请重出静照，勿当作 Key 未测。",
+    };
+  }
+  if (
+    meta.softEnvMissingHonest ||
+    slots.some((s) => /softEnv/i.test(s)) ||
+    /SOFT-ENV-BAKE-FAILED|烘焙失败/.test(blob)
+  ) {
+    return {
+      kind: "soft_env",
+      ctaLabel: /烘焙失败|BAKE/.test(blob) ? "补场景软板后重试" : "补场景软板",
+      explain: /烘焙失败|BAKE/.test(blob)
+        ? "软环境为连贯性必须，但 SCENE 烘焙失败；禁止仅文案写禁止灰棚。"
+        : "软环境 SCENE 板未挂上；成图易灰棚，建议补场景软板。",
+    };
+  }
+  if (slots.length) {
+    return {
+      kind: "lit_slot",
+      ctaLabel: resolveStillRepairCtaLabel(meta),
+      explain: `缺结构槽 ${slots.join("/")}；可增强或手改 VD。`,
+    };
+  }
+  return { kind: "none", ctaLabel: resolveStillRepairCtaLabel(meta), explain: "" };
 }
 
 /**
@@ -93,6 +181,9 @@ export function sheetLeakCtaLabel(meta: StillMeta | null | undefined): string {
 
 /** Resolve primary still-repair CTA: sheetLeak wins over generic HQ / batch_still. */
 export function resolveStillRepairCtaLabel(meta: StillMeta | null | undefined): string {
+  if (meta?.autoRepairStage && meta?.autoRepairStage !== "handoff_human") {
+    return "自动修复中";
+  }
   if (isSheetLeakSignal(meta)) return sheetLeakCtaLabel(meta);
   const be = String(meta?.ctaLabel ?? "").trim();
   if (be) return be;
@@ -123,24 +214,45 @@ export function shouldOfferHumanRejudge(meta: StillMeta | null | undefined): boo
 
 /**
  * Prefer BE `blockSilentRegen` when present; else derive from nextStep / slots.
+ * Vendor / retry_shot / Key-optional unmeasured must NEVER brick Generate.
+ * Only structural split (same-shot silent regen forbidden) hard-blocks.
  */
 export function shouldBlockSilentStillRegen(meta: StillMeta | null | undefined): boolean {
   if (!meta) return false;
-  if (meta.blockSilentRegen === true) return true;
   const step = String(meta?.primaryNextStep ?? "");
-  if (!step) return false;
-  return (
-    step === "split_shot" ||
-    step === "chat_repair" ||
-    step === "human_review" ||
-    meta?.irdPrimaryAction === "confirm_split" ||
+  const autoStage = String(meta?.autoRepairStage ?? "");
+  // Explicit retry / auto-repair / Key-optional paths — always allow click
+  if (
+    step === "retry_shot" ||
+    step === "soft_patch" ||
+    step === "regen_storyboard_hq" ||
+    step === "batch_still" ||
+    (autoStage && autoStage !== "handoff_human")
+  ) {
+    return false;
+  }
+  // Key optional: unmeasured / missing Key is NOT design debt
+  if (meta.keyOptional === true || meta.pixelDimStatus === "unmeasured") {
+    if (meta.irdPrimaryAction !== "confirm_split" && step !== "split_shot") return false;
+  }
+  // Only confirm_split / split_shot bricks silent regen on the SAME shot
+  const hardSplitBrick =
+    step === "split_shot" || meta?.irdPrimaryAction === "confirm_split";
+  if (hardSplitBrick) return true;
+  // Literary enhance / hand_edit: allow Generate (apply补全 then regen, or reverse-fill then regen)
+  if (
     meta?.irdPrimaryAction === "confirm_enhance" ||
+    meta?.irdPrimaryAction === "apply_auto_enhance" ||
     meta?.irdPrimaryAction === "hand_edit_vd" ||
-    (meta?.missingSlots?.length ?? 0) > 0 ||
-    Boolean(meta?.vlmError && /VLM_API_KEY|api\s*key/i.test(meta.vlmError)) ||
-    meta?.pixelDimStatus === "unmeasured" ||
-    meta?.pixelDimStatus === "measured_fail"
-  );
+    (meta?.missingSlots?.length ?? 0) > 0
+  ) {
+    return false;
+  }
+  if (meta.blockSilentRegen === true) {
+    // Stale latch without hard split → allow retry
+    return false;
+  }
+  return false;
 }
 
 /** After split_shot success: FE must reload panels before generating child shots. */
@@ -152,9 +264,15 @@ export function requiresStoryboardRefreshBeforeRegen(meta: StillMeta | null | un
   );
 }
 
-/** Canvas banner when faceCu dropped SCENE refs */
+/** Canvas banner when faceCu dropped SCENE refs (soft_env keeps one env plate) */
 export function faceCuRefsEchoLabel(meta: StillMeta | null | undefined): string | null {
   if (!meta?.excludeScene) return null;
+  if (meta.keepSoftEnvRef || meta.bgMode === "soft_env") {
+    const n = meta.sceneRefsDropped ?? 0;
+    return n > 0
+      ? `特写已降建立场景抢戏（丢 ${n}），保留软环境板`
+      : "特写已降建立场景抢戏，保留软环境板";
+  }
   const n = meta.sceneRefsDropped ?? 0;
   if (n > 0) return `特写已丢 ${n} 张场景参考，仅用身份板`;
   return "特写已排除场景参考，仅用身份板";
@@ -208,3 +326,22 @@ export const HOMOLOGY_CLEAR_RULE_IDS = new Set([
   "FX-GRADE-01",
   "DG-FALSE-GREEN-FX",
 ]);
+
+/** Video track: soft_deliver / qcWeak playable ≠ burn-ready first frame */
+export function deriveTrackBurnAllowed(opts: {
+  state?: string | null;
+  burnAllowed?: boolean | null;
+  qcWeak?: boolean | null;
+  softDeliver?: boolean | null;
+  stillMeta?: StillMeta | null;
+}): boolean {
+  if (opts.state === "需完善") return false;
+  if (opts.burnAllowed === false) return false;
+  if (opts.qcWeak === true || opts.softDeliver === true) return false;
+  return deriveBurnReady(opts.stillMeta ?? null);
+}
+
+/** IMPORT_OK_NOT_EXIT must surface in DebtBar — not treated as design exit pass */
+export function showImportOkNotExitBanner(meta: StillMeta | null | undefined): boolean {
+  return meta?.importOkNotExit === true;
+}

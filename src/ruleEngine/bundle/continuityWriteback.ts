@@ -154,3 +154,34 @@ export async function writeContinuityFromEpisode(
     seriesContinuitySeed: seed,
   };
 }
+
+/**
+ * V5-09: Load seriesContinuity seed from blueprint.seriesContinuityByEpisode[epKey]
+ * into plan (idempotent hydrate).
+ */
+export function hydrateSeriesContinuityFromBlueprint(
+  plan: Record<string, unknown>,
+  blueprint: Record<string, unknown> | null | undefined,
+  episodeKey?: string,
+): boolean {
+  if (!blueprint || typeof blueprint !== "object") return false;
+  const byEp = blueprint.seriesContinuityByEpisode as Record<string, SeriesContinuitySeed> | undefined;
+  if (!byEp || typeof byEp !== "object") return false;
+
+  const meta = (plan.meta as { episodeKey?: string; episodeIndex?: number } | undefined) ?? {};
+  const epIdx = Number(meta.episodeIndex ?? 0);
+  const key =
+    episodeKey ||
+    meta.episodeKey ||
+    (epIdx > 0 ? `ep-${String(epIdx).padStart(2, "0")}` : "");
+  if (!key || epIdx <= 1) return false;
+
+  const seed = byEp[key];
+  if (!seed) {
+    // Also try exact prev writeback target pattern
+    const alt = byEp[`ep-${String(epIdx).padStart(2, "0")}`];
+    if (!alt) return false;
+    return hydrateSeriesContinuityFromSeed(plan, alt);
+  }
+  return hydrateSeriesContinuityFromSeed(plan, seed);
+}

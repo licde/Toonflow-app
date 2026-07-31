@@ -22,6 +22,10 @@ import {
 import { extractDescPredicates, predicateAnchorTokens, type DescPredicatePack } from "./extractDescPredicates";
 import { assertStillDescCoverage } from "./stillDescCoverage";
 import { resolveStillBgPolicy, type StillBgPolicy } from "./stillBgPolicy";
+import { deriveShotModalityIntent } from "./shotModalityIntent";
+import { lintStillPromptBody } from "./stillPromptLint";
+import { deriveStillGenerationObjective, applyGenerationObjectiveToPrompt } from "./stillGenerationObjective";
+import { deriveGenerationContract, type GenerationContract } from "../design/deriveGenerationContract";
 import {
   applyContinuityPolicy,
   healStillRecipePolicy,
@@ -76,6 +80,14 @@ export interface ComposeStillContext {
   /** Cross-shot continuity fragment from continuityFrom + neighbor soft-ref */
   continuityInject?: string | null;
   spatialRelation?: string | null;
+  /** Design color temp (direct or from sceneColorLock) */
+  colorTemp?: string | null;
+  /** Scene display name for colorLock key (e.g. 寝殿) */
+  sceneName?: string | null;
+  sceneColorLock?: Record<
+    string,
+    string | { colorTemp?: string; kelvin?: string | number; name?: string } | undefined
+  > | null;
   foreground?: string | null;
   background?: string | null;
   microExpression?: string | null;
@@ -97,6 +109,7 @@ export interface ComposeStillContext {
   previousVisualBody?: string | null;
   /** Sibling / episode VDs for action lexicon harvest (declare-only on current shot) */
   episodeVisualDescriptions?: string[] | null;
+  episodeShot?: Record<string, unknown> | null;
 }
 
 export interface ComposeStillOptions {
@@ -129,7 +142,22 @@ export interface ComposeStillResult {
   /** Background policy: drop/demote SCENE refs; keep only for establishing */
   bgPolicy?: StillBgPolicy;
   excludeScene?: boolean;
+  /** soft_env: keep one SCENE plate after identity */
+  keepSoftEnvRef?: boolean;
+  /** Continuity: must survive via own slot or bake into identity */
+  softEnvContinuity?: "must" | "optional" | "none";
+  bgMode?: "keep_plate" | "soft_env" | "atmosphere_only";
+  softEnvBakedIntoIdentity?: boolean;
+  propSource?: "asset" | "fe" | "synth" | string;
+  refsRoles?: string[];
+  droppedSoftEnv?: boolean;
+  promptLintConflicts?: string[];
+  generationContract?: GenerationContract;
   bgPolicyReason?: string;
+  /** Canvas/event: PROP soft plate unresolved (honest) */
+  propPlateMissing?: boolean;
+  atomMisses?: string[];
+  refsSig?: string;
   /** Recipe policy self-heal ids (FE / reverse audit) */
   recipeHeals?: string[];
 }
@@ -340,6 +368,7 @@ function oneBeatBlockResult(
     stage: "prompt",
     userMessageOverride: overrideMsg ?? "画面描写多拍，须智能拆镜后再 compose，禁止 trim/旧 prompt 假绿",
   });
+
   return {
     ok: false,
     prompt: "",
@@ -397,6 +426,70 @@ function cuCastBlockResult(
   };
 }
 
+/** Format spatial for 站位 inject when axis/anchors present (G6 design consume). */
+export function formatSpatialStandingLine(spatialRelation: unknown): string | null {
+  if (spatialRelation == null) return null;
+  if (typeof spatialRelation === "object" && !Array.isArray(spatialRelation)) {
+    const o = spatialRelation as { axis?: string; anchors?: string[] | string };
+    const axis = String(o.axis ?? "").trim();
+    const anchors = Array.isArray(o.anchors)
+      ? o.anchors.map((a) => String(a).trim()).filter(Boolean).join("/")
+      : String(o.anchors ?? "").trim();
+    if (axis || anchors) return [axis && `axis=${axis}`, anchors && `anchors=${anchors}`].filter(Boolean).join(" ");
+  }
+  const s = String(spatialRelation ?? "").trim();
+  if (!s) return null;
+  if (/axis\s*=|anchors\s*=|站位|左右|前后|高位|低位/.test(s)) return s.slice(0, 80);
+  return null;
+}
+
+function resolveColorTempFromCtx(ctx: ComposeStillContext): string | null {
+  const direct = String(ctx.colorTemp ?? "").trim();
+  if (direct) return direct.slice(0, 40);
+  const code = String(ctx.sceneCode ?? "").trim().toUpperCase();
+  const name = String(ctx.sceneName ?? "").trim();
+  const lock = (ctx.sceneColorLock ?? {}) as Record<
+    string,
+    string | { colorTemp?: string; kelvin?: string | number } | undefined
+  >;
+  const pick = (entry: string | { colorTemp?: string; kelvin?: string | number } | undefined): string | null => {
+    if (entry == null) return null;
+    if (typeof entry === "string") {
+      const s = entry.trim();
+      return s ? s.slice(0, 40) : null;
+    }
+    const t = String(entry.colorTemp ?? entry.kelvin ?? "").trim();
+    return t ? t.slice(0, 40) : null;
+  };
+  if (code) {
+    const hit = pick(lock[code] ?? lock[code.replace(/^SCENE-/, "")]);
+    if (hit) return hit;
+  }
+  if (name) {
+    const hit = pick(lock[name]);
+    if (hit) return hit;
+  }
+  for (const meta of Object.values(lock)) {
+    const t = pick(meta);
+    if (t) return t;
+  }
+  return null;
+}
+
+/** G6: consume design sceneColorLock / spatialRelation into still body when missing. */
+function layerDesignConsume(ctx: ComposeStillContext, parts: string[], sources: string[]): void {
+  const temp = resolveColorTempFromCtx(ctx);
+  if (temp && !parts.some((p) => /色温：/.test(p))) {
+    parts.push(`色温：${temp}`);
+    sources.push("design.colorTemp");
+  }
+  const spatial = formatSpatialStandingLine(ctx.spatialRelation);
+  if (spatial && !parts.some((p) => /^(站位：|空间关系：)/.test(p))) {
+    parts.push(`站位：${spatial}`);
+    sources.push("design.spatialRelation");
+  }
+}
+
 function layerShootableExtras(ctx: ComposeStillContext, parts: string[], sources: string[], mode: ComposeMode): void {
   const fg = String(ctx.foreground ?? "").trim();
   const bg = String(ctx.background ?? "").trim();
@@ -410,8 +503,11 @@ function layerShootableExtras(ctx: ComposeStillContext, parts: string[], sources
     sources.push("shot.shotSize");
   }
   if (ctx.spatialRelation) {
-    parts.push(`空间关系：${ctx.spatialRelation}`);
-    sources.push("shot.spatialRelation");
+    const spatial = formatSpatialStandingLine(ctx.spatialRelation);
+    if (spatial && !parts.some((p) => /^(站位：|空间关系：)/.test(p))) {
+      parts.push(`站位：${spatial}`);
+      sources.push("shot.spatialRelation");
+    }
   }
   // Still first-frame: narrative over reference collage (hq_update + fidelity)
   if (mode === "fidelity" || ctx.qualityMode === "hq_update") {
@@ -1177,19 +1273,63 @@ export function composeStillPrompt(
   if (predPack.hasSeatingOrKneel && recipeAdapt.mode === "face_or_scene") {
     sources.push("recipeAdapt.seatingOverride");
   }
-  const bgPolicyResult = resolveStillBgPolicy({
-    description: primary?.text ?? ctx.visualDescription ?? "",
-    characterNames: charNamesForBind,
+  const hasSceneLink = (() => {
+    try {
+      const { inferHasSceneLink } = require("./shotModalityIntent") as typeof import("./shotModalityIntent");
+      return inferHasSceneLink({
+        sceneCode: ctx.sceneCode,
+        sceneName: (ctx as { sceneName?: string }).sceneName,
+        sceneAssets: ctx.sceneAssets,
+        promptText: `${ctx.rawPrompt ?? ""}\n${ctx.promptFromStoryboard ?? ""}\n${primary?.text ?? ""}`,
+      });
+    } catch {
+      return Boolean(
+        String(ctx.sceneCode ?? "").trim() ||
+          (ctx.sceneAssets ?? []).some((s) => s?.code || s?.name) ||
+          /--sref\s+SCENE-/i.test(String(ctx.rawPrompt ?? ctx.promptFromStoryboard ?? "")),
+      );
+    }
+  })();
+  // Canvas parity: if sref present but sceneCode empty, backfill
+  if (hasSceneLink && !String(ctx.sceneCode ?? "").trim()) {
+    try {
+      const { inferSceneCodeFromText } =
+        require("./shotModalityIntent") as typeof import("./shotModalityIntent");
+      const code = inferSceneCodeFromText(
+        `${ctx.rawPrompt ?? ""}\n${ctx.promptFromStoryboard ?? ""}\n${primary?.text ?? ""}`,
+      );
+      if (code) ctx.sceneCode = code;
+    } catch {
+      /* optional */
+    }
+  }
+  const modality = deriveShotModalityIntent({
+    visualDescription: primary?.text ?? ctx.visualDescription ?? "",
     shotSize: ctx.shotSize,
-    pack: predPack,
-    // seatingHard always wins inside resolveStillBgPolicy (checked before hint)
+    characterNames: charNamesForBind,
     sceneEstablishingHint:
       Boolean((ctx as { sceneEstablishing?: boolean }).sceneEstablishing) ||
       /建立镜头|establishing|空镜建立|全景建立/i.test(String(primary?.text ?? ctx.visualDescription ?? "")),
+    hasSceneLink,
+    stillIntentClass: (ctx as { stillIntentClass?: string }).stillIntentClass,
   });
+  const generationContract = deriveGenerationContract({
+    visualDescription: primary?.text ?? ctx.visualDescription ?? "",
+    shotSize: ctx.shotSize,
+    spatialRelation: ctx.spatialRelation,
+    foreground: ctx.foreground,
+    background: ctx.background,
+    sceneCode: ctx.sceneCode,
+    sceneName: ctx.sceneName,
+    dialogueLines: ctx.dialogueSpeakers,
+    characterNames: charNamesForBind,
+    episodeShot: ctx.episodeShot,
+  });
+  const bgPolicyResult = modality.bgPolicy;
   if (bgPolicyResult.bgGuidance) {
     supportParts.push(bgPolicyResult.bgGuidance);
     sources.push(`bgPolicy.${bgPolicyResult.policy}`);
+    sources.push(`bgMode.${modality.bgMode}`);
   }
   // Face-CU look anchor early — mustSurvive / checklist L0 before coverage
   if (bgPolicyResult.reason === "faceCuDropScene" && qualityMode === "hq_update") {
@@ -1226,6 +1366,17 @@ export function composeStillPrompt(
       if (!descParts.some((p) => p.includes(prop) && /道具入画|须清晰可见/.test(p))) {
         descParts.push(propLine);
         sources.push("contactEvent.propInFrame");
+      }
+      // G2: HARD negative belt — mouth-ban / locus-only (theme glue, not 休书-only)
+      const mouthBan = `禁口含；禁纸入口；仅${locus}触非口含`;
+      const joinedDesc = descParts.join("。");
+      if (
+        !/禁口含/.test(joinedDesc) ||
+        !/(?:禁纸入口|纸未入口)/.test(joinedDesc) ||
+        !new RegExp(`仅(?:${locus}|颊)触`).test(joinedDesc)
+      ) {
+        descParts.push(mouthBan);
+        sources.push("contactEvent.mouthBanHard");
       }
       const policy = loadContactEventPolicy();
       if (
@@ -1276,6 +1427,7 @@ export function composeStillPrompt(
   } catch {
     /* optional */
   }
+  layerDesignConsume(ctx, supportParts, sources);
   if (predPack.negativeBanLine) {
     descParts.push(predPack.negativeBanLine);
     sources.push("desc.negativeBan");
@@ -1799,6 +1951,29 @@ export function composeStillPrompt(
     charCodeCount: orderedCodes.filter((c) => /^CHAR-/i.test(c)).length,
   });
   let prompt = recipeHeal.prompt;
+  const generationObjective = deriveStillGenerationObjective({
+    contract: generationContract,
+    visualDescription: primary?.text ?? ctx.visualDescription ?? "",
+    prompt,
+  });
+  const objectiveApplied = applyGenerationObjectiveToPrompt({
+    prompt,
+    objective: generationObjective,
+    contract: generationContract,
+    visualDescription: primary?.text ?? ctx.visualDescription ?? "",
+    characterNames: charNamesForBind,
+  });
+  if (objectiveApplied.prompt !== prompt) {
+    prompt = objectiveApplied.prompt;
+    sources.push("objective.rebalanced");
+    sources.push(`objective.${generationContract.objectiveClass}`);
+    warnings.push(...generationObjective.strippedFlowHints.map((id) => `objective:${id}`));
+  }
+  if (objectiveApplied.foundationRestored.length) {
+    sources.push("foundation.guard");
+    for (const id of objectiveApplied.foundationRestored) sources.push(`foundation.restore:${id}`);
+    warnings.push(`foundation restored: ${objectiveApplied.foundationRestored.join(",")}`);
+  }
   if (recipeHeal.changed) {
     sources.push("recipe.heal");
     for (const id of recipeHeal.healed) sources.push(`recipe.heal.${id}`);
@@ -1826,19 +2001,117 @@ export function composeStillPrompt(
     /* optional */
   }
 
+  // Egress single-pipe: lint conflicts / FLOW_ONLY / face orientation (vendor-bound)
+  {
+    const linted = lintStillPromptBody({
+      prompt,
+      visualDescription: primary?.text ?? ctx.visualDescription,
+    });
+    if (linted.prompt !== prompt || linted.conflicts.length) {
+      prompt = linted.prompt;
+      sources.push("promptLint.egress");
+      for (const c of linted.conflicts) {
+        warnings.push(`promptLint:${c.id}`);
+      }
+    }
+  }
+
   const coverage = assertStillDescCoverage({
     prompt,
     description: primary?.text ?? ctx.visualDescription,
     characterNames: charNamesForBind,
     pack: predPack,
     shotSize: ctx.shotSize,
+    bgPolicy: bgPolicyResult.policy,
   });
   if (!coverage.ok) {
     warnings.push(`descCoverage missing: ${coverage.missing.join(",")}`);
   }
+  // untilClear: inject healInject for contact_geom / contact / look / lit / atmosphere atoms
+  let coverageFinal = coverage;
+  if (!coverage.ok) {
+    const injectable = coverage.missing.filter((id) =>
+      /^(contact_geom:|contact:|spatialAnchor:|identity:primary_look|lit:|atmosphere:)/i.test(id),
+    );
+    if (injectable.length) {
+      try {
+        const { buildLiteraryFidelityChecklist, assertLiteraryFidelity } =
+          require("./literaryFidelityChecklist") as typeof import("./literaryFidelityChecklist");
+        const items = buildLiteraryFidelityChecklist({
+          description: primary?.text ?? ctx.visualDescription,
+          characterNames: charNamesForBind,
+          requireDualIdentity: false,
+          bgPolicy: bgPolicyResult.policy,
+          shotSize: ctx.shotSize,
+        });
+        const byId = new Map(items.map((it) => [it.id, it]));
+        let next = prompt;
+        for (const id of injectable) {
+          const bit = String(byId.get(id)?.healInject ?? "").trim();
+          if (!bit) continue;
+          if (next.includes(bit.slice(0, Math.min(8, bit.length)))) continue;
+          next = `${String(next).trim()}，${bit}`;
+          sources.push(`descCoverage.untilClear.inject:${id}`);
+        }
+        // Also ensure mouth-ban tokens for contact_geom even if healInject truncated
+        for (const id of injectable) {
+          const m = /^contact_geom:(.+)$/.exec(id);
+          if (!m) continue;
+          const locus = m[1]!;
+          const mouthBan = `禁口含；禁纸入口；仅${locus}触非口含`;
+          // Must have all three L0 tokens — 纸未入口≠自动跳过禁纸入口
+          if (
+            !/禁口含/.test(next) ||
+            !/(?:禁纸入口|纸未入口)/.test(next) ||
+            !new RegExp(`仅(?:${locus}|颊)触`).test(next)
+          ) {
+            next = `${String(next).trim()}，${mouthBan}`;
+            sources.push(`descCoverage.untilClear.mouthBan:${locus}`);
+          }
+        }
+        if (next !== prompt) {
+          prompt = next;
+          const re = assertStillDescCoverage({
+            prompt,
+            description: primary?.text ?? ctx.visualDescription,
+            characterNames: charNamesForBind,
+            pack: predPack,
+            shotSize: ctx.shotSize,
+            bgPolicy: bgPolicyResult.policy,
+          });
+          coverageFinal = re;
+          if (re.ok) {
+            warnings.push("descCoverage untilClear inject cleared");
+          } else {
+            // fidelity assert may still help
+            const fid = assertLiteraryFidelity(prompt, items);
+            if (!fid.ok) {
+              for (const m of fid.missing) {
+                const bit = String(m.healInject ?? "").trim();
+                if (!bit || prompt.includes(bit.slice(0, Math.min(8, bit.length)))) continue;
+                prompt = `${String(prompt).trim()}，${bit}`;
+              }
+              coverageFinal = assertStillDescCoverage({
+                prompt,
+                description: primary?.text ?? ctx.visualDescription,
+                characterNames: charNamesForBind,
+                pack: predPack,
+                shotSize: ctx.shotSize,
+                bgPolicy: bgPolicyResult.policy,
+              });
+            }
+          }
+        }
+      } catch {
+        /* optional — keep coverageFinal */
+      }
+    }
+  }
+  // Use cleared coverage for HQ gates below
+  const coverageForGate = coverageFinal;
   // HQ seating: missing content-contract atoms → not ok (no false green)
-  if (qualityMode === "hq_update" && predPack.hasSeatingOrKneel && !coverage.ok) {
-    const seatingMissing = coverage.missing.filter(
+  if (qualityMode === "hq_update" && predPack.hasSeatingOrKneel && !coverageForGate.ok) {
+    const seatingMissing = coverageForGate.missing.filter(
       (id) => /seating|role:|prop:|composition:|场面硬约束|抄书|端坐|跪|太师椅|蒲团/.test(id),
     );
     if (seatingMissing.length) {
@@ -1866,15 +2139,18 @@ export function composeStillPrompt(
         missingLeadAsset: false,
         dirtyInput,
         descCoverageOk: false,
-        descCoverageMissing: coverage.missing,
+        descCoverageMissing: coverageForGate.missing,
         orderedCrefCodes: orderedCodes,
+        generationContract,
         recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
       };
     }
   }
-  // HQ lit coverage atoms (XOR/wound/contact) — belt after early gate
-  if (qualityMode === "hq_update" && !coverage.ok) {
-    const litMissing = coverage.missing.filter((id) => /^lit:|contact_role_xor|wound_visible|prop_readable/i.test(id));
+  // HQ lit coverage atoms (XOR/wound) — contact_geom already untilClear-injected above
+  if (qualityMode === "hq_update" && !coverageForGate.ok) {
+    const litMissing = coverageForGate.missing.filter(
+      (id) => /^lit:|contact_role_xor|wound_visible|prop_readable/i.test(id) && !/^contact_geom:/i.test(id),
+    );
     if (litMissing.length) {
       const primaryBlock = buildPrimaryBlock("chat_repair", {
         stage: "prompt",
@@ -1900,8 +2176,9 @@ export function composeStillPrompt(
         missingLeadAsset: false,
         dirtyInput,
         descCoverageOk: false,
-        descCoverageMissing: coverage.missing,
+        descCoverageMissing: coverageForGate.missing,
         orderedCrefCodes: orderedCodes,
+        generationContract,
         recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
       };
     }
@@ -1931,9 +2208,13 @@ export function composeStillPrompt(
       qp02Blocked: true,
       missingLeadAsset: false,
       dirtyInput,
-      descCoverageOk: coverage.ok,
-      descCoverageMissing: coverage.missing,
+      descCoverageOk: coverageForGate.ok,
+      descCoverageMissing: coverageForGate.missing,
       orderedCrefCodes: orderedCodes,
+      generationContract,
+      promptLintConflicts: warnings
+        .filter((w) => w.startsWith("promptLint:"))
+        .map((w) => w.replace(/^promptLint:/, "")),
       recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
     };
   }
@@ -1981,9 +2262,10 @@ export function composeStillPrompt(
       qp02Blocked: false,
       missingLeadAsset: false,
       dirtyInput,
-      descCoverageOk: coverage.ok,
-      descCoverageMissing: coverage.missing,
+      descCoverageOk: coverageForGate.ok,
+      descCoverageMissing: coverageForGate.missing,
       orderedCrefCodes: orderedCodes,
+      generationContract,
       recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
     };
   }
@@ -2003,11 +2285,18 @@ export function composeStillPrompt(
     qp02Blocked: false,
     missingLeadAsset: false,
     dirtyInput,
-    descCoverageOk: coverage.ok,
-    descCoverageMissing: coverage.missing,
+    descCoverageOk: coverageForGate.ok,
+    descCoverageMissing: coverageForGate.missing,
     orderedCrefCodes: identityBind.orderedCodes,
     bgPolicy: bgPolicyResult.policy,
     excludeScene: bgPolicyResult.excludeScene,
+    keepSoftEnvRef: bgPolicyResult.keepSoftEnvRef,
+    softEnvContinuity: bgPolicyResult.softEnvContinuity,
+    bgMode: modality.bgMode,
+    promptLintConflicts: warnings
+      .filter((w) => w.startsWith("promptLint:"))
+      .map((w) => w.replace(/^promptLint:/, "")),
+    generationContract,
     bgPolicyReason: bgPolicyResult.reason,
     recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
   };

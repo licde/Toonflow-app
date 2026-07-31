@@ -897,6 +897,33 @@ export default router.post(
           });
           continue;
         }
+        // G3: pose handoff same as single generateVideo
+        try {
+          const { assertStillVideoPoseHandoff } = await import("@/ruleEngine/qc/stillVideoPoseHandoff");
+          const poseGate = assertStillVideoPoseHandoff({
+            visualDescription: vdContact,
+            stillPrompt: batchStillPrompt,
+            stillMeta: batchStillMeta,
+            videoPrompt: String((shotMeta as { videoPrompt?: string })?.videoPrompt ?? vendorPrompt ?? ""),
+            contactStartState: (batchStillMeta as { contactStartState?: string } | null)?.contactStartState as
+              | import("@/ruleEngine/compilers/contactEventPolicy").ContactStartState
+              | undefined,
+          });
+          if (!poseGate.ok && poseGate.severity === "BLOCK") {
+            await u.db("o_video").where({ id: videoId }).update({
+              state: "生成失败",
+              errorReason: JSON.stringify({
+                message: poseGate.message,
+                code: poseGate.code ?? "STILL-VIDEO-POSE-MISMATCH",
+                primaryNextStep: poseGate.primaryNextStep ?? "regen_storyboard_hq",
+                ctaLabel: "重编译 Motion 或重出静照",
+              }),
+            });
+            continue;
+          }
+        } catch {
+          /* pose optional if module missing */
+        }
       } catch {
         /* optional contact module */
       }

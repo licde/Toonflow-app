@@ -217,10 +217,26 @@ export function runStillPromptPipeline(input: StillPromptPipelineInput): StillPr
     stages.push("recipe_heal");
     for (const id of recipeHeal.healed) autoHealed.push(`recipe:${id}`);
   }
+  // Vendor-front lint homology with compose egress
+  let egressPrompt = recipeHeal.prompt;
+  try {
+    const { lintStillPromptBody } = require("./stillPromptLint") as typeof import("./stillPromptLint");
+    const linted = lintStillPromptBody({
+      prompt: egressPrompt,
+      visualDescription: description,
+    });
+    if (linted.prompt !== egressPrompt) {
+      stages.push("egress_lint");
+      for (const c of linted.conflicts) autoHealed.push(`lint:${c.id}`);
+      egressPrompt = linted.prompt;
+    }
+  } catch {
+    /* optional */
+  }
   const fromCompose = input.composed.recipeHeals ?? [];
   const recipeHeals = [...new Set([...fromCompose, ...recipeHeal.healed])];
   return {
-    egressPrompt: recipeHeal.prompt,
+    egressPrompt,
     literaryChars: measure.chars,
     collapsed,
     collapsedReason: measure.collapsedReason,

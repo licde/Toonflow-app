@@ -564,7 +564,7 @@ export function runDesignAutoClose(
       }
     }
 
-    if (failed.has("DEX-SHOT-INTENT")) {
+    if (failed.has("DEX-SHOT-INTENT") || failed.has("DEX-INTENT-PIC")) {
       const ens = ensureShotDesignIntentsFromPeaks(plan);
       if (ens.applied) {
         touched = true;
@@ -574,8 +574,42 @@ export function runDesignAutoClose(
           path: "planData.shotDesignIntent",
         });
       }
-    } else {
-      // Idempotent patch incomplete intents even if not currently failing the stage mount
+      // G14/G15: INTENT-PIC untilClear — sidecar picture ← VD（禁发明 VD）；与 exit audit 同核
+      if (failed.has("DEX-INTENT-PIC") || Boolean(opts?.forceExpand)) {
+        try {
+          const { getShotDesignIntentsFromPlan, syncIntentPicturesFromShots, auditIntentPictureSync } =
+            require("./shotDesignIntent") as typeof import("./shotDesignIntent");
+          const pdLocal = asPd(plan);
+          const pack =
+            (pdLocal.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+            ((plan as { preDesignPack?: { shots?: Record<string, unknown>[] } }).preDesignPack ?? {
+              shots: [],
+            });
+          const shots = [...(pack.shots ?? [])];
+          const intents = getShotDesignIntentsFromPlan(plan);
+          const before = auditIntentPictureSync({ intents, shots });
+          const synced = syncIntentPicturesFromShots({ intents, shots });
+          if (synced.synced > 0) {
+            pdLocal.shotDesignIntent = synced.intents;
+            const nb = (pdLocal.narrativeBrief as Record<string, unknown> | undefined) ?? {};
+            if (Array.isArray(nb.shotDesignIntent)) nb.shotDesignIntent = synced.intents;
+            pdLocal.preDesignPack = pack;
+            plan.planData = pdLocal;
+            (plan as { preDesignPack?: unknown }).preDesignPack = pack;
+            touched = true;
+            const after = auditIntentPictureSync({ intents: synced.intents, shots });
+            changes.push({
+              ruleId: "DEX-INTENT-PIC",
+              detail: `sync_picture=${synced.synced};before=${before.findings.length};after=${after.findings.length}`,
+              path: "planData.shotDesignIntent[].picture",
+            });
+          }
+        } catch {
+          /* optional */
+        }
+      }
+    } else if (stageId === "SB" || Boolean(opts?.forceExpand)) {
+      // G14: idempotent intent sync even when not currently failing
       try {
         const { validateShotDesignIntents, getShotDesignIntentsFromPlan } =
           require("./shotDesignIntent") as typeof import("./shotDesignIntent");
@@ -587,6 +621,100 @@ export function runDesignAutoClose(
               ruleId: "DEX-SHOT-INTENT",
               detail: ens.reasons.join(";") || "patched incomplete",
               path: "planData.shotDesignIntent",
+            });
+          }
+        }
+      } catch {
+        /* optional */
+      }
+    }
+
+    if (failed.has("FX-GRADE-01") || failed.has("DG-FALSE-GREEN-FX")) {
+      try {
+        const { declareF0OnBundle } =
+          require("../import/declareF0") as typeof import("../import/declareF0");
+        const pdLocal = asPd(plan);
+        const pack =
+          (pdLocal.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ?? { shots: [] };
+        const mini = {
+          planData: pdLocal,
+          preDesignPack: pack,
+          characterDesign: (plan as { characterDesign?: unknown }).characterDesign,
+        } as import("../bundle/types").ScriptBundle;
+        const f0 = declareF0OnBundle(mini);
+        if (f0.declared.length) {
+          pdLocal.preDesignPack = mini.preDesignPack ?? pack;
+          plan.planData = pdLocal;
+          if (mini.preDesignPack) {
+            (plan as { preDesignPack?: unknown }).preDesignPack = mini.preDesignPack;
+          }
+          touched = true;
+          changes.push({
+            ruleId: "FX-GRADE-01",
+            detail: `declare_f0 shots=${f0.declared.join(",")}`,
+            path: "preDesignPack.shots[].fxFeasibility",
+          });
+        }
+      } catch {
+        /* optional */
+      }
+    }
+
+    // G14: EXPR / AUD theme glue — default performance + seed audioPrompt (no invent VD)
+    if (failed.has("DEX-EXPR-SPEAK") || failed.has("CHAT-AUD-01") || Boolean(opts?.forceExpand)) {
+      try {
+        const { ensureShotPerformanceDefaults } =
+          require("../emotion/defaultPerformance") as typeof import("../emotion/defaultPerformance");
+        const pdLocal = asPd(plan);
+        const pack =
+          (pdLocal.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+          ((plan as { preDesignPack?: { shots?: Record<string, unknown>[] } }).preDesignPack ?? {
+            shots: [],
+          });
+        const shots = [...(pack.shots ?? [])];
+        let exprN = 0;
+        let audN = 0;
+        for (const s of shots) {
+          if (failed.has("DEX-EXPR-SPEAK") || Boolean(opts?.forceExpand)) {
+            if (ensureShotPerformanceDefaults(s as never)) exprN += 1;
+          }
+          if (failed.has("CHAT-AUD-01") || Boolean(opts?.forceExpand)) {
+            const gen = ((s as { generation?: Record<string, unknown> }).generation ??= {});
+            if (!String(gen.audioPrompt ?? "").trim()) {
+              const cue = String((s as { audioCue?: string }).audioCue ?? "").trim();
+              const lines =
+                ((s as { narrative?: { dialogue?: { lines?: { text?: string }[] } } }).narrative?.dialogue
+                  ?.lines ?? []) as { text?: string }[];
+              const dial = lines.map((l) => String(l?.text ?? "").trim()).filter(Boolean).join("\n");
+              const av = String(
+                (s as { avCausality?: { audioBeat?: string } }).avCausality?.audioBeat ?? "",
+              ).trim();
+              const seed = (cue || av || dial).slice(0, 80);
+              if (seed) {
+                gen.audioPrompt = cue || av ? `音效与对白：${seed}` : `口型同步对白：${seed}`;
+                audN += 1;
+              }
+            }
+          }
+        }
+        if (exprN || audN) {
+          pack.shots = shots;
+          pdLocal.preDesignPack = pack;
+          plan.planData = pdLocal;
+          (plan as { preDesignPack?: unknown }).preDesignPack = pack;
+          touched = true;
+          if (exprN) {
+            changes.push({
+              ruleId: "DEX-EXPR-SPEAK",
+              detail: `default_performance=${exprN}`,
+              path: "preDesignPack.shots[].shotDesign.performance",
+            });
+          }
+          if (audN) {
+            changes.push({
+              ruleId: "CHAT-AUD-01",
+              detail: `seed_audioPrompt=${audN}`,
+              path: "preDesignPack.shots[].generation.audioPrompt",
             });
           }
         }
@@ -749,6 +877,23 @@ export function runDesignAutoClose(
             detail: `propState_carry mutated=${ph.mutated};blocksLeft=${ph.blocksLeft}`,
             path: "preDesignPack.shots[].propState",
           });
+          // untilClear: if still BLOCK, one more pass (3+ 镜链)
+          if (ph.blocksLeft > 0) {
+            const ph2 = softHealPropContinuityOnBundle(mini);
+            if (ph2.mutated > 0) {
+              if (mini.preDesignPack) {
+                (plan as { preDesignPack?: unknown }).preDesignPack = mini.preDesignPack;
+                const pd = (plan.planData ?? {}) as Record<string, unknown>;
+                pd.preDesignPack = mini.preDesignPack;
+                plan.planData = pd;
+              }
+              changes.push({
+                ruleId: "DEX-PROP-CONT",
+                detail: `propState_carry_pass2 mutated=${ph2.mutated};blocksLeft=${ph2.blocksLeft}`,
+                path: "preDesignPack.shots[].propState",
+              });
+            }
+          }
         }
       } catch {
         /* optional */
@@ -843,7 +988,7 @@ export function runDesignAutoClose(
 /** Mutate ScriptBundle in place with auto-close; returns summary for export/dryRun. */
 export function applyDesignAutoCloseToBundle(
   bundle: ScriptBundle,
-  opts?: { stageId?: string; maxRounds?: number },
+  opts?: { stageId?: string; maxRounds?: number; forceExpand?: boolean },
 ): BundleAutoCloseResult {
   const plan = deepCloneJson(planFromBundleForDesignExit(bundle));
   if (bundle.characterDesign && !(plan as { characterDesign?: unknown }).characterDesign) {
@@ -852,6 +997,7 @@ export function applyDesignAutoCloseToBundle(
   const result = runDesignAutoClose(plan, {
     stageId: opts?.stageId ?? "SB",
     maxRounds: opts?.maxRounds ?? 1,
+    forceExpand: Boolean(opts?.forceExpand),
   });
 
   const pd = (result.plan.planData as Record<string, unknown>) ?? {};
@@ -899,6 +1045,27 @@ export function applyDesignAutoCloseToBundle(
     (bundle.planData as Record<string, unknown>).assetCrefPlan = pd.assetCrefPlan;
   }
 
+  // Always seal theme glue after autoClose (homology with export)
+  try {
+    const { sealThemeGlueUntilClear } =
+      require("./sealThemeGlueUntilClear") as typeof import("./sealThemeGlueUntilClear");
+    const seal = sealThemeGlueUntilClear(bundle);
+    if (seal.sealedIds.length) {
+      result.clearedIds = [...new Set([...result.clearedIds, ...seal.sealedIds])];
+      result.remainingFailedIds = result.remainingFailedIds.filter((id) => !seal.sealedIds.includes(id));
+      result.applied = true;
+      result.changes.push(
+        ...seal.sealedIds.map((id) => ({
+          ruleId: id,
+          detail: "theme_glue_seal",
+          path: "sealThemeGlueUntilClear",
+        })),
+      );
+    }
+  } catch {
+    /* optional */
+  }
+
   return {
     bundle,
     autoClosed: {
@@ -906,7 +1073,7 @@ export function applyDesignAutoCloseToBundle(
       clearedIds: result.clearedIds,
       remainingFailedIds: result.remainingFailedIds,
       changes: result.changes,
-      chatRetryRequired: result.chatRetryRequired,
+      chatRetryRequired: result.chatRetryRequired && result.remainingFailedIds.length > 0,
     },
   };
 }

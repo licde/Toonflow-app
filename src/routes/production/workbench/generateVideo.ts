@@ -741,6 +741,13 @@ export default router.post(
         if (vlmInfra) sheetLeak = false;
       }
       softAllowWeakStillForInfra = vlmInfra && !sheetLeak && Boolean(resolvedStillPath);
+      // G0/G12: Key-absent never soft-allows quality burn
+      try {
+        const { isStillKeyAbsentOnly } = await import("@/ruleEngine/qc/resolveStillForBurn");
+        if (isStillKeyAbsentOnly(stillMeta)) softAllowWeakStillForInfra = false;
+      } catch {
+        /* optional */
+      }
       // Contact-event + prop missing: never soft-allow weak still as burn-ok (SOFT-ALLOW-CONTACT-PROP-FORBIDDEN)
       try {
         const { isContactEventVd, textHasPropInFrame, matchContactEventVd, woundVisibleIsNotProp } =
@@ -757,6 +764,39 @@ export default router.post(
             if (stillMeta) {
               stillMeta = { ...(stillMeta as object), propMissing: true, propInFrame: false };
             }
+          }
+          // G12: cheek/mouth contact — still egress must carry mouth-ban HARD or block soft path
+          const stillBlobLower = stillPromptForHandoff;
+          if (
+            /面颊|颊|贴颊/.test(vdCheck) &&
+            !/禁口含|纸未入口|禁纸入口|仅.+触非口含/.test(stillBlobLower)
+          ) {
+            softAllowWeakStillForInfra = false;
+            if (stillMeta) {
+              stillMeta = {
+                ...(stillMeta as object),
+                mouthBanMissing: true,
+                stillQuality: stillMeta.stillQuality === "hq_ok" ? "weak" : stillMeta.stillQuality,
+              };
+            }
+          }
+        }
+        // G12: design spatial present but still/VD lack 站位/空间 — block soft burn
+        const spatialDesign = String(
+          (shotMeta as { spatialRelation?: string } | undefined)?.spatialRelation ??
+            (shotMeta as { narrative?: { spatialRelation?: string } } | undefined)?.narrative
+              ?.spatialRelation ??
+            "",
+        ).trim();
+        if (
+          spatialDesign &&
+          !/站位：|空间关系：|左右|对峙|近景相对/.test(
+            `${stillPromptForHandoff}\n${vdCheck}`,
+          )
+        ) {
+          softAllowWeakStillForInfra = false;
+          if (stillMeta) {
+            stillMeta = { ...(stillMeta as object), spatialMissing: true };
           }
         }
       } catch {
@@ -1139,6 +1179,27 @@ export default router.post(
     }
 
     try {
+      const { assessStillVideoReadiness } = await import("@/ruleEngine/qc/stillVideoReadiness");
+      const readiness = assessStillVideoReadiness({
+        stillQuality: typeof stillQuality === "string" ? stillQuality : null,
+        visualPass: (stillMeta as { visualPass?: boolean } | null)?.visualPass ?? null,
+        sheetLeak: (stillMeta as { sheetLeak?: boolean } | null)?.sheetLeak ?? null,
+        fidelityItems: ((stillMeta as { fidelityItems?: Array<{ id: string; pass: boolean }> } | null)?.fidelityItems ??
+          []) as Array<{ id: string; pass: boolean }>,
+        promptUsed: stillPromptForHandoff,
+        stillMeta: stillMeta as Record<string, unknown> | null,
+      });
+      if (!readiness.i2vReady) {
+        return res.status(400).send(
+          error("静照未达到视频起始帧标准", {
+            code: "STILL-I2V-NOT-READY",
+            primaryNextStep: "regen_storyboard_hq",
+            ctaLabel: "重出HQ静照",
+            userMessage: readiness.reason || "still 可看但不适合作视频起始帧",
+            criticalMisses: readiness.criticalMisses,
+          }),
+        );
+      }
       const { assertStillContactVideoHandoff } = await import("@/ruleEngine/qc/stillContactVideoHandoff");
       const vdForContact = String(
         (shotMeta as { visualDescription?: string } | undefined)?.visualDescription ??
@@ -1169,6 +1230,7 @@ export default router.post(
         visualDescription: vdForContact,
         stillPrompt: stillPromptForHandoff,
         stillMeta: stillMeta as Record<string, unknown> | null,
+        videoPrompt: burnPrompt,
         contactStartState: (stillMeta as { contactStartState?: string } | null)?.contactStartState as
           | import("@/ruleEngine/compilers/contactEventPolicy").ContactStartState
           | undefined,
@@ -1441,7 +1503,8 @@ export default router.post(
       .then(async () => {
         const { runPostBurnRuntime } = await import("@/ruleEngine/qc/postBurnRuntime");
         const { buildPostBurnVideoUpdate } = await import("@/ruleEngine/qc/persistPostBurnVideo");
-        const visualPass = stillQuality === "hq_ok" || softAllowWeakStillForInfra;
+        const visualPass = stillQuality === "hq_ok";
+        // softAllow skips IMG-STILL-QA gate only — must not forge visualPass / L1 stamp
         const { pixelDimStatus, mustDimAllowsVideoPass } =
           require("@/ruleEngine/quality/practiceCompleteness") as typeof import("@/ruleEngine/quality/practiceCompleteness");
         // Key/adapter optional: absent ⇒ unmeasured must-dims cannot claim videoPass via motion

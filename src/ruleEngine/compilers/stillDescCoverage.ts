@@ -26,6 +26,8 @@ export function assertStillDescCoverage(input: {
   /** Precomputed pack; if omitted, extract from description */
   pack?: DescPredicatePack | null;
   shotSize?: string | null;
+  /** Real bg policy — faceCu drop must not require SCENE plate tokens */
+  bgPolicy?: "keep" | "demote" | "drop" | string | null;
 }): StillDescCoverageResult {
   const names = input.characterNames ?? [];
   const pack =
@@ -38,8 +40,7 @@ export function assertStillDescCoverage(input: {
     description: input.description,
     characterNames: names,
     requireDualIdentity: false,
-    // VD-declared atmosphere is content contract (烛火等) — keep even when SCENE demoted
-    bgPolicy: "keep",
+    bgPolicy: (input.bgPolicy as "keep" | "demote" | "drop" | undefined) ?? "keep",
     shotSize: (input as { shotSize?: string }).shotSize,
   });
   // Prefer checklist; fall back to classic mustAppear when checklist empty

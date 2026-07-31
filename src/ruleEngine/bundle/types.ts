@@ -299,7 +299,7 @@ export interface ShapeResidualGap {
   field?: string;
 }
 
-/** Import-time asset quality report — blocks false-green stubs. */
+/** Import-time asset quality report — stub soft-warn + enqueue (G1); missing main still blocks. */
 export interface AssetQualityReport {
   stubCount: number;
   sceneSeeded: number;
@@ -316,6 +316,9 @@ export interface AssetQualityReport {
   /** Speaker orphans (WARN only; does not fail ok) */
   speakerWarns?: string[];
   ok: boolean;
+  /** G1: stub quality → FE/selfHeal enqueue */
+  primaryNextStep?: "batch_still";
+  softWarn?: boolean;
 }
 
 export interface ImportResult {

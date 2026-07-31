@@ -147,7 +147,8 @@ const resolveVideoSize = (resolution = "720p", aspectRatio = "16:9") => {
   return { width: Math.round(shortEdge * 16 / 9), height: shortEdge };
 };
 
-const extractApiError = (error: any) => {
+/** Extract vendor/network error text. Default must NOT say「视频」— shared by image + video. */
+const extractApiError = (error: any, fallback = "Agnes 请求失败") => {
   const data = error?.response?.data;
   if (typeof data === "object" && data !== null) {
     if (data.error?.message) return String(data.error.message);
@@ -156,11 +157,39 @@ const extractApiError = (error: any) => {
     try {
       return JSON.stringify(data).slice(0, 500);
     } catch {
-      return "请求失败";
+      return fallback;
     }
   }
   if (typeof data === "string" && data.trim()) return data.slice(0, 500);
-  return error?.message || "视频生成请求失败";
+  // No HTTP response: timeout / DNS / TLS / aborted — surface code so FE ≠ opaque「视频失败」
+  const code = String(error?.code ?? "").trim();
+  const msg = String(error?.message ?? "").trim();
+  if (code === "ECONNABORTED" || /timeout/i.test(msg)) {
+    return `Agnes 请求超时${msg ? `: ${msg}` : ""}`.slice(0, 500);
+  }
+  if (code === "ENOTFOUND" || code === "ECONNREFUSED" || code === "ECONNRESET" || code === "ETIMEDOUT") {
+    return `Agnes 网络错误 (${code})${msg ? `: ${msg}` : ""}`.slice(0, 500);
+  }
+  if (msg && !/^Error$/i.test(msg)) return msg.slice(0, 500);
+  if (code) return `Agnes 网络错误 (${code})`;
+  return fallback;
+};
+
+const classifyVendorError = (error: any, modality: "image" | "video") => {
+  const status = Number(error?.response?.status ?? 0);
+  const code = String(error?.code ?? "").trim().toUpperCase();
+  const message = extractApiError(error, modality === "image" ? "图像生成请求失败" : "视频生成请求失败");
+  const bucket =
+    status >= 400 && status < 500
+      ? "vendor_4xx"
+      : status >= 500
+        ? "vendor_5xx"
+        : code === "ECONNABORTED" || /timeout/i.test(message)
+          ? "network_timeout"
+          : /ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT/.test(code)
+            ? "network_error"
+            : "vendor_passthrough";
+  return { bucket, status, code, message };
 };
 
 const postWithRetry = async (url: string, payload: any, retries = 3) => {
@@ -174,7 +203,7 @@ const postWithRetry = async (url: string, payload: any, retries = 3) => {
       const msg = extractApiError(error);
       const retryable = status === 503 || status === 502 || status === 429 || /no available server/i.test(msg);
       if (!retryable || i === retries) break;
-      logger(`视频提交重试 ${i}/${retries}: ${msg}`);
+      logger(`提交重试 ${i}/${retries}: ${msg}`);
       await new Promise((r) => setTimeout(r, 2000 * i));
     }
   }
@@ -227,10 +256,9 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
   try {
     response = await axios.post(`${apiBase}/images/generations`, payload, { headers: getHeaders(), timeout: 120000 });
   } catch (error: any) {
-    const message = extractApiError(error);
-    const status = error?.response?.status;
-    logger(`图像生成失败: status=${status} message=${message}`);
-    throw new Error(message);
+    const info = classifyVendorError(error, "image");
+    logger(`图像生成失败: bucket=${info.bucket} status=${info.status || ""} code=${info.code || ""} message=${info.message}`);
+    throw new Error(info.message);
   }
 
   const url =
@@ -253,12 +281,18 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
   const duration = config.duration || 5;
   const frameRate = 24;
   const { width, height } = resolveVideoSize(config.resolution || "720p", config.aspectRatio || "16:9");
+  let numFrames = normalizeNumFrames(duration);
+  // Agnes singleImage on short clips tends to under-deliver visual duration.
+  // Add a conservative frame-floor so 2s beats do not collapse to ~1.7s output.
+  if (modeLabel === "singleImage" && duration <= 3) {
+    numFrames = Math.max(numFrames, normalizeNumFrames(duration + 0.6));
+  }
   const payload: any = {
     model: model.modelName || "agnes-video-v2.0",
     prompt: config.prompt,
     width,
     height,
-    num_frames: normalizeNumFrames(duration),
+    num_frames: numFrames,
     frame_rate: frameRate,
   };
 
@@ -310,7 +344,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
   try {
     startResponse = await postWithRetry(createUrl, payload);
   } catch (error: any) {
-    const message = extractApiError(error);
+    const message = extractApiError(error, "视频生成请求失败");
     logger(`视频任务提交失败: ${message}`);
     throw new Error(message);
   }

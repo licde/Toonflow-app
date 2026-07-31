@@ -154,11 +154,27 @@ export default router.post(
               {}) as Record<string, unknown>;
           const litCta = String(meta.litDebtCta ?? "");
           const litAct = String(meta.litDebtPrimaryAction ?? "");
+          // V5-10: stamp smartDesignProposals so RulePanel has Confirm surface
+          let smartDesignProposals: unknown[] | undefined;
+          try {
+            const { stampSmartDesignProposals } =
+              require("@/ruleEngine/design/smartProposalMerger") as typeof import("@/ruleEngine/design/smartProposalMerger");
+            smartDesignProposals = stampSmartDesignProposals(plan as Record<string, unknown>, exitGate.failedIds, {
+              reverseTarget: stageId,
+            });
+            const payloadStamp = JSON.stringify(plan);
+            if (row) {
+              await u.db("o_agentWorkData").where({ id: row.id }).update({ data: payloadStamp, updateTime: Date.now() });
+            }
+          } catch {
+            /* optional */
+          }
           return res.status(400).send({
             code: 400,
             message: exitGate.userMessage,
             data: {
               designExitGate: exitGate,
+              smartDesignProposals,
               redesignRequired: isRedesignRequired(plan),
               heal: healResult
                 ? {

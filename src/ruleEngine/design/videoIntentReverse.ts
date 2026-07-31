@@ -33,6 +33,8 @@ export type VideoIrdPatch = {
   shotIndex: number;
   before: unknown;
   after: unknown;
+  /** Auto-apply when conf >= 0.7 (G15) */
+  confidence?: number;
 };
 
 export type VideoIrdDiagnoseResult = {
@@ -119,6 +121,7 @@ export function diagnoseVideoIntent(input: {
         shotIndex: i,
         before: linesRaw,
         after: literary,
+        confidence: 0.9,
       });
     }
 
@@ -136,6 +139,7 @@ export function diagnoseVideoIntent(input: {
         shotIndex: i,
         before: vt,
         after: "none",
+        confidence: 0.85,
       });
     }
 
@@ -154,6 +158,7 @@ export function diagnoseVideoIntent(input: {
         shotIndex: i,
         before: beat,
         after: suggest,
+        confidence: 0.75,
       });
     }
 
@@ -177,6 +182,7 @@ export function diagnoseVideoIntent(input: {
           shotIndex: i,
           before: motion.slice(0, 80),
           after: head,
+          confidence: 0.8,
         });
       }
     }
@@ -208,6 +214,7 @@ export function diagnoseVideoIntent(input: {
               shotIndex: i,
               before: motion.slice(0, 80),
               after: beats.body,
+              confidence: 0.85,
             });
           }
         }
@@ -235,12 +242,14 @@ export function diagnoseVideoIntent(input: {
         shotIndex: i,
         before: "fx_peak",
         after: cls.intentClass,
+        confidence: 0.8,
       });
     }
   }
 
   const blocks = findings.filter((f) => f.severity === "BLOCK");
   const slots = [...new Set(blocks.flatMap((f) => f.missingSlots ?? []))];
+  const highConfPatches = patches.filter((p) => (p.confidence ?? 0) >= 0.7);
   let primaryAction: VideoIrdPrimaryAction = "none";
   if (slots.includes("literaryLines") || slots.includes("motionVerb")) primaryAction = "hand_edit_vd";
   else if (slots.includes("contactBeats") || slots.includes("executableBeats")) primaryAction = "confirm_enhance";
@@ -267,7 +276,7 @@ export function diagnoseVideoIntent(input: {
     findings,
     patches,
     primaryAction,
-    confirmRequired: blocks.length > 0,
+    confirmRequired: blocks.length > 0 && highConfPatches.length === 0,
     missingSlots: slots,
     ctaLabel,
   };

@@ -14,6 +14,7 @@ export type StillFirstFrameGateResult = {
   primaryNextStep?: "chat_repair" | "regen_storyboard_hq" | "batch_still";
   reverseTrigger?: "still_firstframe_dirty" | "still_firstframe_stale" | "still_firstframe_weak" | "dirty_still_prompt";
   intentClass?: string;
+  sceneDominanceFail?: boolean;
 };
 
 /** Detect phantom dual-face / OS-glue / recipe pollution in still prompt used as first frame. */
@@ -195,6 +196,23 @@ export function assertStillFirstFrameContract(input: {
     }
   } catch {
     /* optional */
+  }
+
+  const secondaryDominance =
+    /特写|近景|纸角|贴颊|划过面颊/.test(blob) &&
+    /沈母站立|配角站立|完整立像|半身立像/.test(blob) &&
+    !/仅手|仅前臂|衣角级参与/.test(blob);
+  if (secondaryDominance) {
+    return {
+      ok: false,
+      code: "STILL-FIRSTFRAME-DIRTY",
+      severity: "BLOCK",
+      message: "首帧主导事件被二号角色抢戏；特写场景仅允许配角手/前臂级参与",
+      primaryNextStep: "regen_storyboard_hq",
+      reverseTrigger: "still_firstframe_dirty",
+      intentClass: literaryIntent.intentClass || intent.intentClass,
+      sceneDominanceFail: true,
+    };
   }
 
   return { ok: true, severity: "ok", intentClass: literaryIntent.intentClass || intent.intentClass };

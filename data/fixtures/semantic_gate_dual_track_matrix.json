@@ -171,7 +171,16 @@
     "MOD-VID-M1",
     "DG-SCENE-KEY",
     "CAM-SPEAK",
-    "DEX-CAM-FIT"
+    "DEX-CAM-FIT",
+    "DEX-PROP-CONT",
+    "DEX-INTENT-PIC",
+    "DEX-SHOT-INTENT",
+    "FALSE_GREEN_SELFCHECK",
+    "DG-CAM-FIT-FALSE-GREEN",
+    "DG-NAR-SELFCHECK",
+    "FX-GRADE-01",
+    "DEX-EXPR-SPEAK",
+    "CHAT-AUD-01"
   ],
   "mustEditBlockIds": [
     "DEX-LITERARY-STALE",
@@ -179,16 +188,13 @@
     "DC-16",
     "DG-CD-COVERAGE",
     "DG-FALSE-GREEN-FX",
-    "DG-NAR-SELFCHECK",
     "DEX-VIS-TAG-MISSING",
     "DEX-VIS-TAG-INCONSISTENT",
     "DEX-VIS-SPLIT",
     "LIP-01",
     "DEX-LIP-SPLIT",
-    "FX-GRADE-01",
     "DEX-CAST-ON-DESC",
     "DEX-EMPTY-SHOT-CONSISTENCY",
-    "DEX-EXPR-SPEAK",
     "DEX-QP-02",
     "DEX-STILL-ONEBEAT",
     "DEX-STILL-CU-CAST",
@@ -197,7 +203,6 @@
     "DEX-LIT-CONTACT-XOR",
     "DEX-LIT-CONTACT",
     "DEX-LIT-ANCHOR",
-    "DEX-PROP-CONT",
     "VIS-MULTI-BEAT",
     "NO-LIP-DIALOGUE",
     "DESIGN-LOSS",
@@ -206,16 +211,14 @@
     "VIDEO-PROMPT-STALE",
     "DC-01-EXTRA",
     "CHAIN-BEAT",
-    "CHAT-AUD-01",
     "IMPORT-SPLIT-SYNC",
     "AUD-ORPHAN-SPEECH",
-    "DEX-INTENT-PIC",
     "IRD-CONFIRM",
     "DEX-DUP-VD",
     "DEX-DIRTY-STILL-PROMPT",
     "DEX-HAND-LIP"
   ],
-  "mustEditBlockIdsNote": "Chat/设计须重设计过检（不过绿）。导入/触达：importHeal until-clear 同核清零后检测 PASS 才算解决；禁止用 demote/WARN 顶可愈债。demoteAfterHeal 为过渡废弃字段（默认 false）。confirm_only（DEX-DUP-VD/QP-02）禁 demote、禁自动编造。importOk≠designExitPass 仅标未清零 Confirm 债。",
+  "mustEditBlockIdsNote": "Chat/设计须重设计过检（不过绿）。untilClear 主题胶水（PROP-CONT/INTENT-PIC/假绿派生/CAM/FX-F0/EXPR/AUD）进 autoAdapt——服务端愈到 PASS，勿诱手改 JSON。confirm_only（DEX-DUP-VD/QP-02）禁 demote、禁自动编造。importOk≠designExitPass。",
   "importSalvageRegistry": [
     {
       "ruleId": "DEX-DUP-VD",
@@ -606,12 +609,12 @@
     {
       "ruleId": "DEX-EXPR-SPEAK",
       "chatBlock": true,
-      "healClass": "confirm_only",
-      "importHeal": "none",
-      "confirmOnly": true,
-      "untilClear": false,
+      "healClass": "expr_default",
+      "importHeal": "default_performance",
+      "confirmOnly": false,
+      "untilClear": true,
       "demoteAfterHeal": false,
-      "notes": "W3 登记：none；confirmOnly=True"
+      "notes": "G14 主题胶水：ensureShotPerformanceDefaults untilClear；高强对白仍 Confirm；禁 demote 顶过检"
     },
     {
       "ruleId": "NO-LIP-DIALOGUE",
@@ -666,12 +669,12 @@
     {
       "ruleId": "CHAT-AUD-01",
       "chatBlock": true,
-      "healClass": "confirm_only",
-      "importHeal": "none",
-      "confirmOnly": true,
-      "untilClear": false,
+      "healClass": "audio_seed",
+      "importHeal": "seed_audio_from_dialogue",
+      "confirmOnly": false,
+      "untilClear": true,
       "demoteAfterHeal": false,
-      "notes": "W3 登记：none；confirmOnly=True"
+      "notes": "G14 主题胶水：台词镜缺 audioPrompt → seed from dialogue/audioCue/avCausality untilClear；禁 demote 顶过检"
     },
     {
       "ruleId": "IMPORT-SPLIT-SYNC",

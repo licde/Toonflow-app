@@ -4,6 +4,7 @@
  */
 import type { Knex } from "knex";
 import { isQcSoftDeliver } from "./qcSoftDeliver";
+import { buildQualityObservabilityRow } from "../quality/qualityObservability";
 
 export type PostBurnPersistInput = {
   videoPass: boolean;
@@ -24,18 +25,20 @@ export type PostBurnPersistInput = {
 
 export function buildPostBurnVideoUpdate(post: PostBurnPersistInput): { state: string; errorReason: string } {
   const step = post.primaryNextStep;
+  const qcWeakFlag = Boolean((post as { qcWeak?: boolean }).qcWeak);
+  const effectivePass = post.videoPass && !qcWeakFlag && step !== "human_review";
   const softDeliver = isQcSoftDeliver({
-    videoPass: post.videoPass,
+    videoPass: effectivePass,
     primaryNextStep: step,
     failDims: post.failDims as Array<{ id?: string }> | undefined,
   });
-  const delivered = post.videoPass || softDeliver;
+  const delivered = effectivePass || softDeliver;
   return {
     state: delivered ? "生成成功" : "质检未过",
     errorReason: JSON.stringify({
-      code: post.videoPass ? undefined : "QC-SVQ",
-      qcWeak: softDeliver || undefined,
-      videoPass: post.videoPass,
+      code: effectivePass ? undefined : "QC-SVQ",
+      qcWeak: softDeliver || qcWeakFlag || undefined,
+      videoPass: effectivePass,
       primaryNextStep: step,
       userMessage: post.userMessage,
       ctaLabel:
@@ -43,7 +46,9 @@ export function buildPostBurnVideoUpdate(post: PostBurnPersistInput): { state: s
           ? "SVQ 未测维 · 人审"
           : step === "chat_repair"
             ? "诊断视频 IRD"
-            : undefined,
+            : qcWeakFlag
+              ? "生成成功·未过质检"
+              : undefined,
       findings: post.findings,
       unknownDims: post.unknownDims,
       failDims: post.failDims,
@@ -62,6 +67,12 @@ export function buildPostBurnVideoUpdate(post: PostBurnPersistInput): { state: s
         skippedDims: post.skippedDims,
         svqHonesty: post.svqHonesty,
         deeplinks: post.deeplinks,
+        observability: buildQualityObservabilityRow({
+          stillQuality: (post as { stillQuality?: string }).stillQuality ?? null,
+          i2vReady: (post as { i2vReady?: boolean }).i2vReady ?? null,
+          autoRepairStage: (post as { autoRepairStage?: string }).autoRepairStage ?? null,
+          failureKinds: (post.failDims as Array<{ id?: string }> | undefined)?.map((f) => String(f.id ?? "")),
+        }),
       },
     }),
   };

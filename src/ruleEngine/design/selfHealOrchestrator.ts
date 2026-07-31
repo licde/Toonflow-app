@@ -74,6 +74,10 @@ export interface SelfHealResult {
   prepared?: boolean;
   /** identity fully healed for regen */
   healed?: boolean;
+  /** V5-C2: mid-conf proposals for RulePanel (same ladder as IRD/VIRD) */
+  smartProposals?: import("./smartProposalMerger").SmartProposal[];
+  /** V5-C2: high-conf autoClose attempted */
+  autoClose?: { clearedIds: string[]; remainingFailedIds: string[]; exitOk?: boolean };
 }
 
 const LAYER_NAME = /^(SB|EN|MD|AS|CD|GB|W3|INFRA|AUD|IMG|VID|FX)$/i;
@@ -91,7 +95,12 @@ function collectTriggers(input: SelfHealInput, classifiedRuleId?: string): strin
   const triggers: string[] = [];
   if (classifiedRuleId) triggers.push(classifiedRuleId);
   for (const issue of input.issues ?? []) {
-    if (issue.ruleId) triggers.push(issue.ruleId);
+    if (issue.ruleId) {
+      triggers.push(issue.ruleId);
+      if (/^(AUD|FX|INTENT|SFX|DEX-EXPR)/i.test(issue.ruleId)) {
+        triggers.push(issue.ruleId.replace(/^(DEX-)/i, "").toLowerCase());
+      }
+    }
   }
   for (const g of input.identityGaps ?? []) {
     if (g.reason === "stub_quality") triggers.push("orphan_stub_no_image");
@@ -396,6 +405,79 @@ export async function runSelfHeal(input: SelfHealInput): Promise<SelfHealResult>
     };
   }
 
+  // V5-C2: unify with IRD/VIRD ladder — high-conf autoClose on bundle; mid-conf stamp smartProposals
+  let autoClose: SelfHealResult["autoClose"];
+  let smartProposals: SelfHealResult["smartProposals"];
+  const highConfIssues = (input.issues ?? []).filter((i) => (i.autoFix?.confidence ?? 0) >= 0.7);
+  if (input.bundle && (highConfIssues.length || triggers.some((t) => /^DEX-LIT-|^DEX-PROP-|IRD-CONFIRM|VID-CONTACT/.test(t)))) {
+    try {
+      const { applyDesignAutoCloseToBundle } =
+        require("./designAutoClose") as typeof import("./designAutoClose");
+      const ac = applyDesignAutoCloseToBundle(input.bundle, {
+        stageId: "SB",
+        maxRounds: 2,
+      });
+      autoClose = {
+        clearedIds: ac.clearedIds ?? [],
+        remainingFailedIds: ac.remainingFailedIds ?? ac.exitGate?.failedIds ?? [],
+        exitOk: Boolean(ac.exitGate?.ok),
+      };
+      if (ac.exitGate?.ok) {
+        return {
+          ok: true,
+          exhausted: false,
+          healRound,
+          patchesApplied: ac.clearedIds ?? [],
+          triggers,
+          rePushPlan,
+          skipped,
+          autoApplicable: true,
+          mode: "soft_patch",
+          message: `SelfHeal→IRD autoClose cleared: ${(ac.clearedIds ?? []).join(",") || "none"}`,
+          autoClose,
+          retrySuggested: false,
+        };
+      }
+    } catch {
+      /* optional autoClose */
+    }
+  }
+  try {
+    const { buildSmartProposalsFromTriggers, stampSmartDesignProposals } =
+      require("./smartProposalMerger") as typeof import("./smartProposalMerger");
+    const remain = autoClose?.remainingFailedIds?.length ? autoClose.remainingFailedIds : triggers;
+    if (remain.length) {
+      smartProposals = buildSmartProposalsFromTriggers(
+        remain.map((t) => ({ trigger: t, ruleId: t, reverseTarget: "SB" })),
+      );
+      if (input.bundle) {
+        stampSmartDesignProposals(input.bundle as unknown as Record<string, unknown>, remain);
+      }
+    }
+  } catch {
+    /* optional proposals */
+  }
+
+  // GAP-SELFHEAL-FIDELITY (phase1): route pixel debts → compose_regen / fidelity_edit
+  let healActuators: string[] | undefined;
+  let nextStep: SelfHealResult["nextStep"];
+  try {
+    const { selfHealActuatorsForTriggers, isRedesignOnlyTrigger } =
+      require("../quality/smartRepairActuators") as typeof import("../quality/smartRepairActuators");
+    const pixelTriggers = triggers.filter(
+      (t) =>
+        /BG_READABLE|CONTACT_GEOM|background_readable|contact_geom|STILL_HQ/i.test(t) &&
+        !isRedesignOnlyTrigger(t),
+    );
+    if (pixelTriggers.length) {
+      const routed = selfHealActuatorsForTriggers(pixelTriggers);
+      healActuators = routed.actuators;
+      if (routed.nextStep) nextStep = routed.nextStep;
+    }
+  } catch {
+    /* optional */
+  }
+
   return {
     ok: false,
     exhausted,
@@ -404,8 +486,16 @@ export async function runSelfHeal(input: SelfHealInput): Promise<SelfHealResult>
     triggers,
     rePushPlan,
     skipped,
-    autoApplicable: false,
-    mode: "human",
-    message: "Requires human stage re-push / redesign",
+    autoApplicable: Boolean(healActuators?.includes("regen_storyboard_hq")),
+    mode: healActuators?.length ? "soft_patch" : "human",
+    message: healActuators?.length
+      ? `SelfHeal→untilClear actuators: ${healActuators.join(",")}`
+      : smartProposals?.length
+        ? "Requires Confirm on smartDesignProposals (SelfHeal↔IRD ladder)"
+        : "Requires human stage re-push / redesign",
+    smartProposals,
+    autoClose,
+    nextStep,
+    retrySuggested: healActuators?.includes("regen_storyboard_hq") || healActuators?.includes("compose_regen"),
   };
 }

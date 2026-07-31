@@ -10,6 +10,11 @@ import {
   diagnoseVideoIntent,
   applyVideoIntentPatches,
 } from "@/ruleEngine/design/videoIntentReverse";
+import {
+  applyCascadeAndReGate,
+  syncShotsToStoryboardDb,
+} from "@/ruleEngine/design/applyIntentWriteback";
+import { buildSmartProposalsFromTriggers } from "@/ruleEngine/design/smartProposalMerger";
 
 const router = express.Router();
 
@@ -47,25 +52,53 @@ export default router.post(
     shotIndex: z.number().optional(),
     patchIds: z.array(z.string()).optional(),
     forceApply: z.boolean().optional(),
+    scriptId: z.number().optional(),
   }),
   async (req, res) => {
     try {
-      const { projectId, action, shotIndex, patchIds, forceApply } = req.body as {
+      const { projectId, action, shotIndex, patchIds, forceApply, scriptId } = req.body as {
         projectId: number;
         action: string;
         shotIndex?: number;
         patchIds?: string[];
         forceApply?: boolean;
+        scriptId?: number;
       };
       const { row, plan } = await loadPlan(projectId);
       const shots = shotsFromPlan(plan as Record<string, unknown>);
       const diagnosed = diagnoseVideoIntent({ shots, shotIndex });
 
       if (action === "diagnose" || action === "dryRun") {
+        // V5-10: auto-build smart proposals from video findings
+        try {
+          const triggers = diagnosed.findings
+            .filter((f) => f.severity === "BLOCK" || f.severity === "WARN")
+            .map((f) => ({
+              trigger: f.id,
+              reverseTarget: "EN",
+              ruleId: f.id,
+              reason: f.message,
+              shotIndex: f.shotIndex,
+            }));
+          if (triggers.length) {
+            const existing = Array.isArray((plan as { smartDesignProposals?: unknown[] }).smartDesignProposals)
+              ? ((plan as { smartDesignProposals: import("@/ruleEngine/design/smartProposalMerger").SmartProposal[] })
+                  .smartDesignProposals)
+              : [];
+            const built = buildSmartProposalsFromTriggers(triggers);
+            const byT = new Set(existing.map((p) => p.trigger));
+            const merged = [...existing, ...built.filter((b) => !byT.has(b.trigger))];
+            (plan as { smartDesignProposals?: unknown }).smartDesignProposals = merged;
+            await savePlan(projectId, row, plan);
+          }
+        } catch {
+          /* optional */
+        }
         return res.status(200).send(
           success({
             ...diagnosed,
             action,
+            smartDesignProposals: (plan as { smartDesignProposals?: unknown }).smartDesignProposals,
             primaryNextStep: diagnosed.ok ? "burn" : "chat_repair",
             userMessage: diagnosed.ok
               ? "视频设计契约已过"
@@ -76,7 +109,8 @@ export default router.post(
       }
 
       if (action === "apply") {
-        if (diagnosed.confirmRequired && !forceApply && !patchIds?.length) {
+        const highConf = diagnosed.patches.filter((p) => (p.confidence ?? 0) >= 0.7);
+        if (diagnosed.confirmRequired && !forceApply && !patchIds?.length && highConf.length === 0) {
           return res.status(400).send(
             error("视频设计债须 Confirm（传 forceApply 或 patchIds）", {
               code: "VID-IRD-CONFIRM",
@@ -86,23 +120,49 @@ export default router.post(
             }),
           );
         }
+        const allowIds = patchIds?.length
+          ? new Set(patchIds)
+          : forceApply
+            ? null
+            : new Set(highConf.map((p) => p.id));
         const { shots: next, applied } = applyVideoIntentPatches({
           shots,
           patches: diagnosed.patches,
-          patchIds,
+          patchIds: allowIds ? [...allowIds] : patchIds,
         });
         writeShots(plan as Record<string, unknown>, next);
+        const wb = applyCascadeAndReGate({ plan: plan as Record<string, unknown>, shots: next });
+        writeShots(plan as Record<string, unknown>, wb.shots);
         await savePlan(projectId, row, plan);
-        const again = diagnoseVideoIntent({ shots: next, shotIndex });
+        let syncedStoryboard = false;
+        if (scriptId && wb.shots.length) {
+          syncedStoryboard = await syncShotsToStoryboardDb({
+            db: u.db,
+            projectId,
+            scriptId,
+            shots: wb.shots,
+          });
+        }
+        const again = diagnoseVideoIntent({ shots: wb.shots, shotIndex });
         return res.status(200).send(
           success({
             applied,
             before: diagnosed,
             after: again,
-            ok: again.ok,
-            primaryNextStep: again.ok ? "burn" : "chat_repair",
+            ok: again.ok && wb.designExitPass,
+            exitGate: wb.exitGate,
+            exitReassert: wb.exitGate,
+            designExitPass: wb.designExitPass,
+            cascade: wb.cascade,
+            syncedStoryboard,
+            primaryNextStep: again.ok && wb.designExitPass ? "burn" : "chat_repair",
             ctaLabel: again.ctaLabel,
-            userMessage: again.ok ? "视频设计债已清" : again.findings.map((f) => f.message).join("；"),
+            userMessage:
+              again.ok && wb.designExitPass
+                ? "视频设计债已清"
+                : [...again.findings.map((f) => f.message), ...(wb.exitGate.failedIds.length ? [`exit:${wb.exitGate.failedIds.join(",")}`] : [])].join(
+                    "；",
+                  ),
           }),
         );
       }

@@ -76,6 +76,52 @@ export function buildSmartProposalsFromTriggers(
   return out;
 }
 
+/** Merge newly built proposals into existing without wiping confirmed/applied. */
+export function mergeSmartProposalLists(
+  existing: SmartProposal[] | undefined,
+  built: SmartProposal[],
+): SmartProposal[] {
+  const keep = (existing ?? []).filter((p) => p.status === "confirmed" || p.status === "applied");
+  const keepKeys = new Set(keep.map((p) => `${p.ruleId}|${p.trigger}|${p.shotIndex ?? ""}`));
+  const pending = built.filter((p) => !keepKeys.has(`${p.ruleId}|${p.trigger}|${p.shotIndex ?? ""}`));
+  const pendingKeys = new Set(pending.map((p) => `${p.ruleId}|${p.trigger}|${p.shotIndex ?? ""}`));
+  const priorPending = (existing ?? []).filter(
+    (p) =>
+      p.status === "pending_user_confirm" &&
+      !pendingKeys.has(`${p.ruleId}|${p.trigger}|${p.shotIndex ?? ""}`),
+  );
+  return [...keep, ...priorPending, ...pending];
+}
+
+/**
+ * V5-10: stamp smartDesignProposals onto plan/bundle from failed rule ids / triggers.
+ * Used by diagnose / exportGate / setStepStatus / SelfHeal so RulePanel is never empty when debt exists.
+ */
+export function stampSmartDesignProposals(
+  planOrBundle: Record<string, unknown>,
+  failedIds: string[],
+  opts?: { reverseTarget?: string; reasons?: Record<string, string> },
+): SmartProposal[] {
+  const triggers = failedIds.filter(Boolean).map((id) => ({
+    trigger: id,
+    ruleId: id,
+    reverseTarget: opts?.reverseTarget ?? "SB",
+    reason: opts?.reasons?.[id] ?? `Confirm 修复：${id}`,
+  }));
+  const built = buildSmartProposalsFromTriggers(triggers);
+  const existing = Array.isArray(planOrBundle.smartDesignProposals)
+    ? (planOrBundle.smartDesignProposals as SmartProposal[])
+    : [];
+  const merged = mergeSmartProposalLists(existing, built);
+  planOrBundle.smartDesignProposals = merged;
+  const pd = (planOrBundle.planData as Record<string, unknown> | undefined) ?? {};
+  if (planOrBundle.planData || Object.keys(pd).length) {
+    pd.smartDesignProposals = merged;
+    planOrBundle.planData = pd;
+  }
+  return merged;
+}
+
 /**
  * Merge confirmed proposals into bundle:
  * - writes fixPlan items

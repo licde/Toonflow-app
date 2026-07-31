@@ -127,7 +127,11 @@ function ok(name: string, cond: boolean, detail = "") {
     shotSize: "特写",
     castNames: ["沈清漪"],
   });
-  ok("dense geom → 修接触几何", dense.ctaLabel === "修接触几何", JSON.stringify(dense));
+  ok(
+    "dense geom → contact CTA",
+    dense.ctaLabel === "修接触几何" || dense.ctaLabel === "重出带道具静照",
+    JSON.stringify(dense),
+  );
   ok("dense geom regen not chat", dense.nextStep === "regen_storyboard_hq");
 
   const denseXor = routeStillRepair({

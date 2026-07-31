@@ -141,13 +141,24 @@ function intentsForShot(
   shotIndex: number,
 ): ShotDesignIntent | undefined {
   if (!intents?.length) return undefined;
-  return intents[shotIndex - 1] ?? intents.find((i) => String(i.sceneRef) === String(shotIndex));
+  // Prefer explicit shotIndex / sceneRef — never prefer bare array index first (mis-pairs after split)
+  const byShot = intents.find((i) => Number((i as { shotIndex?: number }).shotIndex) === shotIndex);
+  if (byShot) return byShot;
+  const byScene = intents.find((i) => String(i.sceneRef) === String(shotIndex));
+  if (byScene) return byScene;
+  return intents[shotIndex - 1];
 }
 
 function anchorOverlap(a: string, b: string, knownNames: string[]): number {
   const pack = extractDescPredicates({ description: a, characterNames: knownNames });
   const tokens = pack.mustAppear.filter((t) => t.length >= 2).slice(0, 8);
-  if (!tokens.length) return 1;
+  if (!tokens.length) {
+    // Align with auditIntentPictureSync — bare CJK tokens; empty ≠ perfect overlap
+    const picTokens = a.match(/[\u4e00-\u9fff]{2,}/g)?.slice(0, 6) ?? [];
+    if (picTokens.length < 2) return picTokens.length === 1 && b.includes(picTokens[0]!) ? 1 : 0;
+    const hit = picTokens.filter((t) => b.includes(t)).length;
+    return hit / picTokens.length;
+  }
   const hit = tokens.filter((t) => b.includes(t)).length;
   return hit / tokens.length;
 }
@@ -174,7 +185,7 @@ export function diagnoseStillIntent(
     const vd = String(shot.visualDescription ?? "").trim();
     const intent = intentsForShot(intents, idx);
 
-    // DEX-INTENT-PIC
+    // DEX-INTENT-PIC — theme glue: sync sidecar picture ← VD（禁发明 VD）；无 VD 才从 picture salvage
     if (intent?.picture?.trim()) {
       const pic = intent.picture.trim();
       const overlap = vd ? anchorOverlap(pic, vd, known) : 0;
@@ -185,15 +196,27 @@ export function diagnoseStillIntent(
           message: `镜 ${idx || "?"} intent.picture 与 visualDescription 不同核`,
           breakAt: "design",
         });
-        patches.push({
-          id: pid("sync_intent", idx),
-          op: "sync_intent_picture",
-          shotIndex: idx,
-          confidence: vd ? 0.75 : 0.9,
-          before: { visualDescription: vd, picture: pic },
-          after: { visualDescription: vd || pic.slice(0, 400) },
-          authoritativePaths: ["preDesignPack.shots[].visualDescription", "shotDesignIntent[].picture"],
-        });
+        if (vd) {
+          patches.push({
+            id: pid("sync_intent", idx),
+            op: "sync_intent_picture",
+            shotIndex: idx,
+            confidence: 0.92,
+            before: { visualDescription: vd, picture: pic },
+            after: { picture: vd.slice(0, 240) },
+            authoritativePaths: ["shotDesignIntent[].picture"],
+          });
+        } else {
+          patches.push({
+            id: pid("sync_intent", idx),
+            op: "sync_intent_picture",
+            shotIndex: idx,
+            confidence: 0.9,
+            before: { visualDescription: vd, picture: pic },
+            after: { visualDescription: pic.slice(0, 400), picture: pic.slice(0, 240) },
+            authoritativePaths: ["preDesignPack.shots[].visualDescription", "shotDesignIntent[].picture"],
+          });
+        }
       }
     }
 
@@ -348,7 +371,7 @@ export function diagnoseStillIntent(
     const propInputs = hydrateShotsPropState(
       shots.map((s) => {
         const si = Number(s.shotIndex) || 0;
-        const intent = intentsForShot(si, opts?.intents);
+        const intent = intentsForShot(opts?.intents, si);
         return {
           shotIndex: si || undefined,
           visualDescription: String(s.visualDescription ?? ""),
@@ -435,9 +458,20 @@ export function diagnoseStillIntent(
 
   let primaryAction: IrdPrimaryAction = "none";
   if (blocks.length === 0 && patches.length === 0) {
-    primaryAction = findings.some((f) => isLitOrProp(f.id)) ? "hand_edit_vd" : "none";
+    // Lit findings without patches: prefer reverse enhance when slots are template-fillable
+    if (enhanceableLit && !driftLike) {
+      primaryAction = "confirm_enhance";
+    } else {
+      primaryAction = findings.some((f) => isLitOrProp(f.id)) ? "hand_edit_vd" : "none";
+    }
   } else if (confirmRequired && hasSplit) primaryAction = "confirm_split";
   else if (hasAuto && !confirmRequired) primaryAction = "apply_auto";
+  else if (
+    blocks.some((f) => f.id === "DEX-INTENT-PIC") &&
+    patches.some((p) => p.op === "sync_intent_picture" && p.confidence >= autoMin)
+  ) {
+    primaryAction = "apply_auto";
+  }
   else if (xorPreferSplit || (xorBlocks.length && !enhanceableLit)) {
     primaryAction = "confirm_split";
     confirmRequired = true;
@@ -596,12 +630,12 @@ export function applyStillIntentPatches(
   const proposeOnly = Boolean(opts?.chatStrict) && !opts?.forceApply;
   const locked = Boolean(opts?.literaryLocked) && !opts?.forceApply;
 
-  if (proposeOnly || locked) {
+  if (proposeOnly) {
     return {
       shots,
       applied: [],
       skipped: diagnose.patches.map((p) => p.id),
-      refused: locked ? ["literaryLocked"] : ["chatStrict"],
+      refused: ["chatStrict"],
       irdProvenance: {
         appliedAt: new Date().toISOString(),
         patchIds: [],
@@ -611,6 +645,19 @@ export function applyStillIntentPatches(
   }
 
   let next = [...shots];
+  const intents =
+    opts?.intents ??
+    (opts?.planData
+      ? (() => {
+          try {
+            const { getShotDesignIntentsFromPlan } =
+              require("./shotDesignIntent") as typeof import("./shotDesignIntent");
+            return getShotDesignIntentsFromPlan({ planData: opts.planData });
+          } catch {
+            return [] as ShotDesignIntent[];
+          }
+        })()
+      : ([] as ShotDesignIntent[]));
   const selected = opts?.patchIds?.length
     ? diagnose.patches.filter((p) => opts.patchIds!.includes(p.id))
     : diagnose.patches.filter((p) => p.confidence >= autoMin || opts?.forceApply);
@@ -627,7 +674,33 @@ export function applyStillIntentPatches(
       continue;
     }
     const after = p.after as Record<string, unknown>;
-    if (p.op === "rewrite_vd" || p.op === "sync_intent_picture") {
+    if (p.op === "sync_intent_picture") {
+      // G7/G15: sidecar picture sync always allowed under literaryLocked; VD rewrite only when unlocked
+      let did = false;
+      if (typeof after.picture === "string" && after.picture.trim()) {
+        const intent = intentsForShot(intents, p.shotIndex);
+        if (intent) {
+          intent.picture = after.picture.trim().slice(0, 240);
+          did = true;
+        }
+      }
+      if (typeof after.visualDescription === "string" && after.visualDescription.trim()) {
+        if (locked) {
+          refused.push(p.id);
+        } else {
+          shot.visualDescription = after.visualDescription;
+          markChainStale(shot, { still: true, video: true });
+          shot.irdApplied = true;
+          did = true;
+        }
+      }
+      if (did) applied.push(p.id);
+      else if (!refused.includes(p.id)) skipped.push(p.id);
+    } else if (p.op === "rewrite_vd") {
+      if (locked) {
+        refused.push(p.id);
+        continue;
+      }
       if (typeof after.visualDescription === "string") {
         shot.visualDescription = after.visualDescription;
         markChainStale(shot, { still: true, video: true });
@@ -652,9 +725,20 @@ export function applyStillIntentPatches(
     }
   }
 
+  // Persist intent sidecar writeback
+  if (applied.some((id) => /sync_intent/.test(id)) && opts?.planData && intents.length) {
+    const pd = opts.planData;
+    pd.shotDesignIntent = intents;
+    const nb = (pd.narrativeBrief as Record<string, unknown> | undefined) ?? {};
+    if (nb.shotDesignIntent) nb.shotDesignIntent = intents;
+  }
+
   // Splits — onebeat via expandStillOneBeat on filtered set
   const onebeatPatches = selected.filter((p) => p.op === "split_onebeat");
   if (onebeatPatches.length) {
+    if (locked) {
+      for (const p of onebeatPatches) refused.push(p.id);
+    } else {
     const indices = new Set(onebeatPatches.map((p) => p.shotIndex));
     const refuseLow = onebeatPatches.filter((p) => p.confidence < autoMin && !opts?.forceApply);
     for (const p of refuseLow) refused.push(p.id);
@@ -687,9 +771,25 @@ export function applyStillIntentPatches(
       else refused.push(p.id);
     }
     next = sliceFieldsAfterIrdSplit(next).shots;
+    // Homologous atom table: Confirm/forceApply writes shotAtoms and exits diagnose_only
+    if (opts?.forceApply || expanded.expandedCount > 0) {
+      try {
+        const { applyShotAtomsOnConfirm } =
+          require("./shotAtomsWriteback") as typeof import("./shotAtomsWriteback");
+        const atomsWb = applyShotAtomsOnConfirm({ shots: next, force: Boolean(opts?.forceApply) });
+        next = atomsWb.shots;
+      } catch {
+        /* optional */
+      }
+    }
+    }
   }
 
   for (const p of selected.filter((x) => x.op === "split_speak_react")) {
+    if (locked) {
+      refused.push(p.id);
+      continue;
+    }
     if (p.confidence < autoMin && !opts?.forceApply) {
       refused.push(p.id);
       continue;

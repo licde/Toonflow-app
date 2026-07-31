@@ -1264,7 +1264,7 @@ export function runDesignExitGate(
         break;
       }
       case "DEX-PROP-CONT": {
-        const { auditPropContinuity, auditPropPoseContinuity, hydrateShotsPropState } =
+        const { auditPropContinuity, hydrateShotsPropState } =
           require("../compilers/propContinuitySsot") as typeof import("../compilers/propContinuitySsot");
         const intents = (() => {
           try {
@@ -1278,19 +1278,28 @@ export function runDesignExitGate(
         const raw = preDesignShots(pd).map((s) => {
           const idx = Number(s.shotIndex) || 0;
           const intent = intents.find((x) => Number(x.shotIndex) === idx);
+          const narr = s.narrative as
+            | { propState?: string; transitionType?: string }
+            | undefined;
           return {
             shotIndex: idx || undefined,
             visualDescription: String(s.visualDescription ?? ""),
             sceneName: String((s as { sceneName?: string }).sceneName ?? (s as { scene?: string }).scene ?? ""),
-            transitionType: String((s as { transitionType?: string }).transitionType ?? ""),
-            propState: String((s as { propState?: string }).propState ?? ""),
+            transitionType: String(
+              (s as { transitionType?: string }).transitionType ?? narr?.transitionType ?? "",
+            ),
+            propState: String((s as { propState?: string }).propState ?? narr?.propState ?? ""),
             propPose: String((s as { propPose?: string }).propPose ?? ""),
             shotSize: String(s.shotSize ?? ""),
             intentPicture: intent?.picture ?? null,
+            xorSplit: Boolean((s as { _litXorSplit?: boolean })._litXorSplit),
+            _stillBeatSplitId: (s as { _stillBeatSplitId?: string })._stillBeatSplitId ?? null,
+            _visualSplitId: (s as { _visualSplitId?: string })._visualSplitId ?? null,
           };
         });
         const hydrated = hydrateShotsPropState(raw);
-        const findings = [...auditPropContinuity(hydrated), ...auditPropPoseContinuity(hydrated)];
+        // Only PROP-CONT id — PROP-POSE is separate checklist, 勿误吞
+        const findings = auditPropContinuity(hydrated).filter((f) => f.id === "DEX-PROP-CONT");
         let bad = false;
         for (const f of findings) {
           if (f.severity === "BLOCK") {
