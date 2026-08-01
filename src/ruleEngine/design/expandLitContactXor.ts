@@ -114,10 +114,12 @@ export function expandOneLitContactXorShot(shot: Record<string, unknown>): {
   const cheek = cloneShot(shot);
   const oral = cloneShot(shot);
 
-  cheek.clientId = parentId;
+  cheek.clientId = `${parentId}__lit_cheek`;
   cheek._litXorSplitId = parentId;
   cheek._stillBeatSplitId = parentId;
-  cheek._parentVisualDescription = parentVd;
+  // Continuity stash only — never compose from dual-contact parent body
+  cheek._parentVisualDescription = cheekVd;
+  cheek._intentGraphParentVd = parentVd;
   cheek.visualSplitRole = "action";
   cheek.beatRole = "action";
   cheek.shotSize = "特写";
@@ -132,6 +134,10 @@ export function expandOneLitContactXorShot(shot: Record<string, unknown>): {
   {
     const gen = { ...((cheek.generation as Record<string, unknown>) ?? {}) };
     delete gen.fxPrompt;
+    delete gen.imagePrompt;
+    delete gen.videoPrompt;
+    delete gen.videoDesc;
+    delete gen.compiled;
     delete cheek.fxPrompt;
     cheek.fxFeasibility = "F0";
     cheek.generation = { ...gen, fxFeasibility: "F0" };
@@ -141,6 +147,7 @@ export function expandOneLitContactXorShot(shot: Record<string, unknown>): {
   cheek.stillQuality = undefined;
   cheek.promptState = "stale";
   cheek.videoPass = false;
+  cheek.videoStale = true;
   cheek.narrative = {
     ...((cheek.narrative as object) ?? {}),
     shotSize: "特写",
@@ -150,7 +157,8 @@ export function expandOneLitContactXorShot(shot: Record<string, unknown>): {
   oral.clientId = `${parentId}__lit_oral`;
   oral._litXorSplitId = parentId;
   oral._stillBeatSplitId = parentId;
-  oral._parentVisualDescription = parentVd;
+  oral._parentVisualDescription = oralVd;
+  oral._intentGraphParentVd = parentVd;
   oral.visualSplitRole = "reaction";
   oral.beatRole = "reaction";
   oral.shotSize = "特写";
@@ -160,6 +168,10 @@ export function expandOneLitContactXorShot(shot: Record<string, unknown>): {
   {
     const gen = { ...((oral.generation as Record<string, unknown>) ?? {}) };
     delete gen.fxPrompt;
+    delete gen.imagePrompt;
+    delete gen.videoPrompt;
+    delete gen.videoDesc;
+    delete gen.compiled;
     delete oral.fxPrompt;
     oral.fxFeasibility = "F0";
     oral.generation = { ...gen, fxFeasibility: "F0" };
@@ -169,11 +181,37 @@ export function expandOneLitContactXorShot(shot: Record<string, unknown>): {
   oral.stillQuality = undefined;
   oral.promptState = "stale";
   oral.videoPass = false;
+  oral.videoStale = true;
   oral.narrative = {
     ...((oral.narrative as object) ?? {}),
     shotSize: "特写",
     dialogue: { lines: [] },
   };
+
+  try {
+    const { inheritContinuityAlongEdges } =
+      require("./splitContinuityInherit") as typeof import("./splitContinuityInherit");
+    inheritContinuityAlongEdges({
+      shots: [cheek, oral],
+      edges: [
+        { kind: "xor_mutex", fromShotKey: cheek.clientId as string, toShotKey: oral.clientId as string },
+        { kind: "prop_cont", fromShotKey: parentId, toShotKey: cheek.clientId as string },
+        { kind: "look_cont", fromShotKey: parentId, toShotKey: cheek.clientId as string },
+        { kind: "look_cont", fromShotKey: parentId, toShotKey: oral.clientId as string },
+      ],
+    });
+    // Parent look/codes from original shot
+    if (shot.charCodes) {
+      cheek.charCodes = shot.charCodes;
+      oral.charCodes = shot.charCodes;
+    }
+    if (shot.sceneCode) {
+      cheek.sceneCode = shot.sceneCode;
+      oral.sceneCode = shot.sceneCode;
+    }
+  } catch {
+    /* optional */
+  }
 
   return { children: [cheek, oral], ok: true, confirmRequired: false, reason: "lit_xor_split", confidence };
 }

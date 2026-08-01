@@ -176,6 +176,8 @@ const DEFAULT_AUTO_ADAPT = new Set([
   "FX-GRADE-01",
   "DEX-EXPR-SPEAK",
   "CHAT-AUD-01",
+  "PROMPT-FIDELITY",
+  "PROMPT_FIDELITY",
   // NAR-14 / DEX-VIS-SPLIT are NOT blanket auto — see classifyBlockId
 ]);
 
@@ -880,14 +882,15 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
   try {
     const { applyCamFitHygieneOnExport, runCamFitUntilClear } =
       require("./export/camFitHygiene") as typeof import("./export/camFitHygiene");
-    // G14: high-conf CAM untilClear on export（主题胶水）；仅显式 chatStrict 诊不拆
-    const hardChatStrict =
-      Boolean((bundle as { chatStrict?: boolean }).chatStrict) &&
-      !opts.forceExpand &&
-      opts.allowShapeSalvage !== true;
+    // Import/dryRun salvage: diagnose-only cam-fit（禁 speak_react 同文增产）；仅 forceExpand 才 apply
+    const alreadyExpanded = Boolean(
+      (bundle as { _importSplitExpanded?: boolean })._importSplitExpanded ||
+        (bundle.meta as { importSplitExpanded?: boolean } | undefined)?.importSplitExpanded,
+    );
+    const camDiagnoseOnly = !opts.forceExpand || alreadyExpanded;
     const cam = (runCamFitUntilClear ?? applyCamFitHygieneOnExport)(bundle, {
-      chatStrict: hardChatStrict,
-      maxRounds: hardChatStrict ? 0 : 5,
+      chatStrict: camDiagnoseOnly,
+      maxRounds: camDiagnoseOnly ? 0 : 5,
       autoMinConfidence: 0.7,
     });
     if (cam.applied) {
@@ -896,7 +899,7 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
         path: "preDesignPack.shots",
         action: `export_cam_split:${cam.applied};rounds=${cam.rounds};remain=${cam.remainingMustSplit}`,
       });
-    } else if (hardChatStrict && cam.remainingMustSplit > 0) {
+    } else if (camDiagnoseOnly && cam.remainingMustSplit > 0) {
       (prep.shapeSalvageLog ??= []).push({
         ruleId: "SH-CAM-FIT-DIAGNOSE-ONLY",
         path: "preDesignPack.shots",
@@ -928,8 +931,13 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
       stageId: "SB",
       // Dirty/DUP heals often need merge then re-audit
       maxRounds: opts.allowShapeSalvage === true ? 5 : 4,
-      // 语义扩仅 opts.forceExpand（Confirm / 显式扩）；主题胶水 seal 不依赖 forceExpand
-      forceExpand: Boolean(opts.forceExpand),
+      // 语义扩仅 opts.forceExpand；prepare 已扩则禁二次增产
+      forceExpand:
+        Boolean(opts.forceExpand) &&
+        !Boolean(
+          (bundle as { _importSplitExpanded?: boolean })._importSplitExpanded ||
+            ((bundle as { meta?: { importSplitExpanded?: boolean } }).meta?.importSplitExpanded),
+        ),
     });
     autoClosed = ac.autoClosed;
     if (ac.autoClosed.applied) {
@@ -938,6 +946,24 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
         path: "planData.dialoguePlan|preDesignPack.shots",
         action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"};ops=${ac.autoClosed.changes.length}`,
       });
+      // False-green guard: GEN open after AUTO-CLOSE → keep importOk≠exit
+      try {
+        const { auditGenerationApplyGaps } =
+          require("./bundle/generationApplyAudit") as typeof import("./bundle/generationApplyAudit");
+        const openGen = auditGenerationApplyGaps(bundle).filter((g) => /^GEN-0[356]$/.test(g.id));
+        if (openGen.length) {
+          const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+          bMeta.importOkNotExitPass = true;
+          bMeta.designExitIncomplete = true;
+          (prep.shapeSalvageLog ??= []).push({
+            ruleId: "FALSE-GREEN-GEN",
+            path: "generation.imagePrompt",
+            action: `gen_open:${openGen.map((g) => g.id).join(",")}`,
+          });
+        }
+      } catch {
+        /* optional */
+      }
     }
   } catch {
     /* optional — fall through; seal still runs */
@@ -1637,6 +1663,7 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
           if (opts.forceExpand) {
             const { runSplitOrchestrator } =
               require("./design/splitOrchestrator") as typeof import("./design/splitOrchestrator");
+            const beforeN = place.shots.length;
             const orch = runSplitOrchestrator({
               planData: (bundle.planData ?? {}) as Record<string, unknown>,
               shots: place.shots,
@@ -1652,6 +1679,11 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
               path: "exportGate.preLipSoft",
               action: `shots=${orch.shots.length};steps=${orch.log.map((l) => l.step).join(",")}`,
             });
+            // Honesty: only mark expanded when shot count actually grew
+            if (orch.shots.length > beforeN) {
+              bMeta.importSplitExpanded = true;
+              (bundle as { _importSplitExpanded?: boolean })._importSplitExpanded = true;
+            }
           } else {
             bundle.preDesignPack.shots = place.shots as never;
             (prep.shapeSalvageLog ??= []).push({
@@ -1659,8 +1691,8 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
               path: "exportGate.preLipSoft",
               action: `placement_only;shots=${place.shots.length};no_clause_inflate`,
             });
+            // Honesty: placement-only must NOT set importSplitExpanded (designExit would skip IRD)
           }
-          bMeta.importSplitExpanded = true;
         }
       } catch {
         /* best-effort */

@@ -22,7 +22,16 @@ function digMicro(shot: Record<string, unknown> | undefined): string | null {
   const micro = sd?.performance?.microExpression;
   if (!micro) return null;
   if (typeof micro === "string") return micro;
-  return [micro.eyes, micro.mouthDetail].filter(Boolean).join("; ") || null;
+  const vd = String(shot?.visualDescription ?? "");
+  let mouth = micro.mouthDetail;
+  try {
+    const { mouthDetailAllowedByVd } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    if (mouth && !mouthDetailAllowedByVd(mouth, vd)) mouth = undefined;
+  } catch {
+    /* optional */
+  }
+  return [micro.eyes, mouth].filter(Boolean).join("; ") || null;
 }
 
 function extractPersonality(remark?: string | null, describe?: string | null): string | null {
@@ -182,6 +191,8 @@ export async function hydrateComposeStillContext(
       }
       if (shot) {
         ctx.visualDescription = (shot.visualDescription as string) ?? ctx.visualDescription ?? null;
+        const codes = (shot.charCodes as string[] | undefined) ?? [];
+        if (codes.length) (ctx as { shotCharCodes?: string[] }).shotCharCodes = codes.map((c) => String(c).toUpperCase());
         if (
           (shot as { _forceComposeParity?: boolean })._forceComposeParity ||
           (shot as { _forceRefsDelta?: boolean })._forceRefsDelta ||
@@ -413,6 +424,45 @@ export async function hydrateComposeStillContext(
     knownNames,
     nameToCodes,
   });
+
+  // bgFragment / skirt-blur: demote non-lead linked cref so secondary face does not steal slots
+  try {
+    const { resolveBgFragment, pickVdLiteraryPrimary } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    const frag = resolveBgFragment({
+      visualDescription: ctx.visualDescription,
+      background: ctx.background,
+      imagePrompt: ctx.compiledImagePrompt,
+      spatialRelation: ctx.spatialRelation,
+    });
+    if (frag.stripFullSecondary && ctx.characters?.length) {
+      const names = ctx.characters.map((c) => String(c.name ?? "")).filter(Boolean);
+      const lead = pickVdLiteraryPrimary(ctx.visualDescription, names);
+      const allowCodes = new Set(
+        ((ctx as { shotCharCodes?: string[] }).shotCharCodes ?? []).map((c) => c.toUpperCase()),
+      );
+      ctx.characters = ctx.characters.map((c) => {
+        const n = String(c.name ?? "");
+        const code = String(c.code ?? "").toUpperCase();
+        const inCharCodes = allowCodes.size > 0 && code && allowCodes.has(code);
+        const isLead =
+          inCharCodes ||
+          c.tier === "lead" ||
+          (lead && (n === lead || n.includes(lead) || lead.includes(n)));
+        if (
+          !isLead &&
+          c.hasImage &&
+          (frag.kind === "skirt_blur" || frag.kind === "body_fragment" || frag.kind === "sleeve_blur")
+        ) {
+          return { ...c, hasImage: false, tier: "support" as const };
+        }
+        return c;
+      });
+      (ctx as { bgFragmentDemoted?: boolean }).bgFragmentDemoted = true;
+    }
+  } catch {
+    /* optional */
+  }
 
   return ctx;
 }

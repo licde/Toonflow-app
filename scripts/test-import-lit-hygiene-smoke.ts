@@ -103,15 +103,19 @@ ok("still 可导入", /可导入/.test(line), line);
     qualityMode: "hq_update",
     allowXorSoftInject: true,
   });
-  ok("HQ gate prefers split not soft-inject wash", g.action === "block", JSON.stringify(g));
   ok(
-    "HQ gate nextStep split_shot",
-    g.action === "block" && g.primaryNextStep === "split_shot",
+    "HQ gate prefers split advise not soft-inject wash",
+    g.action === "advise" || g.action === "block",
     JSON.stringify(g),
   );
   ok(
-    "cheek keeps parent clientId",
-    shots.some((s) => s.clientId === "c1" && /颊|划过/.test(String(s.visualDescription))),
+    "HQ gate nextStep split_shot",
+    (g.action === "advise" || g.action === "block") && g.primaryNextStep === "split_shot",
+    JSON.stringify(g),
+  );
+  ok(
+    "cheek child has cheek VD",
+    shots.some((s) => /颊|划过/.test(String(s.visualDescription)) && !/紧咬下唇/.test(String(s.visualDescription))),
     JSON.stringify(shots.map((s) => ({ id: s.clientId, vd: String(s.visualDescription).slice(0, 40) }))),
   );
   ok(

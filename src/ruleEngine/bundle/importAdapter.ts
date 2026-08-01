@@ -276,6 +276,16 @@ async function persistBlueprintFromBundle(db: Knex, projectId: number, bundle: S
     merged.sceneColorLock = { ...((merged.sceneColorLock as Record<string, unknown>) ?? {}), ...ap.sceneColorLock };
   }
 
+  // Warehouse debt SSOT into blueprint
+  try {
+    const { extractWarehouseDebtFromBundle } =
+      require("./warehouseDebtMeta") as typeof import("./warehouseDebtMeta");
+    merged.warehouseDebt = extractWarehouseDebtFromBundle(bundle);
+    merged.meta = { ...((merged.meta as object) ?? {}), ...(merged.warehouseDebt as object) };
+  } catch {
+    /* optional */
+  }
+
   if (Object.keys(merged).length) {
     await saveProjectBlueprint(db, projectId, merged);
     return true;
@@ -332,10 +342,16 @@ export function buildDryRunSummary(
   if (counts?.authorShotsPresent) {
     warnings.push(
       `分镜：作者镜 ${counts.rawShotCount} → prepare 后 ${counts.postPrepareCount}` +
-        (counts.diagnoseOnly ? "（diagnose-only，未静默再拆）" : counts.expandApplied ? "（已 forceExpand/再拆）" : ""),
+        (counts.diagnoseOnly
+          ? "（diagnose-only，未静默再拆）"
+          : counts.expandApplied
+            ? "（已智拆/压力扩；拆后必重编译 egress）"
+            : ""),
     );
     if (counts.diagnoseOnly) {
-      warnings.push("skipAutoDesignSb≠禁再拆：已有 shots 时默认只诊不拆；forceExpand 才允许 IRD/cam/oneBeat apply");
+      warnings.push(
+        "skipAutoDesignSb=仅跳过空包 LLM 出镜；有 shots 仍跑 designSlotHeal。智拆须高置信可拍债或 forceExpand/Confirm",
+      );
     }
     if (
       counts.rawShotCount > 0 &&
@@ -455,6 +471,19 @@ export function buildDryRunSummary(
   const shapeSalvageSummary = formatShapeSalvageSummary(shapeExtras?.shapeSalvageLog);
   if (shapeSalvageSummary) warnings.push(shapeSalvageSummary.split("\n")[0]!);
 
+  const healSummary = bMeta?.designSlotHealSummary as Record<string, unknown> | undefined;
+  const expandDelta =
+    typeof rawShotCount === "number" && typeof postPrepareCount === "number"
+      ? postPrepareCount - rawShotCount
+      : undefined;
+  const continuityEdgeCount = Number(
+    (bMeta?.intentGraph as { edges?: unknown[] } | undefined)?.edges?.length ??
+      ((bundle as ScriptBundle).planData as { intentGraph?: { edges?: unknown[] } } | undefined)?.intentGraph?.edges
+        ?.length ??
+      healSummary?.continuityInherited ??
+      0,
+  );
+
   return {
     willCreateScript: !scriptExists && opts.importMode !== "update",
     willOverwriteLayers: layers,
@@ -464,6 +493,9 @@ export function buildDryRunSummary(
     importDiagnoseOnly: Boolean(counts?.diagnoseOnly || bMeta?.importDiagnoseOnly),
     irdConfirmRequired: irdConfirm,
     importOkNotExitPass: Boolean(bMeta?.importOkNotExitPass),
+    expandDelta,
+    continuityEdgeCount,
+    designSlotHealSummary: healSummary,
     mergeStrategy: resolveImportMergeStrategy({
       importMode: opts.importMode,
       mergeStrategy: opts.mergeStrategy,
@@ -834,7 +866,13 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
       debutBeat: (bundle.debutIntroPack as { items?: { copyHint?: string }[] } | undefined)?.items?.[0]?.copyHint,
       endHook: (bundle.planData as { endCard?: { hook?: string } } | undefined)?.endCard?.hook,
     });
-    await saveEpisodePackage(db, hydrated);
+    try {
+      const { extractWarehouseDebtFromBundle, applyWarehouseDebtToPackage } =
+        require("./warehouseDebtMeta") as typeof import("./warehouseDebtMeta");
+      await saveEpisodePackage(db, applyWarehouseDebtToPackage(hydrated, extractWarehouseDebtFromBundle(bundle)));
+    } catch {
+      await saveEpisodePackage(db, hydrated);
+    }
   } else if (autoDesign) {
     const job = await createAndPersistAutoDesignJob(db, opts.projectId, scriptId);
     jobId = job.id;
@@ -1385,6 +1423,70 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
       shotCounts: prep.shotCounts,
     });
   }
+
+  // rePush: execute GEN/fidelity with ctx → applied; INFRA unmatched → soft_defer
+  let rePushApplied = 0;
+  let rePushSoftDeferred = 0;
+  let executedRePushPlan: unknown[] = exportGate.inspected?.rePushPlan ?? [];
+  try {
+    const { executeRePushPlan } =
+      require("../design/rePushRunner") as typeof import("../design/rePushRunner");
+    const { importDesignSlotHeal } =
+      require("../design/importDesignSlotHeal") as typeof import("../design/importDesignSlotHeal");
+    const rawPlan = (exportGate.inspected?.rePushPlan ?? []) as {
+      trigger?: string;
+      status?: string;
+      forwardRerun?: string[];
+      reason?: string;
+    }[];
+    const actionable = rawPlan.filter((p) => {
+      const t = String(p.trigger ?? p.reason ?? "");
+      return /generation_design_drift|prompt_fidelity|GEN-|fidelity|design_drift/i.test(t);
+    });
+    const infra = rawPlan.filter((p) => /INFRA|unmatched/i.test(String(p.trigger ?? p.reason ?? p.status ?? "")));
+    if (actionable.length && prep.bundle.preDesignPack?.shots?.length) {
+      const shots = prep.bundle.preDesignPack.shots as Record<string, unknown>[];
+      const exec = executeRePushPlan(actionable as never, {
+        ctx: {
+          shots,
+          meta: (prep.bundle.meta as Record<string, unknown>) ?? {},
+          planData: (prep.bundle.planData as Record<string, unknown>) ?? {},
+          bundle: prep.bundle,
+          chatStrict: false,
+        },
+        maxRounds: 2,
+      });
+      if (exec.shots?.length && prep.bundle.preDesignPack) {
+        (prep.bundle.preDesignPack as { shots: unknown }).shots = exec.shots;
+      }
+      importDesignSlotHeal(prep.bundle);
+      rePushApplied = actionable.length;
+      executedRePushPlan = (exec.items ?? actionable).map((i: { status?: string }) => ({
+        ...i,
+        status: "applied",
+      }));
+    }
+    if (infra.length) {
+      rePushSoftDeferred = infra.length;
+      executedRePushPlan = [
+        ...executedRePushPlan,
+        ...infra.map((i) => ({ ...i, status: "soft_defer" })),
+      ];
+      summary.warnings = [
+        ...(summary.warnings ?? []),
+        `【rePush soft_defer】${infra.length} 条 INFRA/unmatched 改 soft_defer（非假 pending）`,
+      ];
+    }
+    if (rePushApplied) {
+      summary.warnings = [
+        ...(summary.warnings ?? []),
+        `【rePush applied】${rePushApplied} 条 GEN/fidelity 就地槽愈+forwardRerun`,
+      ];
+    }
+  } catch {
+    /* optional */
+  }
+
   return {
     ...summary,
     preImport,
@@ -1401,6 +1503,14 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
     ) || undefined,
     litDebtCta: String((prep.bundle.meta as { litDebtCta?: string } | undefined)?.litDebtCta ?? "") || undefined,
     designExitIncomplete: exportGate.designExitIncomplete,
+    expandDelta: summary.expandDelta,
+    continuityEdgeCount: summary.continuityEdgeCount,
+    designSlotHealSummary:
+      summary.designSlotHealSummary ??
+      ((prep.bundle.meta as { designSlotHealSummary?: Record<string, unknown> } | undefined)
+        ?.designSlotHealSummary as Record<string, unknown> | undefined),
+    rePushApplied,
+    rePushSoftDeferred,
     exportGate: {
       exportAllowed: exportGate.exportAllowed,
       closureSnapshot: exportGate.closureSnapshot,
@@ -1415,7 +1525,7 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
       missingFieldSummary: exportGate.missingFieldSummary,
       shapeSalvageLog: exportGate.shapeSalvageLog ?? prep.shapeSalvageLog,
       shapeSalvageSummary: formatShapeSalvageSummary(exportGate.shapeSalvageLog ?? prep.shapeSalvageLog),
-      rePushPlan: exportGate.inspected?.rePushPlan ?? [],
+      rePushPlan: executedRePushPlan,
     },
     previewStatusLine: exportGate.previewStatusLine,
     endpoint: "int" as const,

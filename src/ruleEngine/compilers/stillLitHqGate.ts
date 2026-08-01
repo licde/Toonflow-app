@@ -1,7 +1,8 @@
 /**
  * HQ literary-debt gate — compose/Exit homology.
- * Design/HQ: face-CU dual contact → prefer split_shot (never soft-inject wash-green).
+ * Shootable-first: dual contact / lit debt → advise + slim, never hard-block generate.
  * Soft XOR phrase disabled on main path (debt router homology).
+ * Burn still requires design alignment (requireFixBeforeBurn), not forbidRegen.
  */
 import type { BurnNextStep } from "./burnGateEnvelope";
 import { buildPrimaryBlock } from "./primaryBlock";
@@ -10,6 +11,7 @@ import {
   hasContactRoleXorSatisfaction,
 } from "./stillLiteraryDetailQuality";
 import { routeStillDebtAction } from "./stillDebtActionRouter";
+import { slimVdForShootable } from "../design/shootableArchitecture";
 
 const LIT_BLOCK_IDS = new Set([
   "DEX-LIT-CONTACT-XOR",
@@ -23,6 +25,19 @@ const LIT_BLOCK_IDS = new Set([
 export type LitHqGateResult =
   | { action: "pass"; sources: string[]; visualDescription: string; promptAppend?: string }
   | {
+      action: "advise";
+      sources: string[];
+      visualDescription: string;
+      adviseReason: string;
+      primaryNextStep: BurnNextStep;
+      userMessage: string;
+      ctaLabel?: string;
+      missingSlots: string[];
+      /** Require design fix before burn — never blocks generate */
+      requireFixBeforeBurn: true;
+    }
+  | {
+      /** @deprecated Prefer advise; kept for importSoftTrack tests that expect block */
       action: "block";
       sources: string[];
       visualDescription: string;
@@ -51,9 +66,32 @@ export function softInjectXorHeal(vd: string, promptSlice: string): { text: stri
   return { text: `${promptSlice.trim()}。${heal}`, applied: true };
 }
 
+function toAdvise(input: {
+  sources: string[];
+  vd: string;
+  reason: string;
+  primaryNextStep: BurnNextStep;
+  userMessage: string;
+  ctaLabel?: string;
+  missingSlots: string[];
+}): LitHqGateResult {
+  return {
+    action: "advise",
+    sources: [...input.sources, "lit.hq.advise", "shootable.first"],
+    visualDescription: input.vd,
+    adviseReason: input.reason,
+    primaryNextStep: input.primaryNextStep,
+    userMessage: input.userMessage,
+    ctaLabel: input.ctaLabel,
+    missingSlots: input.missingSlots,
+    requireFixBeforeBurn: true,
+  };
+}
+
 /**
- * HQ gate for compose: face-CU dual → split_shot; residual BLOCK → refuse.
- * Soft XOR inject is off by default (allowXorSoftInject must be explicit true).
+ * HQ gate for compose: face-CU dual → advise split + slim VD; residual → advise enhance.
+ * Shootable-first default: never action=block (generate may continue).
+ * Set hardBlock=true only for legacy tests that assert refuse.
  */
 export function gateStillLitDebtForHq(input: {
   visualDescription?: string | null;
@@ -63,6 +101,8 @@ export function gateStillLitDebtForHq(input: {
   importSoftTrack?: boolean;
   /** Explicit opt-in only — never default on (wash-green banned) */
   allowXorSoftInject?: boolean;
+  /** Legacy: emit action=block instead of advise (tests only) */
+  hardBlock?: boolean;
 }): LitHqGateResult {
   const sources: string[] = [];
   let vd = String(input.visualDescription ?? "").trim();
@@ -73,6 +113,22 @@ export function gateStillLitDebtForHq(input: {
     return { action: "pass", sources, visualDescription: vd };
   }
 
+  const emit = (advise: Extract<LitHqGateResult, { action: "advise" }>): LitHqGateResult => {
+    if (input.hardBlock) {
+      return {
+        action: "block",
+        sources: advise.sources.filter((s) => s !== "shootable.first"),
+        visualDescription: advise.visualDescription,
+        blockReason: advise.adviseReason,
+        primaryNextStep: advise.primaryNextStep,
+        userMessage: advise.userMessage,
+        ctaLabel: advise.ctaLabel,
+        missingSlots: advise.missingSlots,
+      };
+    }
+    return advise;
+  };
+
   // Unified debt router first (split > soft)
   const routed = routeStillDebtAction({
     visualDescription: vd,
@@ -80,31 +136,41 @@ export function gateStillLitDebtForHq(input: {
   });
   sources.push(...routed.sources);
   if (routed.action === "split_shot" && routed.kind === "lit_contact_xor") {
-    return {
-      action: "block",
-      sources: [...sources, "lit.hq.preferSplit", "lit.hq.block"],
-      visualDescription: vd,
-      blockReason: "DEX-LIT-CONTACT-XOR",
-      primaryNextStep: routed.primaryNextStep,
-      userMessage: routed.userMessage,
-      ctaLabel: routed.ctaLabel || "确认智能拆镜",
-      missingSlots: routed.missingSlots ?? ["contactRoleXor"],
-    };
+    const slim = slimVdForShootable(vd);
+    if (slim.slimmed) {
+      vd = slim.vd;
+      sources.push("lit.hq.slimXorCheek");
+    }
+    return emit(
+      toAdvise({
+        sources: [...sources, "lit.hq.preferSplit"],
+        vd,
+        reason: "DEX-LIT-CONTACT-XOR",
+        primaryNextStep: routed.primaryNextStep,
+        userMessage:
+          "文学双接触建议智拆（颊触/口创）；已瘦身为可拍颊触描写，仍可生成；烧片前请拆齐或增强。",
+        ctaLabel: "智拆并生成",
+        missingSlots: routed.missingSlots ?? ["contactRoleXor"],
+      }),
+    );
   }
   if (routed.kind === "contact_prop_missing" || routed.action === "regen_prop_still") {
-    return {
-      action: "block",
-      sources: [...sources, "lit.hq.contactProp", "lit.hq.block"],
-      visualDescription: vd,
-      blockReason: "DEX-PROP-IN-FRAME",
-      primaryNextStep: routed.primaryNextStep,
-      userMessage: routed.userMessage,
-      ctaLabel: routed.ctaLabel || "重出带道具静照",
-      missingSlots: routed.missingSlots ?? ["propInFrame", "contactGeom"],
-    };
+    return emit(
+      toAdvise({
+        sources: [...sources, "lit.hq.contactProp"],
+        vd,
+        reason: "DEX-PROP-IN-FRAME",
+        primaryNextStep: "batch_still",
+        userMessage:
+          routed.userMessage ||
+          "接触事件建议补道具入画；仍可生成试拍，烧片前须道具可见。",
+        ctaLabel: routed.ctaLabel || "增强道具并生成",
+        missingSlots: routed.missingSlots ?? ["propInFrame", "contactGeom"],
+      }),
+    );
   }
 
-  // Contact-event VD without prop alias readable → BLOCK (no VLM may not hq_ok)
+  // Contact-event VD without prop alias readable → advise (not block generate)
   try {
     const { isContactEventVd, textHasPropInFrame, matchContactEventVd } =
       require("./contactEventPolicy") as typeof import("./contactEventPolicy");
@@ -113,19 +179,20 @@ export function gateStillLitDebtForHq(input: {
       if (!textHasPropInFrame(vd, m)) {
         const primary = buildPrimaryBlock("chat_repair", {
           stage: "prompt",
-          userMessageOverride: `接触事件缺道具入画声明（${m.propCanonical || "道具"}）：请 Confirm 增强补 prop+geom，禁止无道具 hq_ok`,
-          ctaLabelOverride: "批准增强补propInFrame",
+          userMessageOverride: `接触事件缺道具入画声明（${m.propCanonical || "道具"}）：建议增强补 prop+geom；仍可试拍，禁止无道具 hq_ok 烧片`,
+          ctaLabelOverride: "增强设计并生成",
         });
-        return {
-          action: "block",
-          sources: [...sources, "lit.hq.contactEventVd", "lit.hq.block"],
-          visualDescription: vd,
-          blockReason: "DEX-PROP-IN-FRAME",
-          primaryNextStep: primary.primaryNextStep,
-          userMessage: primary.userMessage,
-          ctaLabel: primary.ctaLabel,
-          missingSlots: ["propInFrame", "contactGeom"],
-        };
+        return emit(
+          toAdvise({
+            sources: [...sources, "lit.hq.contactEventVd"],
+            vd,
+            reason: "DEX-PROP-IN-FRAME",
+            primaryNextStep: "batch_still",
+            userMessage: primary.userMessage,
+            ctaLabel: primary.ctaLabel,
+            missingSlots: ["propInFrame", "contactGeom"],
+          }),
+        );
       }
     }
   } catch {
@@ -141,7 +208,6 @@ export function gateStillLitDebtForHq(input: {
   let audit = runAudit(vd);
   let blocks = audit.findings.filter((f) => f.severity === "BLOCK" && isLitBlockId(f.id));
 
-  // Soft inject only when explicitly opted in AND not face-CU dual (router already split those)
   if (
     input.allowXorSoftInject === true &&
     blocks.some((f) => f.id === "DEX-LIT-CONTACT-XOR") &&
@@ -165,22 +231,29 @@ export function gateStillLitDebtForHq(input: {
     ...new Set(blocks.flatMap((f) => (f.missingSlots ?? f.missing ?? []).map(String)).filter(Boolean)),
   ];
   const hasXor = blocks.some((f) => f.id === "DEX-LIT-CONTACT-XOR");
+  if (hasXor) {
+    const slim = slimVdForShootable(vd);
+    if (slim.slimmed) {
+      vd = slim.vd;
+      sources.push("lit.hq.slimXorCheek");
+    }
+  }
   const nextStep: BurnNextStep = hasXor ? "split_shot" : "chat_repair";
   const primary = buildPrimaryBlock(nextStep, {
     stage: "prompt",
     userMessageOverride: hasXor
-      ? `文学互斥债未清（${missingSlots.slice(0, 4).join("/") || "contactRoleXor"}）：请拆镜，禁止带债出图`
-      : `文学细节债未清（${blocks.map((f) => f.id).slice(0, 3).join(",")}）：请增强/手改 VD 后再生成`,
+      ? `文学互斥债建议拆镜（${missingSlots.slice(0, 4).join("/") || "contactRoleXor"}）；已尽量瘦身可拍，仍可生成`
+      : `文学细节建议增强（${blocks.map((f) => f.id).slice(0, 3).join(",")}）；仍可生成试拍，烧片前请对齐`,
   });
-  sources.push("lit.hq.block");
-  return {
-    action: "block",
-    sources,
-    visualDescription: vd,
-    blockReason: blocks[0]?.id ?? "DEX-LIT-CONTACT",
-    primaryNextStep: primary.primaryNextStep,
-    userMessage: primary.userMessage,
-    ctaLabel: primary.ctaLabel,
-    missingSlots,
-  };
+  return emit(
+    toAdvise({
+      sources,
+      vd,
+      reason: blocks[0]?.id ?? "DEX-LIT-CONTACT",
+      primaryNextStep: hasXor ? "split_shot" : "batch_still",
+      userMessage: primary.userMessage,
+      ctaLabel: hasXor ? "智拆并生成" : "增强设计并生成",
+      missingSlots,
+    }),
+  );
 }

@@ -55,8 +55,18 @@ export function ensureChildVisualDescription(input: {
     child = comp;
   }
 
-  // Graft missing parent anchors into child (CHAIN-BEAT homology — even when already ≥ minChars)
-  if (parent) {
+  // Graft missing parent anchors — but never reinject dual-contact XOR parent soup
+  const parentDualXor =
+    /划过|贴颊|颊触|纸角|贴合/.test(parent) && /咬|渗血|血珠|紧咬/.test(parent);
+  if (parent && parentDualXor && compactLen(child) < min) {
+    const slice = parent.split(/[。；;]/).map((s) => s.trim()).find((s) => s.length >= 3) || parent.slice(0, 80);
+    return {
+      visualDescription: child || slice,
+      ok: compactLen(child || slice) >= min,
+      healInduced: true,
+    };
+  }
+  if (parent && !parentDualXor) {
     const pack = extractDescPredicates({
       description: parent,
       characterNames: input.knownNames ?? [],
@@ -66,7 +76,6 @@ export function ensureChildVisualDescription(input: {
     if (missing.length) {
       const isPerfShell = /^对白表演[：:]/.test(child);
       if (isPerfShell) {
-        // Keep literary frame before dialogue-performance shell (禁冲掉端坐等父锚)
         const head =
           parent
             .split(/[。；;\n]+/)
@@ -95,7 +104,6 @@ export function ensureChildVisualDescription(input: {
         };
       }
     } else if (compactLen(child) < min && compactLen(parent) >= min) {
-      // Last resort: use full parent (coverage OK for CHAIN-BEAT; not a short invent)
       return { visualDescription: parent, ok: true, healInduced: true };
     }
   }

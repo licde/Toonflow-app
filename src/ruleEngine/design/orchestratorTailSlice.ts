@@ -85,8 +85,16 @@ export function sliceChildrenAfterSplit(shots: Record<string, unknown>[]): {
   });
 
   const findings = auditLiteraryBeatCoverage(next);
-  // Heal CHAIN-BEAT: graft parent anchors into 对白表演 shells / under-covered children
+  // Heal CHAIN-BEAT untilClear — alias-aware graft (勿只诊不愈)
   if (findings.some((f) => f.id === "CHAIN-BEAT")) {
+    try {
+      const { healLiteraryBeatCoverage } =
+        require("./literaryBeatCoverage") as typeof import("./literaryBeatCoverage");
+      const healed = healLiteraryBeatCoverage(next);
+      for (let i = 0; i < healed.shots.length; i++) next[i] = healed.shots[i]!;
+    } catch {
+      /* optional */
+    }
     try {
       const { ensureChildVisualDescription } =
         require("./splitChildVisual") as typeof import("./splitChildVisual");
@@ -95,7 +103,7 @@ export function sliceChildrenAfterSplit(shots: Record<string, unknown>[]): {
         const parentVd = String(s._parentVisualDescription ?? "").trim();
         if (!parentVd || !(s._stillBeatSplitId || s._visualSplitId)) continue;
         const vd = String(s.visualDescription ?? "");
-        if (!/^对白表演[：:]/.test(vd) && vd.includes(parentVd.slice(0, 4))) continue;
+        // Always attempt ensure when still failing — do not skip on shared parent prefix
         const ensured = ensureChildVisualDescription({
           role: String(s.beatRole ?? s.visualSplitRole ?? "speak"),
           childVd: vd,

@@ -76,15 +76,18 @@ export async function composeAndPersistStillPrompt(
   });
   const meta = ingress.prevMeta;
   ctx.previousVisualBody = ingress.previousVisualBody;
-  const result = composeStillPrompt(ctx, { mode: ingress.effectiveMode });
+  let result = composeStillPrompt(ctx, { mode: ingress.effectiveMode });
   if (!result.ok) {
     return { ok: false, result, blockReason: result.blockReason };
   }
 
-  // M5/IRD: hq compose — PROMPT-FIDELITY BLOCK
+  // M5: PROMPT-FIDELITY — heal dual-write, never persist-block
   try {
     const { assertPromptDesignFidelity } =
       require("../quality/assertPromptDesignFidelity") as typeof import("../quality/assertPromptDesignFidelity");
+    const { healPromptFidelityAnchors } =
+      require("../design/healPromptFidelityAnchors") as typeof import("../design/healPromptFidelityAnchors");
+    let imagePrompt = result.visualBody || result.prompt;
     const fid = assertPromptDesignFidelity({
       shot: {
         visualDescription: ctx.visualDescription,
@@ -92,22 +95,22 @@ export async function composeAndPersistStillPrompt(
         charCodes: (ctx.characters ?? []).map((c) => c.code).filter(Boolean),
       },
       knownNames: (ctx.characters ?? []).map((c) => c.name).filter(Boolean) as string[],
-      imagePrompt: result.visualBody || result.prompt,
+      imagePrompt,
       stage: "compose",
-      fidelityHard: (input.qualityMode ?? "hq_update") !== "draft",
+      fidelityHard: false,
     });
-    const blockFid = fid.findings.filter((f) => f.severity === "BLOCK");
-    if (blockFid.length) {
-      return {
-        ok: false,
-        result: {
-          ...result,
-          ok: false,
-          blockReason: blockFid[0].id,
-          userMessage: `${blockFid[0].message}；请 stillIntentOps 反推改 VD 或重 compose`,
-          warnings: [...result.warnings, ...blockFid.map((f) => f.id)],
-        },
-        blockReason: blockFid[0].id,
+    if (fid.findings.some((f) => f.id === "PROMPT-FIDELITY")) {
+      const healed = healPromptFidelityAnchors({
+        visualDescription: ctx.visualDescription,
+        visualBody: imagePrompt,
+        knownNames: (ctx.characters ?? []).map((c) => c.name).filter(Boolean) as string[],
+      });
+      if (healed.visualDescription) ctx.visualDescription = healed.visualDescription;
+      result = {
+        ...result,
+        visualBody: healed.visualBody,
+        sources: [...result.sources, ...healed.sources],
+        warnings: [...result.warnings, "PROMPT-FIDELITY", ...healed.sources],
       };
     }
   } catch {

@@ -46,7 +46,8 @@ export type ShotChainContract = {
 
 export type ChainEgressFinding = {
   id: string;
-  severity: "BLOCK" | "WARN";
+  /** CONTRACT|HEAL = design debt (never gate HTTP); WARN = soft; BLOCK legacy only for infra callers migrating off */
+  severity: "BLOCK" | "WARN" | "CONTRACT" | "HEAL";
   message: string;
   breakAt: ChainBreakAt;
   /** Literary/prop structure slots still missing (declare-only; never invent) */
@@ -167,14 +168,14 @@ export function assertChainEgress(
   if (!contract.visualDescription.trim()) {
     push({
       id: "DESIGN-LOSS",
-      severity: "BLOCK",
+      severity: "CONTRACT",
       message: `镜 ${contract.shotIndex ?? contract.clientId} visualDescription 遗失`,
       breakAt: "design_loss",
     });
   } else if (contract.multiBeat && (stage === "exit" || stage === "compose" || stage === "burn")) {
     push({
       id: "DEX-STILL-ONEBEAT",
-      severity: "BLOCK",
+      severity: "CONTRACT",
       message: `镜 ${contract.shotIndex ?? contract.clientId} 多拍描写须拆镜，禁 trim 出站`,
       breakAt: "split",
     });
@@ -184,7 +185,7 @@ export function assertChainEgress(
     if (stage === "exit" || stage === "burn" || stage === "finalize") {
       push({
         id: "DESIGN-LOSS-DURATION",
-        severity: stage === "burn" ? "BLOCK" : "WARN",
+        severity: "HEAL",
         message: `镜 ${contract.shotIndex ?? contract.clientId} 时长未可信设定（禁默成 1s 当设计）`,
         breakAt: "design_loss",
       });
@@ -195,7 +196,7 @@ export function assertChainEgress(
     if (artifact.burnDuration < contract.durationSec) {
       push({
         id: "DUR-DESYNC",
-        severity: "BLOCK",
+        severity: "HEAL",
         message: `时长降档 ${contract.durationSec}s→${artifact.burnDuration}s 禁止`,
         breakAt: "video",
       });
@@ -205,17 +206,21 @@ export function assertChainEgress(
   if (stage === "compose" || stage === "finalize" || stage === "burn") {
     const body = `${artifact?.imagePrompt ?? ""}\n${artifact?.videoPrompt ?? ""}`;
     if (contract.anchorTokens.length && body.trim()) {
-      const hit = contract.anchorTokens.filter((t) => t.length >= 2 && body.includes(t));
+      let hitCount = 0;
+      try {
+        const { bodyCoversToken } =
+          require("../design/healPromptFidelityAnchors") as typeof import("../design/healPromptFidelityAnchors");
+        hitCount = contract.anchorTokens.filter((t) => t.length >= 2 && bodyCoversToken(body, t)).length;
+      } catch {
+        hitCount = contract.anchorTokens.filter((t) => t.length >= 2 && body.includes(t)).length;
+      }
       const need = Math.min(2, contract.anchorTokens.length);
-      if (hit.length < need) {
-        const hard =
-          stage === "finalize" ||
-          stage === "burn" ||
-          (stage === "compose" && (artifact?.fidelityHard !== false));
+      if (hitCount < need) {
+        // CONTRACT debt — never BLOCK gate; callers must heal-until-clear
         push({
           id: "PROMPT-FIDELITY",
-          severity: hard ? "BLOCK" : "WARN",
-          message: `提示词未覆盖设计锚点（命中 ${hit.length}/${need}）`,
+          severity: "CONTRACT",
+          message: `提示词未覆盖设计锚点（命中 ${hitCount}/${need}）`,
           breakAt: stage === "compose" ? "still" : "video",
         });
       }
@@ -225,7 +230,7 @@ export function assertChainEgress(
   if (contract.stale.still && stage === "burn") {
     push({
       id: "STILL-FIRSTFRAME-STALE",
-      severity: "BLOCK",
+      severity: "HEAL",
       message: "静帧 stale，须重出后再烧",
       breakAt: "still",
     });
@@ -238,15 +243,18 @@ export function assertChainEgress(
     if (hashDrift || (stage === "burn" && contract.stale.video)) {
       push({
         id: "VIDEO-PROMPT-STALE",
-        severity: "BLOCK",
+        severity: "HEAL",
         message: "设计/对白已变或视频提示词 stale，须重编译后再烧",
         breakAt: "video",
       });
     }
   }
 
+  // Only legacy infra BLOCK counts as ok=false; CONTRACT/HEAL are debts for heal routers
   const blocks = findings.filter((f) => f.severity === "BLOCK");
-  const breakAt: ChainBreakAt = blocks[0]?.breakAt ?? (findings[0]?.breakAt ?? "ok");
+  const debts = findings.filter((f) => f.severity === "CONTRACT" || f.severity === "HEAL");
+  const breakAt: ChainBreakAt =
+    blocks[0]?.breakAt ?? debts[0]?.breakAt ?? (findings[0]?.breakAt ?? "ok");
   return {
     ok: blocks.length === 0,
     breakAt,

@@ -21,6 +21,10 @@ export default router.post(
       .update({
         inputValues: JSON.stringify(inputValues),
       });
+    if (/^comfyui$/i.test(String(id)) && inputValues?.baseUrl) {
+      const { applyComfyVendorBaseUrl } = await import("@/ruleEngine/actuators/comfyStillActuator");
+      applyComfyVendorBaseUrl(inputValues.baseUrl);
+    }
     res.status(200).send(success("更新成功"));
   },
 );

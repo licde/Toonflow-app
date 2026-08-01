@@ -25,7 +25,12 @@ export default router.post(
     composeMode: z.enum(["full", "refine", "fidelity"]).optional(),
   }),
   async (req, res) => {
+    const projectId = req.body.projectId as number;
     try {
+      const { markGenerationInflight, clearGenerationInflight } = await import(
+        "@/ruleEngine/design/genInflightGuard"
+      );
+      markGenerationInflight(projectId, "still");
       const { withStoryboardLock } = await import("@/ruleEngine/heal/storyboardLock");
       const run = () =>
         runGenerateFlowImageCore(u.db, {
@@ -46,6 +51,7 @@ export default router.post(
       const result = req.body.storyboardId
         ? await withStoryboardLock(Number(req.body.storyboardId), run)
         : await run();
+      clearGenerationInflight(projectId);
       return res.status(200).send(
         success({
           url: result.url,
@@ -89,6 +95,15 @@ export default router.post(
           refsRoles: result.refsRoles,
           vendorCalled: result.vendorCalled,
           vendorMs: result.vendorMs,
+          actuatorId: result.actuatorId,
+          workflowHash: result.workflowHash,
+          actuatorDegraded: result.actuatorDegraded,
+          actuatorDegradedReason: result.actuatorDegradedReason,
+          propPlateGrade: result.propPlateGrade,
+          egressCompressed: result.egressCompressed,
+          keyOptional: result.keyOptional,
+          pixelDimStatus: result.pixelDimStatus,
+          debtKind: result.debtKind,
           bgMode: result.bgMode,
           bgPolicy: result.bgPolicy,
           bgPolicyReason: result.bgPolicyReason,
@@ -96,9 +111,18 @@ export default router.post(
           sheetLeak: result.sheetLeak,
           blockSilentRegen: result.blockSilentRegen,
           refreshStoryboardBeforeRegen: result.refreshStoryboardBeforeRegen,
+          deliveryTier: (result as { deliveryTier?: string }).deliveryTier,
+          requireFixBeforeBurn: (result as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn,
+          ctaKind: (result as { ctaKind?: string }).ctaKind,
         }),
       );
     } catch (e: any) {
+      try {
+        const { clearGenerationInflight } = await import("@/ruleEngine/design/genInflightGuard");
+        clearGenerationInflight(req.body.projectId);
+      } catch {
+        /* optional */
+      }
       const errMsg = u.error(e).message;
       const feedback = e?.feedback;
       const envelope = (() => {

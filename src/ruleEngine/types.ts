@@ -34,12 +34,33 @@ export interface CompiledPrompts {
   hash: string;
 }
 
+export interface WarehouseDebtMeta {
+  importOkNotExitPass?: boolean;
+  importDiagnoseOnly?: boolean;
+  lipConfirmRequired?: boolean;
+  irdConfirmRequired?: boolean;
+  importSplitExpanded?: boolean;
+  expandProvenance?: Record<string, unknown>;
+  designSlotHealSummary?: Record<string, unknown>;
+  designExitIncomplete?: boolean;
+}
+
 export interface EpisodeShot {
   id: string;
   storyboardId?: number;
   index: number;
   /** Screenplay / blocking description (from preDesign visualDescription) */
   visualDescription?: string;
+  /** Compose lifecycle — preserved across hydrate */
+  promptState?: "stale" | "composed" | "draft" | string;
+  videoStale?: boolean;
+  videoPass?: boolean;
+  burnParentForbidden?: boolean;
+  _stillBeatSplitId?: string;
+  _visualSplitId?: string;
+  _litXorSplitId?: string;
+  _cuCastSplitId?: string;
+  packageVersion?: number;
   narrative: {
     type?: ShotType;
     sceneName?: string;
@@ -115,6 +136,10 @@ export interface EpisodePackage {
   storyboardHash?: string;
   rulePackVersion: string;
   updatedAt: number;
+  /** Import/design warehouse debt SSOT — production gates read this */
+  warehouseDebt?: WarehouseDebtMeta;
+  /** Compat mirror of warehouseDebt for older readers */
+  meta?: WarehouseDebtMeta;
 }
 
 export interface ResolvedConfig {

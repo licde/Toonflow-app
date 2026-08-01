@@ -55,6 +55,27 @@ export default router.post(
     if (!storyboardIds || storyboardIds.length === 0) return res.status(400).send(error("storyboardIds不能为空"));
     let finalStoryboardIds: number[] = storyboardIds || [];
 
+    // Warehouse debt: draft OK; hq_update gets enhance CTA (never gray-button forever)
+    {
+      const pkg = await loadEpisodePackage(u.db, projectId, scriptId);
+      const { readWarehouseDebtFromPackage, warehouseDebtStillEnhance } =
+        require("@/ruleEngine/bundle/warehouseDebtMeta") as typeof import("@/ruleEngine/bundle/warehouseDebtMeta");
+      const debt = readWarehouseDebtFromPackage(pkg);
+      const enhance = warehouseDebtStillEnhance(debt);
+      if (enhance.enhance && qualityMode === "hq_update" && !compulsory) {
+        return res.status(400).send(
+          error(enhance.userMessage, {
+            code: "WAREHOUSE_DEBT_STILL_ENHANCE",
+            decision: "soft_defer",
+            primaryNextStep: "enhance_design",
+            ctaLabel: enhance.ctaLabel,
+            warehouseDebt: debt,
+            hint: "可改 qualityMode=draft 先出草稿；draft≠hq_ok≠设计已闭",
+          }),
+        );
+      }
+    }
+
     // V5-N11b: skipPreflight must never bypass lit/contact/weak still debt
     if (skipPreflight) {
       const rows = await u
@@ -479,6 +500,12 @@ export default router.post(
       try {
         const { resolveShotIdentityBinding } = await import("@/ruleEngine/compilers/resolveShotIdentityBinding");
         const { buildReferenceListForStoryboard } = await import("@/ruleEngine/compilers/referenceListBuilder");
+        let actuatorEcho: {
+          actuatorId?: string;
+          actuatorDegraded?: boolean;
+          propPlateGrade?: string;
+          workflowHash?: string;
+        } = {};
         const loopOut = await runStillVisualFidelityLoop({
           qualityMode: hq ? "hq_update" : "draft",
           storyboardId: item.id!,
@@ -562,6 +589,9 @@ export default router.post(
               referenceList = await buildReferenceListFromAssetIds(u.db, assetIds);
             }
             // Path parity with canvas: event prop plate synth + hard gate + face-bias
+            let synthesizedProp = false;
+            let propPresent = Boolean(builtRefs.propSoftKept);
+            let eventObj = false;
             try {
               const {
                 objectiveNeedsPropPlate,
@@ -570,18 +600,24 @@ export default router.post(
                 resolvePropPlateLabel,
                 decideEventPlateGate,
               } = await import("@/ruleEngine/compilers/eventPlateReadiness");
-              const eventObj = objectiveNeedsPropPlate(
+              eventObj = objectiveNeedsPropPlate(
                 (composedForPipe.generationContract as { objectiveClass?: string } | undefined)?.objectiveClass,
               );
-              let propPresent = Boolean(builtRefs.propSoftKept);
               const softPresent = Boolean(builtRefs.softEnvKept);
               if (eventObj && referenceList[0]?.base64) {
-                const face = await cropIdentityPlateToFaceBias(referenceList[0].base64);
+                const { resolveIdentityCropTopRatio } = await import(
+                  "@/ruleEngine/compilers/eventPlateReadiness"
+                );
+                const topRatio = resolveIdentityCropTopRatio({
+                  objectiveClass: composedForPipe.generationContract?.objectiveClass,
+                  keepSoftEnvRef: composedForPipe.keepSoftEnvRef,
+                  softEnvContinuity: softPresent ? "must" : "none",
+                });
+                const face = await cropIdentityPlateToFaceBias(referenceList[0].base64, { topRatio });
                 if (face.cropped && face.base64) {
                   referenceList[0] = { type: "image" as const, base64: face.base64 };
                 }
               }
-              let synthesizedProp = false;
               if (eventObj && !propPresent) {
                 const label = resolvePropPlateLabel({
                   contract: composedForPipe.generationContract ?? null,
@@ -604,7 +640,7 @@ export default router.post(
                     .filter((f: { id: string }) => f.id === "prop_form" || f.id === "prop_glyph" || f.id === "prop_pose")
                     .map((f: { text: string }) => f.text)
                     .slice(0, 3);
-                  vendorPrompt = `${formBits.join("。")}。${label.canonical}须清晰入画（薄纸片软板，非书）。${vendorPrompt}`;
+                  vendorPrompt = `${formBits.join("。")}。${label.canonical}入画于触点（薄纸片软板，非书、非手持卡片）。${vendorPrompt}`;
                 }
               }
               const gate = decideEventPlateGate({
@@ -614,6 +650,7 @@ export default router.post(
                 softEnvPlatePresent: softPresent,
                 allowSynthesizeProp: true,
                 synthesizedPropApplied: synthesizedProp || propPresent,
+                synthAttempted: eventObj,
               });
               if (!gate.allowVendor) {
                 throw Object.assign(new Error(gate.userMessage || "DEX-PROP-PLATE-MISSING"), {
@@ -823,34 +860,76 @@ export default router.post(
             }
             void layoutTemplateId;
             void layoutSkipped;
-            const imageCls = await u.Ai.Image(projectSettingData?.imageModel as `${string}:${string}`).run(
-              {
-                referenceList,
-                prompt: vendorPrompt,
-                size: repeloadObj.size,
-                aspectRatio: repeloadObj.aspectRatio,
-              },
-              {
-                taskClass: "生成分镜图片",
-                describe: `分镜图片生成 edit=${editStrategy ?? "generate"}`,
-                relatedObjects: JSON.stringify({ ...repeloadObj, prompt: vendorPrompt, editStrategy }),
-                projectId: projectId,
-              },
+            const { runStillVendorWithActuatorCore } = await import(
+              "@/ruleEngine/actuators/runStillVendorWithActuator"
             );
-            const savePath = `/${projectId}/assets/${scriptId}/${u.uuid()}.jpg`;
-            await imageCls.save(savePath);
-            const url = await u.oss.getSmallImageUrl(savePath.replace(/^\//, ""));
-            let imageBase64 = "";
-            try {
-              imageBase64 = await u.oss.getImageBase64(savePath.replace(/^\//, ""));
-            } catch {
-              imageBase64 = "dGVzdA==";
-            }
+            const vendorOut = await runStillVendorWithActuatorCore({
+              vendorPrompt,
+              referenceList,
+              refsRoles: (composedForPipe as { refsRoles?: string[] }).refsRoles,
+              objectiveClass: composedForPipe.generationContract?.objectiveClass,
+              softEnvContinuity: (composedForPipe as { softEnvContinuity?: string }).softEnvContinuity,
+              keepSoftEnvRef: composedForPipe.keepSoftEnvRef,
+              propClassId: (composedForPipe.generationContract as { propClassId?: string } | undefined)
+                ?.propClassId,
+              propSource: (composedForPipe as { propSource?: string }).propSource,
+              synthesizedProp,
+              propPlateMissing: !propPresent && eventObj,
+              propPlateGrade: synthesizedProp ? "synthetic_geometry" : undefined,
+              projectId,
+              uuid: () => u.uuid(),
+              ossWriteFile: (p, d) => u.oss.writeFile(p, d),
+              getSmallImageUrl: (p) => u.oss.getSmallImageUrl(p),
+              runSeedream: async (promptOverride?: string) => {
+                const seedPrompt = promptOverride || vendorPrompt;
+                const imageCls = await u.Ai.Image(
+                  projectSettingData?.imageModel as `${string}:${string}`,
+                ).run(
+                  {
+                    referenceList,
+                    prompt: seedPrompt,
+                    size: repeloadObj.size,
+                    aspectRatio: repeloadObj.aspectRatio,
+                  },
+                  {
+                    taskClass: "生成分镜图片",
+                    describe: `分镜图片生成 edit=${editStrategy ?? "generate"}`,
+                    relatedObjects: JSON.stringify({
+                      ...repeloadObj,
+                      prompt: seedPrompt,
+                      editStrategy,
+                    }),
+                    projectId: projectId,
+                  },
+                );
+                const sp = `/${projectId}/assets/${scriptId}/${u.uuid()}.jpg`;
+                await imageCls.save(sp);
+                const uurl = await u.oss.getSmallImageUrl(sp.replace(/^\//, ""));
+                let b64 = "";
+                try {
+                  b64 = await u.oss.getImageBase64(sp.replace(/^\//, ""));
+                } catch {
+                  b64 = "dGVzdA==";
+                }
+                return { url: uurl, savePath: sp, imageBase64: b64 };
+              },
+            });
+            (composedForPipe as { actuatorId?: string }).actuatorId = vendorOut.actuatorId;
+            (composedForPipe as { actuatorDegraded?: boolean }).actuatorDegraded =
+              vendorOut.actuatorDegraded;
+            (composedForPipe as { propPlateGrade?: string }).propPlateGrade = vendorOut.propPlateGrade;
+            (composedForPipe as { workflowHash?: string }).workflowHash = vendorOut.workflowHash;
+            actuatorEcho = {
+              actuatorId: vendorOut.actuatorId,
+              actuatorDegraded: vendorOut.actuatorDegraded,
+              propPlateGrade: vendorOut.propPlateGrade,
+              workflowHash: vendorOut.workflowHash,
+            };
             return {
-              url,
-              savePath,
+              url: vendorOut.url,
+              savePath: vendorOut.savePath,
               promptUsed: vendorPrompt,
-              imageBase64,
+              imageBase64: vendorOut.imageBase64,
               allowHqOkL0: pipeline.allowHqOk && !pipeline.collapsed,
               fidelityMissing: pipeline.fidelityMissing,
               strategy: (editStrategy as "agnes_i2i" | "atlas_native" | "focus_regen" | "generate") ?? "generate",
@@ -936,13 +1015,14 @@ export default router.post(
         }
         // Homology: do not let lifecycle overwrite design reverse with burn when weak/exhausted
         const litDebtStop = loopOut.repairIrdPrimaryAction === "hand_edit_vd";
+        // Key optional: never force chat_repair as if Key were required
         const primaryNext =
-          keyMissing
+          litDebtStop || repairRoute?.nextStep === "chat_repair"
             ? "chat_repair"
-            : litDebtStop || repairRoute?.nextStep === "chat_repair"
-              ? "chat_repair"
-              : repairRoute?.nextStep === "split_shot"
-                ? "split_shot"
+            : repairRoute?.nextStep === "split_shot"
+              ? "split_shot"
+              : keyMissing
+                ? "batch_still"
                 : loopOut.stopReason === "vlm_error" || !allowHq
                   ? repairRoute?.nextStep === "batch_still"
                     ? "batch_still"
@@ -1034,12 +1114,18 @@ export default router.post(
               ? "/settings/vendor?focus=volcengine&field=apiKey"
               : repairRoute?.settingsDeepLink,
             ctaLabel: keyMissing
-              ? "可选：配置诊断 Key 后人审"
+              ? loopOut.pendingHumanRejudge
+                ? "人审通过（未测·非失败）"
+                : "继续生成修复"
               : loopOut.repairCtaLabel ??
                 repairRoute?.ctaLabel ??
                 (!allowHq ? weakPrimary.ctaLabel : undefined),
             keyOptional: true,
             pixelDimStatus: keyMissing ? "unmeasured" : allowHq ? "measured_pass" : "measured_fail",
+            actuatorId: actuatorEcho.actuatorId,
+            actuatorDegraded: Boolean(actuatorEcho.actuatorDegraded),
+            propPlateGrade: actuatorEcho.propPlateGrade,
+            workflowHash: actuatorEcho.workflowHash,
             userMessage: weakMsg,
             missingSlots: loopOut.repairMissingSlots ?? repairRoute?.missingSlots,
             irdPrimaryAction: loopOut.repairIrdPrimaryAction ?? repairRoute?.irdPrimaryAction,

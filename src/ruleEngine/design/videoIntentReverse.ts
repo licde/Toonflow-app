@@ -48,7 +48,7 @@ export type VideoIrdDiagnoseResult = {
 };
 
 const MOTION_VERB_RE =
-  /划|擦|甩|咬|颤|推|拉|跟|移|转|抬|落|跪|坐|走|停|闪|爆|灭|渗|贴合|拂过|攥|握/;
+  /划|擦|甩|咬|颤|推|拉|跟|移|转|抬|落|跪|坐|走|停|闪|爆|灭|渗|贴合|拂过|攥|握|捡|捏|弯|扫|追|摩挲|刺|飞|击|钉|拢|推门|破门/;
 const THIN_MOTION_RE = /事件拍点|轻微跟随|微表情呼吸|静止持镜|微动作跟随/;
 
 function shotVd(s: Record<string, unknown>): string {
@@ -323,13 +323,26 @@ export function applyVideoIntentPatches(input: {
       applied.push(p.id);
     } else if (p.op === "append_motion_verb") {
       const gen = { ...((s.generation as object) ?? {}) } as Record<string, unknown>;
-      const prev = String(gen.videoDesc ?? "");
       const verb = String(p.after ?? "").trim();
-      if (verb && !prev.includes(verb)) {
-        gen.videoDesc = `${verb}。${prev}`.trim();
-        s.generation = gen;
-        applied.push(p.id);
+      if (!verb) continue;
+      const prevDesc = String(gen.videoDesc ?? "");
+      if (verb && !prevDesc.includes(verb.slice(0, Math.min(12, verb.length)))) {
+        gen.videoDesc = `${verb}。${prevDesc}`.trim();
       }
+      // Dual-write Motion into videoPrompt so diagnose motionBlob clears
+      const vp = String(gen.videoPrompt ?? "");
+      if (vp) {
+        if (/\[Motion\]/i.test(vp)) {
+          gen.videoPrompt = vp.replace(/\[Motion\][^\[]*/i, `[Motion] ${verb}\n`);
+        } else {
+          gen.videoPrompt = `${vp.trim()}\n[Motion] ${verb}`;
+        }
+      } else {
+        gen.videoPrompt = `[Motion] ${verb}`;
+      }
+      s.generation = gen;
+      s.motion = verb.slice(0, 120);
+      applied.push(p.id);
     }
   }
   return { shots, applied };

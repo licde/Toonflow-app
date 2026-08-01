@@ -91,6 +91,16 @@ export function expandOneCuCastShot(shot: Record<string, unknown>): {
   }
   reaction.burnParentForbidden = true;
   reaction.filePath = undefined;
+  reaction.promptState = "stale";
+  reaction.videoStale = true;
+  {
+    const gen = { ...((reaction.generation as Record<string, unknown>) ?? {}) };
+    delete gen.imagePrompt;
+    delete gen.videoPrompt;
+    delete gen.videoDesc;
+    delete gen.compiled;
+    reaction.generation = gen;
+  }
 
   ensemble.clientId = `${parentId}__cu_ens`;
   ensemble._cuCastSplitId = parentId;
@@ -106,6 +116,16 @@ export function expandOneCuCastShot(shot: Record<string, unknown>): {
   ensemble.visualDescription = `场面。${vd}`.slice(0, 220);
   ensemble.burnParentForbidden = true;
   ensemble.filePath = undefined;
+  ensemble.promptState = "stale";
+  ensemble.videoStale = true;
+  {
+    const gen = { ...((ensemble.generation as Record<string, unknown>) ?? {}) };
+    delete gen.imagePrompt;
+    delete gen.videoPrompt;
+    delete gen.videoDesc;
+    delete gen.compiled;
+    ensemble.generation = gen;
+  }
 
   return { children: [reaction, ensemble], ok: true, confirmRequired: false };
 }

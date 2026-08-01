@@ -81,25 +81,92 @@ export interface StillMeta {
   propSource?: string;
   vendorCalled?: boolean;
   vendorMs?: number;
-  /** Structure form miss vs Key-unmeasured — FE must not collapse */
-  debtKind?: "prop_form" | "prop_plate" | "soft_env" | "key_unmeasured" | "lit_slot" | string;
+  /** Actuator echo (Comfy / Seedream) */
+  actuatorId?: string;
+  workflowHash?: string;
+  actuatorDegraded?: boolean;
+  actuatorDegradedReason?: string;
+  propPlateGrade?: "asset" | "fe" | "synthetic_geometry" | "missing" | string;
+  egressCompressed?: boolean;
+  /** Structure form miss vs Key-unmeasured vs actuator degrade — FE must not collapse */
+  debtKind?:
+    | "prop_form"
+    | "prop_plate"
+    | "soft_env"
+    | "key_unmeasured"
+    | "actuator_degraded"
+    | "lit_slot"
+    | "missing_identity"
+    | "action_misfire"
+    | "contamination"
+    | "bg_fragment"
+    | string;
+  /** draft | preview | burn — out ≠ hq_ok */
+  deliveryTier?: "draft" | "preview" | "burn" | string;
+  /** Design debt must clear before burn — does NOT block generate */
+  requireFixBeforeBurn?: boolean;
+  /** Shared CTA kind for Chat/Web */
+  ctaKind?: string;
 }
 
-/** Split structure/form debt vs Key-optional unmeasured (never「要素未见=没写约束」). */
+/** Split structure/form debt vs Key-optional unmeasured vs actuator degrade (三分流). */
 export function resolveStillDebtSemantics(meta: StillMeta | null | undefined): {
-  kind: "prop_form" | "prop_plate" | "soft_env" | "key_unmeasured" | "lit_slot" | "none";
+  kind:
+    | "prop_form"
+    | "prop_plate"
+    | "soft_env"
+    | "key_unmeasured"
+    | "actuator_degraded"
+    | "lit_slot"
+    | "none";
   ctaLabel: string;
   explain: string;
 } {
   if (!meta) return { kind: "none", ctaLabel: "", explain: "" };
   const slots = meta.missingSlots ?? [];
   const blob = `${meta.userMessage ?? ""} ${meta.ctaLabel ?? ""} ${slots.join(" ")}`;
-  if (meta.keyOptional || meta.pixelDimStatus === "unmeasured") {
+  if (meta.debtKind === "action_misfire" || /action_misfire|动作主导/.test(blob)) {
+    return {
+      kind: "lit_slot",
+      ctaLabel: "重出动作主导静帧",
+      explain: "本拍动作（捡/捏/弯腰）未忠实实现；请 full 重出，勿手改邻镜文学。",
+    };
+  }
+  if (meta.debtKind === "contamination" || /跨镜污染|beatIsolation/.test(blob)) {
+    return {
+      kind: "lit_slot",
+      ctaLabel: "本拍隔离重出",
+      explain: "检测到邻镜原子串入本拍 egress；已隔离后请重出，勿手改剧本。",
+    };
+  }
+  // 1) Actuator degrade — honest Comfy→Seedream fallback (not Key, not form debt)
+  if (meta.actuatorDegraded || meta.debtKind === "actuator_degraded") {
+    return {
+      kind: "actuator_degraded",
+      ctaLabel: "已降级 Seedream·可继续",
+      explain: `可选 Comfy 不可用（${meta.actuatorDegradedReason || "degraded"}），已走 Seedream 主路径；交付门槛不变，非须配置 Comfy。`,
+    };
+  }
+  // 2) Synthetic geometry — not a real PROP lock
+  if (
+    meta.propPlateGrade === "synthetic_geometry" ||
+    (meta.synthesizedPropPlate && /synthetic|合成/.test(blob + String(meta.propPlateGrade ?? "")))
+  ) {
+    if (/卷棒|纸卷|prop_form|形态|抵颏|synthetic_geometry/.test(blob + String(meta.propPlateGrade ?? ""))) {
+      return {
+        kind: "prop_form",
+        ctaLabel: "挂真道具板后重出",
+        explain: "当前为 synthetic_geometry 几何软板，不冒充形态锁；请挂真 PROP 资产后再出。",
+      };
+    }
+  }
+  // 3) Key optional unmeasured — never「必须装 Key」
+  if (meta.keyOptional || meta.pixelDimStatus === "unmeasured" || meta.debtKind === "key_unmeasured") {
     if (!slots.some((s) => /prop|contact|form|glyph|softEnv/i.test(s)) && !/卷棒|薄纸|形态|道具板/.test(blob)) {
       return {
         kind: "key_unmeasured",
         ctaLabel: humanRejudgePrimaryCta(meta),
-        explain: "像素诊断 Key 未装/未测（可选）。文学与形态约束仍有效；请人审或装 Key，勿当作缺约束。",
+        explain: "像素诊断 Key 未装/未测（可选）。文学与形态约束仍有效；请人审放行，勿当作缺约束。",
       };
     }
   }
@@ -213,46 +280,47 @@ export function shouldOfferHumanRejudge(meta: StillMeta | null | undefined): boo
 }
 
 /**
- * Prefer BE `blockSilentRegen` when present; else derive from nextStep / slots.
- * Vendor / retry_shot / Key-optional unmeasured must NEVER brick Generate.
- * Only structural split (same-shot silent regen forbidden) hard-blocks.
+ * Shootable-first: NEVER brick Generate for policy debt.
+ * Identity / lit / fidelity → enqueue+heal CTA, buttons stay clickable.
  */
-export function shouldBlockSilentStillRegen(meta: StillMeta | null | undefined): boolean {
-  if (!meta) return false;
-  const step = String(meta?.primaryNextStep ?? "");
-  const autoStage = String(meta?.autoRepairStage ?? "");
-  // Explicit retry / auto-repair / Key-optional paths — always allow click
-  if (
-    step === "retry_shot" ||
-    step === "soft_patch" ||
-    step === "regen_storyboard_hq" ||
-    step === "batch_still" ||
-    (autoStage && autoStage !== "handoff_human")
-  ) {
-    return false;
-  }
-  // Key optional: unmeasured / missing Key is NOT design debt
-  if (meta.keyOptional === true || meta.pixelDimStatus === "unmeasured") {
-    if (meta.irdPrimaryAction !== "confirm_split" && step !== "split_shot") return false;
-  }
-  // Only confirm_split / split_shot bricks silent regen on the SAME shot
-  const hardSplitBrick =
-    step === "split_shot" || meta?.irdPrimaryAction === "confirm_split";
-  if (hardSplitBrick) return true;
-  // Literary enhance / hand_edit: allow Generate (apply补全 then regen, or reverse-fill then regen)
-  if (
-    meta?.irdPrimaryAction === "confirm_enhance" ||
-    meta?.irdPrimaryAction === "apply_auto_enhance" ||
-    meta?.irdPrimaryAction === "hand_edit_vd" ||
-    (meta?.missingSlots?.length ?? 0) > 0
-  ) {
-    return false;
-  }
-  if (meta.blockSilentRegen === true) {
-    // Stale latch without hard split → allow retry
-    return false;
-  }
+export function shouldBlockSilentStillRegen(_meta: StillMeta | null | undefined): boolean {
   return false;
+}
+
+/** Chat/Web CTA SSOT — same labels on DebtBar and agent tools. */
+export function resolveStillPrimaryCtaLabel(meta: StillMeta | null | undefined): {
+  kind: string;
+  label: string;
+  blocksGenerate: boolean;
+} {
+  if (!meta) return { kind: "generate", label: "生成静帧", blocksGenerate: false };
+  if (meta.debtKind === "missing_identity" || meta.propPlateGrade === "identity_missing") {
+    return { kind: "enqueue_identity_and_generate", label: "补定妆并继续生成", blocksGenerate: false };
+  }
+  if (meta.debtKind === "prompt_fidelity") {
+    return { kind: "enhance_and_generate", label: "增强锚点并生成", blocksGenerate: false };
+  }
+  if (meta.stillQuality === "hq_ok" && meta.visualPass === true) {
+    return { kind: "burn_ready", label: "可烧视频", blocksGenerate: false };
+  }
+  const step = String(meta.primaryNextStep ?? "");
+  const ird = String(meta.irdPrimaryAction ?? "");
+  if (ird === "confirm_split" || step === "split_shot") {
+    return { kind: "split_and_generate", label: "智拆并生成", blocksGenerate: false };
+  }
+  if (ird === "confirm_enhance" || ird === "apply_auto_enhance" || step === "chat_repair") {
+    return { kind: "enhance_and_generate", label: "增强设计并生成", blocksGenerate: false };
+  }
+  if (
+    step === "regen_storyboard_hq" ||
+    step === "retry_shot" ||
+    step === "batch_still" ||
+    meta.pixelDimStatus === "unmeasured" ||
+    meta.keyOptional
+  ) {
+    return { kind: "continue_repair", label: "继续生成修复", blocksGenerate: false };
+  }
+  return { kind: "generate", label: "生成静帧", blocksGenerate: false };
 }
 
 /** After split_shot success: FE must reload panels before generating child shots. */

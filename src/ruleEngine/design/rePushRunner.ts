@@ -150,8 +150,12 @@ export function executeRePushPlan(
         if (opts?.ctx?.meta) {
           (opts.ctx.meta as Record<string, unknown>).designExitRequiredAfterIrd = true;
         }
-      } else if (shots && (s === "MD-IMG" || s === "EN" || s === "MD-VID")) {
-        cascadeForwardStale({ shots, forwardStages: [s === "MD-VID" ? "EN" : s] });
+      } else if (shots && (s === "MD-IMG" || s === "MD" || s === "EN" || s === "MD-VID")) {
+        // bare MD ≡ MD-IMG cascade (reverse_route_table often emits MD)
+        cascadeForwardStale({
+          shots,
+          forwardStages: [s === "MD-VID" ? "EN" : s === "MD" ? "MD-IMG" : s],
+        });
         stageResults.push({ stage: s, ok: true, detail: "stale_cascade;await_designExit" });
       } else {
         stageResults.push({ stage: s, ok: true, detail: "queued" });

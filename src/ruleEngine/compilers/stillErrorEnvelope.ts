@@ -264,27 +264,15 @@ export function buildStillErrorEnvelope(input: {
 }
 
 /**
- * Only latch FE silent-regen block for structural split on the SAME shot.
- * Key-optional / lit enhance / chat_repair / regen_hq must NOT brick Generate.
+ * Shootable-first: never latch FE Generate for literary/split debt.
+ * Split/enhance are advise CTAs; only true unshootable (handled elsewhere) may brick.
  */
-export function shouldLatchBlockSilentRegen(input: {
+export function shouldLatchBlockSilentRegen(_input: {
   primaryNextStep?: string | null;
   code?: string | null;
   missingSlots?: string[] | null;
   irdPrimaryAction?: string | null;
   errMsg?: string | null;
 }): boolean {
-  const step = String(input.primaryNextStep ?? "");
-  const code = String(input.code ?? "").toUpperCase();
-  const msg = String(input.errMsg ?? "");
-  if (step === "retry_shot" || step === "soft_patch" || step === "regen_storyboard_hq" || step === "batch_still") {
-    return false;
-  }
-  if (code === "VENDOR" || code.startsWith("VENDOR")) return false;
-  if (/image queue input|download input image|upload image queue|timeout|ECONN|502|503|rate.?limit/i.test(msg)) {
-    return false;
-  }
-  // Only confirm_split / split_shot hard-latches
-  if (input.irdPrimaryAction === "confirm_split" || step === "split_shot") return true;
   return false;
 }

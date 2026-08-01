@@ -34,6 +34,13 @@ const SLOT_HINTS: Array<{ re: RegExp; hint: string }> = [
   { re: /surface/i, hint: "（补承写面：案上/纸上…）" },
   { re: /pour/i, hint: "（补泼洒承受点：…脸上/地上）" },
   { re: /propCarry|propState|propSource/i, hint: "（补道具去向：仍持/放下/撕毁）" },
+  { re: /dialogueCoverage|dialogue/i, hint: "（台词覆盖：本镜对白/无对白须声明）" },
+  { re: /audioCue/i, hint: "（音效拍点：与画面峰对齐）" },
+  { re: /^sfx$/i, hint: "（音效：纸页摩擦/布料轻擦等与道具同源）" },
+  { re: /fxPrompt|fxFeas/i, hint: "（特效：仅写可行级，禁不可实现 FX）" },
+  { re: /avCausality/i, hint: "（视听因果：visualPeak+audioBeat）" },
+  { re: /microExpression/i, hint: "（微表情：落在锁定脸型上）" },
+  { re: /propPose/i, hint: "（道具姿态：贴颊薄纸角，禁口含/举卡）" },
 ];
 
 /** Shared template library for suggestFill + apply_auto_enhance. */
@@ -159,7 +166,7 @@ export function buildLitFillSuggestions(input: {
     let missing = [
       ...new Set(audit.findings.flatMap((f) => f.missingSlots ?? f.missing ?? [])),
     ];
-    if (allowed.size) missing = missing.filter((m) => allowed.has(m) || /contact|grip|ground|path|surface|threshold|xor|wound|prop/i.test(m));
+    if (allowed.size) missing = missing.filter((m) => allowed.has(m) || /contact|grip|ground|path|surface|threshold|xor|wound|prop|dialogue|audio|sfx|fx|av|micro|pose/i.test(m));
     const wound = deriveWoundVisibleAppend({
       visualDescription: vd,
       intentVisualEnhance: input.intentVisualEnhance,

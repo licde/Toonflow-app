@@ -73,7 +73,7 @@ export default router.post(
     try {
     const { scriptId, projectId, trackData, model, resolution, audio, mode, skipPreflight } = req.body;
 
-    const storyboardIds = [
+    let storyboardIds = [
       ...new Set(
         (trackData as { uploadData: { id: number; sources: string }[] }[])
           .flatMap((t) => t.uploadData)
@@ -108,11 +108,23 @@ export default router.post(
           };
         }),
       );
-      if (!epStill.ok) {
+      if (!epStill.ok && epStill.blockers.length) {
         return res.status(400).send(
           error(epStill.blockers[0]?.message ?? "EPISODE-STILL-WEAK", {
             code: "EPISODE-STILL-WEAK",
             blockers: epStill.blockers,
+            primaryNextStep: "batch_still",
+          }),
+        );
+      }
+      // Weak contact shots → heal queue; filter burn set to burnableIds when present
+      if (epStill.healQueue?.length && epStill.burnableIds?.length) {
+        storyboardIds = epStill.burnableIds.filter((id) => storyboardIds.includes(id));
+      } else if (epStill.healQueue?.length && !epStill.burnableIds?.length) {
+        return res.status(400).send(
+          error("接触镜均未 hq，已入修复队列（不砖他集策略）；请先修静帧", {
+            code: "EPISODE-STILL-HEAL-QUEUE",
+            healQueue: epStill.healQueue,
             primaryNextStep: "batch_still",
           }),
         );
@@ -152,16 +164,21 @@ export default router.post(
     // Once hydrate: ratio + package
     const ratio = await u.db("o_project").select("videoRatio").where("id", projectId).first();
     const pkg = await loadEpisodePackage(u.db, projectId, scriptId);
-    // Homology with batchGeneratePrompt / generateVideo: design/import lip open → refuse burn
+    // Homology: warehouse debt SSOT → soft_defer CTA (never silent green burn)
     {
-      const meta = (pkg as { meta?: { lipConfirmRequired?: boolean; importOkNotExitPass?: boolean } } | null)?.meta;
-      if (meta?.lipConfirmRequired || meta?.importOkNotExitPass) {
+      const { readWarehouseDebtFromPackage, warehouseDebtBlocksVideo } =
+        require("@/ruleEngine/bundle/warehouseDebtMeta") as typeof import("@/ruleEngine/bundle/warehouseDebtMeta");
+      const debt = readWarehouseDebtFromPackage(pkg);
+      if (warehouseDebtBlocksVideo(debt)) {
         return res.status(400).send(
-          error("设计/导入口型拆镜未闭合，请回 SB Confirm 或重导后再烧", {
-            code: "LIP_CONFIRM_REQUIRED",
-            primaryNextStep: "split_shot",
-            userMessage: "lipConfirmRequired / importOkNotExitPass：本台不执行拆镜，请先闭合设计再烧",
-            ctaLabel: "回 SB Confirm 拆镜",
+          error("设计/导入仓债未闭，请回 SB Confirm 或增强设计后再烧", {
+            code: "WAREHOUSE_DEBT_SOFT_DEFER",
+            decision: "soft_defer",
+            primaryNextStep: "enhance_design",
+            userMessage:
+              "lipConfirmRequired / importOkNotExitPass / irdConfirmRequired：draft≠hq_ok≠设计已闭；增强并继续",
+            ctaLabel: "增强设计并继续烧",
+            warehouseDebt: debt,
           }),
         );
       }
@@ -482,25 +499,27 @@ export default router.post(
               stillQuality: qualityForGate,
               sheetLeak,
             });
-            if (!detect.ok || (!ff.ok && ff.severity === "BLOCK")) {
-              const msg = detect.message || ff.message || "静照首帧未过，批量烧片已跳过";
+            if (!detect.ok || (!ff.ok && (ff.severity === "BLOCK" || ff.severity === "HEAL" || ff.severity === "CONTRACT"))) {
+              // heal_then_burn: soft_defer this shot, never 400 the whole episode
+              const msg = detect.message || ff.message || "静照首帧契约债 — 已入 heal 队列";
               const code = detect.code ?? ff.code ?? "STILL-FIRSTFRAME-WEAK";
               const videoPath = `/${projectId}/video/${uuidv4()}.mp4`;
               const [videoId] = await u.db("o_video").insert({
                 filePath: videoPath,
                 time: Date.now(),
-                state: "生成失败",
+                state: "需完善",
                 scriptId,
                 projectId,
                 videoTrackId: trackId,
                 errorReason: JSON.stringify({
                   message: msg,
                   code,
+                  softDefer: true,
                   primaryNextStep: detect.primaryNextStep ?? ff.primaryNextStep ?? "batch_still",
-                  userMessage: msg,
+                  userMessage: `${msg}；请增强静帧后继续烧`,
                   irdPrimaryAction: detect.irdPrimaryAction,
                   missingSlots: detect.missingSlots,
-                  ctaLabel: detect.ctaLabel,
+                  ctaLabel: detect.ctaLabel ?? "增强并继续烧片",
                 }),
               });
               tasks.push({

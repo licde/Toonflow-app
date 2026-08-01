@@ -95,12 +95,12 @@ Slot 定义 SSOT：`data/fixtures/modality_prompt_slots.json`（skills / compile
   - **DEX-QP-02 / QP-02**（BLOCK）：画面描写空/过短/抽象无物象 — 与 export 同核；须 SB 重设计。深链 `qp02_visual_short`。minChars 仅防空壳底线
   - **DEX-LIT-CONTACT-XOR / CONTACT / ANCHOR / PROP-CONT**（BLOCK）：可拍结构槽、颊触≠口含互斥、邻镜道具连续 — `confirm_enhance` / 手改 VD / 拆镜；禁只 regen；深链 `lit_detail_contact_xor` / `lit_detail_*` / `prop_continuity`；导入 soft demote ≠ ExitPass
   - **DEX-CAST-ON-DESC**（BLOCK）：描写点名须进 `charCodes`（与 DEX-CAST-CODES 分立）。**智能绑定**：CD/资产唯一命中可自动补码+cref；歧义拒绑保留姓名；CD 无则 orphan stub（仍 BLOCK export 假绿）。**禁剥名**、禁自由 NER 造角。深链 `cast_on_desc_missing`（RH-CAST-ON-DESC）
-  - **DEX-EMPTY-SHOT-CONSISTENCY**（BLOCK）：空镜声明不得与人名/出脸/codes 并存。深链 `empty_shot_conflict`（RH-EMPTY-SHOT）；forbidRegenWithoutDescFix。compose 出站禁再叠「正脸清晰」
+  - **DEX-EMPTY-SHOT-CONSISTENCY**（CONTRACT）：空镜声明不得与人名/出脸/codes 并存。深链 `empty_shot_conflict`（RH-EMPTY-SHOT）；反推改写 untilClear，非灰钮。compose 出站禁再叠「正脸清晰」
   - **DEX-EXPR-SPEAK**（BLOCK）：高强度**出镜**对白须 `microExpression`+`lipSyncPolicy`；OS/VO 不强制口型闸。禁默认表演假过。深链 `expr_speak_missing`（RH-EXPR-SPEAK）
   - **DEX-ASSET-CREF**（BLOCK · AS；SB 可 stub 延期）：出脸/`CHAR-*` 须本镜绑；SB 可用 stub+`assetCrefPlan` 过设计闸，AS/compose 须定妆真图。禁止假 `--cref`/假绿。深链 `asset_cref`（RH-ASSET-CREF → AS）
   - **designBrief 同挂 EMPTY/EXPR/CAST**（与 SB 同核）：不得提前出站绕开 SB
   - **NO-LIP-DIALOGUE**（BLOCK · EN/MD-VID）：**出镜对白**禁止显式 `lipSyncPolicy=none/silent` 与提示词 `no lip sync`。空 policy → 自动升 `subtle_natural`（≠假阳）。**仅 OS/VO 的镜允许 no lip**。深链 `no_lip_dialogue`（RH-NO-LIP-DIALOGUE）
-  - **Audio XOR / PromptFidelity（M1–M7）**：乱入=`DC-01-EXTRA`；有词无声=`CHAT-AUD-01` BLOCK；无词有声=`AUD-ORPHAN-SPEECH` strip（`dialogueLines:[]` 确认静音）；锚点未覆盖=`PROMPT-FIDELITY`；多拍禁 trim=`DEX-STILL-ONEBEAT`；VD/对白漂移=`VIDEO-PROMPT-STALE`（须重编译）。CI：`test:dialogue-audio-loop` / `test:prompt-fidelity-loop`
+  - **Audio XOR / PromptFidelity（M1–M7）**：乱入=`DC-01-EXTRA`；有词无声=`CHAT-AUD-01`→seed；无词有声=`AUD-ORPHAN-SPEECH` strip；锚点未覆盖=`PROMPT-FIDELITY`→heal 双写 untilClear（**非挡拍**）；多拍=`DEX-STILL-ONEBEAT`→智拆；VD 漂移=`VIDEO-PROMPT-STALE`→重编译。CI：`test:dialogue-audio-loop` / `test:prompt-fidelity-loop` / `test:g-prompt-fidelity-heal`
   - **STILL-MOUTH-HANDOFF**：静帧闭口 ∩ 视频强口型（仅出镜对白）→ soft 一次后须复检；仍冲突 **BLOCK**（禁 silent soft 假愈）。深链 `still_mouth_handoff`
   - **STILL-CONTACT-HANDOFF / DEX-PROP-IN-FRAME**：接触事件 VD（动词∩道具类别名）∩ 静帧无道具（浅痕≠道具）→ **BLOCK** 重出带道具静照；禁 soft-allow 冒充可烧、禁只改视频词。深链 `still_prop_missing` / `still_video_contact_handoff`
   - **SFX-UNBACKED**（WARN）：字面 `sfx:<>` 无 adapter / 无 `audioCue` 真源 ≠ 音效满分。深链 `sfx_unbacked`（RH-SFX-UNBACKED）。DEX-SFX-BRIDGE 禁逼造假意图

@@ -79,6 +79,10 @@ export function routeStillDebtAction(input: {
   vlmError?: string | null;
   /** draft / import soft track → no hard route */
   softTrack?: boolean | null;
+  /** Already XOR/onebeat split child — skip dual-contact re-detect */
+  litXorSplitId?: string | null;
+  stillBeatSplitId?: string | null;
+  xorSplit?: boolean | null;
 }): StillDebtRouteResult {
   const sources: string[] = ["debt.router"];
   if (input.softTrack) {
@@ -92,6 +96,11 @@ export function routeStillDebtAction(input: {
       stopFidelityBurn: false,
     };
   }
+
+  const alreadySplit = Boolean(
+    input.litXorSplitId || input.stillBeatSplitId || input.xorSplit,
+  );
+  if (alreadySplit) sources.push("debt.alreadySplit");
 
   const err = String(input.vlmErrorCode || input.vlmError || "");
   // G0: do not early-return on Key — structure debt first; Key only annotate if nothing else
@@ -108,7 +117,16 @@ export function routeStillDebtAction(input: {
       require("../design/expandLitContactXor") as typeof import("../design/expandLitContactXor");
     // Homology: literaryPrompt may arrive only as promptBlob (repair/Edit paths)
     const xorText = vd.length >= 8 ? vd : String(input.promptBlob ?? "").trim();
-    if (needsLitContactXorSplit({ visualDescription: xorText, shotSize: sz })) {
+    if (
+      !alreadySplit &&
+      needsLitContactXorSplit({
+        visualDescription: xorText,
+        shotSize: sz,
+        _litXorSplitId: input.litXorSplitId,
+        _stillBeatSplitId: input.stillBeatSplitId,
+        xorSplit: input.xorSplit,
+      })
+    ) {
       detected.push("lit_contact_xor");
     }
   } catch {

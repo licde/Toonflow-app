@@ -16,6 +16,7 @@ import {
   composeStillPrompt,
   computeComposeHash,
   isDirtyStillPrompt,
+  literaryComposeHash,
   scrubStillPromptNoise,
   shouldDefaultFidelityCompose,
   stripIdentityTokens,
@@ -166,6 +167,15 @@ export async function runGenerateFlowImageCore(
   refsRoles?: string[];
   vendorCalled?: boolean;
   vendorMs?: number;
+  actuatorId?: string;
+  workflowHash?: string;
+  actuatorDegraded?: boolean;
+  actuatorDegradedReason?: string;
+  propPlateGrade?: string;
+  egressCompressed?: boolean;
+  keyOptional?: boolean;
+  pixelDimStatus?: string;
+  debtKind?: string;
   bgMode?: "keep_plate" | "soft_env" | "atmosphere_only";
   bgPolicy?: string;
   bgPolicyReason?: string;
@@ -173,6 +183,9 @@ export async function runGenerateFlowImageCore(
   sheetLeak?: boolean;
   blockSilentRegen?: boolean;
   refreshStoryboardBeforeRegen?: boolean;
+  deliveryTier?: string;
+  requireFixBeforeBurn?: boolean;
+  ctaKind?: string;
   autoRepairStage?: string;
   autoRepairRound?: number;
   autoRepairBudgetLeft?: number;
@@ -221,43 +234,80 @@ export async function runGenerateFlowImageCore(
     currentHash: computeComposeHash(composeCtx),
     preferFidelity: shouldDefaultFidelityCompose(composeCtx),
     loadPrevious: Boolean(storyboardId),
+    currentClientId: String((composeCtx as { clientId?: string }).clientId ?? storyboardId ?? ""),
+    literaryHash: literaryComposeHash({
+      visualDescription: composeCtx.visualDescription,
+      compiledImagePrompt: composeCtx.compiledImagePrompt,
+    }),
+    visualDescription: composeCtx.visualDescription,
   });
   composeCtx.previousVisualBody = ingress.previousVisualBody;
   const composeMode = ingress.composeMode;
 
   // XOR smart-split stays on import/design only — never rewrite shot count mid-generate
-  const composed = composeStillPrompt(composeCtx, { mode: ingress.effectiveMode });
+  let composed = composeStillPrompt(composeCtx, { mode: ingress.effectiveMode });
   if (!composed.ok) {
     const br = String(composed.blockReason ?? "");
-    const code =
-      composed.missingLeadAsset || br === "DEX-ASSET-CREF" || br === "IMG-CREF"
-        ? composed.missingLeadAsset
-          ? "IMG-CREF"
-          : br || "IMG-CREF"
-        : br === "DEX-DIRTY-STILL-PROMPT"
-          ? "DEX-DIRTY-STILL-PROMPT"
-          : br === "DEX-STILL-ONEBEAT" || br === "DEX-STILL-OS-NAME" || br === "DEX-STILL-FILLER"
-            ? br
-            : /^DEX-LIT-|DEX-PROP-CONT/.test(br)
-              ? br
-              : br === "DEX-QP-02" || composed.qp02Blocked
-                ? "QP-02"
-                : br || "QP-02";
-    const env = buildStillErrorEnvelope({
-      code,
-      errMsg: composed.userMessage || composed.blockReason,
-    });
-    throw Object.assign(new Error(composed.userMessage || composed.blockReason || env.userMessage), {
-      code: env.code,
-      primaryNextStep: composed.primaryNextStep ?? env.primaryNextStep,
-      userMessage: composed.userMessage ?? env.userMessage,
-      ctaLabel: composed.ctaLabel ?? env.ctaLabel,
-      composeSources: composed.sources,
-      stillQuality: "missing" as const,
-    });
+    const bodyOk = String(composed.visualBody || composed.prompt || "").trim().length >= 12;
+    // Policy compose debts: soft-continue when we still have a shootable body
+    if (bodyOk && br !== "DEX-QP-02" && !composed.qp02Blocked && br !== "visual body too thin after compose") {
+      composed = {
+        ...composed,
+        ok: true,
+        sources: [...(composed.sources ?? []), "compose.policy.softContinue", `compose.debt:${br || "unknown"}`],
+        requireFixBeforeBurn: true,
+      } as typeof composed;
+    } else {
+      // Empty VD — try salvage from prompt scraps before refusing
+      const salvage = String(composeCtx.visualDescription || composeCtx.videoDesc || prompt || "").trim();
+      if (salvage.length >= 8) {
+        composeCtx.visualDescription = salvage.slice(0, 400);
+        composed = composeStillPrompt(composeCtx, { mode: "full" });
+        if (composed.ok) {
+          composed = {
+            ...composed,
+            sources: [...(composed.sources ?? []), "compose.salvageVd"],
+            requireFixBeforeBurn: true,
+          } as typeof composed;
+        }
+      }
+      if (!composed.ok) {
+        const code =
+          composed.missingLeadAsset || br === "DEX-ASSET-CREF" || br === "IMG-CREF"
+            ? composed.missingLeadAsset
+              ? "IMG-CREF"
+              : br || "IMG-CREF"
+            : br === "DEX-DIRTY-STILL-PROMPT"
+              ? "DEX-DIRTY-STILL-PROMPT"
+              : br === "DEX-STILL-ONEBEAT" || br === "DEX-STILL-OS-NAME" || br === "DEX-STILL-FILLER"
+                ? br
+                : /^DEX-LIT-|DEX-PROP-CONT/.test(br)
+                  ? br
+                  : br === "DEX-QP-02" || composed.qp02Blocked
+                    ? "QP-02"
+                    : br || "QP-02";
+        const env = buildStillErrorEnvelope({
+          code,
+          errMsg: composed.userMessage || composed.blockReason,
+        });
+        // Last resort soft_defer envelope — still prefer chat_repair CTA over brick if body partial
+        throw Object.assign(new Error(composed.userMessage || composed.blockReason || env.userMessage), {
+          code: env.code,
+          primaryNextStep: composed.primaryNextStep ?? "enhance_and_generate",
+          userMessage: composed.userMessage ?? env.userMessage,
+          ctaLabel: composed.ctaLabel ?? "增强设计并生成",
+          composeSources: composed.sources,
+          stillQuality: "missing" as const,
+          softDefer: true,
+        });
+      }
+    }
   }
 
   // Description SSOT — hq path cannot invent literary body from dirty prompt
+  let fidelityHealSources: string[] = [];
+  let fidelityDebtKind: string | undefined;
+  let fidelityRequireFix = false;
   const { resolveLiteraryDescriptionSsot, buildLiteraryFidelityChecklist } = await import(
     "@/ruleEngine/compilers/literaryFidelityChecklist"
   );
@@ -268,49 +318,84 @@ export async function runGenerateFlowImageCore(
       qualityMode === "hq_update" && !isDirtyStillPrompt(prompt) ? scrubStillPromptNoise(stripIdentityTokens(prompt).body).cleaned : null,
   });
   if (!descSsot.ok && qualityMode === "hq_update") {
-    const env = buildStillErrorEnvelope({ code: "QP-02", errMsg: "缺少画面描写，无法文学复原" });
-    throw Object.assign(new Error("请先补全画面描写（visualDescription）再生成高质量静照"), {
-      code: "QP-02",
-      primaryNextStep: "chat_repair",
-      userMessage: "缺少画面描写，无法文学复原静照",
-      ctaLabel: env.ctaLabel ?? "去补描写",
-      stillQuality: "missing" as const,
-    });
+    const salvage = String(composeCtx.visualDescription || composeCtx.videoDesc || composed.visualBody || "").trim();
+    if (salvage.length >= 8) {
+      composeCtx.visualDescription = salvage.slice(0, 400);
+      fidelityHealSources.push("repair.qp02.salvageContinue");
+      fidelityRequireFix = true;
+    } else {
+      const env = buildStillErrorEnvelope({ code: "QP-02", errMsg: "缺少画面描写，无法文学复原" });
+      throw Object.assign(new Error("请先补全画面描写（visualDescription）再生成高质量静照"), {
+        code: "QP-02",
+        primaryNextStep: "enhance_and_generate",
+        userMessage: "缺少画面描写，无法文学复原静照 — 请反推补 VD 后继续生成",
+        ctaLabel: env.ctaLabel ?? "增强设计并生成",
+        stillQuality: "missing" as const,
+        softDefer: true,
+      });
+    }
   }
 
-  // Design intent fidelity — same kernel as persist compose (HQ hard)
+  // Design intent fidelity — CONTRACT debt → heal dual-write, never HTTP 400
   if (qualityMode === "hq_update") {
     try {
       const { assertPromptDesignFidelity } =
         require("@/ruleEngine/quality/assertPromptDesignFidelity") as typeof import("@/ruleEngine/quality/assertPromptDesignFidelity");
-      const fid = assertPromptDesignFidelity({
+      const { healPromptFidelityAnchors } =
+        require("@/ruleEngine/design/healPromptFidelityAnchors") as typeof import("@/ruleEngine/design/healPromptFidelityAnchors");
+      let imagePrompt = composed.visualBody || composed.prompt;
+      let fid = assertPromptDesignFidelity({
         shot: {
           visualDescription: composeCtx.visualDescription ?? descSsot.description,
           charCodes: (composeCtx.characters ?? []).map((c) => c.code).filter(Boolean),
         },
         knownNames: (composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[],
-        imagePrompt: composed.visualBody || composed.prompt,
+        imagePrompt,
         stage: "compose",
-        fidelityHard: true,
+        fidelityHard: false,
       });
-      const blockFid = fid.findings.filter((f) => f.severity === "BLOCK");
-      if (blockFid.length) {
-        throw Object.assign(new Error(blockFid[0]!.message), {
-          code: blockFid[0]!.id,
-          primaryNextStep: "chat_repair",
-          userMessage: `${blockFid[0]!.message}；请 stillIntentOps 反推改 VD 或重 compose`,
-          ctaLabel: "去补设计描写",
-          stillQuality: "missing" as const,
-          composeSources: composed.sources,
+      const debtFid = fid.findings.filter(
+        (f) => f.id === "PROMPT-FIDELITY" && (f.severity === "CONTRACT" || f.severity === "HEAL" || f.severity === "BLOCK" || f.severity === "WARN"),
+      );
+      if (debtFid.length) {
+        const healed = healPromptFidelityAnchors({
+          visualDescription: composeCtx.visualDescription ?? descSsot.description,
+          visualBody: imagePrompt,
+          knownNames: (composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[],
         });
+        imagePrompt = healed.visualBody;
+        composed.visualBody = healed.visualBody;
+        if (healed.visualDescription) {
+          composeCtx.visualDescription = healed.visualDescription;
+        }
+        fidelityHealSources = healed.sources;
+        composed.sources = [...(composed.sources ?? []), ...healed.sources];
+        fidelityRequireFix = healed.softDefer || !healed.ok;
+        fidelityDebtKind = healed.debtKind;
+        // Re-check after heal — still debt is soft_defer, continue vendor
+        fid = assertPromptDesignFidelity({
+          shot: {
+            visualDescription: composeCtx.visualDescription ?? descSsot.description,
+            charCodes: (composeCtx.characters ?? []).map((c) => c.code).filter(Boolean),
+          },
+          knownNames: (composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[],
+          imagePrompt,
+          stage: "compose",
+          fidelityHard: false,
+        });
+        if (fid.findings.some((f) => f.id === "PROMPT-FIDELITY")) {
+          fidelityRequireFix = true;
+          fidelityDebtKind = "prompt_fidelity";
+          fidelityHealSources.push("repair.fidelity.softDeferContinue");
+        }
       }
     } catch (e: unknown) {
-      if (e && typeof e === "object" && "code" in e) throw e;
-      /* optional module */
+      if (e && typeof e === "object" && "code" in e && String((e as { code?: string }).code) === "API-PROMPT-TYPE") throw e;
+      /* heal optional — never brick generate on fidelity module errors */
     }
   }
 
-  // Dual seating + multi-char: missing look → hard stop (一人一脸)
+  // Dual seating + multi-char: missing look → contract debt (enqueue), continue soft shoot when possible
   // Role URL refs + --cref CHAR-* credit looks before vendor spend; scene URLs never credit faces
   const { parsePromptRefs } = await import("@/ruleEngine/compilers/vendorPromptAdapter");
   const promptRefs = parsePromptRefs(composed.prompt || prompt);
@@ -320,18 +405,23 @@ export async function runGenerateFlowImageCore(
     dialogueSpeakers: composeCtx.dialogueSpeakers,
     referenceUrls: references,
     promptCrefCodes: promptRefs.crefs,
-    enforce: true,
+    enforce: false,
   });
+  let identityDebtKind: string | undefined;
   if (!identityGate.ok) {
-    throw Object.assign(new Error(identityGate.userMessage || "角色定妆不齐"), {
-      code: identityGate.code ?? "IMG-CREF-CHAR",
-      primaryNextStep: identityGate.primaryNextStep ?? "batch_still",
-      userMessage: identityGate.userMessage,
-      ctaLabel: identityGate.ctaLabel,
-      stillQuality: "missing" as const,
-      missingChars: identityGate.missing,
-      suggestBatchStill: identityGate.suggestBatchStill,
-    });
+    identityDebtKind = "missing_identity";
+    fidelityHealSources.push("repair.identity.enqueueContinue");
+    // Do not throw — soft continue; deliveryTier stays draft until plate present
+  }
+
+  // Stamp heal debt onto composed for response echo
+  (composed as { fidelityRequireFix?: boolean }).fidelityRequireFix =
+    fidelityRequireFix || Boolean((composed as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn);
+  (composed as { fidelityDebtKind?: string }).fidelityDebtKind =
+    fidelityDebtKind || identityDebtKind;
+  (composed as { identityDebtKind?: string }).identityDebtKind = identityDebtKind;
+  if (fidelityHealSources.length) {
+    composed.sources = [...(composed.sources ?? []), ...fidelityHealSources];
   }
 
   let budget = body.healBudget ?? createHealBudget();
@@ -344,15 +434,14 @@ export async function runGenerateFlowImageCore(
         stage: "qc",
         userMessageOverride: "自动重试次数已用尽，请人工处理",
       });
-      throw Object.assign(new Error(primary.userMessage), {
-        code: "HEAL-BUDGET",
-        primaryNextStep: primary.primaryNextStep,
-        userMessage: primary.userMessage,
-        ctaLabel: primary.ctaLabel,
-        healBudget: budget,
-      });
+      // soft_defer — do not throw; clear strengthen and continue best-effort
+      fidelityHealSources.push("repair.healBudget.softDefer");
+      fidelityRequireFix = true;
+      body.strengthen = undefined;
+      void primary;
+    } else {
+      budget = consumeRegenRetry(budget);
     }
-    budget = consumeRegenRetry(budget);
   }
 
   const urlRefCount = references.filter(Boolean).length;
@@ -470,6 +559,27 @@ export async function runGenerateFlowImageCore(
   const { preflightFamilyCref } = await import("@/ruleEngine/qc/stillCrefPreflight");
   const { selectLayoutFamily } = await import("@/ruleEngine/qc/stillCompositionSpec");
   const { classifyStillIntent } = await import("@/ruleEngine/compilers/stillIntentPolicy");
+  // Workflow canvas: FE references[] carry SCENE nodes — must count as hasSceneLink
+  // even without storyboard sceneCode (else faceCu drops temple → grey studio).
+  const { classifyFeReferenceRole } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+  const { inferHasSceneLink } = await import("@/ruleEngine/compilers/shotModalityIntent");
+  const feRefUrls = (references ?? []).filter(Boolean).map(String);
+  const feHasScenePlate =
+    feRefUrls.length >= 2 &&
+    feRefUrls.some(
+      (url, i) =>
+        classifyFeReferenceRole(url, i, { softEnvNeeded: true, total: feRefUrls.length }) === "scene",
+    );
+  const hasSceneLink = Boolean(
+    inferHasSceneLink({
+      sceneCode: composeCtx.sceneCode,
+      sceneName: (composeCtx as { sceneName?: string }).sceneName,
+      sceneAssets: composeCtx.sceneAssets,
+      promptText: String(prompt ?? ""),
+    }) ||
+      composed.keepSoftEnvRef ||
+      feHasScenePlate,
+  );
   const bgPol = resolveStillBgPolicy({
     description: literaryDesc,
     characterNames: charNames,
@@ -477,12 +587,7 @@ export async function runGenerateFlowImageCore(
     sceneEstablishingHint:
       Boolean((composeCtx as { sceneEstablishing?: boolean }).sceneEstablishing) ||
       /建立镜头|establishing|空镜建立|全景建立/i.test(String(literaryDesc ?? "")),
-    hasSceneLink: Boolean(
-      composeCtx.sceneCode ||
-        (composeCtx.sceneAssets ?? []).length ||
-        composed.keepSoftEnvRef ||
-        /--sref\s+SCENE-/i.test(String(prompt ?? "")),
-    ),
+    hasSceneLink,
   });
   const seatingPack = bgPol.pack;
   const intent = classifyStillIntent({
@@ -550,9 +655,21 @@ export async function runGenerateFlowImageCore(
 
   let feedback: Awaited<ReturnType<typeof classifyGenerationFailure>> | undefined;
   let referenceCount = 0;
-  let lastComposed = composed;
+  // Sync bg policy onto compose result — compose may have missed FE-only SCENE links
+  let lastComposed = {
+    ...composed,
+    excludeScene: bgPol.excludeScene,
+    keepSoftEnvRef: bgPol.keepSoftEnvRef,
+    softEnvContinuity: bgPol.softEnvContinuity,
+    bgMode: bgPol.bgMode,
+    bgPolicy: bgPol.policy,
+    bgPolicyReason: bgPol.reason,
+  } as typeof composed;
+  if (bgPol.bgGuidance && bgPol.keepSoftEnvRef) {
+    (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = bgPol.softEnvContinuity;
+  }
   let lastPipeline = runStillPromptPipeline({
-    composed,
+    composed: lastComposed,
     description: literaryDesc,
     characterNames: charNames,
     identitySlots,
@@ -584,15 +701,30 @@ export async function runGenerateFlowImageCore(
         forbidLayoutPreserve: roundForbidLayoutPreserve,
         swapLayoutTemplate,
         excludeLayoutTemplateId,
+        forceFullCompose,
       }) => {
         const useEdit = mode === "edit";
         // Edit rounds: do not re-stack strengthen into compose; use fixHint focus prompt
         if (!useEdit) {
           composeCtx.strengthen = { ...(composeCtx.strengthen ?? {}), ...strengthen };
         }
+        if (forceFullCompose) {
+          composeCtx.previousVisualBody = undefined;
+        }
+        const roundComposeMode: ComposeMode = forceFullCompose
+          ? "full"
+          : useEdit || Object.keys(strengthen).length
+            ? "fidelity"
+            : composeMode;
         lastComposed = composeStillPrompt(composeCtx, {
-          mode: useEdit || Object.keys(strengthen).length ? "fidelity" : composeMode,
+          mode: roundComposeMode,
         });
+        if (forceFullCompose && lastComposed.ok) {
+          lastComposed = {
+            ...lastComposed,
+            sources: [...(lastComposed.sources ?? []), "infra.forceFullCompose"],
+          } as typeof lastComposed;
+        }
         if (!lastComposed.ok) {
           const br = String(lastComposed.blockReason ?? "");
           const code =
@@ -605,6 +737,16 @@ export async function runGenerateFlowImageCore(
             code,
           });
         }
+        // Preserve FE-aware softEnv (recompose may lose canvas-only SCENE link)
+        lastComposed = {
+          ...lastComposed,
+          excludeScene: bgPol.excludeScene,
+          keepSoftEnvRef: bgPol.keepSoftEnvRef,
+          softEnvContinuity: bgPol.softEnvContinuity,
+          bgMode: bgPol.bgMode,
+          bgPolicy: bgPol.policy,
+          bgPolicyReason: bgPol.reason,
+        } as typeof lastComposed;
         // Rebind cref order each round (prevent ref drift)
         const bind = resolveShotIdentityBinding({
           description: literaryDesc,
@@ -672,11 +814,20 @@ export async function runGenerateFlowImageCore(
             propPlatePresent = true;
             propPlateMissing = false;
             (lastComposed as { propSource?: string }).propSource = "asset";
-          } else if (
-            lastComposed.generationContract?.objectiveClass === "contact_geom" ||
-            lastComposed.generationContract?.objectiveClass === "prop_readable"
-          ) {
-            propPlateMissing = true;
+          } else {
+            try {
+              const { objectiveNeedsPropPlate } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+              if (objectiveNeedsPropPlate(lastComposed.generationContract?.objectiveClass)) {
+                propPlateMissing = true;
+              }
+            } catch {
+              if (
+                lastComposed.generationContract?.objectiveClass === "contact_geom" ||
+                lastComposed.generationContract?.objectiveClass === "prop_readable"
+              ) {
+                propPlateMissing = true;
+              }
+            }
           }
           softEnvPlatePresent = Boolean(built.softEnvKept);
         }
@@ -752,9 +903,17 @@ export async function runGenerateFlowImageCore(
                 }
                 continue;
               }
-              // Event objectives: face-bias only when softEnv will NOT be baked (bake face-crops)
+              // Event objectives: upper-body bias keeps costume (not face-only soup)
               if (eventObj && !(softEnv && softEnvB64)) {
-                const face = await cropIdentityPlateToFaceBias(base64);
+                const { resolveIdentityCropTopRatio } = await import(
+                  "@/ruleEngine/compilers/eventPlateReadiness"
+                );
+                const topRatio = resolveIdentityCropTopRatio({
+                  objectiveClass: lastComposed.generationContract?.objectiveClass,
+                  keepSoftEnvRef: softEnv,
+                  softEnvContinuity: softEnv ? "must" : "none",
+                });
+                const face = await cropIdentityPlateToFaceBias(base64, { topRatio });
                 if (face.cropped && face.base64) base64 = face.base64;
               }
               identityPlates.push({ type: "image" as const, base64 });
@@ -806,7 +965,18 @@ export async function runGenerateFlowImageCore(
               tagged.push({ type: "image", base64: propB64, role: "propSoft" });
               (lastComposed as { propSource?: string }).propSource = "fe";
             } else if (eventObj) propPlateMissing = true;
-            if (softEnv && softEnvB64) tagged.push({ type: "image", base64: softEnvB64, role: "softEnv" });
+            if (softEnv && softEnvB64) {
+              try {
+                const { softenSoftEnvPlateForAtmosphere } = await import(
+                  "@/ruleEngine/compilers/eventPlateReadiness"
+                );
+                const soft = await softenSoftEnvPlateForAtmosphere(softEnvB64);
+                if (soft.base64) softEnvB64 = soft.base64;
+              } catch {
+                /* optional */
+              }
+              tagged.push({ type: "image", base64: softEnvB64, role: "softEnv" });
+            }
             const budgeted = await applyContinuityAwareRefBudget({
               refs: tagged,
               propRequired: eventObj,
@@ -897,6 +1067,15 @@ export async function runGenerateFlowImageCore(
             tagged.push({ type: "image", base64: referenceList[1].base64, role: "propSoft" });
           }
           if (softEnv && softEnvB64) {
+            try {
+              const { softenSoftEnvPlateForAtmosphere } = await import(
+                "@/ruleEngine/compilers/eventPlateReadiness"
+              );
+              const soft = await softenSoftEnvPlateForAtmosphere(softEnvB64);
+              if (soft.base64) softEnvB64 = soft.base64;
+            } catch {
+              /* optional */
+            }
             tagged.push({ type: "image", base64: softEnvB64, role: "softEnv" });
           } else if (softEnvPlatePresent) {
             const softIdx =
@@ -945,13 +1124,16 @@ export async function runGenerateFlowImageCore(
 
         // Structure whitelist: synthesize PROP soft plate when event objective lacks one
         let synthAttempted = false;
-        if (
-          propPlateMissing &&
-          !propPlatePresent &&
-          !synthesizedProp &&
-          (lastComposed.generationContract?.objectiveClass === "contact_geom" ||
-            lastComposed.generationContract?.objectiveClass === "prop_readable")
-        ) {
+        const needsPropPlate = (() => {
+          try {
+            const { objectiveNeedsPropPlate } = require("@/ruleEngine/compilers/eventPlateReadiness") as typeof import("@/ruleEngine/compilers/eventPlateReadiness");
+            return objectiveNeedsPropPlate(lastComposed.generationContract?.objectiveClass);
+          } catch {
+            const o = lastComposed.generationContract?.objectiveClass;
+            return o === "contact_geom" || o === "prop_readable" || o === "action_primary";
+          }
+        })();
+        if (propPlateMissing && !propPlatePresent && !synthesizedProp && needsPropPlate) {
           synthAttempted = true;
           try {
             const { synthesizePropSoftPlate, resolvePropPlateLabel } = await import(
@@ -990,6 +1172,7 @@ export async function runGenerateFlowImageCore(
                 false;
               (lastComposed as { synthesizedPropPlate?: boolean }).synthesizedPropPlate = true;
               (lastComposed as { propSource?: string }).propSource = "synth";
+              (lastComposed as { propPlateGrade?: string }).propPlateGrade = "synthetic_geometry";
               const formBits = (lastComposed.generationContract?.mustShowFacts ?? [])
                 .filter((f) => f.id === "prop_form" || f.id === "prop_glyph" || f.id === "prop_pose")
                 .map((f) => f.text)
@@ -997,7 +1180,7 @@ export async function runGenerateFlowImageCore(
               const anti = (lastComposed.generationContract?.forbiddenSubstitutions ?? [])
                 .filter((s) => /书本|卷轴|厚本|薄纸|替代/.test(s))
                 .slice(0, 2);
-              vendorPrompt = [...formBits, ...anti, `${label.canonical}须清晰入画（薄纸片软板，非书）`]
+              vendorPrompt = [...formBits, ...anti, `${label.canonical}入画于颊触纸角（薄纸片软板，非书、非手持卡片）`]
                 .filter(Boolean)
                 .join("。")
                 .concat("。")
@@ -1177,10 +1360,17 @@ export async function runGenerateFlowImageCore(
               };
             }
             // Force refsSig delta: re-synth prop soft plate when event objective
-            if (
-              lastComposed.generationContract?.objectiveClass === "contact_geom" ||
-              lastComposed.generationContract?.objectiveClass === "prop_readable"
-            ) {
+            const needsPropPlateIso = (() => {
+              try {
+                const { objectiveNeedsPropPlate } =
+                  require("@/ruleEngine/compilers/eventPlateReadiness") as typeof import("@/ruleEngine/compilers/eventPlateReadiness");
+                return objectiveNeedsPropPlate(lastComposed.generationContract?.objectiveClass);
+              } catch {
+                const o = lastComposed.generationContract?.objectiveClass;
+                return o === "contact_geom" || o === "prop_readable" || o === "action_primary";
+              }
+            })();
+            if (needsPropPlateIso) {
               try {
                 const { synthesizePropSoftPlate, resolvePropPlateLabel } = await import(
                   "@/ruleEngine/compilers/eventPlateReadiness"
@@ -1237,9 +1427,17 @@ export async function runGenerateFlowImageCore(
           let softEnvBaked = Boolean(
             (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity,
           );
-          // Face-bias only when softEnv was NOT baked (bake already face-crops — avoid double destroy)
+          // Upper-body bias when softEnv was NOT baked (bake already face-crops — avoid double destroy)
           if (eventObj && !softEnvBaked && referenceList[0]?.base64) {
-            const face = await cropIdentityPlateToFaceBias(referenceList[0].base64);
+            const { resolveIdentityCropTopRatio } = await import(
+              "@/ruleEngine/compilers/eventPlateReadiness"
+            );
+            const topRatio = resolveIdentityCropTopRatio({
+              objectiveClass: lastComposed.generationContract?.objectiveClass,
+              keepSoftEnvRef: lastComposed.keepSoftEnvRef,
+              softEnvContinuity: continuity,
+            });
+            const face = await cropIdentityPlateToFaceBias(referenceList[0].base64, { topRatio });
             if (face.cropped && face.base64) {
               referenceList[0] = { type: "image" as const, base64: face.base64 };
             }
@@ -1515,51 +1713,87 @@ export async function runGenerateFlowImageCore(
         let imageBase64: string;
         const vendorT0 = Date.now();
         let vendorCalled = false;
-        if (deps.imageRunner) {
-          const stub = await deps.imageRunner({
-            prompt: vendorPrompt,
-            referenceList,
-            size: quality,
-            aspectRatio: aspectRatio ?? ratio,
-          });
-          vendorCalled = true;
-          savePath = `/${projectId}/workFlow/${u.uuid()}.jpg`;
-          await stub.save(savePath.replace(/^\//, ""));
-          url = stub.getResultUrl
-            ? await stub.getResultUrl()
-            : await u.oss.getSmallImageUrl(savePath.replace(/^\//, ""));
-          imageBase64 = stub.resultBase64 ?? (await toB64(url));
-        } else {
-          const imageClass = await u.Ai.Image(model as `${string}:${string}`).run(
-            {
-              prompt: vendorPrompt,
-              referenceList,
-              size: quality as "1K" | "2K" | "4K",
-              aspectRatio: aspectRatio as `${number}:${number}`,
-            },
-            {
-              taskClass: "工作流图片生成",
-              describe: `工作流图片生成 mode=${modeRules.modeId} edit=${editStrategy ?? "generate"} stageCost=${stageCost}`,
-              relatedObjects: JSON.stringify({
-                ...body,
-                resolvedImageMode: modeRules.modeId,
-                qualityMode,
-                editStrategy,
-                layoutTemplateId,
-                bgPolicy: lastComposed.bgPolicy ?? bgPol.policy,
-                sceneRefsDropped,
-                stageCost,
-              }),
-              projectId,
-            },
-          );
-          vendorCalled = true;
-          savePath = `/${projectId}/workFlow/${u.uuid()}.jpg`;
-          await imageClass.save(savePath.replace(/^\//, ""));
-          url = await u.oss.getSmallImageUrl(savePath.replace(/^\//, ""));
-          imageBase64 = await toB64(url);
-        }
-        const vendorMs = Date.now() - vendorT0;
+        const { runStillVendorWithActuatorCore } = await import(
+          "@/ruleEngine/actuators/runStillVendorWithActuator"
+        );
+        const vendorOut = await runStillVendorWithActuatorCore({
+          vendorPrompt,
+          referenceList,
+          refsRoles: (lastComposed as { refsRoles?: string[] }).refsRoles,
+          objectiveClass: lastComposed.generationContract?.objectiveClass,
+          softEnvContinuity: (lastComposed as { softEnvContinuity?: string }).softEnvContinuity,
+          keepSoftEnvRef: lastComposed.keepSoftEnvRef,
+          propClassId: (lastComposed.generationContract as { propClassId?: string } | undefined)?.propClassId,
+          propSource: (lastComposed as { propSource?: string }).propSource,
+          synthesizedProp,
+          propPlateMissing,
+          propPlateGrade: (lastComposed as { propPlateGrade?: string }).propPlateGrade,
+          projectId,
+          uuid: () => u.uuid(),
+          ossWriteFile: (p, d) => u.oss.writeFile(p, d),
+          getSmallImageUrl: (p) => u.oss.getSmallImageUrl(p),
+          imageRunner: deps.imageRunner,
+          runSeedream: async (promptOverride?: string) => {
+            const seedPrompt = promptOverride || vendorPrompt;
+            if (deps.imageRunner) {
+              const stub = await deps.imageRunner({
+                prompt: seedPrompt,
+                referenceList,
+                size: quality,
+                aspectRatio: aspectRatio ?? ratio,
+              });
+              const sp = `/${projectId}/workFlow/${u.uuid()}.jpg`;
+              await stub.save(sp.replace(/^\//, ""));
+              const uurl = stub.getResultUrl
+                ? await stub.getResultUrl()
+                : await u.oss.getSmallImageUrl(sp.replace(/^\//, ""));
+              return {
+                url: uurl,
+                savePath: sp,
+                imageBase64: stub.resultBase64 ?? (await toB64(uurl)),
+              };
+            }
+            const imageClass = await u.Ai.Image(model as `${string}:${string}`).run(
+              {
+                prompt: seedPrompt,
+                referenceList,
+                size: quality as "1K" | "2K" | "4K",
+                aspectRatio: aspectRatio as `${number}:${number}`,
+              },
+              {
+                taskClass: "工作流图片生成",
+                describe: `工作流图片生成 mode=${modeRules.modeId} edit=${editStrategy ?? "generate"} stageCost=${stageCost}`,
+                relatedObjects: JSON.stringify({
+                  ...body,
+                  resolvedImageMode: modeRules.modeId,
+                  qualityMode,
+                  editStrategy,
+                  layoutTemplateId,
+                  bgPolicy: lastComposed.bgPolicy ?? bgPol.policy,
+                  sceneRefsDropped,
+                  stageCost,
+                }),
+                projectId,
+              },
+            );
+            const sp = `/${projectId}/workFlow/${u.uuid()}.jpg`;
+            await imageClass.save(sp.replace(/^\//, ""));
+            const uurl = await u.oss.getSmallImageUrl(sp.replace(/^\//, ""));
+            return { url: uurl, savePath: sp, imageBase64: await toB64(uurl) };
+          },
+        });
+        url = vendorOut.url;
+        savePath = vendorOut.savePath;
+        imageBase64 = vendorOut.imageBase64;
+        vendorCalled = vendorOut.vendorCalled;
+        (lastComposed as { actuatorId?: string }).actuatorId = vendorOut.actuatorId;
+        (lastComposed as { actuatorDegraded?: boolean }).actuatorDegraded = vendorOut.actuatorDegraded;
+        (lastComposed as { actuatorDegradedReason?: string }).actuatorDegradedReason =
+          vendorOut.actuatorDegradedReason;
+        (lastComposed as { workflowHash?: string }).workflowHash = vendorOut.workflowHash;
+        (lastComposed as { propPlateGrade?: string }).propPlateGrade = vendorOut.propPlateGrade;
+        (lastComposed as { egressCompressed?: boolean }).egressCompressed = vendorOut.egressCompressed;
+        const vendorMs = vendorOut.vendorMs || Date.now() - vendorT0;
         (lastComposed as { vendorCalled?: boolean; vendorMs?: number; refsRoles?: string[] }).vendorCalled =
           vendorCalled;
         (lastComposed as { vendorMs?: number }).vendorMs = vendorMs;
@@ -1869,9 +2103,8 @@ async function finalizeSuccess(
         ? "regen_storyboard_hq"
         : "chat_repair"
     : primary.primaryNextStep;
-  // Only structural split bricks silent regen; Key可选/文学可补槽/自动修复均保持可点生成
-  const blockSilentRegen =
-    nextStepOut === "split_shot" || input.repairIrdPrimaryAction === "confirm_split";
+  // Shootable-first: never brick Generate for split/lit debt (advise CTA only)
+  const blockSilentRegen = false;
   const refreshStoryboardBeforeRegen = nextStepOut === "split_shot";
   const vlmCta =
     litDebtStop
@@ -1884,9 +2117,7 @@ async function finalizeSuccess(
       ? keyMissing
         ? autoRepair.allowSilentRegen
           ? "继续生成修复"
-          : input.pendingHumanRejudge
-            ? "人审通过（未测·非失败）"
-            : "可选：配置诊断 Key 后人审"
+          : "人审通过（未测·非失败）"
         : input.pendingHumanRejudge
           ? "人审通过或修复评审配置"
           : "修复评审配置后重试"
@@ -1895,7 +2126,13 @@ async function finalizeSuccess(
     ? input.composed.didSynthesize
       ? "已按设计智能合成并标记高质量首帧"
       : "已标记高质量首帧"
-    : litDebtStop
+    : (input.composed as { actuatorDegraded?: boolean }).actuatorDegraded &&
+        Boolean(input.composed.keepSoftEnvRef) &&
+        /contact_geom|prop_readable/.test(
+          String((input.composed.generationContract as { objectiveClass?: string } | undefined)?.objectiveClass ?? ""),
+        )
+      ? `高难接触镜可控后端不可用（${(input.composed as { actuatorDegradedReason?: string }).actuatorDegradedReason || "degraded"}），已诚实降级弱多图；殿内软环境/颊触几何可能未锁住，白棚属预期。请启动 Comfy（COMFY_URL）或人审后重出；勿当作「少写禁令」。`
+      : litDebtStop
       ? primary.userMessage
       : input.fidelityStopReason === "vlm_error"
       ? primary.userMessage
@@ -1908,6 +2145,35 @@ async function finalizeSuccess(
             : !coverageOk
               ? `描写动作未覆盖完整（缺 ${coverageMissing.join("、") || "硬约束"}），弱图不可作视频首帧`
               : primary.userMessage;
+  const ctaResolved = (() => {
+    try {
+      const { resolveStillPrimaryCta } =
+        require("@/ruleEngine/design/shootableArchitecture") as typeof import("@/ruleEngine/design/shootableArchitecture");
+      return resolveStillPrimaryCta({
+        primaryNextStep: nextStepOut,
+        irdPrimaryAction: input.repairIrdPrimaryAction,
+        stillQuality: hq ? "hq_ok" : "weak",
+        visualPass: input.visualPass,
+        keyOptional: keyMissing,
+        pixelDimStatus: keyMissing ? "unmeasured" : input.visualPass ? "measured_pass" : "measured_fail",
+      });
+    } catch {
+      return null;
+    }
+  })();
+  const ctaOut =
+    (input.composed as { actuatorDegraded?: boolean }).actuatorDegraded &&
+    Boolean(input.composed.keepSoftEnvRef) &&
+    !hq
+      ? "启动Comfy或人审"
+      : ctaResolved?.label || vlmCta;
+  const deliveryTier = hq && input.visualPass ? "burn" : hq || !keyMissing ? "preview" : "draft";
+  const requireFixBeforeBurn =
+    Boolean((input.composed as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn) ||
+    litDebtStop ||
+    nextStepOut === "split_shot" ||
+    nextStepOut === "chat_repair" ||
+    Boolean((input.composed as { fidelityRequireFix?: boolean }).fidelityRequireFix);
   const { assessStillVideoReadiness } =
     require("@/ruleEngine/qc/stillVideoReadiness") as typeof import("@/ruleEngine/qc/stillVideoReadiness");
   const readiness = assessStillVideoReadiness({
@@ -2077,11 +2343,24 @@ async function finalizeSuccess(
           (input.composed as { propPlateMissing?: boolean }).propPlateMissing ||
             atom.mustFail.includes("propPlateMissing") ||
             atom.mustFail.includes("missing_prop_readable") ||
-            atom.mustFail.includes("missing_prop_glyph") ||
+            atom.mustFail.includes("missing_prop_pose_locus") ||
             atom.mustFail.includes("missing_contact_event"),
         );
+        const actuatorDegraded = Boolean(
+          (input.composed as { actuatorDegraded?: boolean }).actuatorDegraded,
+        );
+        const synthGeom =
+          (input.composed as { propPlateGrade?: string }).propPlateGrade === "synthetic_geometry" ||
+          Boolean((input.composed as { synthesizedPropPlate?: boolean }).synthesizedPropPlate);
+        const geomUnmeasured =
+          input.pendingHumanRejudge === true ||
+          flowPixelDimStatus === "unmeasured" ||
+          (input.fidelityItems ?? []).some(
+            (i) => /contact_geom/i.test(i.id) && !i.pass,
+          );
+        const blockAtLocus = actuatorDegraded || synthGeom || geomUnmeasured || !atom.ok || propPlateMissing;
         const m = matchContactEventVd(vd || blob);
-        if (!propPlateMissing && atom.ok) {
+        if (!blockAtLocus) {
           const inferred = inferContactStartStateFromStill({
             stillPrompt: blob,
             visualDescription: vd,
@@ -2103,7 +2382,13 @@ async function finalizeSuccess(
             contactTrajSummary: "接近→划过→停住（触肤瞬间）",
           };
         } else {
-          // Forbid false handoff — do not declare at_locus when atoms fail
+          // Forbid false handoff — degraded/synth/unmeasured geom must not claim at_locus
+          const blockReasons = [
+            ...atom.mustFail,
+            ...(actuatorDegraded ? ["actuator_degraded"] : []),
+            ...(synthGeom ? ["synthetic_geometry"] : []),
+            ...(geomUnmeasured ? ["contact_geom_unmeasured"] : []),
+          ];
           poseAnchorMeta = {
             ...poseAnchorMeta,
             stillPoseAnchor: {
@@ -2114,7 +2399,7 @@ async function finalizeSuccess(
             },
             contactStartState: "entering",
             poseHandoffBlocked: true,
-            poseHandoffBlockReasons: atom.mustFail,
+            poseHandoffBlockReasons: blockReasons,
           };
         }
       }
@@ -2128,7 +2413,7 @@ async function finalizeSuccess(
       nextStep,
       primaryNextStep: nextStep,
       userMessage,
-      ctaLabel: vlmCta,
+      ctaLabel: ctaOut,
       didSynthesize: input.composed.didSynthesize,
       scrubbed: input.composed.scrubbed,
       warnings: input.composed.warnings,
@@ -2163,6 +2448,12 @@ async function finalizeSuccess(
       ),
       softEnvContinuity: (input.composed as { softEnvContinuity?: string }).softEnvContinuity,
       propSource: (input.composed as { propSource?: string }).propSource,
+      actuatorId: (input.composed as { actuatorId?: string }).actuatorId,
+      workflowHash: (input.composed as { workflowHash?: string }).workflowHash,
+      actuatorDegraded: Boolean((input.composed as { actuatorDegraded?: boolean }).actuatorDegraded),
+      actuatorDegradedReason: (input.composed as { actuatorDegradedReason?: string }).actuatorDegradedReason,
+      propPlateGrade: (input.composed as { propPlateGrade?: string }).propPlateGrade,
+      egressCompressed: Boolean((input.composed as { egressCompressed?: boolean }).egressCompressed),
       autoRepairStage: autoRepair.autoRepairStage,
       autoRepairRound: autoRepair.autoRepairRound,
       autoRepairBudgetLeft: autoRepair.autoRepairBudgetLeft,
@@ -2235,12 +2526,18 @@ async function finalizeSuccess(
     if (hq && input.visualPass) {
       try {
         const { cascadeTrackAfterStillHqOk } = await import("@/ruleEngine/quality/cascadeTrackAfterStillHq");
+        const contactPending =
+          Boolean(input.pendingHumanRejudge) &&
+          (input.fidelityItems ?? []).some(
+            (i) => /contact_geom|prop_readable|prop_pose/i.test(i.id) && !i.pass,
+          );
         await cascadeTrackAfterStillHqOk({
           db,
           storyboardId: input.storyboardId,
           stillQuality: "hq_ok",
           visualPass: true,
           litDebt: Boolean(input.repairIrdPrimaryAction && input.repairIrdPrimaryAction !== "none"),
+          contactPendingHuman: contactPending,
         });
       } catch {
         /* optional cascade */
@@ -2260,7 +2557,7 @@ async function finalizeSuccess(
     stillQuality,
     primaryNextStep: nextStepOut,
     userMessage,
-    ctaLabel: vlmCta,
+    ctaLabel: ctaOut,
     missingSlots: input.repairMissingSlots,
     irdPrimaryAction: input.repairIrdPrimaryAction,
     composeSources: input.composed.sources,
@@ -2299,6 +2596,24 @@ async function finalizeSuccess(
     propSource: (input.composed as { propSource?: string }).propSource,
     vendorCalled: (input.composed as { vendorCalled?: boolean }).vendorCalled,
     vendorMs: (input.composed as { vendorMs?: number }).vendorMs,
+    actuatorId: (input.composed as { actuatorId?: string }).actuatorId,
+    workflowHash: (input.composed as { workflowHash?: string }).workflowHash,
+    actuatorDegraded: Boolean((input.composed as { actuatorDegraded?: boolean }).actuatorDegraded),
+    actuatorDegradedReason: (input.composed as { actuatorDegradedReason?: string }).actuatorDegradedReason,
+    propPlateGrade: (input.composed as { propPlateGrade?: string }).propPlateGrade,
+    egressCompressed: Boolean((input.composed as { egressCompressed?: boolean }).egressCompressed),
+    keyOptional: keyMissing,
+    pixelDimStatus: flowPixelDimStatus,
+    debtKind:
+      (input.composed as { fidelityDebtKind?: string }).fidelityDebtKind ||
+      (input.composed as { identityDebtKind?: string }).identityDebtKind ||
+      ((input.composed as { actuatorDegraded?: boolean }).actuatorDegraded
+        ? "actuator_degraded"
+        : (input.composed as { propPlateGrade?: string }).propPlateGrade === "synthetic_geometry"
+          ? "prop_form"
+          : keyMissing
+            ? "key_unmeasured"
+            : undefined),
     bgMode: input.composed.bgMode,
     bgPolicy: input.bgPolicy ?? input.composed.bgPolicy,
     bgPolicyReason: input.composed.bgPolicyReason,
@@ -2306,6 +2621,9 @@ async function finalizeSuccess(
     sheetLeak: input.sheetLeak,
     blockSilentRegen,
     refreshStoryboardBeforeRegen,
+    deliveryTier,
+    requireFixBeforeBurn,
+    ctaKind: ctaResolved?.kind,
     autoRepairStage: autoRepair.autoRepairStage,
     autoRepairRound: autoRepair.autoRepairRound,
     autoRepairBudgetLeft: autoRepair.autoRepairBudgetLeft,

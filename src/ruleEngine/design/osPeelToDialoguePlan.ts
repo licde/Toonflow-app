@@ -79,8 +79,26 @@ export function syncOsPeelToDialoguePlan(
     }
 
     if (peeled.osLines.length && peeled.visual !== vd && peeled.visual.trim().length >= 8) {
-      // Keep VD literary authority when peel only removed OS wrappers; optional clean
-      // Do not rewrite VD here (design-hard: no invent) — peel already used for plan only.
+      // Split children: rewrite VD to OS-peeled visual so parent OS dialogue does not stick on child
+      const isChild = Boolean(
+        shot._stillBeatSplitId ||
+          shot._visualSplitId ||
+          shot._litXorSplitId ||
+          shot._cuCastSplitId ||
+          shot.burnParentForbidden,
+      );
+      if (isChild) {
+        shot.visualDescription = peeled.visual;
+        const narrDlg = (shot.narrative as { dialogue?: { lines?: unknown[] } } | undefined)?.dialogue;
+        if (narrDlg?.lines?.length) {
+          const kept = (narrDlg.lines as Array<{ text?: string; type?: string; speaker?: string }>).filter(
+            (l) =>
+              !/os|vo|画外|旁白/i.test(String(l.type ?? "")) &&
+              !/（OS）|\(OS\)|画外/.test(String(l.speaker ?? "")),
+          );
+          (shot.narrative as { dialogue?: { lines?: unknown[] } }).dialogue = { ...narrDlg, lines: kept };
+        }
+      }
     }
 
     if (opts?.stripOsLip !== false) {

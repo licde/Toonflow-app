@@ -56,7 +56,20 @@ export function applyFixPlanToBundle(bundle: ScriptBundle, issues: ValidationIss
   if (fix.applied.length) {
     // Always pass ruleIds/triggers — never layer names from rePushTargets
     next.rePushPlan = buildRePushPlan(fix.applied);
-    const executed = executeRePushPlan(next.rePushPlan as ReturnType<typeof buildRePushPlan>);
+    const shots = (next.preDesignPack?.shots ?? []) as Record<string, unknown>[];
+    const executed = executeRePushPlan(next.rePushPlan as ReturnType<typeof buildRePushPlan>, {
+      ctx: {
+        shots,
+        meta: ((next as { meta?: Record<string, unknown> }).meta ?? {}) as Record<string, unknown>,
+        planData: (next.planData as Record<string, unknown>) ?? {},
+        bundle: next,
+        chatStrict: false,
+      },
+      maxRounds: 3,
+    });
+    if (executed.shots?.length && next.preDesignPack) {
+      next.preDesignPack = { ...next.preDesignPack, shots: executed.shots as typeof next.preDesignPack.shots };
+    }
     stagesExecuted = executed.stagesToRerun;
     (next as { rePushExecution?: unknown }).rePushExecution = executed;
   }

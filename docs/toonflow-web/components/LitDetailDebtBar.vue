@@ -36,7 +36,25 @@
 
       <t-button v-if="showSplit" size="small" theme="primary" @click="$emit('confirm-split')">
 
-        确认拆镜
+        {{ splitLabel }}
+
+      </t-button>
+
+      <t-button
+
+        v-if="showGenerateContinue"
+
+        size="small"
+
+        theme="primary"
+
+        variant="outline"
+
+        @click="$emit('batch-still')"
+
+      >
+
+        {{ generateContinueLabel }}
 
       </t-button>
 
@@ -182,7 +200,7 @@ import {
 
 } from "@/types/stillIntentOps";
 
-import { humanRejudgePrimaryCta, shouldOfferHumanRejudge, resolveStillDebtSemantics, type StillMeta } from "@/types/stillQuality";
+import { humanRejudgePrimaryCta, shouldOfferHumanRejudge, resolveStillDebtSemantics, resolveStillPrimaryCtaLabel, type StillMeta } from "@/types/stillQuality";
 
 
 
@@ -404,17 +422,44 @@ const regenPropLabel = computed(() =>
 
 
 
-const enhanceLabel = computed(() =>
-
-  irdCtaLabel({
-
-    primaryAction: props.primaryAction === "apply_auto_enhance" ? "apply_auto_enhance" : "confirm_enhance",
-
-    missingSlots: slots.value,
-
+const shootableCta = computed(() =>
+  resolveStillPrimaryCtaLabel({
+    ...(props.stillMeta ?? {}),
+    primaryNextStep: props.primaryNextStep ?? props.stillMeta?.primaryNextStep,
+    irdPrimaryAction: props.primaryAction ?? props.stillMeta?.irdPrimaryAction,
+    stillQuality: (props.stillQuality ?? props.stillMeta?.stillQuality) as StillMeta["stillQuality"],
+    ctaLabel: props.ctaLabel ?? props.stillMeta?.ctaLabel,
   }),
-
 );
+
+const splitLabel = computed(() =>
+  shootableCta.value.kind === "split_and_generate" ? shootableCta.value.label : "智拆并生成",
+);
+
+const showGenerateContinue = computed(
+  () =>
+    !showRegenPropStill.value &&
+    (shootableCta.value.kind === "continue_repair" ||
+      shootableCta.value.kind === "generate" ||
+      shootableCta.value.kind === "enhance_and_generate" ||
+      shootableCta.value.kind === "enqueue_identity_and_generate" ||
+      Boolean(props.stillMeta?.requireFixBeforeBurn)),
+);
+
+const generateContinueLabel = computed(() => {
+  if (shootableCta.value.kind === "enqueue_identity_and_generate") return shootableCta.value.label;
+  if (shootableCta.value.kind === "enhance_and_generate") return shootableCta.value.label;
+  if (shootableCta.value.kind === "continue_repair") return shootableCta.value.label;
+  return "继续生成修复";
+});
+
+const enhanceLabel = computed(() => {
+  if (shootableCta.value.kind === "enhance_and_generate") return shootableCta.value.label;
+  return irdCtaLabel({
+    primaryAction: props.primaryAction === "apply_auto_enhance" ? "apply_auto_enhance" : "confirm_enhance",
+    missingSlots: slots.value,
+  });
+});
 
 
 
@@ -442,7 +487,7 @@ const explainText = computed(() => {
 
   if (props.designDebtBlock) {
 
-    return "设计债未清（缺 propInFrame/contactGeom 等）；请先 IRD/手改 VD，再人审。人审不能跳过设计债。";
+    return "设计债建议先补齐（propInFrame/contactGeom 等）；仍可试拍生成，烧片前须对齐。人审不能假绿 hq。";
 
   }
 
@@ -473,9 +518,9 @@ const explainText = computed(() => {
     return "接触主题胶水：compose 须含「禁口含/禁纸入口/仅落点触」HARD；缺则增强或手改 VD，禁止只 regen。";
   }
 
-  if (slots.value.includes("contactRoleXor")) {
+  if (slots.value.includes("contactRoleXor") || showSplit.value) {
 
-    return "颊触与口创同镜须互斥句或拆镜；可批准增强补 contactRoleXor，或手改 VD。补全后可继续生成。";
+    return "颊触与口创同镜建议智拆并生成；已可试拍（系统会尽量瘦身颊触）。烧片前须拆齐或增强对齐。";
 
   }
 

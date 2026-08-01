@@ -1,5 +1,10 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
+  "shootablePolicy": {
+    "forbidRegenWithoutDescFixMeans": "requireFixBeforeBurn",
+    "blocksGenerate": false,
+    "note": "Legacy forbidRegenWithoutDescFix never grays Generate; mapped by reverseRouteShootable.ts"
+  },
   "routes": [
     {
       "trigger": "visual_multi_beat",
@@ -232,7 +237,8 @@
       "forwardStages": ["SB", "MD-IMG", "EN"],
       "repairPriority": "P0",
       "forbidRegenWithoutDescFix": true,
-      "note": "提示词须覆盖 VD 锚点；禁 freeform 跳过 Shot List"
+      "defaultAction": "healPromptFidelityAnchors",
+      "note": "契约债：egress 须覆盖 VD 锚点；heal 双写 VD+prompt untilClear；永不 HTTP 挡试拍/烧片；假绿禁"
     },
     {
       "trigger": "video_prompt_stale",

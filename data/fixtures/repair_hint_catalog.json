@@ -544,8 +544,8 @@
       "ruleId": "PROMPT-FIDELITY",
       "checkIds": ["PROMPT-FIDELITY"],
       "symptom": "image/video 提示词未覆盖设计锚点",
-      "action": "改 VD 或重编译提示词，禁 freeform 跳过 Shot List",
-      "chatTemplate": "【PROMPT-FIDELITY】提示词须覆盖 visualDescription 文学意图原子（端坐/太师椅/抄书/座次等）。回 SB 改描写或重跑 compose；Edit 焦点只追加缺失项，禁止掏空文学基底假绿。reverseTarget=SB。"
+      "action": "heal 双写 VD+egress 至锚点覆盖；untilClear 非挡拍；禁 freeform 跳过设计",
+      "chatTemplate": "【PROMPT-FIDELITY】契约债：提示词须覆盖 visualDescription 锚点（端坐/太师椅/抄书等）。自动 heal 补锚双写 VD+egress untilClear → 继续生成；Chat 可反推改描写或重 compose。Edit 只追加缺失项，禁掏空文学基底假绿。永不灰「生成」。reverseTarget=SB。"
     },
     {
       "id": "RH-DEX-CAM-FIT",

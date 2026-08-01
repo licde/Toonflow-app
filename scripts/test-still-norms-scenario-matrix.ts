@@ -81,8 +81,8 @@ function ok(name: string, cond: boolean, detail?: string) {
     qualityMode: "hq_update",
     allowXorSoftInject: false,
   });
-  ok("XOR HQ block", g.action === "block", JSON.stringify(g));
-  if (g.action === "block") {
+  ok("XOR HQ advise (shootable-first)", g.action === "advise" || g.action === "block", JSON.stringify(g));
+  if (g.action === "advise" || g.action === "block") {
     ok("XOR next split_shot", g.primaryNextStep === "split_shot");
     ok("XOR no softInject source", !g.sources.includes("lit.hq.xorSoftInject"));
   }
@@ -116,7 +116,7 @@ function ok(name: string, cond: boolean, detail?: string) {
   ok("compose generation contract exported", Boolean(r.generationContract?.contractHash));
 }
 
-// --- compose XOR refuse ---
+// --- compose XOR advise + slim (shootable-first; requireFixBeforeBurn) ---
 {
   const r = composeStillPrompt({
     visualDescription: "特写。沈清漪侧脸，休书纸角划过面颊，她紧咬下唇渗出血珠",
@@ -124,8 +124,13 @@ function ok(name: string, cond: boolean, detail?: string) {
     characters: [{ name: "沈清漪", code: "CHAR-C", hasImage: true, kind: "role" }],
     qualityMode: "hq_update",
   });
-  ok("compose XOR refuse", r.ok === false && r.blockReason === "DEX-LIT-CONTACT-XOR");
-  ok("compose XOR CTA split", r.primaryNextStep === "split_shot");
+  ok("compose XOR shootable ok", r.ok === true, JSON.stringify({ ok: r.ok, warn: r.warnings }));
+  ok(
+    "compose XOR advise sources",
+    (r.sources ?? []).some((s) => /advise|slimXor|preferSplit/.test(s)),
+    JSON.stringify(r.sources?.slice(-8)),
+  );
+  ok("compose XOR slim drops oral", !/紧咬下唇/.test(String(r.prompt ?? r.visualBody ?? "")));
 }
 
 // --- ensemble mid: no faceCu drop ---
@@ -244,7 +249,8 @@ function ok(name: string, cond: boolean, detail?: string) {
     stillQuality: "hq_ok",
     visualPass: true,
     fidelityItems: [{ id: "contact_geom", pass: true }],
-    promptUsed: "特写。纸角贴颊。",
+    promptUsed:
+      "特写。薄纸角贴合面颊划过触肤，禁止口含/手持卡片挡脸，禁止以外类手持物替代本镜事件道具。纸未入口；仅颊触非口含。",
   });
   ok("i2v readiness pass", ready.i2vReady === true, JSON.stringify(ready));
 }

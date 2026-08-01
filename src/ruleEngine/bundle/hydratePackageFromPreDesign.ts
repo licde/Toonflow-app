@@ -169,9 +169,30 @@ export function hydratePackageFromPreDesign(
       es.narrative.endHook ??
       (i === pkg.shots.length - 1 && opts?.endHook ? opts.endHook : undefined);
 
+    const rawAny = raw as RichShot & {
+      promptState?: string;
+      videoStale?: boolean;
+      videoPass?: boolean;
+      burnParentForbidden?: boolean;
+      _stillBeatSplitId?: string;
+      _visualSplitId?: string;
+      _litXorSplitId?: string;
+      _cuCastSplitId?: string;
+      packageVersion?: number;
+    };
+
     return {
       ...es,
       visualDescription: raw.visualDescription ?? es.visualDescription,
+      promptState: rawAny.promptState ?? es.promptState,
+      videoStale: rawAny.videoStale ?? es.videoStale,
+      videoPass: rawAny.videoPass ?? es.videoPass,
+      burnParentForbidden: rawAny.burnParentForbidden ?? es.burnParentForbidden,
+      _stillBeatSplitId: rawAny._stillBeatSplitId ?? es._stillBeatSplitId,
+      _visualSplitId: rawAny._visualSplitId ?? es._visualSplitId,
+      _litXorSplitId: rawAny._litXorSplitId ?? es._litXorSplitId,
+      _cuCastSplitId: rawAny._cuCastSplitId ?? es._cuCastSplitId,
+      packageVersion: rawAny.packageVersion ?? es.packageVersion,
       narrative: {
         ...es.narrative,
         sceneName,

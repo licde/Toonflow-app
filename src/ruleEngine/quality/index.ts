@@ -15,3 +15,5 @@ export * from "./designLossSupplement";
 export * from "./assertPromptDesignFidelity";
 export * from "./camShootableFit";
 export * from "./audioShotLinkage";
+export * from "./episodeStillReadiness";
+export * from "./isoRegenHardDelta";

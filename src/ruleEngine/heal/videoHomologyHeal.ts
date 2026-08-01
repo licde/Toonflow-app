@@ -140,8 +140,10 @@ export function softHealVideoHomologyOnShots(input: {
   if (diagnosed.patches.length) {
     const applied = applyVideoIntentPatches({
       shots,
-      patches: diagnosed.patches.filter((p) =>
-        ["strip_pseudo_lines", "set_voice_none", "set_beat_duration", "set_video_intent"].includes(p.op),
+      patches: diagnosed.patches.filter(
+        (p) =>
+          ["strip_pseudo_lines", "set_voice_none", "set_beat_duration", "set_video_intent"].includes(p.op) ||
+          (p.op === "append_motion_verb" && Number(p.confidence ?? 0) >= 0.75),
       ),
     });
     shots = applied.shots;
@@ -168,8 +170,9 @@ export function softHealVideoHomologyOnShots(input: {
   });
 
   const again = diagnoseVideoIntent({ shots });
+  // Only Confirm when still open after high-conf auto append_motion_verb
   const confirmOnly = again.findings.filter((f) =>
-    ["DEX-VID-MOTION-VERB", "DEX-VID-CAM-MEDIATE"].includes(f.id),
+    ["DEX-VID-MOTION-VERB", "DEX-VID-CAM-MEDIATE", "VID-CONTACT-BEATS"].includes(f.id),
   );
 
   return {

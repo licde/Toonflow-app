@@ -177,6 +177,39 @@ export async function syncStoryboardToDb(
     });
   }
 
+  // Non-replaceAll expand: prune orphan parent storyboard/videoTrack rows not in live panel set
+  if (!opts?.replaceAll && panels.length) {
+    const keepIds = new Set(resultPanels.map((p) => p.id).filter(Boolean) as number[]);
+    const keepFlows = new Set(
+      resultPanels.map((p) => p.flowId).filter((f): f is number => typeof f === "number" && f > 0),
+    );
+    const orphans = existingRows.filter((r) => {
+      if (!r.id || keepIds.has(r.id)) return false;
+      if (r.flowId && keepFlows.has(Number(r.flowId))) return false;
+      // Only prune when panels look like a split (child markers present)
+      const splitish = panels.some(
+        (p) =>
+          Boolean((p as { _stillBeatSplitId?: string })._stillBeatSplitId) ||
+          Boolean((p as { _visualSplitId?: string })._visualSplitId) ||
+          Boolean((p as { _litXorSplitId?: string })._litXorSplitId) ||
+          Boolean((p as { burnParentForbidden?: boolean }).burnParentForbidden),
+      );
+      return splitish;
+    });
+    if (orphans.length) {
+      const orphanIds = orphans.map((r) => r.id!);
+      const orphanTrackIds = [
+        ...new Set(orphans.map((r) => r.trackId).filter((t): t is number => typeof t === "number")),
+      ];
+      await db("o_assets2Storyboard").whereIn("storyboardId", orphanIds).delete();
+      await db("o_storyboard").whereIn("id", orphanIds).delete();
+      for (const tid of orphanTrackIds) {
+        const stillUsed = await db("o_storyboard").where({ trackId: tid }).first();
+        if (!stillUsed) await db("o_videoTrack").where("id", tid).delete();
+      }
+    }
+  }
+
   await assignTrackIds(db, scriptId, projectId);
   return { panels: resultPanels, idMap, mediaPreservedCount };
 }

@@ -654,6 +654,54 @@ export default (toolCpnfig: ToolConfig) => {
         return text ?? "无数据";
       },
     }),
+    resolve_still_cta: tool({
+      description:
+        "静帧 CTA SSOT（与 Web DebtBar 同源）：finding=契约债→反推治愈；永不灰生成；缺定妆=补定妆并继续生成；PROMPT-FIDELITY=增强锚点并生成",
+      inputSchema: jsonSchema<{
+        primaryNextStep?: string;
+        irdPrimaryAction?: string;
+        stillQuality?: string;
+        visualPass?: boolean;
+        debtKind?: string;
+        propPlateGrade?: string;
+        keyOptional?: boolean;
+        pixelDimStatus?: string;
+      }>(
+        z
+          .object({
+            primaryNextStep: z.string().optional(),
+            irdPrimaryAction: z.string().optional(),
+            stillQuality: z.string().optional(),
+            visualPass: z.boolean().optional(),
+            debtKind: z.string().optional(),
+            propPlateGrade: z.string().optional(),
+            keyOptional: z.boolean().optional(),
+            pixelDimStatus: z.string().optional(),
+          })
+          .toJSONSchema(),
+      ),
+      execute: async (input) => {
+        const { resolveStillPrimaryCtaLabel, shouldBlockSilentStillRegen } = await import(
+          "@/agents/scriptAgent/stillCtaSsot"
+        );
+        const meta = {
+          primaryNextStep: input.primaryNextStep,
+          irdPrimaryAction: input.irdPrimaryAction,
+          stillQuality: input.stillQuality as "weak" | "hq_ok" | "missing" | undefined,
+          visualPass: input.visualPass,
+          debtKind: input.debtKind,
+          propPlateGrade: input.propPlateGrade,
+          keyOptional: input.keyOptional,
+          pixelDimStatus: input.pixelDimStatus,
+        };
+        const cta = resolveStillPrimaryCtaLabel(meta);
+        return JSON.stringify({
+          ...cta,
+          blockSilentRegen: shouldBlockSilentStillRegen(meta),
+          note: "finding=契约债→反推治愈；blocksGenerate always false; identity→enqueue_identity_and_generate",
+        });
+      },
+    }),
   };
   return toolsNames ? Object.fromEntries(Object.entries(tools).filter(([n]) => toolsNames.includes(n))) : tools;
 };

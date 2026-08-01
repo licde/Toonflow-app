@@ -178,7 +178,16 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
     try {
       const { applyDesignAutoCloseToBundle } =
         require("./design/designAutoClose") as typeof import("./design/designAutoClose");
-      const ac = applyDesignAutoCloseToBundle(working, { stageId: "SB", maxRounds: 4, forceExpand: true });
+      const alreadyExpanded = Boolean(
+        (working as { _importSplitExpanded?: boolean })._importSplitExpanded ||
+          (working.meta as { importSplitExpanded?: boolean } | undefined)?.importSplitExpanded,
+      );
+      // Single-expand-pass: prepare already expanded → auto-close must not re-inflate shots
+      const ac = applyDesignAutoCloseToBundle(working, {
+        stageId: "SB",
+        maxRounds: 4,
+        forceExpand: !alreadyExpanded,
+      });
       working = ac.bundle;
       if (ac.autoClosed.applied) {
         for (const id of ac.autoClosed.clearedIds) salvagedRuleIds.add(id);
@@ -186,13 +195,45 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
           at: now(),
           ruleId: "SH-DESIGN-AUTO-CLOSE",
           action: "design_auto_close",
-          detail: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"};ops=${ac.autoClosed.changes.length}`,
+          detail: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"};ops=${ac.autoClosed.changes.length};forceExpand=${!alreadyExpanded}`,
         });
         (shapeSalvageLog as ShapeSalvageEntry[]).push({
           ruleId: "SH-DESIGN-AUTO-CLOSE",
           path: "planData.shotDesignIntent|assetCrefPlan|dialoguePlan",
           action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"}`,
         });
+      }
+      // False-green: re-audit GEN after AUTO-CLOSE — keep importOk≠exit if GEN open
+      try {
+        const { auditGenerationApplyGaps } =
+          require("./bundle/generationApplyAudit") as typeof import("./bundle/generationApplyAudit");
+        const genGaps = auditGenerationApplyGaps(working);
+        const openGen = genGaps.filter((g) => /^GEN-0[356]$/.test(g.id));
+        if (openGen.length) {
+          const bMeta = ((working as { meta?: Record<string, unknown> }).meta ??= {});
+          bMeta.importOkNotExitPass = true;
+          bMeta.designExitIncomplete = true;
+          healLog.push({
+            at: now(),
+            ruleId: "FALSE-GREEN-GEN",
+            action: "auto_close_gen_open",
+            detail: openGen.map((g) => g.id).join(","),
+          });
+          (shapeSalvageLog as ShapeSalvageEntry[]).push({
+            ruleId: "FALSE-GREEN-GEN",
+            path: "generation.imagePrompt",
+            action: `gen_open_after_auto_close:${openGen.map((g) => g.id).join(",")}`,
+          });
+        }
+      } catch {
+        /* optional */
+      }
+      try {
+        const { pruneIntentGraphOnBundle } =
+          require("./design/intentGraphPrune") as typeof import("./design/intentGraphPrune");
+        pruneIntentGraphOnBundle(working);
+      } catch {
+        /* optional */
       }
     } catch {
       /* optional */
@@ -223,11 +264,51 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
             salvagedRuleIds.add("DEX-VID-PSEUDO-LINE");
             salvagedRuleIds.add("DEX-VID-VOICE-MODE");
             salvagedRuleIds.add("DEX-VID-BEAT-DUR");
+            salvagedRuleIds.add("DEX-VID-MOTION-VERB");
+            salvagedRuleIds.add("VID-CONTACT-BEATS");
+          }
+          if (vh.heals.some((h) => /motion|contact-beats/i.test(h))) {
+            salvagedRuleIds.add("DEX-VID-MOTION-VERB");
+            salvagedRuleIds.add("VID-CONTACT-BEATS");
           }
           (shapeSalvageLog as ShapeSalvageEntry[]).push({
             ruleId: "SH-VIDEO-HOMOLOGY",
             path: "preDesignPack.shots",
             action: `heals=${vh.heals.join(",")};cleared=${vh.cleared}`,
+          });
+        }
+      }
+    } catch {
+      /* optional */
+    }
+
+    // CHAIN-BEAT untilClear — alias-aware graft (勿甩须手改清单)
+    try {
+      const pd = working.preDesignPack as { shots?: Record<string, unknown>[] } | undefined;
+      if (pd?.shots?.length) {
+        const { healLiteraryBeatCoverage } =
+          require("./design/literaryBeatCoverage") as typeof import("./design/literaryBeatCoverage");
+        const { sliceChildrenAfterSplit } =
+          require("./design/orchestratorTailSlice") as typeof import("./design/orchestratorTailSlice");
+        let shots = [...pd.shots];
+        const hb = healLiteraryBeatCoverage(shots);
+        shots = hb.shots;
+        const sl = sliceChildrenAfterSplit(shots);
+        shots = sl.shots;
+        pd.shots = shots as never;
+        working = { ...working, preDesignPack: pd };
+        if (hb.grafted || hb.remaining === 0) {
+          salvagedRuleIds.add("CHAIN-BEAT");
+          healLog.push({
+            at: now(),
+            ruleId: "CHAIN-BEAT-HEAL",
+            action: "graft_parent_anchors",
+            detail: `grafted=${hb.grafted};remain=${hb.remaining}`,
+          });
+          (shapeSalvageLog as ShapeSalvageEntry[]).push({
+            ruleId: "CHAIN-BEAT-HEAL",
+            path: "preDesignPack.shots",
+            action: `grafted=${hb.grafted};remain=${hb.remaining}`,
           });
         }
       }

@@ -38,7 +38,7 @@
     - **M2** 有词无声：对白镜缺 `audioPrompt` → `CHAT-AUD-01` **BLOCK**（可先 auto seed）
     - **M3** 无词有声：设计确认静音（`dialogueLines: []`）→ `AUD-ORPHAN-SPEECH` strip；未传 lines 可保留嵌入 CJK
     - **M4** 出镜对白禁 `none/silent` / `no lip sync` → `NO-LIP-DIALOGUE`
-    - **M5** 提示词须覆盖 VD 锚点 → `PROMPT-FIDELITY`；禁 non-stub freeform 跳过设计
+    - **M5** 提示词须覆盖 VD 锚点 → `PROMPT-FIDELITY`（契约债→heal 双写 untilClear；**永不挡试拍/烧片**；draft≠hq_ok）
     - **M6** 多拍拒出站 → `DEX-STILL-ONEBEAT` / `split_shot`；禁 `trimToOneBeat` 假绿
     - **M7** VD/对白 `designContentHash` 漂移 → `VIDEO-PROMPT-STALE`；须重编译再烧
     - CI：`yarn test:dialogue-audio-loop` · `yarn test:prompt-fidelity-loop`

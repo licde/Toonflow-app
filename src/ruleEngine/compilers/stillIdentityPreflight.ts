@@ -23,6 +23,9 @@ export interface StillIdentityPreflightResult {
   missing?: string[];
   /** Suggest selfHeal batch_still */
   suggestBatchStill?: boolean;
+  /** Honest: never synth identity plate */
+  debtKind?: "missing_identity";
+  enqueueIdentity?: boolean;
 }
 
 function realCharacters(input?: ComposeStillCharHint[] | null): ComposeStillCharHint[] {
@@ -69,9 +72,11 @@ export function assertStillIdentityPreflight(input: {
         code: "IMG-CREF-CHAR",
         primaryNextStep: primary.primaryNextStep,
         userMessage: primary.userMessage,
-        ctaLabel: primary.ctaLabel,
+        ctaLabel: "补定妆资产后再生成",
         missing,
         suggestBatchStill: true,
+        debtKind: "missing_identity",
+        enqueueIdentity: true,
       };
     }
   }
@@ -87,9 +92,11 @@ export function assertStillIdentityPreflight(input: {
       code: gate.code ?? "IMG-CREF-CHAR",
       primaryNextStep: gate.primaryNextStep,
       userMessage: gate.userMessage,
-      ctaLabel: gate.ctaLabel,
+      ctaLabel: "补定妆资产后再生成",
       missing: gate.missing,
       suggestBatchStill: true,
+      debtKind: "missing_identity",
+      enqueueIdentity: true,
     };
   }
   return { ok: true };

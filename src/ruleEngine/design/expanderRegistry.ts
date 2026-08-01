@@ -132,6 +132,61 @@ export function runShotExpanders(
     /* optional */
   }
 
+  // Continuity inherit on all expand paths (not only XOR)
+  try {
+    const { inheritContinuityAlongEdges } =
+      require("./splitContinuityInherit") as typeof import("./splitContinuityInherit");
+    const edges = (
+      opts?.meta?.intentGraph as { edges?: import("./shootableArchitecture").IntentGraphEdge[] } | undefined
+    )?.edges;
+    const cont = inheritContinuityAlongEdges({ shots: next, edges });
+    next = cont.shots;
+    if (cont.inherited > 0) {
+      log.push({ expanderId: "continuity_inherit", expanded: true, count: cont.inherited });
+    }
+  } catch {
+    /* optional */
+  }
+
+  // Wire media preserve policy after split (was dead code)
+  try {
+    const anyExpanded = log.some((l) => l.expanded && l.expanderId !== "ledger_rebind");
+    if (anyExpanded) {
+      const { applyMediaPreserveOnSplit } =
+        require("./visBeatLifecycle") as typeof import("./visBeatLifecycle");
+      const byParent = new Map<string, Record<string, unknown>>();
+      for (const s of next) {
+        const id = String(s.clientId ?? "");
+        if (
+          id &&
+          !s._stillBeatSplitId &&
+          !s._visualSplitId &&
+          !s._litXorSplitId &&
+          !s._cuCastSplitId
+        ) {
+          byParent.set(id, s);
+        }
+      }
+      const groups = new Map<string, Record<string, unknown>[]>();
+      for (const s of next) {
+        const pk = String(
+          s._stillBeatSplitId ?? s._visualSplitId ?? s._litXorSplitId ?? s._cuCastSplitId ?? "",
+        );
+        if (!pk) continue;
+        const arr = groups.get(pk) ?? [];
+        arr.push(s);
+        groups.set(pk, arr);
+      }
+      for (const [pk, children] of groups) {
+        const parent = byParent.get(pk);
+        if (!parent?.filePath) continue;
+        applyMediaPreserveOnSplit(children, parent);
+      }
+    }
+  } catch {
+    /* optional */
+  }
+
   return { shots: next, log };
 }
 

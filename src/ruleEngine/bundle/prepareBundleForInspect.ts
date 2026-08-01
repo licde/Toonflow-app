@@ -81,7 +81,10 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
         {};
       const chatStrict = Boolean((bundle as { chatStrict?: boolean }).chatStrict);
       // Import/ingest: pressure-gated smart expand（同核愈）；Chat 默认诊不拆，除非 forceExpand
+      // Discipline: only high-confidence must-split + net-cap; else Confirm
+      const EXPAND_NET_CAP = 8;
       let allowApplyExpand = Boolean(opts.forceExpand) && !chatStrict;
+      let pressureConfirmOnly = false;
       if (!allowApplyExpand && !chatStrict && opts.ingestHeal !== false) {
         try {
           const { diagnoseStillIntent } =
@@ -95,19 +98,25 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
             meta,
           });
           const lipP = shots.some((s) => detectLipSplitPressure(s).mustConfirm);
-          // Only must-split pressure opens expand; soft enhance patches ≠ auto expand (防 16→N)
-          allowApplyExpand = Boolean(
-            diagnose.confirmRequired ||
-              lipP ||
-              diagnose.patches.some(
-                (p) =>
-                  p.op === "split_onebeat" ||
-                  p.op === "split_speak_react" ||
-                  p.op === "split_cu_cast" ||
-                  p.op === "split_lit_xor" ||
-                  /split/i.test(String(p.op ?? "")),
-              ),
+          const splitPatches = diagnose.patches.filter(
+            (p) =>
+              p.op === "split_onebeat" ||
+              p.op === "split_speak_react" ||
+              p.op === "split_cu_cast" ||
+              p.op === "split_lit_xor" ||
+              /split/i.test(String(p.op ?? "")),
           );
+          const highConf =
+            diagnose.confirmRequired === false &&
+            (splitPatches.length > 0 || lipP) &&
+            splitPatches.every((p) => Number((p as { confidence?: number }).confidence ?? 0.85) >= 0.75);
+          const estimatedNet = Math.max(splitPatches.length, lipP ? 1 : 0);
+          if (highConf && estimatedNet <= EXPAND_NET_CAP) {
+            allowApplyExpand = true;
+          } else if (diagnose.confirmRequired || lipP || splitPatches.length) {
+            pressureConfirmOnly = true;
+            allowApplyExpand = false;
+          }
         } catch {
           allowApplyExpand = false;
         }
@@ -115,7 +124,8 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
       diagnoseOnly = !allowApplyExpand;
 
       if (!chatStrict || diagnoseOnly) {
-        if (allowApplyExpand) {
+        // migrate / IRD apply only on explicit forceExpand（作者包禁静默 speak_react 同文增产）
+        if (allowApplyExpand && opts.forceExpand) {
           const { shouldMigrateMultiBeat, migrateMultiBeatStockShots } =
             require("../design/migrateMultiBeatStock") as typeof import("../design/migrateMultiBeatStock");
           if (shouldMigrateMultiBeat(meta)) {
@@ -136,7 +146,9 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
           const { runStillIntentHeal, diagnoseStillIntent } =
             require("../design/stillIntentReverse") as typeof import("../design/stillIntentReverse");
           applyNormalizedShotsToBundle(bundle, shots as Parameters<typeof applyNormalizedShotsToBundle>[1]);
-          if (allowApplyExpand) {
+          // Author import: IRD split only on explicit forceExpand（防 speak_react 同文 DUP 11→N）
+          // 压力门只跑 litXor/cu expanders；mustSplit → Confirm
+          if (allowApplyExpand && opts.forceExpand) {
             const ird = runStillIntentHeal(bundle, {
               chatStrict: false,
               meta,
@@ -164,7 +176,7 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
               (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired = true;
             }
           } else {
-            // diagnose-only: no apply — mustSplit → Confirm, never silent expand
+            // diagnose-only: no IRD apply — mustSplit → Confirm；压力扩仅 expander litXor/cu
             const diagnose = diagnoseStillIntent(shots, {
               chatStrict: true,
               bundle,
@@ -173,12 +185,13 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
             });
             const must =
               diagnose.confirmRequired ||
+              pressureConfirmOnly ||
               diagnose.patches.some((p) => p.op === "split_onebeat" || p.op === "split_speak_react");
             if (must) {
               semanticHealLog.push({
                 ruleId: "IRD-DIAGNOSE-ONLY",
                 path: "preDesignPack.shots",
-                action: `mustSplit;primary=${diagnose.primaryAction};patches=${diagnose.patches.length}`,
+                action: `mustSplit;primary=${diagnose.primaryAction};patches=${diagnose.patches.length};pressureConfirm=${pressureConfirmOnly}`,
               });
               (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired = true;
               const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
@@ -205,9 +218,10 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
           const { runCamFitUntilClear } =
             require("../export/camFitHygiene") as typeof import("../export/camFitHygiene");
           applyNormalizedShotsToBundle(bundle, shots as Parameters<typeof applyNormalizedShotsToBundle>[1]);
+          // Cam-fit speak_react apply only on forceExpand；压力门诊不拆（防同文 DUP）
           const cam = runCamFitUntilClear(bundle, {
-            chatStrict: !allowApplyExpand,
-            maxRounds: allowApplyExpand ? 5 : 0,
+            chatStrict: !opts.forceExpand,
+            maxRounds: opts.forceExpand ? 5 : 0,
           });
           shots = ((bundle.preDesignPack as { shots?: Record<string, unknown>[] })?.shots ?? shots) as Record<
             string,
@@ -224,14 +238,14 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
           }
           if (cam.confirmRequired) {
             semanticHealLog.push({
-              ruleId: allowApplyExpand ? "IRD-CONFIRM" : "IRD-DIAGNOSE-ONLY",
+              ruleId: opts.forceExpand ? "IRD-CONFIRM" : "IRD-DIAGNOSE-ONLY",
               path: "preDesignPack.shots",
               action: `cam_fit_remain:${cam.remainingMustSplit}`,
             });
             (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired = true;
             const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
             bMeta.irdConfirmRequired = true;
-            if (!allowApplyExpand) bMeta.importDiagnoseOnly = true;
+            if (!opts.forceExpand) bMeta.importDiagnoseOnly = true;
           }
         } catch (e) {
           semanticHealLog.push({
@@ -242,24 +256,48 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
         }
 
         if (allowApplyExpand) {
+          const beforeN = shots.length;
+          // Author pack: ban dialogue_cluster / onebeat inflate；仅 litXor/cu
           const expanded = runShotExpanders(shots, {
             meta: { ...meta, pillarsVisBeatV2: (meta.pillarsVisBeatV2 as string) || "enforce" },
-            applyClusters: true,
-            applyStillOneBeat: true,
+            applyClusters: Boolean(opts.forceExpand),
+            applyStillOneBeat: Boolean(opts.forceExpand),
+            applyCuCast: true,
+            applyLitXor: true,
+            forceExpand: Boolean(opts.forceExpand),
+            maxVisualExpand: 40,
           });
           shots = expanded.shots;
-          if (expanded.log.some((l) => l.expanded)) {
+          const net = shots.length - beforeN;
+          if (net > EXPAND_NET_CAP && !opts.forceExpand) {
+            // Cap exceeded without explicit forceExpand → roll back to diagnose Confirm
+            shots = (normalized.shots as Record<string, unknown>[]).slice();
+            expandApplied = false;
+            (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired = true;
+            const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+            bMeta.irdConfirmRequired = true;
+            bMeta.importOkNotExitPass = true;
+            semanticHealLog.push({
+              ruleId: "EXPAND-CAP-CONFIRM",
+              path: "preDesignPack.shots",
+              action: `net=${net}>cap=${EXPAND_NET_CAP};rolled_back`,
+            });
+          } else if (expanded.log.some((l) => l.expanded) && net > 0) {
             expandApplied = true;
             semanticHealLog.push({
               ruleId: "VIS-MULTI-BEAT",
               path: "preDesignPack.shots",
-              action: `expand:${expanded.log.map((l) => `${l.expanderId}:${l.count}`).join(",")}`,
+              action: `expand:${expanded.log.map((l) => `${l.expanderId}:${l.count}`).join(",")};net=${net}`,
             });
             cascadeForwardStale({ shots, forwardStages: ["SB", "MD-IMG", "EN"] });
             (bundle as { _importSplitExpanded?: boolean })._importSplitExpanded = true;
             const bAny = bundle as { meta?: Record<string, unknown> };
             if (!bAny.meta) bAny.meta = {};
             bAny.meta.importSplitExpanded = true;
+            bAny.meta.packageVersion = Number(bAny.meta.packageVersion ?? 0) + 1;
+            for (const s of shots) {
+              s.packageVersion = Number(s.packageVersion ?? 0) + 1;
+            }
             if (!bAny.meta.irdProvenance) {
               semanticHealLog.push({
                 ruleId: "IRD-PROVENANCE-MISSING",
@@ -267,6 +305,12 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
                 action: "silent_expand_without_ird",
               });
             }
+          } else if (expanded.log.some((l) => l.expanded) && net === 0) {
+            semanticHealLog.push({
+              ruleId: "VIS-MULTI-BEAT",
+              path: "preDesignPack.shots",
+              action: `expand_noop:${expanded.log.map((l) => `${l.expanderId}:${l.count}`).join(",")};net=0`,
+            });
           }
         } else {
           semanticHealLog.push({
@@ -340,6 +384,44 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
         action: e instanceof Error ? e.message.slice(0, 80) : "fail",
       });
     }
+    // CHAIN-BEAT untilClear (alias-aware graft) — 勿甩手改清单
+    try {
+      const { healLiteraryBeatCoverage } =
+        require("../design/literaryBeatCoverage") as typeof import("../design/literaryBeatCoverage");
+      const { sliceChildrenAfterSplit } =
+        require("../design/orchestratorTailSlice") as typeof import("../design/orchestratorTailSlice");
+      const hb = healLiteraryBeatCoverage(shots);
+      shots = hb.shots;
+      const sl = sliceChildrenAfterSplit(shots);
+      shots = sl.shots;
+      if (hb.grafted || sl.chainBeatBlocks === 0) {
+        semanticHealLog.push({
+          ruleId: "CHAIN-BEAT-HEAL",
+          path: "preDesignPack.shots",
+          action: `grafted=${hb.grafted};remain=${hb.remaining || sl.chainBeatBlocks}`,
+        });
+      }
+      applyNormalizedShotsToBundle(bundle, shots as Parameters<typeof applyNormalizedShotsToBundle>[1]);
+    } catch {
+      /* optional */
+    }
+    // Video motion/contact untilClear on prepare (同源 softHeal)
+    try {
+      const { softHealVideoHomologyOnShots } =
+        require("../heal/videoHomologyHeal") as typeof import("../heal/videoHomologyHeal");
+      const vh = softHealVideoHomologyOnShots({ shots });
+      if (vh.changed) {
+        shots = vh.shots;
+        applyNormalizedShotsToBundle(bundle, shots as Parameters<typeof applyNormalizedShotsToBundle>[1]);
+        semanticHealLog.push({
+          ruleId: "SH-VIDEO-HOMOLOGY",
+          path: "preDesignPack.shots",
+          action: `heals=${vh.heals.join(",")};cleared=${vh.cleared}`,
+        });
+      }
+    } catch {
+      /* optional */
+    }
     // Duration raise-only: bare 1s + dialogue → min 2
     for (const s of shots) {
       const lines = (s.narrative as { dialogue?: { lines?: unknown[] } } | undefined)?.dialogue?.lines ?? [];
@@ -353,6 +435,62 @@ export function prepareBundleForInspect(raw: unknown, opts: PrepareBundleForInsp
           action: `${dur}→2`,
         });
       }
+    }
+    applyNormalizedShotsToBundle(bundle, shots as Parameters<typeof applyNormalizedShotsToBundle>[1]);
+
+    // Always slot-heal egress (even when no expand) — GEN-05/06/03 closed loop
+    try {
+      const { importDesignSlotHeal } =
+        require("../design/importDesignSlotHeal") as typeof import("../design/importDesignSlotHeal");
+      const healed = importDesignSlotHeal(bundle);
+      shots = (bundle.preDesignPack?.shots ?? shots) as Record<string, unknown>[];
+      if (healed.summary.healed || healed.summary.egressRewritten) {
+        semanticHealLog.push({
+          ruleId: "DESIGN-SLOT-HEAL",
+          path: "preDesignPack.shots",
+          action: `healed=${healed.summary.healed};egress=${healed.summary.egressRewritten};fid=${healed.summary.fidelityHealed};cont=${healed.summary.continuityInherited}`,
+        });
+      }
+    } catch (e) {
+      semanticHealLog.push({
+        ruleId: "DESIGN-SLOT-HEAL",
+        path: "preDesignPack.shots",
+        action: e instanceof Error ? e.message.slice(0, 80) : "fail",
+      });
+    }
+    try {
+      const { pruneIntentGraphOnBundle } =
+        require("../design/intentGraphPrune") as typeof import("../design/intentGraphPrune");
+      const pg = pruneIntentGraphOnBundle(bundle);
+      if (pg.pruned || pg.rebuilt) {
+        semanticHealLog.push({
+          ruleId: "INTENT-GRAPH-PRUNE",
+          path: "planData.intentGraph",
+          action: `pruned=${pg.pruned};rebuilt=${pg.rebuilt}`,
+        });
+      }
+    } catch {
+      /* optional */
+    }
+    // Post slot-heal: designExit diagnose — GEN/fidelity open → importOk≠exitPass
+    try {
+      const { auditGenerationApplyGaps } =
+        require("./generationApplyAudit") as typeof import("./generationApplyAudit");
+      const openGen = auditGenerationApplyGaps(bundle).filter((g) => /^GEN-0[356]$/.test(g.id));
+      if (openGen.length) {
+        const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+        bMeta.importOkNotExitPass = true;
+        bMeta.designExitIncomplete = true;
+        (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired =
+          (bundle as { irdConfirmRequired?: boolean }).irdConfirmRequired || openGen.length > 2;
+        semanticHealLog.push({
+          ruleId: "POST-HEAL-DESIGN-EXIT",
+          path: "generation.imagePrompt",
+          action: `gen_open:${openGen.map((g) => g.id).join(",")};importOk≠exit`,
+        });
+      }
+    } catch {
+      /* optional */
     }
     applyNormalizedShotsToBundle(bundle, shots as Parameters<typeof applyNormalizedShotsToBundle>[1]);
     speakerOrphans = normalized.speakerOrphans ?? [];

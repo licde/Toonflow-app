@@ -42,8 +42,99 @@ export const STILL_PRIMARY_LOOK_VLM_TEMPLATE =
 export const STILL_PRIMARY_LOOK_HEAL_TEMPLATE =
   "本镜主look以「{NAME}」定妆为准，禁止混用其他角色衣装色系";
 
-/** Neighbor continuity atoms that must not overwrite a different beat. */
-const CONTAMINATION_ATOMS = /端坐|太师椅|摩挲扳指|扳指|蒲团跪|跪低位|低位|蒲团|跪于/;
+/** Neighbor continuity / previous atoms that must not overwrite a different beat. */
+const CONTAMINATION_ATOMS =
+  /端坐|太师椅|摩挲扳指|扳指|蒲团跪|跪低位|低位|蒲团|跪于|咬唇|紧咬下唇|紧咬|渗血|lip_bite|划过面颊|纸角划过|前景：[^，。]{0,12}唇/;
+
+/** Off-beat mouth / CU atoms — previous refine must drop when current VD lacks them. */
+export const OFF_BEAT_MOUTH_CU_ATOMS =
+  /咬唇|紧咬下唇|紧咬|渗血|lip_bite_blood|lip_bite|划过面颊|纸角划过|侧脸特写|唇部特写|前景：[^，。]{0,16}唇/;
+
+/** Current-shot action-primary stems that previous must survive (or drop previous). */
+export const ACTION_PRIMARY_SURVIVE_STEMS = /弯腰|捡起|捡|捏紧|指节|俯身/;
+
+/**
+ * True when previous/continuity body carries neighbor mouth/CU atoms absent from current VD.
+ */
+export function previousBodyHasOffBeatContamination(
+  previous?: string | null,
+  visualDescription?: string | null,
+): boolean {
+  const prev = String(previous ?? "");
+  const vd = String(visualDescription ?? "");
+  if (!prev.trim()) return false;
+  if (OFF_BEAT_MOUTH_CU_ATOMS.test(prev) && !OFF_BEAT_MOUTH_CU_ATOMS.test(vd)) return true;
+  if (CONTAMINATION_ATOMS.test(prev) && !CONTAMINATION_ATOMS.test(vd)) {
+    // Seating soup in previous while current is action-primary pickup
+    if (ACTION_PRIMARY_SURVIVE_STEMS.test(vd) && /端坐|太师椅|扳指|蒲团|跪/.test(prev)) return true;
+  }
+  // Current requires pickup/grip but previous lacks those stems
+  if (ACTION_PRIMARY_SURVIVE_STEMS.test(vd)) {
+    const needPickup = /捡|弯腰|俯身/.test(vd);
+    const needGrip = /捏紧|指节/.test(vd);
+    if (needPickup && !/捡|弯腰|俯身/.test(prev)) return true;
+    if (needGrip && !/捏紧|指节|捏/.test(prev)) return true;
+  }
+  return false;
+}
+
+/** Skirt / body-fragment background — forbid full secondary face + prop steal. */
+export type BgFragmentKind = "skirt_blur" | "sleeve_blur" | "body_fragment" | null;
+
+export function resolveBgFragment(input: {
+  visualDescription?: string | null;
+  background?: string | null;
+  imagePrompt?: string | null;
+  spatialRelation?: string | null;
+}): { kind: BgFragmentKind; guidance: string | null; stripFullSecondary: boolean } {
+  const blob = [
+    input.visualDescription,
+    input.background,
+    input.imagePrompt,
+    input.spatialRelation,
+  ]
+    .map((s) => String(s ?? ""))
+    .join("\n");
+  if (/裙摆/.test(blob) && /虚化|浅景深|背景/.test(blob + "虚化")) {
+    return {
+      kind: "skirt_blur",
+      guidance:
+        "背景仅次角裙摆虚化浅景深，禁止次角完整正脸/半身立像，禁止次角持书/持纸抢戏，禁止双人同权构图",
+      stripFullSecondary: true,
+    };
+  }
+  if (/裙摆|衣角|袖缘|袍角/.test(blob) && !/双人同框|对峙中景/.test(blob)) {
+    return {
+      kind: "body_fragment",
+      guidance:
+        "背景为局部身体碎片虚化，禁止次角完整正脸与持道具抢戏；空间站立仅作方位 hint，不画完整立像",
+      stripFullSecondary: true,
+    };
+  }
+  if (/袖缘|衣角|袍角/.test(blob)) {
+    return {
+      kind: "sleeve_blur",
+      guidance: "背景仅衣角/袖缘虚化，禁止次角完整人脸持物抢戏",
+      stripFullSecondary: true,
+    };
+  }
+  return { kind: null, guidance: null, stripFullSecondary: false };
+}
+
+/** Mouth-detail performance inject only when VD declares mouth action. */
+export function mouthDetailAllowedByVd(
+  mouthDetail?: string | null,
+  visualDescription?: string | null,
+): boolean {
+  const md = String(mouthDetail ?? "").trim();
+  if (!md) return true;
+  const vd = String(visualDescription ?? "");
+  if (/neutral|closed|自然|闭合/i.test(md) && !/咬|渗血|lip_bite/i.test(md)) return true;
+  if (/咬|刺|含|衔|捂嘴|渗血|lip_bite/i.test(md)) {
+    return /咬|刺|含|衔|捂嘴|渗血|下唇/.test(vd);
+  }
+  return true;
+}
 
 /**
  * Primary face/name from VD literary body — earliest cast-name occurrence wins
@@ -124,6 +215,9 @@ export function softenContinuityForFirstFrame(input: {
       .replace(/蒲团跪[^，。；;]{0,12}/g, "")
       .replace(/跪低位|跪于低|低位/g, "")
       .replace(/蒲团/g, "")
+      .replace(/咬唇|紧咬下唇|紧咬|渗血|lip_bite_blood|lip_bite/gi, "")
+      .replace(/划过面颊|纸角划过/g, "")
+      .replace(/侧脸特写|唇部特写|前景：[^，。；]{0,16}唇[^，。；]{0,8}/g, "")
       .replace(/\s{2,}/g, " ")
       .replace(/[，,]{2,}/g, "，")
       .trim();
@@ -390,9 +484,16 @@ export function preserveLiteraryCoreForEdit(input: {
   literaryPrompt: string;
   visualDescription?: string | null;
 }): string {
-  const lit = String(input.literaryPrompt ?? "").trim();
+  let lit = String(input.literaryPrompt ?? "").trim();
   const vd = String(input.visualDescription ?? "").trim();
   if (!vd) return lit;
+  // Strip off-beat mouth/CU soup from Edit base when VD is action-primary
+  if (previousBodyHasOffBeatContamination(lit, vd)) {
+    lit = lit
+      .replace(/[^。；;\n]*(?:咬唇|紧咬|渗血|lip_bite|划过面颊|唇部特写)[^。；;\n]*/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
   // If Edit base lost VD action head, prepend peeled VD (no cast card)
   const vdCore = vd
     .replace(/出镜人数[：:][^。\n]{0,160}/g, "")
@@ -401,6 +502,15 @@ export function preserveLiteraryCoreForEdit(input: {
     .slice(0, 160);
   if (!vdCore || vdCore.length < 8) return lit;
   const head = vdCore.slice(0, Math.min(24, vdCore.length));
-  if (lit.includes(head)) return lit;
+  if (lit.includes(head)) {
+    // Still ensure action stems present
+    if (ACTION_PRIMARY_SURVIVE_STEMS.test(vd)) {
+      const act = vd.match(/[^。；;\n]*(?:弯腰|捡起|捡|捏紧|指节)[^。；;\n]{0,36}/)?.[0];
+      if (act && !new RegExp(act.slice(0, 6)).test(lit)) {
+        return `${act}。${lit}`.replace(/。。+/g, "。").trim();
+      }
+    }
+    return lit;
+  }
   return `${vdCore}。${lit}`.replace(/。。+/g, "。").trim();
 }

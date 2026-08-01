@@ -1367,7 +1367,7 @@ shotSize、cameraMovement、lightingSetup、compiledPrompt。
 - **一镜一画面（语义强制）**：连续≥3 归一化同文 VD（**有对白也算**）→ `DEX-DUP-VD` BLOCK；禁止「同文口型复用」当设计；超 vendor/多句 → Confirm 语义拆（子镜须景别/运镜/`intent.picture` 相对父镜可区分）或改短，**禁止**指望导入静默拆成同文 N 镜
 - **DEX-DUP-VD / DEX-DIRTY-STILL-PROMPT / DEX-HAND-LIP**：同文连镜、手+眼同帧、文学体裸 `--cref CHAR`/`--sref SCENE`、手镜 lip≠none → BLOCK；composed prompt **尾** IR 码除外
 - **配方智能适配（≠改设计）**：分镜 VD/景别/intent 是 SSOT；compose 按镜型适配（手 CU **仅**显式手部特写；座次/中景/权力反差 **压过** 摩挲扳指动作，禁手CU禁出脸对撞）；**特写×出镜≥2**：VD 只点名一人 → **降出场人数+裁主角 cref**（禁拆镜 Confirm）；VD 多人同框意图 → `still_cu_cast` 智能拆；成稿泄漏「仅N人」同核；禁【Edit焦点】文学洗绿；Edit 反拼版用短锁（`*_EDIT_ZH`），接触几何/主look优先于拼版句；文学意图原子（端坐太师椅/抄书等）须在 compose/首烧/Edit 存活；**禁止**把配方句回写 `visualDescription`。真脏手+脸 → Chat BLOCK + VisBeat Confirm 拆；导入与设计 **同核智能拆/降人数**（非仅软过）；残留才 `importOk≠designExitPass` / Confirm，禁静默同文拆手脸
-- **PROMPT-FIDELITY / 文学存活**：HQ 座次镜缺抄书/太师椅等 → 不过绿；Edit 焦点只追加，禁掏空文学基底
+- **PROMPT-FIDELITY / 文学存活**：座次/锚点未覆盖 = 契约债 → heal 双写 VD+egress untilClear（可拍）；不过绿≠挡拍；Edit 焦点只追加，禁掏空文学基底
 - **`importOk≠designExitPass`**：导入可进仓 ≠ 设计闭合；禁止只改 `modalityPromptAudit` / `narrativeSelfcheck.passed`
 - composeStillPromptPreview `persist:true` 写库用 `result.composeMode`（禁裸变量 `mode` → `mode is not defined`）
 - VLM 缺 Key：图已出、HQ 未过（≠ preview HTTP 400）
@@ -3729,7 +3729,7 @@ motion, camera, duration, lipSync, identity, fx
 - QF-VIEW / QF-DUR 运镜词；裸秒 `2s,3s` 须收敛为单一 `duration Ns`（quality 单源）
 - 有**出镜**对白须 lipSync 关键词；**禁止**显式 `no lip sync` / `lipSyncPolicy=none|silent`（NO-LIP-DIALOGUE → `no_lip_dialogue`）。**OS/VO 不强制口型**；空 policy 自动升 subtle（≠ silent 假阳）
 - **Audio XOR**：设计确认无对白时剥孤儿口播（`AUD-ORPHAN-SPEECH`）；有对白须 `audioPrompt`（`CHAT-AUD-01`）
-- **PromptFidelity / stale**：视频词须覆盖 VD 锚点（`PROMPT-FIDELITY`）；`designContentHash` 漂移 → `VIDEO-PROMPT-STALE` 重编译再烧
+- **PromptFidelity / stale**：视频词须覆盖 VD 锚点（`PROMPT-FIDELITY`→heal 双写 untilClear，非挡烧）；`designContentHash` 漂移 → `VIDEO-PROMPT-STALE` 重编译再 heal_then_burn
 - burn 读 policy：`shotDesign` → `narrative` → `shot` →（出镜）默认 subtle
 - 静帧闭口 ∩ 强口型（仅出镜）：mouth handoff soft 一次后复检，仍冲突 BLOCK（`still_mouth_handoff`）
 - 接触事件 ∩ 静帧无道具：contact handoff **BLOCK**（`still_prop_missing` / `STILL-CONTACT-HANDOFF`）；浅痕≠道具；禁 soft-allow；须重出带道具静照后再烧
@@ -10878,7 +10878,7 @@ Slot 定义 SSOT：`data/fixtures/modality_prompt_slots.json`（skills / compile
   - **DEX-ASSET-CREF**（BLOCK · AS；SB 可 stub 延期）：出脸/`CHAR-*` 须本镜绑；SB 可用 stub+`assetCrefPlan` 过设计闸，AS/compose 须定妆真图。禁止假 `--cref`/假绿。深链 `asset_cref`（RH-ASSET-CREF → AS）
   - **designBrief 同挂 EMPTY/EXPR/CAST**（与 SB 同核）：不得提前出站绕开 SB
   - **NO-LIP-DIALOGUE**（BLOCK · EN/MD-VID）：**出镜对白**禁止显式 `lipSyncPolicy=none/silent` 与提示词 `no lip sync`。空 policy → 自动升 `subtle_natural`（≠假阳）。**仅 OS/VO 的镜允许 no lip**。深链 `no_lip_dialogue`（RH-NO-LIP-DIALOGUE）
-  - **Audio XOR / PromptFidelity（M1–M7）**：乱入=`DC-01-EXTRA`；有词无声=`CHAT-AUD-01` BLOCK；无词有声=`AUD-ORPHAN-SPEECH` strip（`dialogueLines:[]` 确认静音）；锚点未覆盖=`PROMPT-FIDELITY`；多拍禁 trim=`DEX-STILL-ONEBEAT`；VD/对白漂移=`VIDEO-PROMPT-STALE`（须重编译）。CI：`test:dialogue-audio-loop` / `test:prompt-fidelity-loop`
+  - **Audio XOR / PromptFidelity（M1–M7）**：乱入=`DC-01-EXTRA`；有词无声=`CHAT-AUD-01`→seed；无词有声=`AUD-ORPHAN-SPEECH` strip；锚点未覆盖=`PROMPT-FIDELITY`→heal 双写 untilClear（**非挡拍**）；多拍=`DEX-STILL-ONEBEAT`→智拆；VD 漂移=`VIDEO-PROMPT-STALE`→重编译。CI：`test:dialogue-audio-loop` / `test:prompt-fidelity-loop` / `test:g-prompt-fidelity-heal`
   - **STILL-MOUTH-HANDOFF**：静帧闭口 ∩ 视频强口型（仅出镜对白）→ soft 一次后须复检；仍冲突 **BLOCK**（禁 silent soft 假愈）。深链 `still_mouth_handoff`
   - **STILL-CONTACT-HANDOFF / DEX-PROP-IN-FRAME**：接触事件 VD（动词∩道具类别名）∩ 静帧无道具（浅痕≠道具）→ **BLOCK** 重出带道具静照；禁 soft-allow 冒充可烧、禁只改视频词。深链 `still_prop_missing` / `still_video_contact_handoff`
   - **SFX-UNBACKED**（WARN）：字面 `sfx:<>` 无 adapter / 无 `audioCue` 真源 ≠ 音效满分。深链 `sfx_unbacked`（RH-SFX-UNBACKED）。DEX-SFX-BRIDGE 禁逼造假意图
@@ -11362,7 +11362,8 @@ rulePackVersion: 2.0.1
       "forwardStages": ["SB", "MD-IMG", "EN"],
       "repairPriority": "P0",
       "forbidRegenWithoutDescFix": true,
-      "note": "提示词须覆盖 VD 锚点；禁 freeform 跳过 Shot List"
+      "defaultAction": "healPromptFidelityAnchors",
+      "note": "契约债：egress 须覆盖 VD 锚点；heal 双写 VD+prompt untilClear；永不 HTTP 挡试拍/烧片；假绿禁"
     },
     {
       "trigger": "video_prompt_stale",
@@ -13355,7 +13356,8 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
       "forwardStages": ["SB", "MD-IMG", "EN"],
       "repairPriority": "P0",
       "forbidRegenWithoutDescFix": true,
-      "note": "提示词须覆盖 VD 锚点；禁 freeform 跳过 Shot List"
+      "defaultAction": "healPromptFidelityAnchors",
+      "note": "契约债：egress 须覆盖 VD 锚点；heal 双写 VD+prompt untilClear；永不 HTTP 挡试拍/烧片；假绿禁"
     },
     {
       "trigger": "video_prompt_stale",
@@ -15522,7 +15524,7 @@ IC dryRun：intelligent_closure_checklist.json
       "checkIds": ["PROMPT-FIDELITY"],
       "symptom": "image/video 提示词未覆盖设计锚点",
       "action": "改 VD 或重编译提示词，禁 freeform 跳过 Shot List",
-      "chatTemplate": "【PROMPT-FIDELITY】提示词须覆盖 visualDescription 文学意图原子（端坐/太师椅/抄书/座次等）。回 SB 改描写或重跑 compose；Edit 焦点只追加缺失项，禁止掏空文学基底假绿。reverseTarget=SB。"
+      "chatTemplate": "【PROMPT-FIDELITY】契约债：提示词须覆盖 visualDescription 锚点（端坐/太师椅/抄书等）。自动 heal 补锚双写 VD+egress untilClear → 继续生成；Chat 可反推改描写或重 compose。Edit 只追加缺失项，禁掏空文学基底假绿。永不灰「生成」。reverseTarget=SB。"
     },
     {
       "id": "RH-DEX-CAM-FIT",

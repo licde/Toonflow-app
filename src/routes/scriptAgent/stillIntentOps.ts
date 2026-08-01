@@ -309,6 +309,23 @@ export default router.post(
       });
       writeShots(plan, applied.shots);
       try {
+        const { bumpPackageVersionOnShots } =
+          require("@/ruleEngine/design/designSplitLifecycle") as typeof import("@/ruleEngine/design/designSplitLifecycle");
+        bumpPackageVersionOnShots(
+          applied.shots,
+          applied.applied?.length ? applied.applied : fillList.map((f) => f.shotIndex),
+        );
+      } catch {
+        /* optional */
+      }
+      try {
+        const { regenerateModalityPromptsAfterDesign } =
+          require("@/ruleEngine/design/modalityPromptRegen") as typeof import("@/ruleEngine/design/modalityPromptRegen");
+        regenerateModalityPromptsAfterDesign({ shots: applied.shots, forceAll: true });
+      } catch {
+        /* optional */
+      }
+      try {
         const pdMeta = (pd.meta as Record<string, unknown>) ?? {};
         const re = runForwardReentryAfterRepair({
           planData: pd,
@@ -319,9 +336,13 @@ export default router.post(
         else {
           const { cascadeForwardStale } =
             require("@/ruleEngine/quality/forwardStaleCascade") as typeof import("@/ruleEngine/quality/forwardStaleCascade");
-          cascadeForwardStale({
-            shots: applied.shots,
-            forwardStages: ["SB", "MD-IMG", "EN", "MD-VID"],
+          const { runCascadeWhenIdle } =
+            require("@/ruleEngine/design/genInflightGuard") as typeof import("@/ruleEngine/design/genInflightGuard");
+          runCascadeWhenIdle(projectId, () => {
+            cascadeForwardStale({
+              shots: applied.shots,
+              forwardStages: ["SB", "MD-IMG", "EN", "MD-VID"],
+            });
           });
         }
       } catch {

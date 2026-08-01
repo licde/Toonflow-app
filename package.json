@@ -215,6 +215,8 @@
     "test:g-untilclear-prop-intent": "tsx scripts/test-g-untilclear-prop-intent.ts",
     "test:g-export-theme-glue-seal": "tsx scripts/test-g-export-theme-glue-seal.ts",
     "test:g-vendor-regen-latch": "tsx scripts/test-g-vendor-regen-latch.ts",
+    "test:g-shootable-architecture": "tsx scripts/test-g-shootable-architecture.ts",
+    "test:g-prompt-fidelity-heal": "tsx scripts/test-g-prompt-fidelity-heal.ts",
     "test:g-desc-coverage-untilclear": "tsx scripts/test-g-desc-coverage-untilclear.ts",
     "test:g-prompt-conflict-lint": "tsx scripts/test-g-prompt-conflict-lint.ts",
     "test:g-generation-contract": "tsx scripts/test-g-generation-contract.ts",
@@ -226,7 +228,12 @@
     "test:g-sample-shot1-atoms": "tsx scripts/test-g-sample-shot1-atoms.ts",
     "test:g-modality-intent-softenv": "tsx scripts/test-g-modality-intent-softenv.ts",
     "test:g-untilclear-runtime": "tsx scripts/test-g-untilclear-runtime.ts",
-    "test:g-inventory-mount-audit": "tsx scripts/test-g-inventory-mount-audit.ts"
+    "test:g-inventory-mount-audit": "tsx scripts/test-g-inventory-mount-audit.ts",
+    "test:g-still-actuator-ladder": "tsx scripts/test-g-still-actuator-ladder.ts",
+    "test:g-still-beat-isolation": "tsx scripts/test-g-still-beat-isolation.ts",
+    "test:g-import-split-heal": "tsx scripts/test-g-import-split-heal.ts",
+    "smoke:comfy-still": "tsx scripts/smoke-comfy-still.ts",
+    "verify:comfy-gold": "tsx scripts/verify-comfy-gold.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.35",

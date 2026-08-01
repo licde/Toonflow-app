@@ -381,6 +381,12 @@ export interface DryRunImportSummary {
   skipAutoDesignSb?: boolean;
   /** Morphological salvage alone must not imply contract-closed */
   importOkNotExitPass?: boolean;
+  /** Expand delta + continuity + slot heal observability */
+  expandDelta?: number;
+  continuityEdgeCount?: number;
+  designSlotHealSummary?: Record<string, unknown>;
+  rePushApplied?: number;
+  rePushSoftDeferred?: number;
   productionClosureChecks?: ProductionClosureCheck[];
   designClosureChecks?: ProductionClosureCheck[];
   generationClosureChecks?: ProductionClosureCheck[];

@@ -35,6 +35,10 @@ export interface QualityDecisionInput {
 export interface QualityDecisionResult {
   decision: QualityDecisionKind;
   burnAllowed: boolean;
+  /** soft_defer decision without implying burnAllowed toggle confusion */
+  softDefer?: boolean;
+  /** Soft debt may one-click raise duration/time — must not forge hq_ok */
+  softDeferRaiseAllowed?: boolean;
   splitHint?: string;
   lipMin?: number;
   vendorMax?: number;
@@ -99,6 +103,8 @@ function wrap(
   return {
     decision: effective,
     burnAllowed,
+    softDefer: effective === "soft_defer",
+    softDeferRaiseAllowed: effective === "soft_defer",
     reasons: extra.reasons,
     envelope,
     nextStep: envelope.nextStep,

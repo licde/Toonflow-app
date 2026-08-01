@@ -197,6 +197,16 @@ export default async function startServe(randomPort: Boolean = false) {
       const address = server.address();
       const realPort = typeof address === "string" ? address : address?.port;
       console.log(`[服务启动成功]: http://localhost:${realPort}`);
+      try {
+        if (!String(process.env.COMFY_URL ?? process.env.COMFYUI_URL ?? "").trim()) {
+          process.env.COMFY_URL = "http://127.0.0.1:8000";
+        }
+        const { syncComfyUrlFromVendorConfig } = await import("@/ruleEngine/actuators/comfyStillActuator");
+        const comfyUrl = await syncComfyUrlFromVendorConfig();
+        if (comfyUrl) console.log(`[Comfy] COMFY_URL=${comfyUrl}`);
+      } catch (e) {
+        console.warn("[Comfy] URL sync skipped", e instanceof Error ? e.message : e);
+      }
       resolve(realPort);
     });
   });

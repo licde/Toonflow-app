@@ -73,14 +73,19 @@ export default router.post(
         }
       }
 
-      // Gate BEFORE 生成中 — never leave tracks stuck mid-flight on refuse
+      // Gate BEFORE 生成中 — warehouse debt soft_defer (同源 pkg SSOT)
       {
-        const meta = (pkg as { meta?: { lipConfirmRequired?: boolean; importOkNotExitPass?: boolean } } | null)?.meta;
-        if (meta?.lipConfirmRequired || meta?.importOkNotExitPass) {
+        const { readWarehouseDebtFromPackage, warehouseDebtBlocksVideo } =
+          require("@/ruleEngine/bundle/warehouseDebtMeta") as typeof import("@/ruleEngine/bundle/warehouseDebtMeta");
+        const debt = readWarehouseDebtFromPackage(pkg);
+        if (warehouseDebtBlocksVideo(debt)) {
           return res.status(400).send(
-            error("设计/导入口型拆镜未闭合（lipConfirmRequired），请回 SB Confirm 或重导后再批量生成提示词", {
-              code: "LIP_CONFIRM_REQUIRED",
-              primaryNextStep: "split_shot",
+            error("设计/导入仓债未闭，请回 SB Confirm 或增强设计后再批量生成提示词", {
+              code: "WAREHOUSE_DEBT_SOFT_DEFER",
+              decision: "soft_defer",
+              primaryNextStep: "enhance_design",
+              ctaLabel: "增强设计并继续",
+              warehouseDebt: debt,
             }),
           );
         }

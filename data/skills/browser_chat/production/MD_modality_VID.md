@@ -26,7 +26,7 @@ motion, camera, duration, lipSync, identity, fx
 - QF-VIEW / QF-DUR 运镜词；裸秒 `2s,3s` 须收敛为单一 `duration Ns`（quality 单源）
 - 有**出镜**对白须 lipSync 关键词；**禁止**显式 `no lip sync` / `lipSyncPolicy=none|silent`（NO-LIP-DIALOGUE → `no_lip_dialogue`）。**OS/VO 不强制口型**；空 policy 自动升 subtle（≠ silent 假阳）
 - **Audio XOR**：设计确认无对白时剥孤儿口播（`AUD-ORPHAN-SPEECH`）；有对白须 `audioPrompt`（`CHAT-AUD-01`）
-- **PromptFidelity / stale**：视频词须覆盖 VD 锚点（`PROMPT-FIDELITY`）；`designContentHash` 漂移 → `VIDEO-PROMPT-STALE` 重编译再烧
+- **PromptFidelity / stale**：视频词须覆盖 VD 锚点（`PROMPT-FIDELITY`→heal 双写 untilClear，非挡烧）；`designContentHash` 漂移 → `VIDEO-PROMPT-STALE` 重编译再 heal_then_burn
 - burn 读 policy：`shotDesign` → `narrative` → `shot` →（出镜）默认 subtle
 - 静帧闭口 ∩ 强口型（仅出镜）：mouth handoff soft 一次后复检，仍冲突 BLOCK（`still_mouth_handoff`）
 - 接触事件 ∩ 静帧无道具：contact handoff **BLOCK**（`still_prop_missing` / `STILL-CONTACT-HANDOFF`）；浅痕≠道具；禁 soft-allow；须重出带道具静照后再烧

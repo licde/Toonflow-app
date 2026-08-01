@@ -15,7 +15,8 @@ export function assertPromptDesignFidelity(input: {
   const r = assertChainEgress(input.stage ?? "finalize", contract, {
     imagePrompt: input.imagePrompt,
     videoPrompt: input.videoPrompt,
-    fidelityHard: input.fidelityHard ?? input.stage === "compose",
+    // Never hard-block; findings are CONTRACT debts for heal routers
+    fidelityHard: false,
   });
   return { ok: r.ok, findings: r.findings.filter((f) => f.id === "PROMPT-FIDELITY" || f.id === "DEX-STILL-ONEBEAT") };
 }

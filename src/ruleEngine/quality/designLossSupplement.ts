@@ -74,7 +74,20 @@ export function applyDesignLossSupplement(
       const fromParent = parentVdFromSplit(shots, shot);
       const fromPlan = planPictureCrumb(bundle, idx);
       const candidate = [fromParent, fromPlan].sort((a, b) => b.length - a.length)[0] ?? "";
-      if (candidate.replace(/\s/g, "").length >= min) {
+      const dualXor =
+        /划过|贴颊|颊触|纸角|贴合/.test(candidate) && /咬|渗血|血珠|紧咬/.test(candidate);
+      // Never salvage dual-contact parent into XOR children
+      if (dualXor && shot.xorSplit) {
+        warnings.push(`design_loss_skip_xor_parent:${idx ?? "?"}`);
+        if (len === 0) {
+          unsalvageable.push({
+            id: "DESIGN-LOSS",
+            severity: "BLOCK",
+            message: `镜 ${idx ?? "?"} XOR 子镜 VD 遗失且禁父双接触回灌`,
+            breakAt: "design_loss",
+          });
+        }
+      } else if (candidate.replace(/\s/g, "").length >= min) {
         if (!proposeOnly) {
           // Prefer keeping role-sized slice: if child has short vd, prepend parent crumb only when empty
           shot.visualDescription = vd ? vd : candidate.slice(0, 400);

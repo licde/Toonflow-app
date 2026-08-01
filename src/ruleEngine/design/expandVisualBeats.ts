@@ -89,6 +89,14 @@ export function expandVisualBeats(
         promptState: "stale",
         composeHash: undefined,
         filePath: undefined,
+        videoStale: true,
+        generation: {
+          ...((shot.generation as Record<string, unknown>) ?? {}),
+          imagePrompt: undefined,
+          videoPrompt: undefined,
+          videoDesc: undefined,
+          compiled: undefined,
+        },
         narrative: {
           ...(n ?? {}),
           shotSize: beat.shotSize,

@@ -52,6 +52,20 @@ export function peekPackageVersion(shots: Record<string, unknown>[]): number {
   return Math.max(0, ...shots.map((s) => Number(s.packageVersion ?? 0)));
 }
 
+/** Bump all touched shots' packageVersion after repair/enhance writeback. */
+export function bumpPackageVersionOnShots(
+  shots: Record<string, unknown>[],
+  shotIndexes?: number[] | null,
+): number {
+  const next = peekPackageVersion(shots) + 1;
+  const set = shotIndexes?.length ? new Set(shotIndexes.map(Number)) : null;
+  for (const s of shots) {
+    if (set && !set.has(Number(s.shotIndex))) continue;
+    s.packageVersion = next;
+  }
+  return next;
+}
+
 /**
  * After reverse repair: run orchestrator + mark stale prompts; keep hq_ok media.
  */

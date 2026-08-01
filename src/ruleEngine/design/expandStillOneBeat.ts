@@ -247,6 +247,7 @@ export function expandStillOneBeat(
         parentVd,
       });
       const childVd = ens.ok ? ens.visualDescription : parentVd;
+      const parentGen = (shot.generation as Record<string, unknown> | undefined) ?? {};
       out.push({
         ...shot,
         clientId: `${parentKey}-ob-${c.role}-${i}`,
@@ -265,6 +266,15 @@ export function expandStillOneBeat(
         promptState: "stale",
         composeHash: undefined,
         videoPass: false,
+        videoStale: true,
+        // Never inherit parent collage imagePrompt (GEN-05)
+        generation: {
+          ...parentGen,
+          imagePrompt: undefined,
+          videoPrompt: undefined,
+          videoDesc: undefined,
+          compiled: undefined,
+        },
         narrative: {
           ...(n ?? {}),
           shotSize: c.shotSize,

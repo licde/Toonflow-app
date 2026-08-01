@@ -5,7 +5,10 @@
 export interface DescPredicate {
   who?: string;
   verb: string;
+  /** Egress / hardConstraint surface word (e.g. 休书) — never rewrite to class label */
   prop?: string;
+  /** Internal class id when prop is paper-like (paper_doc); not for egress */
+  classId?: string;
   /** Raw span for coverage checks */
   surface: string;
 }
@@ -42,7 +45,20 @@ function paperDocAliasAlt(): string {
   }
 }
 
-function buildPredicatePatterns(): Array<{ verb: string; prop?: string; re: RegExp }> {
+/** Resolve paper surface from clause (休书) — classId stays paper_doc internally. */
+function paperSurfaceFromClause(clause: string): { surface: string; classId: string } {
+  const paper = paperDocAliasAlt();
+  const re = new RegExp(paper, "g");
+  const hit = clause.match(re)?.[0];
+  return { surface: hit || "休书", classId: "paper_doc" };
+}
+
+function buildPredicatePatterns(): Array<{
+  verb: string;
+  prop?: string;
+  paperClass?: boolean;
+  re: RegExp;
+}> {
   const paper = paperDocAliasAlt();
   return [
     { verb: "端坐", prop: "太师椅", re: /端坐[^，。；]{0,8}太师椅|太师椅[^，。；]{0,6}端坐|端坐高位太师椅/ },
@@ -53,13 +69,13 @@ function buildPredicatePatterns(): Array<{ verb: string; prop?: string; re: RegE
     { verb: "抄书", prop: "书", re: /抄书|誊写|书写/ },
     {
       verb: "捡",
-      prop: "纸角",
+      paperClass: true,
       re: new RegExp(`捡[起下]?[^，。；]{0,6}(?:${paper})|(?:${paper})[^，。；]{0,4}捡`),
     },
     { verb: "捡", re: /捡[起下]/ },
     {
       verb: "划过",
-      prop: "纸角",
+      paperClass: true,
       re: new RegExp(`(?:${paper})[^，。；]{0,8}划过|划过[^，。；]{0,6}(?:面颊|脸颊)`),
     },
     { verb: "递", re: /递[上出给至]/ },
@@ -144,7 +160,12 @@ export function extractDescPredicates(input: {
       if (pat.verb === "跪" && !pat.prop && predicates.some((p) => p.verb === "跪" && p.prop)) continue;
       seen.add(key);
       let prop = pat.prop;
-      if (!prop) {
+      let classId: string | undefined;
+      if (pat.paperClass) {
+        const paper = paperSurfaceFromClause(clause);
+        prop = paper.surface;
+        classId = paper.classId;
+      } else if (!prop) {
         const pm = clause.match(PROP_RE);
         if (pm && pm[0] !== "香案" && pm[0] !== "供桌" && pm[0] !== "香炉") prop = pm[0];
       }
@@ -152,6 +173,7 @@ export function extractDescPredicates(input: {
         who: stripWhoVerbGlue(who, names),
         verb: pat.verb,
         prop,
+        classId,
         surface: [stripWhoVerbGlue(who, names), pat.verb, prop].filter(Boolean).join(""),
       });
       // Continue patterns in same clause (端坐+摩挲, 跪+抄书)

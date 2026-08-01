@@ -127,14 +127,29 @@ export interface DryRunImportResponse {
   willCreateScript?: boolean;
   willOverwriteLayers?: string[];
   storyboardCount?: number;
+  /** Author pack before prepare */
+  rawShotCount?: number;
+  /** After prepareBundleForInspect */
+  postPrepareCount?: number;
+  expandDelta?: number;
+  continuityEdgeCount?: number;
+  designSlotHealSummary?: Record<string, unknown>;
+  rePushApplied?: number;
+  rePushSoftDeferred?: number;
+  importDiagnoseOnly?: boolean;
+  irdConfirmRequired?: boolean;
+  importOkNotExitPass?: boolean;
+  designExitIncomplete?: boolean;
   mergeStrategy?: string;
   warnings?: string[];
+  skipAutoDesignSb?: boolean;
   closureChecks?: InspectBundleResult["closureChecks"];
   endpoint?: "ext" | "int";
   /** SSOT for import preview CTA — wire to RulePanel */
   exportGate?: ExportGateSummary;
   chatRepairText?: string;
   tier?: ClosureTier;
+  previewStatusLine?: string;
 }
 
 export interface ImportScriptResult {

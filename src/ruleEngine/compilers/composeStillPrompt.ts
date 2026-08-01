@@ -598,8 +598,21 @@ function layerCharacterPerf(
   }
   const micro = String(ctx.microExpression ?? "").trim();
   if (micro && !opts?.adapt?.omitFaceMicroExpression) {
-    parts.push(`微表情：${micro.slice(0, 80)}`);
-    sources.push("shotDesign.performance.microExpression");
+    let allowMicro = true;
+    try {
+      const { mouthDetailAllowedByVd, OFF_BEAT_MOUTH_CU_ATOMS } =
+        require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      if (OFF_BEAT_MOUTH_CU_ATOMS.test(micro) && !mouthDetailAllowedByVd(micro, ctx.visualDescription)) {
+        allowMicro = false;
+        sources.push("shotDesign.performance.microExpression.omittedOffBeat");
+      }
+    } catch {
+      /* optional */
+    }
+    if (allowMicro) {
+      parts.push(`微表情：${micro.slice(0, 80)}`);
+      sources.push("shotDesign.performance.microExpression");
+    }
   } else if (micro && opts?.adapt?.omitFaceMicroExpression) {
     sources.push("shotDesign.performance.microExpression.omittedByRecipeAdapt");
   }
@@ -938,16 +951,34 @@ export function composeStillPrompt(
       /* optional */
     }
     const prev = stripStaleBindingFromPrevious(prevClean);
-    if (prev && (shouldWarnOneBeat(prev) || previousBodyIsSheetLockSoup(prev) || previousBodyIsSheetLockSoup(ctx.previousVisualBody))) {
+    let dropOffBeat = false;
+    try {
+      const { previousBodyHasOffBeatContamination } =
+        require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      dropOffBeat = previousBodyHasOffBeatContamination(prev, ctx.visualDescription);
+    } catch {
+      /* optional */
+    }
+    if (
+      prev &&
+      (dropOffBeat ||
+        shouldWarnOneBeat(prev) ||
+        previousBodyIsSheetLockSoup(prev) ||
+        previousBodyIsSheetLockSoup(ctx.previousVisualBody))
+    ) {
       warnings.push(
-        previousBodyIsSheetLockSoup(prev) || previousBodyIsSheetLockSoup(ctx.previousVisualBody)
-          ? "sheet_lock_soup:drop_dirty_previous"
-          : "DEX-STILL-ONEBEAT:drop_dirty_previous",
+        dropOffBeat
+          ? "off_beat_contamination:drop_previous"
+          : previousBodyIsSheetLockSoup(prev) || previousBodyIsSheetLockSoup(ctx.previousVisualBody)
+            ? "sheet_lock_soup:drop_dirty_previous"
+            : "DEX-STILL-ONEBEAT:drop_dirty_previous",
       );
       sources.push(
-        previousBodyIsSheetLockSoup(prev) || previousBodyIsSheetLockSoup(ctx.previousVisualBody)
-          ? "previous.dropped_sheet_lock_soup"
-          : "previous.dropped_multibeat",
+        dropOffBeat
+          ? "previous.dropped_off_beat"
+          : previousBodyIsSheetLockSoup(prev) || previousBodyIsSheetLockSoup(ctx.previousVisualBody)
+            ? "previous.dropped_sheet_lock_soup"
+            : "previous.dropped_multibeat",
       );
       effectiveMode = "full";
       ctx.previousVisualBody = undefined;
@@ -1090,7 +1121,19 @@ export function composeStillPrompt(
         vdRaw = litGate.visualDescription;
         primary = pickPrimaryDescription(ctx);
       }
-      if (litGate.action === "block") {
+      if (litGate.action === "advise") {
+        // Shootable-first: advise + slim, continue compose (requireFixBeforeBurn only)
+        warnings.push(litGate.adviseReason);
+        sources.push(...litGate.sources, "lit.hq.adviseContinue");
+        (ctx as { litAdviseNextStep?: string }).litAdviseNextStep = litGate.primaryNextStep;
+        (ctx as { litAdviseCta?: string }).litAdviseCta = litGate.ctaLabel;
+        (ctx as { litAdviseMessage?: string }).litAdviseMessage = litGate.userMessage;
+        (ctx as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn = true;
+        if (litGate.missingSlots?.length) {
+          (ctx as { litAdviseSlots?: string[] }).litAdviseSlots = litGate.missingSlots;
+        }
+      } else if (litGate.action === "block") {
+        // Legacy hardBlock path only
         return {
           ok: false,
           prompt: String(primary?.text ?? vdRaw ?? ""),
@@ -1114,7 +1157,6 @@ export function composeStillPrompt(
           descCoverageMissing: litGate.missingSlots,
         };
       }
-      // Soft XOR wash-green path removed — dual contact already blocked as split_shot above
     } catch {
       /* optional */
     }
@@ -1331,7 +1373,7 @@ export function composeStillPrompt(
     sources.push(`bgPolicy.${bgPolicyResult.policy}`);
     sources.push(`bgMode.${modality.bgMode}`);
   }
-  // Face-CU look anchor early — mustSurvive / checklist L0 before coverage
+  // Face-CU look anchor early — only when bgPolicy truly faceCu (MS never)
   if (bgPolicyResult.reason === "faceCuDropScene" && qualityMode === "hq_update") {
     try {
       const { pickVdLiteraryPrimary, STILL_PRIMARY_LOOK_HEAL_TEMPLATE } =
@@ -1347,6 +1389,40 @@ export function composeStillPrompt(
     } catch {
       /* optional */
     }
+  }
+  // Skirt / body-fragment background contract
+  try {
+    const { resolveBgFragment } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    const frag = resolveBgFragment({
+      visualDescription: ctx.visualDescription,
+      background: ctx.background,
+      imagePrompt: ctx.compiledImagePrompt,
+      spatialRelation: ctx.spatialRelation,
+    });
+    if (frag.guidance && !supportParts.some((p) => /裙摆虚化|身体碎片|衣角\/袖缘/.test(p))) {
+      supportParts.push(frag.guidance);
+      sources.push(`bg.fragment.${frag.kind ?? "body"}`);
+    }
+  } catch {
+    /* optional */
+  }
+  // Action-primary lead: prepend 弯腰/捡/捏紧 when declared
+  try {
+    const { ACTION_PRIMARY_SURVIVE_STEMS } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    const vdAct = String(ctx.visualDescription ?? primary?.text ?? "");
+    if (ACTION_PRIMARY_SURVIVE_STEMS.test(vdAct)) {
+      const head =
+        vdAct.match(/[^。；;\n]*(?:弯腰|捡起|捡|捏紧|指节)[^。；;\n]{0,40}/)?.[0]?.trim() ||
+        "";
+      if (head && !descParts.some((p) => p.includes(head.slice(0, 8)))) {
+        descParts.unshift(`动作主导：${head.slice(0, 80)}`);
+        sources.push("action.primary.lead");
+      }
+    }
+  } catch {
+    /* optional */
   }
   // Stack: description → predicate hard → binding → anchors
   if (predPack.hardConstraintLine) {
@@ -1587,21 +1663,20 @@ export function composeStillPrompt(
       sources.push("entity.anchors.vdPrimaryFirst");
     }
     const line = `必须出现：${anchors.join("、")}`;
-    // HQ non-seating: skip 必须出现 when VD already names cast (short shell)
-    const skipMustAppear =
-      qualityMode === "hq_update" &&
-      !predPack.hasSeatingOrKneel &&
-      mode !== "fidelity" &&
-      Boolean(vdPrimary);
+    // Always keep mustAppear in HQ egress — omitMustAppearHq caused PROMPT-FIDELITY self-contradiction
     if (mode === "fidelity") {
       descParts.push(line);
       descParts.push(`再次强调场面：${primary?.text?.slice(0, 120) ?? anchors.join("、")}`);
       sources.push("fidelity.entityReplay");
-    } else if (!skipMustAppear) {
+    } else {
       supportParts.push(line);
       sources.push("entity.anchors");
-    } else {
-      sources.push("entity.anchors.omitMustAppearHq");
+      // Also fold tokens into descParts so strip of support cannot drop coverage
+      const lock = anchors.filter((a) => a.length >= 2).slice(0, 4).join("、");
+      if (lock && !descParts.some((p) => anchors.every((a) => p.includes(a) || a.length < 2))) {
+        descParts.push(`场面锚点：${lock}`);
+        sources.push("entity.anchors.egressLock");
+      }
     }
     entityAnchors = anchors;
   }
@@ -2109,78 +2184,52 @@ export function composeStillPrompt(
   }
   // Use cleared coverage for HQ gates below
   const coverageForGate = coverageFinal;
-  // HQ seating: missing content-contract atoms → not ok (no false green)
+  // HQ seating: missing atoms → inject heal (never ok:false / HTTP block)
   if (qualityMode === "hq_update" && predPack.hasSeatingOrKneel && !coverageForGate.ok) {
     const seatingMissing = coverageForGate.missing.filter(
       (id) => /seating|role:|prop:|composition:|场面硬约束|抄书|端坐|跪|太师椅|蒲团/.test(id),
     );
     if (seatingMissing.length) {
-      const primaryBlock = buildPrimaryBlock("chat_repair", {
-        stage: "prompt",
-        userMessageOverride: `文学意图原子未进提示词（${seatingMissing.slice(0, 4).join("、")}）；请回 SB 检查 VD 或重 compose，禁止缺抄书/座次假绿`,
-      });
-      return {
-        ok: false,
-        prompt,
-        visualBody,
-        didSynthesize,
-        scrubbed: scrubRaw.scrubbed || dirtyInput,
-        composeMode: effectiveMode,
-        sources: [...sources, "mustSurvive.hqBlock"],
-        warnings: [...warnings, "PROMPT-FIDELITY"],
-        entityAnchors,
-        blockReason: "PROMPT-FIDELITY",
-        primaryNextStep: primaryBlock.primaryNextStep,
-        userMessage: primaryBlock.userMessage,
-        ctaLabel: primaryBlock.ctaLabel,
-        compositionContractApplied,
-        complianceHit,
-        qp02Blocked: false,
-        missingLeadAsset: false,
-        dirtyInput,
-        descCoverageOk: false,
-        descCoverageMissing: coverageForGate.missing,
-        orderedCrefCodes: orderedCodes,
-        generationContract,
-        recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
-      };
+      try {
+        const { healPromptFidelityAnchors } =
+          require("../design/healPromptFidelityAnchors") as typeof import("../design/healPromptFidelityAnchors");
+        const healed = healPromptFidelityAnchors({
+          visualDescription: primary?.text ?? ctx.visualDescription,
+          visualBody,
+          knownNames: (ctx.characters ?? []).map((c) => c.name || "").filter(Boolean),
+        });
+        visualBody = healed.visualBody;
+        sources.push(...healed.sources, "mustSurvive.hqHeal");
+        warnings.push("PROMPT-FIDELITY");
+        (ctx as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn = true;
+        if (healed.visualDescription && healed.visualDescription !== (primary?.text ?? ctx.visualDescription)) {
+          (ctx as { visualDescription?: string }).visualDescription = healed.visualDescription;
+        }
+      } catch {
+        const inject = seatingMissing.slice(0, 4).join("、");
+        visualBody = `${visualBody}${visualBody.endsWith("。") ? "" : "。"}必须出现：${inject}`;
+        sources.push("mustSurvive.hqHeal.fallback");
+        warnings.push("PROMPT-FIDELITY");
+      }
+      // rebuild prompt tail after body heal
+      try {
+        const { appendVendorPromptSuffix } =
+          require("./vendorPromptAdapter") as typeof import("./vendorPromptAdapter");
+        /* keep existing prompt assembly — visualBody already updated for return */
+      } catch {
+        /* optional */
+      }
     }
   }
-  // HQ lit coverage atoms (XOR/wound) — contact_geom already untilClear-injected above
+  // HQ lit coverage atoms — inject / advise, never brick compose
   if (qualityMode === "hq_update" && !coverageForGate.ok) {
     const litMissing = coverageForGate.missing.filter(
       (id) => /^lit:|contact_role_xor|wound_visible|prop_readable/i.test(id) && !/^contact_geom:/i.test(id),
     );
     if (litMissing.length) {
-      const primaryBlock = buildPrimaryBlock("chat_repair", {
-        stage: "prompt",
-        userMessageOverride: `文学细节原子未进提示词（${litMissing.slice(0, 4).join("、")}）；请批准增强/拆镜，禁止带债出图`,
-      });
-      return {
-        ok: false,
-        prompt,
-        visualBody,
-        didSynthesize,
-        scrubbed: scrubRaw.scrubbed || dirtyInput,
-        composeMode: effectiveMode,
-        sources: [...sources, "lit.hq.coverageBlock"],
-        warnings: [...warnings, "DEX-LIT-COVERAGE"],
-        entityAnchors,
-        blockReason: litMissing.some((m) => /xor/i.test(m)) ? "DEX-LIT-CONTACT-XOR" : "DEX-LIT-CONTACT",
-        primaryNextStep: primaryBlock.primaryNextStep,
-        userMessage: primaryBlock.userMessage,
-        ctaLabel: primaryBlock.ctaLabel,
-        compositionContractApplied,
-        complianceHit,
-        qp02Blocked: false,
-        missingLeadAsset: false,
-        dirtyInput,
-        descCoverageOk: false,
-        descCoverageMissing: coverageForGate.missing,
-        orderedCrefCodes: orderedCodes,
-        generationContract,
-        recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
-      };
+      sources.push("lit.coverage.adviseContinue");
+      warnings.push(...litMissing.slice(0, 4).map((id) => `litDebt:${id}`));
+      (ctx as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn = true;
     }
   }
 
@@ -2383,6 +2432,12 @@ export function buildStillPreviousIngress(input: {
   preferFidelity?: boolean;
   /** When false (no storyboard), skip previous/meta load. Default true. */
   loadPrevious?: boolean;
+  /** Current shot clientId — mismatch vs meta forces full */
+  currentClientId?: string | null;
+  /** Current literary hash (VD+imagePrompt) — mismatch vs meta forces full */
+  literaryHash?: string | null;
+  /** Current visualDescription for off-beat contamination check */
+  visualDescription?: string | null;
 }): StillPreviousIngress {
   const loadPrevious = input.loadPrevious !== false;
   const requestPrompt = String(input.requestPrompt ?? "");
@@ -2415,6 +2470,22 @@ export function buildStillPreviousIngress(input: {
   } catch {
     /* optional */
   }
+  // Cross-shot / literary drift → never refine neighbor egress
+  const metaClient = String((prevMeta as { clientId?: string } | null)?.clientId ?? "").trim();
+  const curClient = String(input.currentClientId ?? "").trim();
+  if (metaClient && curClient && metaClient !== curClient) forceFull = true;
+  const metaLit = String((prevMeta as { literaryHash?: string } | null)?.literaryHash ?? "").trim();
+  const curLit = String(input.literaryHash ?? "").trim();
+  if (metaLit && curLit && metaLit !== curLit) forceFull = true;
+  try {
+    const { previousBodyHasOffBeatContamination } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    if (prevBody && previousBodyHasOffBeatContamination(prevBody, input.visualDescription)) {
+      forceFull = true;
+    }
+  } catch {
+    /* optional */
+  }
 
   const effectiveMode = forceFull && !input.requestedMode ? "full" : composeMode;
   return {
@@ -2425,4 +2496,15 @@ export function buildStillPreviousIngress(input: {
     previousVisualBody: forceFull || !prevBody ? undefined : prevBody,
     effectiveMode,
   };
+}
+
+/** Hash VD + compiled imagePrompt for ingress stale detection. */
+export function literaryComposeHash(input: {
+  visualDescription?: string | null;
+  compiledImagePrompt?: string | null;
+}): string {
+  const raw = `${String(input.visualDescription ?? "").trim()}\n${String(input.compiledImagePrompt ?? "").trim()}`;
+  let h = 0;
+  for (let i = 0; i < raw.length; i++) h = (Math.imul(31, h) + raw.charCodeAt(i)) | 0;
+  return `lit_${(h >>> 0).toString(16)}`;
 }

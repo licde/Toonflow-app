@@ -145,6 +145,8 @@ export interface StillVisualGenerateRoundArgs {
   /** Smart repair: swap to alternate layout template on Stage A */
   swapLayoutTemplate?: boolean;
   excludeLayoutTemplateId?: string;
+  /** Force full compose + clear previous (infra regen / beat isolation) */
+  forceFullCompose?: boolean;
 }
 
 export interface StillVisualFidelityLoopResult {
@@ -289,6 +291,7 @@ async function finishOnVlmInfra(input: {
         failedImageBase64: undefined,
         candidateIndex: 0,
         forbidLayoutPreserve: true,
+        forceFullCompose: true,
       });
       hitOnce = regenerated;
       budget = consumeRegenRetry(budget);
@@ -310,13 +313,22 @@ async function finishOnVlmInfra(input: {
     promptUsed: hitOnce.promptUsed,
     visualPass: false,
     stillQuality: "weak",
-    itemResults: input.judgedItems,
+    itemResults: (input.judgedItems ?? []).map((it) => ({
+      ...it,
+      pass: false,
+      evidence: String(it.evidence || "vlm_infra_unmeasured"),
+      fixHint: it.fixHint || "key_unmeasured_continue_repair",
+    })),
     rounds: input.round + 1 + (infraEditBypassUsed ? 1 : 0),
-    autoHealed,
+    autoHealed: [...autoHealed, "heuristic_unmeasured_honest"],
     healBudget: budget,
     strengthen,
     stopReason: "vlm_error",
-    fidelityItems: compactFidelityItems(input.judgedItems),
+    fidelityItems: compactFidelityItems(input.judgedItems).map((f) => ({
+      ...f,
+      pass: false,
+      evidence: f.evidence || "vlm_infra_unmeasured",
+    })),
     parallelM: input.candCount,
     vlmError: input.vlmError,
     pendingHumanRejudge: true,

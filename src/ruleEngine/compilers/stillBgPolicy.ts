@@ -57,8 +57,14 @@ export function isSceneEstablishingShot(shotSize?: string | null): boolean {
   return ESTABLISHING_SHOT.test(s);
 }
 
-function softInteriorGuidance(desc: string, seating: boolean): string {
+function softInteriorGuidance(desc: string, seating: boolean, faceCuSoftEnv = false): string {
   const atm = /烛火|烛光|月光|暖光|冷光|夜色|灯火/.exec(desc)?.[0];
+  // faceCu + soft_env: atmosphere rim, not "shallow DOF punch-out subject from sharp plate"
+  if (faceCuSoftEnv) {
+    return atm
+      ? `背景氛围：保留${atm}与室内木作轮廓作软环境边（勿锐利建立镜头抢戏），主体融入殿内色温，禁止灰棚/纯色摄影棚空白背景，禁止群像`
+      : "背景氛围：保留室内轮廓/木作作软环境边（勿锐利建立镜头抢戏），主体融入环境色温，禁止灰棚/纯色摄影棚空白背景，禁止群像";
+  }
   if (seating) {
     return atm
       ? `背景弱化：浅景深虚化环境，保留${atm}氛围可辨，禁止香案/供桌升为主构图，禁止灰棚/纯色摄影棚空白背景`
@@ -102,11 +108,19 @@ export function resolveStillBgPolicy(input: StillBgPolicyInput): StillBgPolicyRe
   }
 
   // Face CU / 侧脸特写：场景参考会把构图拉成殿内群像，必须丢 establishing 抢戏
+  // Shot-size wins: MS/WS/FS never faceCu from wound words alone (面颊浅痕 on mid action).
   const sz = String(input.shotSize ?? "");
   const desc = String(input.description ?? "");
+  const midWide =
+    /中景|全景|远景|大远景|中全景|\bms\b|\bws\b|\bfs\b|medium|wide|establishing/i.test(sz) ||
+    /^(?:中景|全景|远景|大远景)/.test(desc.trim()) ||
+    /中景[。，,]/.test(desc);
+  const sizeIsCu = /特写|近景|大特|ecu|\bcu\b/i.test(sz);
   const faceCu =
-    /特写|近景|ecu|\bcu\b/i.test(sz) ||
-    (/特写|侧脸|正脸|面颊|咬唇|渗血/.test(desc) && !/全景|远景|中景对峙|双人同框/.test(desc));
+    sizeIsCu ||
+    (!midWide &&
+      (/特写|侧脸|正脸|咬唇|渗血/.test(desc) || (/面颊/.test(desc) && /特写|近景/.test(desc))) &&
+      !/全景|远景|中景对峙|双人同框|中景/.test(desc));
   if (faceCu) {
     const keepSoft = hasSceneLink;
     return {
@@ -116,7 +130,7 @@ export function resolveStillBgPolicy(input: StillBgPolicyInput): StillBgPolicyRe
       keepSoftEnvRef: keepSoft,
       softEnvContinuity: continuityOf(keepSoft, hasSceneLink),
       omitSrefToken: !keepSoft,
-      bgGuidance: softInteriorGuidance(desc, false),
+      bgGuidance: softInteriorGuidance(desc, false, keepSoft),
       reason: "faceCuDropScene",
       pack,
       sceneEstablishing: false,

@@ -218,6 +218,39 @@ export default router.post(
       Object.assign(pd, orch.planData);
       pack.shots = orch.shots;
       pd.preDesignPack = pack;
+      // Homology with import: Confirm expand → continuity + egress slot heal
+      try {
+        const mini = {
+          ...plan,
+          planData: pd,
+          preDesignPack: pack,
+          meta: meta ?? {},
+        } as import("@/ruleEngine/bundle/types").ScriptBundle;
+        const { importDesignSlotHeal } =
+          require("@/ruleEngine/design/importDesignSlotHeal") as typeof import("@/ruleEngine/design/importDesignSlotHeal");
+        const healed = importDesignSlotHeal(mini);
+        pack.shots = (mini.preDesignPack?.shots ?? pack.shots) as typeof pack.shots;
+        pd.preDesignPack = pack;
+        if (healed.summary.healed) {
+          (meta as Record<string, unknown>).designSlotHealSummary = healed.summary as unknown as Record<
+            string,
+            unknown
+          >;
+        }
+      } catch {
+        /* optional */
+      }
+      try {
+        const { pruneIntentGraphOnBundle } =
+          require("@/ruleEngine/design/intentGraphPrune") as typeof import("@/ruleEngine/design/intentGraphPrune");
+        pruneIntentGraphOnBundle({
+          preDesignPack: pack,
+          planData: pd,
+          meta: meta as Record<string, unknown>,
+        });
+      } catch {
+        /* optional */
+      }
       try {
         const { reindexDerivedTables } =
           require("@/ruleEngine/bundle/reindexDerivedTables") as typeof import("@/ruleEngine/bundle/reindexDerivedTables");
