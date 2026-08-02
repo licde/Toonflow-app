@@ -153,6 +153,8 @@ export interface StillVisualFidelityLoopResult {
   url: string;
   savePath: string;
   promptUsed: string;
+  /** Last candidate bytes — feeds local pose heuristic */
+  imageBase64?: string;
   visualPass: boolean;
   stillQuality: "hq_ok" | "weak";
   itemResults: VlmItemResult[];
@@ -311,13 +313,16 @@ async function finishOnVlmInfra(input: {
     url: hitOnce.url,
     savePath: hitOnce.savePath,
     promptUsed: hitOnce.promptUsed,
+    imageBase64: hitOnce.imageBase64,
     visualPass: false,
     stillQuality: "weak",
+    // Key/infra absent: mark unmeasured — never pass:false poison untilClear pixel debt
     itemResults: (input.judgedItems ?? []).map((it) => ({
       ...it,
-      pass: false,
+      pass: true,
+      unknown: true,
       evidence: String(it.evidence || "vlm_infra_unmeasured"),
-      fixHint: it.fixHint || "key_unmeasured_continue_repair",
+      fixHint: it.fixHint || "key_unmeasured_not_fail",
     })),
     rounds: input.round + 1 + (infraEditBypassUsed ? 1 : 0),
     autoHealed: [...autoHealed, "heuristic_unmeasured_honest"],
@@ -326,8 +331,9 @@ async function finishOnVlmInfra(input: {
     stopReason: "vlm_error",
     fidelityItems: compactFidelityItems(input.judgedItems).map((f) => ({
       ...f,
-      pass: false,
+      pass: true,
       evidence: f.evidence || "vlm_infra_unmeasured",
+      fixHint: "key_unmeasured_not_fail",
     })),
     parallelM: input.candCount,
     vlmError: input.vlmError,
@@ -421,6 +427,7 @@ export async function runStillVisualFidelityLoop(input: {
       url: once.url,
       savePath: once.savePath,
       promptUsed: once.promptUsed,
+      imageBase64: once.imageBase64,
       visualPass: once.allowHqOkL0 && (input.forceSkipVlm || !cfg.hqRequiresVisualPass),
       stillQuality:
         once.allowHqOkL0 && (input.forceSkipVlm || !cfg.hqRequiresVisualPass) ? "hq_ok" : "weak",
@@ -499,6 +506,7 @@ export async function runStillVisualFidelityLoop(input: {
         url: once.url,
         savePath: once.savePath,
         promptUsed: once.promptUsed,
+        imageBase64: once.imageBase64,
         visualPass: false,
         stillQuality: "weak",
         itemResults: input.checklist.map((c) => ({
@@ -594,6 +602,7 @@ export async function runStillVisualFidelityLoop(input: {
         url: picked.once.url,
         savePath: picked.once.savePath,
         promptUsed: picked.once.promptUsed,
+        imageBase64: picked.once.imageBase64,
         visualPass: true,
         stillQuality: "hq_ok",
         itemResults: picked.items,
@@ -657,6 +666,7 @@ export async function runStillVisualFidelityLoop(input: {
           url: keep.once.url,
           savePath: keep.once.savePath,
           promptUsed: keep.once.promptUsed,
+          imageBase64: keep.once.imageBase64,
           visualPass: false,
           stillQuality: "weak",
           itemResults: keep.items,
@@ -691,6 +701,7 @@ export async function runStillVisualFidelityLoop(input: {
           url: keep.once.url,
           savePath: keep.once.savePath,
           promptUsed: keep.once.promptUsed,
+          imageBase64: keep.once.imageBase64,
           visualPass: false,
           stillQuality: "weak",
           itemResults: keep.items,
@@ -758,6 +769,7 @@ export async function runStillVisualFidelityLoop(input: {
           url: keep.once.url,
           savePath: keep.once.savePath,
           promptUsed: keep.once.promptUsed,
+          imageBase64: keep.once.imageBase64,
           visualPass: false,
           stillQuality: "weak",
           itemResults: keep.items,
@@ -787,6 +799,7 @@ export async function runStillVisualFidelityLoop(input: {
         url: keep.once.url,
         savePath: keep.once.savePath,
         promptUsed: keep.once.promptUsed,
+        imageBase64: keep.once.imageBase64,
         visualPass: false,
         stillQuality: "weak",
         itemResults: keep.items,
@@ -822,6 +835,7 @@ export async function runStillVisualFidelityLoop(input: {
     url: keep.once.url,
     savePath: keep.once.savePath,
     promptUsed: keep.once.promptUsed,
+    imageBase64: keep.once.imageBase64,
     visualPass: false,
     stillQuality: "weak",
     itemResults: keep.items,

@@ -137,6 +137,54 @@ export function resolveStillBgPolicy(input: StillBgPolicyInput): StillBgPolicyRe
     };
   }
 
+  // bend / action_primary: scene-first — keep softEnv when SCENE linked; fragment is Should/ZH
+  const bendOrAction =
+    /弯腰|捡起|捡拾|俯身|触地捡/.test(desc) ||
+    (/中景|近景/.test(desc) && /捡|拾/.test(desc));
+  try {
+    const { resolveBgFragment } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    const frag = resolveBgFragment({ visualDescription: desc });
+    if (frag.stripFullSecondary || bendOrAction) {
+      let fragmentOverFull = false;
+      try {
+        const { isNoComfyNoKeyDoctrine } =
+          require("../quality/literaryPrimaryEffects") as typeof import("../quality/literaryPrimaryEffects");
+        fragmentOverFull = isNoComfyNoKeyDoctrine().fragmentOverFullSoftEnv;
+      } catch {
+        /* scene-first default */
+      }
+      // Scene-first: keep hall when linked; only drop when doctrine forces fragment-over-full without scene
+      const keepHall = hasSceneLink && !fragmentOverFull;
+      const dropHall = fragmentOverFull && !hasSceneLink;
+      return {
+        policy: "demote",
+        bgMode: keepHall ? "soft_env" : dropHall ? "atmosphere_only" : hasSceneLink ? "soft_env" : "atmosphere_only",
+        excludeScene: false,
+        keepSoftEnvRef: keepHall || (hasSceneLink && !fragmentOverFull),
+        softEnvContinuity: continuityOf(keepHall || hasSceneLink, hasSceneLink),
+        omitSrefToken: !(keepHall || hasSceneLink),
+        bgGuidance:
+          keepHall || hasSceneLink
+            ? "背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化，禁止次角完整正脸抢戏"
+            : "背景仅次角裙摆/衣角等碎片虚化浅景深，禁止次角完整正脸或持道具抢戏；保留气氛轮廓可辨，禁止灰棚",
+        reason: keepHall || (hasSceneLink && !fragmentOverFull)
+          ? bendOrAction
+            ? "bend_action:keep_softEnv"
+            : `bg_fragment:${frag.kind}:keep_softEnv`
+          : bendOrAction && !frag.stripFullSecondary
+            ? "bend_action:atmosphere"
+            : dropHall
+              ? `bg_fragment:${frag.kind}:over_softEnv`
+              : `bg_fragment:${frag.kind}`,
+        pack,
+        sceneEstablishing: false,
+      };
+    }
+  } catch {
+    /* optional */
+  }
+
   if (sceneEstablishing) {
     return {
       policy: "keep",

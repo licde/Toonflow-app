@@ -77,10 +77,15 @@ export function preDesignShotsToPanels(
         (shot as { _stillBeatSplitId?: string })._stillBeatSplitId ||
         (shot as { _visualSplitId?: string })._visualSplitId,
     );
+    const literary =
+      String(desc ?? "").trim() ||
+      [chars, shot.sceneName, sceneCode].filter(Boolean).join("，").trim();
+    // Literary SSOT for panel.prompt — never silently let generation.imagePrompt cover VD
+    const promptLiterary = literary.slice(0, 2000) || imagePrompt.slice(0, 2000);
     return {
       clientId: stableClientId,
       duration: shot.duration ?? 3,
-      prompt: imagePrompt || [chars, shot.sceneName, sceneCode, desc].filter(Boolean).join("，").slice(0, 2000),
+      prompt: promptLiterary,
       videoDesc:
         videoPrompt ||
         `${shot.shotSize ?? "medium shot"} ${(shot as { camera?: string }).camera ?? "static"}, ${shot.duration ?? 3}s`,

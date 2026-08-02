@@ -717,12 +717,17 @@ export default router.post(
       }
       const sbRow = resolved.row;
       resolvedStillPath = resolved.filePath;
-      stillPromptForHandoff = resolved.prompt || String(sbRow?.prompt ?? "");
       try {
         stillMeta = resolved.reasonRaw ? JSON.parse(resolved.reasonRaw) : null;
       } catch {
         stillMeta = null;
       }
+      // Vendor egress for sheetLeak/contact/mouth — literary column is edit SSOT only
+      stillPromptForHandoff =
+        String(resolved.promptUsed ?? "").trim() ||
+        String((stillMeta as { promptUsed?: string } | null)?.promptUsed ?? "").trim() ||
+        resolved.prompt ||
+        String(sbRow?.prompt ?? "");
       const vlmInfra = isStillVlmInfraGap(stillMeta);
       let sheetLeak = Boolean((stillMeta as { sheetLeak?: boolean } | null)?.sheetLeak);
       try {
@@ -865,7 +870,7 @@ export default router.post(
         stillMeta = { ...(stillMeta as object), ...staleMeta };
         stillQuality = "weak";
       }
-      // M7 dialogue/VD designContentHash drift vs stamp at video/still compile
+      // M7 dialogue/VD designContentHash drift → require still recompose/regen before clearing videoStale
       if (!vlmInfra && shotMeta && stillMeta) {
         try {
           const { buildShotChainContract } = await import("@/ruleEngine/quality/shotChainContract");
@@ -873,13 +878,17 @@ export default router.post(
           const drift = markVideoStaleOnDesignContentChange(stillMeta as never, liveHash);
           if (drift) {
             designContentHashNowForEgress = liveHash;
-            autoRecompiledVideoPrompt = true;
-            // UX: do not hard-block burn; use live design fingerprint for chain egress.
+            // Do NOT clear videoStale or fake-green: still must recompose/regen first
             stillMeta = {
               ...(stillMeta as object),
-              videoStale: false,
+              ...drift,
               designContentHash: liveHash,
+              videoStale: true,
+              stillQuality: "weak",
+              requireStillRegenBeforeVideo: true,
+              staleClearSource: "hash_drift_need_still_regen",
             };
+            stillQuality = "weak";
           }
         } catch {
           /* optional */
@@ -1180,6 +1189,12 @@ export default router.post(
 
     try {
       const { assessStillVideoReadiness } = await import("@/ruleEngine/qc/stillVideoReadiness");
+      const vdForReadiness = String(
+        (shotMeta as { visualDescription?: string } | undefined)?.visualDescription ??
+          (shotMeta as { narrative?: { visualDescription?: string } } | undefined)?.narrative
+            ?.visualDescription ??
+          "",
+      );
       const readiness = assessStillVideoReadiness({
         stillQuality: typeof stillQuality === "string" ? stillQuality : null,
         visualPass: (stillMeta as { visualPass?: boolean } | null)?.visualPass ?? null,
@@ -1187,6 +1202,15 @@ export default router.post(
         fidelityItems: ((stillMeta as { fidelityItems?: Array<{ id: string; pass: boolean }> } | null)?.fidelityItems ??
           []) as Array<{ id: string; pass: boolean }>,
         promptUsed: stillPromptForHandoff,
+        visualDescription: vdForReadiness,
+        i2vCriticalFacts:
+          ((stillMeta as { i2vCriticalFacts?: string[] } | null)?.i2vCriticalFacts ??
+            (stillMeta as { generationContract?: { i2vCriticalFacts?: string[] } } | null)
+              ?.generationContract?.i2vCriticalFacts ??
+            null) as string[] | null,
+        contract:
+          ((stillMeta as { generationContract?: unknown } | null)?.generationContract ??
+            null) as import("@/ruleEngine/design/deriveGenerationContract").GenerationContract | null,
         stillMeta: stillMeta as Record<string, unknown> | null,
       });
       if (!readiness.i2vReady) {
@@ -1224,6 +1248,16 @@ export default router.post(
             missingSlots: contactGate.missingSlots,
           }),
         );
+      }
+      // AV enhance Motion 起态补助 — L3 handoff only; never reseals still L0
+      const motionHint = String(
+        (stillMeta as { videoMotionStartHint?: string } | null)?.videoMotionStartHint ??
+          (stillMeta as { generationContract?: { videoMotionStartHint?: string } } | null)
+            ?.generationContract?.videoMotionStartHint ??
+          "",
+      ).trim();
+      if (motionHint && !burnPrompt.includes(motionHint.slice(0, Math.min(12, motionHint.length)))) {
+        burnPrompt = `${motionHint}\n${burnPrompt}`.trim();
       }
       const { assertStillVideoPoseHandoff } = await import("@/ruleEngine/qc/stillVideoPoseHandoff");
       const poseGate = assertStillVideoPoseHandoff({

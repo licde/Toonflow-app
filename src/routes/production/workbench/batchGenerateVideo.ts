@@ -416,7 +416,9 @@ export default router.post(
             const { assertStillFirstFrameContract } = await import("@/ruleEngine/qc/stillFirstFrameGate");
             let stillMeta = parseStillMetaFromReason(sbRow?.reason);
             let sheetLeak = Boolean(stillMeta?.sheetLeak);
-            const stillPrompt = String(sbRow?.prompt ?? "");
+            // Vendor egress for gates — literary o_storyboard.prompt is edit SSOT only
+            const stillPrompt =
+              String(stillMeta?.promptUsed ?? "").trim() || String(sbRow?.prompt ?? "");
             const { isStillVlmInfraGap } = await import("@/ruleEngine/qc/resolveStillForBurn");
             const vlmInfra = isStillVlmInfraGap(stillMeta as Record<string, unknown> | null);
             try {
@@ -886,15 +888,51 @@ export default router.post(
         /* optional mouth module */
       }
 
-      // Contact handoff homology with generateVideo
+      // I2V readiness + contact handoff homology with generateVideo
       try {
-        const { assertStillContactVideoHandoff } = await import("@/ruleEngine/qc/stillContactVideoHandoff");
         const vdContact = String(
           (shotMeta as { visualDescription?: string } | undefined)?.visualDescription ??
             (shotMeta as { narrative?: { visualDescription?: string } } | undefined)?.narrative
               ?.visualDescription ??
             "",
         );
+        try {
+          const { assessStillVideoReadiness } = await import("@/ruleEngine/qc/stillVideoReadiness");
+          const readiness = assessStillVideoReadiness({
+            stillQuality: batchStillQuality,
+            visualPass: (batchStillMeta as { visualPass?: boolean } | null)?.visualPass ?? null,
+            sheetLeak: Boolean((batchStillMeta as { sheetLeak?: boolean } | null)?.sheetLeak),
+            fidelityItems: ((batchStillMeta as { fidelityItems?: Array<{ id: string; pass: boolean }> } | null)
+              ?.fidelityItems ?? []) as Array<{ id: string; pass: boolean }>,
+            promptUsed: batchStillPrompt,
+            visualDescription: vdContact,
+            i2vCriticalFacts:
+              ((batchStillMeta as { i2vCriticalFacts?: string[] } | null)?.i2vCriticalFacts ??
+                (batchStillMeta as { generationContract?: { i2vCriticalFacts?: string[] } } | null)
+                  ?.generationContract?.i2vCriticalFacts ??
+                null) as string[] | null,
+            contract:
+              ((batchStillMeta as { generationContract?: unknown } | null)?.generationContract ??
+                null) as import("@/ruleEngine/design/deriveGenerationContract").GenerationContract | null,
+            stillMeta: batchStillMeta as Record<string, unknown> | null,
+          });
+          if (!readiness.i2vReady) {
+            await u.db("o_video").where({ id: videoId }).update({
+              state: "生成失败",
+              errorReason: JSON.stringify({
+                message: readiness.reason || "静照未达到视频起始帧标准",
+                code: "STILL-I2V-NOT-READY",
+                primaryNextStep: "regen_storyboard_hq",
+                ctaLabel: "重出HQ静照",
+                criticalMisses: readiness.criticalMisses,
+              }),
+            });
+            continue;
+          }
+        } catch {
+          /* readiness optional if module missing */
+        }
+        const { assertStillContactVideoHandoff } = await import("@/ruleEngine/qc/stillContactVideoHandoff");
         const contact = assertStillContactVideoHandoff({
           visualDescription: vdContact,
           stillPrompt: batchStillPrompt,
@@ -915,6 +953,16 @@ export default router.post(
             }),
           });
           continue;
+        }
+        // AV enhance Motion 起态补助 — homology with generateVideo
+        const motionHint = String(
+          (batchStillMeta as { videoMotionStartHint?: string } | null)?.videoMotionStartHint ??
+            (batchStillMeta as { generationContract?: { videoMotionStartHint?: string } } | null)
+              ?.generationContract?.videoMotionStartHint ??
+            "",
+        ).trim();
+        if (motionHint && !vendorPrompt.includes(motionHint.slice(0, Math.min(12, motionHint.length)))) {
+          vendorPrompt = `${motionHint}\n${vendorPrompt}`.trim();
         }
         // G3: pose handoff same as single generateVideo
         try {

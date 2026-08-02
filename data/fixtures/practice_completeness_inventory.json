@@ -231,6 +231,28 @@
       "noEscape": "stub_shell_ne_burn"
     },
     {
+      "id": "ACTION_MISFIRE",
+      "declare": ["action_primary", "heuristicStillJudge"],
+      "mount": ["untilClearRuntime", "actionMisfireUntilClear", "smartRepairActuators"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "desk_lean_ne_pickup; no_hq_ok_on_action_misfire",
+      "l0Always": true,
+      "l1WhenKey": true
+    },
+    {
+      "id": "SECONDARY_DOMINANCE",
+      "declare": ["bg_fragment", "skirt_blur", "heuristicStillJudge"],
+      "mount": ["untilClearRuntime", "secondaryDominanceUntilClear", "smartRepairActuators"],
+      "hard": true,
+      "untilClear": true,
+      "feBlock": true,
+      "noEscape": "no_full_secondary_cref; heal_ne_补定妆",
+      "l0Always": true,
+      "l1WhenKey": true
+    },
+    {
       "id": "EMPTY_OS_ENSEMBLE",
       "declare": ["empty_or_os", "ensemble_4plus", "DEX-STILL-OS-NAME"],
       "mount": ["stillIntentPolicy", "stillCompositionSpec"],

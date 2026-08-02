@@ -4,7 +4,7 @@
 
   <section v-if="show" class="lit-debt" role="region" aria-labelledby="lit-debt-title">
 
-    <h4 id="lit-debt-title" class="lit-debt__title">{{ title }}</h4>
+    <h4 id="lit-debt-title" class="lit-debt__title">{{ resolvedTitle }}</h4>
 
     <p class="lit-debt__explain">{{ explainText }}</p>
 
@@ -20,7 +20,7 @@
 
       <t-button
 
-        v-if="showEnhance && !hideEnhance"
+        v-if="showEnhance && !hideEnhance && !sampleMustMiss"
 
         size="small"
 
@@ -118,7 +118,7 @@
 
       <t-button
 
-        v-if="!showFork"
+        v-if="!showFork && !sampleMustMiss"
 
         size="small"
 
@@ -136,7 +136,7 @@
 
       <t-button
 
-        v-if="suggestFillEnabled"
+        v-if="suggestFillEnabled && !sampleMustMiss"
 
         size="small"
 
@@ -276,6 +276,44 @@ defineEmits<{
 
 
 
+/** Sample Must miss owns primary CTA — suppress IRD「须补描写」 */
+const sampleMustMiss = computed(() => {
+  const m = props.stillMeta;
+  if (!m) return false;
+  if (m.sampleFulfillment?.mustFulfilled === false || m.sampleMustFulfilled === false) return true;
+  if ((m.sampleFulfillment?.mustMissIds?.length ?? 0) > 0) return true;
+  if (m.literaryEffectsQualified === false) return true;
+  return false;
+});
+
+const sampleMustOk = computed(() => {
+  const m = props.stillMeta;
+  if (!m) return false;
+  return (
+    m.sampleFulfillment?.mustFulfilled === true ||
+    m.sampleMustFulfilled === true ||
+    m.literaryEffectsQualified === true
+  );
+});
+
+const resolvedTitle = computed(() => {
+  if (sampleMustMiss.value) {
+    const ids = props.stillMeta?.sampleFulfillment?.mustMissIds ?? [];
+    return ids.length
+      ? `样本未兑现：${ids.slice(0, 3).join("、")}`
+      : "设计意图样本未兑现";
+  }
+  if (sampleMustOk.value && (props.stillMeta?.keyOptional || props.stillMeta?.pixelDimStatus === "unmeasured")) {
+    return "必须元素已兑现；像素未测";
+  }
+  if (sampleMustOk.value) {
+    return props.title && !/须补描写|文学细节未过/.test(props.title)
+      ? props.title
+      : "主效果已齐，细节可增强";
+  }
+  return props.title;
+});
+
 const slots = computed(() => {
 
   const fromProp = (props.missingSlots ?? []).filter(Boolean);
@@ -298,7 +336,7 @@ const findingIds = computed(() =>
 
 const showHumanRejudge = computed(
 
-  () => !props.designDebtBlock && shouldOfferHumanRejudge(props.stillMeta ?? null),
+  () => !props.designDebtBlock && !sampleMustMiss.value && shouldOfferHumanRejudge(props.stillMeta ?? null),
 
 );
 
@@ -312,7 +350,8 @@ const showFork = computed(
 
   () =>
 
-    props.primaryAction === "presentation_fork" || (props.presentationFork?.length ?? 0) > 0,
+    !sampleMustMiss.value &&
+    (props.primaryAction === "presentation_fork" || (props.presentationFork?.length ?? 0) > 0),
 
 );
 
@@ -338,6 +377,7 @@ const show = computed(
 
   () =>
 
+    sampleMustMiss.value ||
     isLitDebtStillMeta({
 
       primaryNextStep: props.primaryNextStep,
@@ -364,6 +404,7 @@ const showEnhance = computed(
 
   () =>
 
+    !sampleMustMiss.value &&
     !props.hideEnhance &&
 
     (isEnhanceAction(props.primaryAction) ||
@@ -378,11 +419,12 @@ const showSplit = computed(
 
   () =>
 
-    isSplitAction(props.primaryAction) ||
+    !sampleMustMiss.value &&
+    (isSplitAction(props.primaryAction) ||
 
     findingIds.value.includes("DEX-LIT-CONTACT-XOR") ||
 
-    slots.value.includes("contactRoleXor"),
+    slots.value.includes("contactRoleXor")),
 
 );
 
@@ -394,6 +436,7 @@ const showRegenPropStill = computed(
 
   () =>
 
+    sampleMustMiss.value ||
     slots.value.includes("propInFrame") ||
 
     slots.value.includes("contactGeom") ||
@@ -408,17 +451,19 @@ const showRegenPropStill = computed(
 
     debtSemantics.value.kind === "prop_form" ||
 
-    debtSemantics.value.kind === "prop_plate",
+    debtSemantics.value.kind === "prop_plate" ||
+    debtSemantics.value.kind === "lit_slot",
 
 );
 
-const regenPropLabel = computed(() =>
-  debtSemantics.value.kind === "prop_form"
-    ? "重出形态静照"
-    : debtSemantics.value.kind === "prop_plate"
-      ? "挂道具板后再生成"
-      : "重出带道具静照",
-);
+const regenPropLabel = computed(() => {
+  if (sampleMustMiss.value) {
+    return debtSemantics.value.ctaLabel || props.stillMeta?.literaryCtaLabel || "继续生成智能修";
+  }
+  if (debtSemantics.value.kind === "prop_form") return "重出形态静照";
+  if (debtSemantics.value.kind === "prop_plate") return "挂道具板后再生成";
+  return "重出带道具静照";
+});
 
 
 
@@ -439,6 +484,7 @@ const splitLabel = computed(() =>
 const showGenerateContinue = computed(
   () =>
     !showRegenPropStill.value &&
+    !sampleMustMiss.value &&
     (shootableCta.value.kind === "continue_repair" ||
       shootableCta.value.kind === "generate" ||
       shootableCta.value.kind === "enhance_and_generate" ||
@@ -477,7 +523,18 @@ const handEditLabel = computed(() =>
 
 const explainText = computed(() => {
 
+  if (sampleMustMiss.value) {
+    return (
+      debtSemantics.value.explain ||
+      "设计意图 Must 未逐项兑现；请换板重出，勿以补描写冒充主修。"
+    );
+  }
+
   if (props.explain) return props.explain;
+
+  if (sampleMustOk.value && slots.value.length) {
+    return "主效果已齐，细节可增强；非主失败。";
+  }
 
   if (showFork.value) {
 
@@ -489,6 +546,10 @@ const explainText = computed(() => {
 
     return "设计债建议先补齐（propInFrame/contactGeom 等）；仍可试拍生成，烧片前须对齐。人审不能假绿 hq。";
 
+  }
+
+  if (debtSemantics.value.kind === "lit_slot") {
+    return debtSemantics.value.explain;
   }
 
   if (debtSemantics.value.kind === "prop_form" || debtSemantics.value.kind === "prop_plate") {
@@ -512,7 +573,7 @@ const explainText = computed(() => {
   }
 
   if (
-    /lit_contact_mouth_ban|mouthBan/i.test(String(props.reverseTrigger ?? props.code ?? "")) ||
+    /lit_contact_mouth_ban|mouthBan/i.test(String((props as { reverseTrigger?: string; code?: string }).reverseTrigger ?? (props as { code?: string }).code ?? "")) ||
     slots.value.some((s) => /mouthBan|禁口含/i.test(s))
   ) {
     return "接触主题胶水：compose 须含「禁口含/禁纸入口/仅落点触」HARD；缺则增强或手改 VD，禁止只 regen。";

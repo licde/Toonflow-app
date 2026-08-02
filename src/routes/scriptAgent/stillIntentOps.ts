@@ -237,6 +237,16 @@ export default router.post(
           code: "IRD-CHAT-STRICT",
         });
       }
+      {
+        const curVer = peekPackageVersion(shotsFromPlan(plan));
+        if (packageVersion != null && packageVersion !== curVer) {
+          return res.status(409).json({
+            message: `packageVersion conflict: client=${packageVersion} server=${curVer}`,
+            code: "IRD-PKG-VERSION",
+            packageVersion: curVer,
+          });
+        }
+      }
       if (literaryLocked && !forceApply) {
         const { buildLitFillSuggestions } =
           require("@/ruleEngine/design/literaryDetailLlmFill") as typeof import("@/ruleEngine/design/literaryDetailLlmFill");

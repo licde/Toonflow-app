@@ -55,7 +55,10 @@ export default router.post(
       return res.status(200).send(
         success({
           url: result.url,
+          /** Literary edit SSOT — FE must not treat promptUsed as node.prompt */
+          prompt: result.prompt,
           promptUsed: result.promptUsed,
+          egressPrompt: result.egressPrompt ?? result.promptUsed,
           contentPolicyWarnings: result.contentPolicyWarnings,
           feedback: result.feedback,
           imageMode: result.imageMode,

@@ -286,14 +286,30 @@ export function buildMustSurvive(input: {
       seen.add("lit:contact_role_xor");
     }
     if (/浅痕|红痕|划痕可见|渗血|血珠/.test(vd) && !seen.has("lit:wound_visible")) {
+      const bendWins =
+        /弯腰|捡起|捡拾|俯身捡/.test(vd) ||
+        (() => {
+          try {
+            const { resolvePoseOccupancy } =
+              require("./designIntentProfile") as typeof import("./designIntentProfile");
+            return resolvePoseOccupancy(vd) === "bend_pickup";
+          } catch {
+            return false;
+          }
+        })();
       items.push({
         id: "lit:wound_visible",
         kind: "composition",
-        mustTokens: ["渗血", "血珠", "浅痕", "红痕"].filter((t) => vd.includes(t)).slice(0, 1),
+        mustTokens: bendWins
+          ? []
+          : ["渗血", "血珠", "浅痕", "红痕"].filter((t) => vd.includes(t)).slice(0, 1),
         vlmQuestion: "触面浅痕/渗血是否可见？",
-        healInject: "伤痕可见度须落在声明部位",
+        healInject: bendWins
+          ? "细节：面颊浅痕可辨（非颊触立法）"
+          : "伤痕可见度须落在声明部位",
         strengthenKey: "composition",
         strengthenValue: "wound_visible",
+        soft: bendWins,
       });
       seen.add("lit:wound_visible");
     }

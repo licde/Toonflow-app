@@ -31,6 +31,13 @@ function digMicro(shot: Record<string, unknown> | undefined): string | null {
   } catch {
     /* optional */
   }
+  // XOR: dialogue_native drops closed-mouth from micro string
+  const lipSync = String(
+    (shot?.shotDesign as { lipSyncPolicy?: string } | undefined)?.lipSyncPolicy ?? "",
+  );
+  if (lipSync === "dialogue_native" && mouth && /neutral_closed|闭口|抿嘴/.test(mouth)) {
+    mouth = undefined;
+  }
   return [micro.eyes, mouth].filter(Boolean).join("; ") || null;
 }
 
@@ -75,7 +82,11 @@ function dialogueBeatFromShot(
   if (/咬|刺|含|衔|捂嘴|咬唇|咬帕/.test(desc)) return null;
   const micro = (shot?.shotDesign as { performance?: { microExpression?: { mouthDetail?: string } } } | undefined)
     ?.performance?.microExpression;
-  if (micro?.mouthDetail) {
+  const lipSync = String(
+    (shot?.shotDesign as { lipSyncPolicy?: string } | undefined)?.lipSyncPolicy ?? "",
+  );
+  // XOR: dialogue_native must not inject closed-mouth beat
+  if (micro?.mouthDetail && !(lipSync === "dialogue_native" && /neutral_closed|闭口|抿嘴/.test(micro.mouthDetail))) {
     const speakers = normalizeDialogueSpeakers(lines.map((l) => l.speaker).filter(Boolean) as string[]);
     const who = speakers.slice(0, 2).join("与") || "角色";
     return `${who}表演：嘴型=${micro.mouthDetail}`;
@@ -213,9 +224,40 @@ export async function hydrateComposeStillContext(
           (shot.shotSize as string) ??
           ((shot.narrative as { shotSize?: string } | undefined)?.shotSize) ??
           null;
-        const sd = shot.shotDesign as { composition?: { foreground?: string; background?: string } } | undefined;
+        const sd = shot.shotDesign as {
+          composition?: { foreground?: string; background?: string };
+          cameraAnchor?: { shotSize?: string; bgBlur?: boolean; colorTemp?: string };
+          lipSyncPolicy?: string;
+        } | undefined;
         ctx.foreground = sd?.composition?.foreground ?? null;
         ctx.background = sd?.composition?.background ?? null;
+        // P0: full shotDesign into compose — episodeShot + cameraAnchor
+        ctx.episodeShot = shot;
+        const cam = sd?.cameraAnchor;
+        if (cam?.shotSize && !ctx.shotSize) ctx.shotSize = String(cam.shotSize);
+        else if (cam?.shotSize && ctx.shotSize) {
+          // Prefer cameraAnchor when top-level missing MS/CU cue
+          if (!/MS|CU|中景|近景|特写|全景|远景/i.test(String(ctx.shotSize))) {
+            ctx.shotSize = String(cam.shotSize);
+          }
+        }
+        if (typeof cam?.bgBlur === "boolean") {
+          (ctx as { bgBlur?: boolean }).bgBlur = cam.bgBlur;
+        }
+        if (cam?.colorTemp && !ctx.colorTemp) {
+          ctx.colorTemp = String(cam.colorTemp);
+        }
+        if (sd?.lipSyncPolicy) {
+          (ctx as { lipSyncPolicy?: string }).lipSyncPolicy = String(sd.lipSyncPolicy);
+        }
+        // Extract sample atoms (current shot only — not neighbor lexicon)
+        try {
+          const { extractShotDesignSample } = await import("../design/shotDesignSample");
+          const sample = extractShotDesignSample(shot);
+          (ctx as { shotDesignSample?: typeof sample }).shotDesignSample = sample;
+        } catch {
+          /* optional */
+        }
         ctx.microExpression = digMicro(shot);
         ctx.splitHint = (shot.splitHint as string) ?? null;
         ctx.reactionAction =
@@ -425,7 +467,8 @@ export async function hydrateComposeStillContext(
     nameToCodes,
   });
 
-  // bgFragment / skirt-blur: demote non-lead linked cref so secondary face does not steal slots
+  // bgFragment / skirt-blur: demote non-lead linked cref so secondary face does not steal slots.
+  // No secondary asset is a legal path — never treat missing support plate as identity debt.
   try {
     const { resolveBgFragment, pickVdLiteraryPrimary } =
       require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
@@ -438,27 +481,29 @@ export async function hydrateComposeStillContext(
     if (frag.stripFullSecondary && ctx.characters?.length) {
       const names = ctx.characters.map((c) => String(c.name ?? "")).filter(Boolean);
       const lead = pickVdLiteraryPrimary(ctx.visualDescription, names);
-      const allowCodes = new Set(
-        ((ctx as { shotCharCodes?: string[] }).shotCharCodes ?? []).map((c) => c.toUpperCase()),
+      const shotCodes = ((ctx as { shotCharCodes?: string[] }).shotCharCodes ?? []).map((c) =>
+        c.toUpperCase(),
       );
+      // Single primary code only when cast has exactly one CHAR — never "any code in shot ⇒ lead"
+      const soleCode = shotCodes.length === 1 ? shotCodes[0] : "";
       ctx.characters = ctx.characters.map((c) => {
         const n = String(c.name ?? "");
         const code = String(c.code ?? "").toUpperCase();
-        const inCharCodes = allowCodes.size > 0 && code && allowCodes.has(code);
         const isLead =
-          inCharCodes ||
           c.tier === "lead" ||
-          (lead && (n === lead || n.includes(lead) || lead.includes(n)));
+          (lead && (n === lead || n.includes(lead) || lead.includes(n))) ||
+          (Boolean(soleCode) && code === soleCode);
         if (
           !isLead &&
-          c.hasImage &&
           (frag.kind === "skirt_blur" || frag.kind === "body_fragment" || frag.kind === "sleeve_blur")
         ) {
+          // Force demote even when hasImage was false (normalize tier); strip plate when present
           return { ...c, hasImage: false, tier: "support" as const };
         }
         return c;
       });
       (ctx as { bgFragmentDemoted?: boolean }).bgFragmentDemoted = true;
+      (ctx as { secondaryAssetOptional?: boolean }).secondaryAssetOptional = true;
     }
   } catch {
     /* optional */

@@ -125,7 +125,10 @@ export async function runGenerateFlowImageCore(
   deps: GenerateFlowImageDeps = {},
 ): Promise<{
   url: string;
+  /** Literary edit SSOT — never egress soup */
+  prompt?: string;
   promptUsed: string;
+  egressPrompt?: string;
   contentPolicyWarnings?: string[];
   feedback?: Awaited<ReturnType<typeof classifyGenerationFailure>>;
   referenceCount: number;
@@ -242,6 +245,29 @@ export async function runGenerateFlowImageCore(
     visualDescription: composeCtx.visualDescription,
   });
   composeCtx.previousVisualBody = ingress.previousVisualBody;
+  try {
+    const prevMeta = ingress.prevMeta as Record<string, unknown> | null;
+    const gated = prevMeta?.untilClearGatedInject;
+    const litInject = ingress.literaryRepairInjectLines ?? [];
+    const mergedInject = [
+      ...(Array.isArray(gated) ? gated.map((s) => String(s)) : []),
+      ...litInject,
+    ].filter(Boolean);
+    if (mergedInject.length) {
+      composeCtx.gatedHealInject = [...new Set(mergedInject)].slice(0, 8);
+    }
+    const priorSeal = prevMeta?.primaryIntentSeal;
+    if (priorSeal && typeof priorSeal === "object") {
+      composeCtx.priorPrimaryIntentSeal =
+        priorSeal as import("@/ruleEngine/compilers/primaryIntentSeal").PrimaryIntentCarrierSet;
+    }
+    if (ingress.forceFull && litInject.length) {
+      (composeCtx as { literaryRepairDeltaHints?: string[] }).literaryRepairDeltaHints =
+        ingress.literaryRepairDeltaHints;
+    }
+  } catch {
+    /* optional */
+  }
   const composeMode = ingress.composeMode;
 
   // XOR smart-split stays on import/design only — never rewrite shot count mid-generate
@@ -553,7 +579,22 @@ export async function runGenerateFlowImageCore(
   }
 
   const charNames = (composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[];
-  const literaryDesc = descSsot.description || composeCtx.visualDescription || composed.visualBody;
+  const literaryDesc = (() => {
+    try {
+      const { resolveLiteraryStillPrompt } =
+        require("@/ruleEngine/compilers/literaryStillSsot") as typeof import("@/ruleEngine/compilers/literaryStillSsot");
+      const lit = resolveLiteraryStillPrompt({
+        visualDescription: descSsot.description || composeCtx.visualDescription,
+        compiledImagePrompt: composeCtx.compiledImagePrompt,
+        background: composeCtx.background,
+        spatialRelation: composeCtx.spatialRelation,
+      }).literary;
+      if (lit) return lit;
+    } catch {
+      /* fall through */
+    }
+    return descSsot.description || composeCtx.visualDescription || composed.visualBody;
+  })();
   const { resolveStillBgPolicy } = await import("@/ruleEngine/compilers/stillBgPolicy");
   const { extractDescPredicates } = await import("@/ruleEngine/compilers/extractDescPredicates");
   const { preflightFamilyCref } = await import("@/ruleEngine/qc/stillCrefPreflight");
@@ -682,17 +723,7 @@ export async function runGenerateFlowImageCore(
   const policy = precheckContentPolicy(lastPipeline.egressPrompt);
 
   try {
-    const loopOut = await runStillVisualFidelityLoop({
-      qualityMode,
-      storyboardId,
-      description: literaryDesc,
-      checklist,
-      healBudget: budget,
-      strengthen: body.strengthen,
-      judgeFn: deps.vlmJudgeFn,
-      db,
-      bgPolicy: bgPol.policy,
-      generateOnce: async ({
+    const generateOnce = async ({
         strengthen,
         mode,
         fixHints,
@@ -805,6 +836,20 @@ export async function runGenerateFlowImageCore(
               excludeScene: Boolean(lastComposed.excludeScene),
               softEnvRef: Boolean(lastComposed.keepSoftEnvRef),
               propSoftCodes: propCodes,
+              secondaryCharacterBudget: (() => {
+                try {
+                  const dip = (lastComposed.generationContract as { designIntentProfile?: { secondaryBudget?: string } })
+                    ?.designIntentProfile;
+                  if (dip?.secondaryBudget === "skirt_blur" || dip?.secondaryBudget === "hands_only") {
+                    return dip.secondaryBudget;
+                  }
+                  const { deriveDesignIntentProfile } = require("@/ruleEngine/compilers/designIntentProfile");
+                  return deriveDesignIntentProfile({ visualDescription: literaryDesc }).secondaryBudget;
+                } catch {
+                  return undefined;
+                }
+              })(),
+              leadCharCodes: bind.orderedCodes.length ? bind.orderedCodes.slice(0, 1) : undefined,
             },
           );
           referenceList = built.referenceList;
@@ -887,9 +932,33 @@ export async function runGenerateFlowImageCore(
               continue;
             }
             if (likelyCharSheet || (dropScene && !likelyScene && !likelyProp)) {
+              const sealCropEarly = (lastComposed.generationContract as {
+                primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
+              } | undefined)?.primaryIntentSeal;
+              let preferActionBody = false;
+              try {
+                const { resolveStillRefsContract } = await import(
+                  "@/ruleEngine/compilers/stillRefsContract"
+                );
+                const refsC = resolveStillRefsContract({
+                  primaryObjective: sealCropEarly?.primaryObjective,
+                  objectiveClass: lastComposed.generationContract?.objectiveClass,
+                  poseOccupancy: sealCropEarly?.poseOccupancy,
+                  visualDescription: literaryDesc,
+                });
+                preferActionBody = refsC.identityPreferActionBody;
+                (lastComposed as { stillRefsContract?: typeof refsC }).stillRefsContract = refsC;
+              } catch {
+                preferActionBody =
+                  sealCropEarly?.poseOccupancy === "bend_pickup" ||
+                  sealCropEarly?.primaryObjective === "action_primary" ||
+                  lastComposed.generationContract?.objectiveClass === "action_primary" ||
+                  /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? ""));
+              }
               const cropped = await cropTurnaroundSheetToIdentityPlate(base64, {
                 assumeSheet: true,
                 threeViewStrip: true,
+                preferActionBody,
               });
               if (cropped.cropped && cropped.base64) {
                 base64 = cropped.base64;
@@ -908,13 +977,47 @@ export async function runGenerateFlowImageCore(
                 const { resolveIdentityCropTopRatio } = await import(
                   "@/ruleEngine/compilers/eventPlateReadiness"
                 );
+                const sealCrop = sealCropEarly;
                 const topRatio = resolveIdentityCropTopRatio({
                   objectiveClass: lastComposed.generationContract?.objectiveClass,
                   keepSoftEnvRef: softEnv,
                   softEnvContinuity: softEnv ? "must" : "none",
+                  poseOccupancy: sealCrop?.poseOccupancy,
+                  primaryObjective: sealCrop?.primaryObjective,
                 });
-                const face = await cropIdentityPlateToFaceBias(base64, { topRatio });
+                const face = await cropIdentityPlateToFaceBias(base64, {
+                  topRatio,
+                  preferActionBody,
+                });
                 if (face.cropped && face.base64) base64 = face.base64;
+              }
+              // Bend: replace standing sheet body with face+lean silhouette (not upright four-up)
+              {
+                const refsForBend =
+                  (lastComposed as { stillRefsContract?: { identityReplaceStandingSheet?: boolean } })
+                    .stillRefsContract;
+                const replaceStand =
+                  refsForBend?.identityReplaceStandingSheet === true ||
+                  preferActionBody ||
+                  sealCropEarly?.poseOccupancy === "bend_pickup";
+                if (replaceStand) {
+                  try {
+                    const { composeBendIdentityPlate } = await import(
+                      "@/ruleEngine/compilers/eventPlateReadiness"
+                    );
+                    const bendId = await composeBendIdentityPlate({
+                      faceSourceBase64: base64,
+                    });
+                    if (bendId.usedFace && bendId.base64) {
+                      base64 = bendId.base64;
+                      (lastComposed as { bendIdentityReplaced?: boolean; bendIdentityReason?: string }).bendIdentityReplaced =
+                        true;
+                      (lastComposed as { bendIdentityReason?: string }).bendIdentityReason = bendId.reason;
+                    }
+                  } catch {
+                    /* keep cropped sheet */
+                  }
+                }
               }
               identityPlates.push({ type: "image" as const, base64 });
             } else if (!dropScene && likelyScene) {
@@ -970,7 +1073,10 @@ export async function runGenerateFlowImageCore(
                 const { softenSoftEnvPlateForAtmosphere } = await import(
                   "@/ruleEngine/compilers/eventPlateReadiness"
                 );
-                const soft = await softenSoftEnvPlateForAtmosphere(softEnvB64);
+                const soft = await softenSoftEnvPlateForAtmosphere(softEnvB64, {
+                  softEnvContinuity: continuity,
+                  sceneMust: continuity === "must",
+                });
                 if (soft.base64) softEnvB64 = soft.base64;
               } catch {
                 /* optional */
@@ -993,6 +1099,57 @@ export async function runGenerateFlowImageCore(
             (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity =
               budgeted.softEnvBakedIntoIdentity;
             (lastComposed as { softEnvBakeFailed?: boolean }).softEnvBakeFailed = budgeted.bakeFailed;
+          }
+          // Refs contract: hard-drop full SCENE softEnv when objective/occupancy demands
+          {
+            let dropSoft = false;
+            try {
+              const { resolveStillRefsContract } = await import(
+                "@/ruleEngine/compilers/stillRefsContract"
+              );
+              const sealBend = (lastComposed.generationContract as {
+                primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
+              } | undefined)?.primaryIntentSeal;
+              const refsC =
+                (lastComposed as { stillRefsContract?: ReturnType<typeof resolveStillRefsContract> })
+                  .stillRefsContract ??
+                resolveStillRefsContract({
+                  primaryObjective: sealBend?.primaryObjective,
+                  objectiveClass: lastComposed.generationContract?.objectiveClass,
+                  poseOccupancy: sealBend?.poseOccupancy,
+                  visualDescription: literaryDesc,
+                });
+              (lastComposed as { stillRefsContract?: typeof refsC }).stillRefsContract = refsC;
+              dropSoft = refsC.dropFullSoftEnv;
+            } catch {
+              // Scene-first safe default: NEVER drop softEnv on import/resolve failure for bend
+              dropSoft = false;
+            }
+            if (dropSoft) {
+              const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+              const nextRefs: typeof referenceList = [];
+              const nextRoles: string[] = [];
+              for (let i = 0; i < referenceList.length; i++) {
+                const role = roles[i] || "identity";
+                if (role === "softEnv") {
+                  (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = true;
+                  continue;
+                }
+                nextRefs.push(referenceList[i]!);
+                nextRoles.push(String(role));
+              }
+              if (nextRefs.length !== referenceList.length) {
+                referenceList = nextRefs;
+                (lastComposed as { refsRoles?: string[] }).refsRoles = nextRoles;
+                softEnvPlatePresent = false;
+                lastComposed.keepSoftEnvRef = false;
+                (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = "none";
+                lastPipeline = {
+                  ...lastPipeline,
+                  autoHealed: [...(lastPipeline.autoHealed ?? []), "refs_contract:drop_softEnv"],
+                };
+              }
+            }
           }
           (lastComposed as { propPlateMissing?: boolean }).propPlateMissing = propPlateMissing;
         } else if (references?.length && referenceList.length) {
@@ -1066,27 +1223,32 @@ export async function runGenerateFlowImageCore(
           } else if (propPlatePresent && referenceList[1]?.base64) {
             tagged.push({ type: "image", base64: referenceList[1].base64, role: "propSoft" });
           }
+          // Hang softEnv: FE SCENE bytes OR DB softEnvKept tail — never strip hall when keepSoftEnvRef
+          if (softEnv && !softEnvB64 && (softEnvPlatePresent || referenceList.length >= 2)) {
+            const softIdx =
+              propPlatePresent && referenceList.length >= 3
+                ? referenceList.length - 1
+                : referenceList.length >= 2
+                  ? referenceList.length - 1
+                  : -1;
+            if (softIdx > 0 && referenceList[softIdx]?.base64) {
+              softEnvB64 = referenceList[softIdx]!.base64;
+            }
+          }
           if (softEnv && softEnvB64) {
             try {
               const { softenSoftEnvPlateForAtmosphere } = await import(
                 "@/ruleEngine/compilers/eventPlateReadiness"
               );
-              const soft = await softenSoftEnvPlateForAtmosphere(softEnvB64);
+              const soft = await softenSoftEnvPlateForAtmosphere(softEnvB64, {
+                softEnvContinuity: continuity,
+                sceneMust: continuity === "must",
+              });
               if (soft.base64) softEnvB64 = soft.base64;
             } catch {
               /* optional */
             }
             tagged.push({ type: "image", base64: softEnvB64, role: "softEnv" });
-          } else if (softEnvPlatePresent) {
-            const softIdx =
-              propPlatePresent && referenceList.length >= 3
-                ? referenceList.length - 1
-                : !propPlatePresent && referenceList.length >= 2
-                  ? referenceList.length - 1
-                  : -1;
-            if (softIdx > 0 && referenceList[softIdx]?.base64) {
-              tagged.push({ type: "image", base64: referenceList[softIdx]!.base64, role: "softEnv" });
-            }
           }
 
           const budgeted = await applyContinuityAwareRefBudget({
@@ -1113,6 +1275,54 @@ export async function runGenerateFlowImageCore(
           turnaroundCrefUsed = true;
         }
 
+        // Shared refs-contract softEnv drop (covers DB-ref path)
+        {
+          let dropSoft2 = false;
+          try {
+            const { resolveStillRefsContract } = await import(
+              "@/ruleEngine/compilers/stillRefsContract"
+            );
+            const sealBend2 = (lastComposed.generationContract as {
+              primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
+            } | undefined)?.primaryIntentSeal;
+            const refsC =
+              (lastComposed as { stillRefsContract?: ReturnType<typeof resolveStillRefsContract> })
+                .stillRefsContract ??
+              resolveStillRefsContract({
+                primaryObjective: sealBend2?.primaryObjective,
+                objectiveClass: lastComposed.generationContract?.objectiveClass,
+                poseOccupancy: sealBend2?.poseOccupancy,
+                visualDescription: literaryDesc,
+              });
+            (lastComposed as { stillRefsContract?: typeof refsC }).stillRefsContract = refsC;
+            dropSoft2 = refsC.dropFullSoftEnv;
+          } catch {
+            // Scene-first safe default — never drop softEnv on resolve failure
+            dropSoft2 = false;
+          }
+          if (dropSoft2 && ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).includes("softEnv")) {
+            const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+            const nextRefs: typeof referenceList = [];
+            const nextRoles: string[] = [];
+            for (let i = 0; i < referenceList.length; i++) {
+              const role = roles[i] || "identity";
+              if (role === "softEnv") continue;
+              nextRefs.push(referenceList[i]!);
+              nextRoles.push(String(role));
+            }
+            referenceList = nextRefs;
+            (lastComposed as { refsRoles?: string[] }).refsRoles = nextRoles;
+            softEnvPlatePresent = false;
+            lastComposed.keepSoftEnvRef = false;
+            (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = true;
+            (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = "none";
+            lastPipeline = {
+              ...lastPipeline,
+              autoHealed: [...(lastPipeline.autoHealed ?? []), "refs_contract:drop_softEnv_shared"],
+            };
+          }
+        }
+
         // Always echo continuity flags (even false) for FE/debug
         if (lastComposed.keepSoftEnvRef) {
           (lastComposed as { softEnvContinuity?: string }).softEnvContinuity =
@@ -1123,6 +1333,7 @@ export async function runGenerateFlowImageCore(
         }
 
         // Structure whitelist: synthesize PROP soft plate when event objective lacks one
+        // OR refs contract forces occupancy-keyed plate (FE display-card must not skip)
         let synthAttempted = false;
         const needsPropPlate = (() => {
           try {
@@ -1133,7 +1344,36 @@ export async function runGenerateFlowImageCore(
             return o === "contact_geom" || o === "prop_readable" || o === "action_primary";
           }
         })();
-        if (propPlateMissing && !propPlatePresent && !synthesizedProp && needsPropPlate) {
+        let forceOccupancyProp = false;
+        try {
+          const refsC = (lastComposed as { stillRefsContract?: { forcePropOccupancySynth?: boolean; propPoseOccupancy?: string | null } })
+            .stillRefsContract;
+          if (refsC?.forcePropOccupancySynth) forceOccupancyProp = true;
+          else {
+            const { resolveStillRefsContract } = await import("@/ruleEngine/compilers/stillRefsContract");
+            const sealBend = (lastComposed.generationContract as {
+              primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
+            } | undefined)?.primaryIntentSeal;
+            const c = resolveStillRefsContract({
+              primaryObjective: sealBend?.primaryObjective,
+              objectiveClass: lastComposed.generationContract?.objectiveClass,
+              poseOccupancy: sealBend?.poseOccupancy,
+              visualDescription: literaryDesc,
+            });
+            (lastComposed as { stillRefsContract?: typeof c }).stillRefsContract = c;
+            forceOccupancyProp = c.forcePropOccupancySynth;
+          }
+        } catch {
+          forceOccupancyProp =
+            /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? "")) ||
+            (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string } } | undefined)
+              ?.primaryIntentSeal?.poseOccupancy === "bend_pickup";
+        }
+        if (
+          ((propPlateMissing && !propPlatePresent) || forceOccupancyProp) &&
+          !synthesizedProp &&
+          needsPropPlate
+        ) {
           synthAttempted = true;
           try {
             const { synthesizePropSoftPlate, resolvePropPlateLabel } = await import(
@@ -1143,12 +1383,121 @@ export async function runGenerateFlowImageCore(
               contract: lastComposed.generationContract,
               visualDescription: literaryDesc,
             });
-            const synth = await synthesizePropSoftPlate({
+            // Asset-first: skip synth when warehouse/FE plate already available —
+            // EXCEPT when refs contract forces occupancy-keyed geometry (bend 触地)
+            let skipSynth = false;
+            const occForPlate =
+              (lastComposed.generationContract as {
+                primaryIntentSeal?: { poseOccupancy?: string };
+                designIntentProfile?: { poseOccupancy?: string; plateMode?: string };
+              } | undefined)?.primaryIntentSeal?.poseOccupancy ??
+              (lastComposed.generationContract as { designIntentProfile?: { poseOccupancy?: string } } | undefined)
+                ?.designIntentProfile?.poseOccupancy ??
+              null;
+            try {
+              const { resolvePropPlateLadder } = await import("@/ruleEngine/compilers/propPlateLadder");
+              const ladder = await resolvePropPlateLadder({
+                db,
+                projectId,
+                storyboardId: storyboardId ?? null,
+                propClassId: label.propClassId,
+                propCanonical: label.canonical,
+                glyphText: label.glyphText,
+                poseOccupancy: occForPlate,
+                plateMode: label.plateMode,
+              });
+              if (ladder.skipSynth && !forceOccupancyProp) {
+                // Honesty: skipSynth only when plate bytes actually hang into referenceList
+                let hungBytes = false;
+                if (ladder.assetId && db) {
+                  try {
+                    const asset = await db("o_assets").where({ id: ladder.assetId }).first();
+                    const imageId = (asset as { imageId?: number } | undefined)?.imageId;
+                    if (imageId) {
+                      const img = await db("o_image").where({ id: imageId }).first();
+                      const fp = String((img as { filePath?: string } | undefined)?.filePath ?? "");
+                      if (fp) {
+                        const buf = await u.oss.readFile(fp).catch(() => null);
+                        if (buf && Buffer.isBuffer(buf) && buf.length > 64) {
+                          const b64 = buf.toString("base64");
+                          if (referenceList.length >= 1) {
+                            referenceList.splice(1, 0, { type: "image" as const, base64: b64 });
+                          } else {
+                            referenceList.push({ type: "image" as const, base64: b64 });
+                          }
+                          hungBytes = true;
+                          propPlatePresent = true;
+                          propPlateMissing = false;
+                          synthesizedProp = false;
+                          (lastComposed as { propSource?: string }).propSource = ladder.grade;
+                          (lastComposed as { propPlateGrade?: string }).propPlateGrade = ladder.grade;
+                          if (ladder.assetId) {
+                            (lastComposed as { propAssetId?: number }).propAssetId = ladder.assetId;
+                          }
+                        }
+                      }
+                    }
+                  } catch {
+                    hungBytes = false;
+                  }
+                }
+                if (!hungBytes) {
+                  skipSynth = false;
+                  (lastComposed as { sources?: string[] }).sources = [
+                    ...((lastComposed as { sources?: string[] }).sources ?? []),
+                    "propLadder.skipSynth_no_bytes_force_synth",
+                  ];
+                } else {
+                  skipSynth = true;
+                }
+              }
+            } catch {
+              /* optional */
+            }
+            if (!skipSynth) {
+            const synthOcc =
+              (lastComposed as { stillRefsContract?: { propPoseOccupancy?: string | null } }).stillRefsContract
+                ?.propPoseOccupancy ||
+              occForPlate ||
+              (forceOccupancyProp ? "bend_pickup" : null);
+            let synth = await synthesizePropSoftPlate({
               propClassId: label.propClassId,
               canonical: label.canonical,
               glyphText: label.glyphText,
               softPlateHint: label.softPlateHint,
+              plateMode: synthOcc === "bend_pickup" ? "object_inset" : label.plateMode,
+              poseOccupancy: synthOcc,
             });
+            // Bend: prefer photographic SCENE floor crop over cartoon SVG (Seedream ignores flat SVG)
+            if (synthOcc === "bend_pickup") {
+              try {
+                const { composeBendPropSoftFromScene } = await import(
+                  "@/ruleEngine/compilers/eventPlateReadiness"
+                );
+                const softB64 =
+                  referenceList.find(
+                    (_, i) =>
+                      ((lastComposed as { refsRoles?: string[] }).refsRoles ?? [])[i] === "softEnv",
+                  )?.base64 ||
+                  (softEnvPlatePresent ? referenceList[referenceList.length - 1]?.base64 : undefined);
+                const fromScene = await composeBendPropSoftFromScene({ sceneBase64: softB64 });
+                if (fromScene?.base64) {
+                  synth = {
+                    base64: fromScene.base64,
+                    kind: fromScene.kind,
+                    label: label.canonical || "纸",
+                    plateMode: "object_inset",
+                  };
+                  (lastComposed as { bendPropFromScene?: boolean }).bendPropFromScene = true;
+                  (lastComposed as { sources?: string[] }).sources = [
+                    ...((lastComposed as { sources?: string[] }).sources ?? []),
+                    `propSoft.${fromScene.reason}`,
+                  ];
+                }
+              } catch {
+                /* keep SVG synth */
+              }
+            }
             if (synth.base64 && sanitizeReferenceList([{ type: "image", base64: synth.base64 }]).length) {
               // Insert after identity, before soft env (never peel baked identity's only companion if it's prop)
               const softEnvSeparate =
@@ -1159,7 +1508,12 @@ export async function runGenerateFlowImageCore(
               const softTail = softEnvSeparate
                 ? referenceList.splice(referenceList.length - 1, 1)
                 : [];
-              if (referenceList.length >= 1) {
+              // Replace FE display-card propSoft when forcing occupancy synth
+              const rolesNow = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+              const propIdx = rolesNow.indexOf("propSoft");
+              if (forceOccupancyProp && propIdx >= 0 && referenceList[propIdx]) {
+                referenceList[propIdx] = { type: "image" as const, base64: synth.base64 };
+              } else if (referenceList.length >= 1) {
                 referenceList.splice(1, 0, { type: "image" as const, base64: synth.base64 });
               } else {
                 referenceList.push({ type: "image" as const, base64: synth.base64 });
@@ -1173,22 +1527,192 @@ export async function runGenerateFlowImageCore(
               (lastComposed as { synthesizedPropPlate?: boolean }).synthesizedPropPlate = true;
               (lastComposed as { propSource?: string }).propSource = "synth";
               (lastComposed as { propPlateGrade?: string }).propPlateGrade = "synthetic_geometry";
+              if (forceOccupancyProp) {
+                (lastComposed as { litPlatesSwapped?: boolean }).litPlatesSwapped = true;
+                (lastComposed as { litClaimPlateRepair?: boolean }).litClaimPlateRepair = true;
+                lastPipeline = {
+                  ...lastPipeline,
+                  autoHealed: [...(lastPipeline.autoHealed ?? []), "refs_contract:force_prop_occupancy_synth"],
+                };
+              }
+              try {
+                const { persistSynthesizedPropPlate } = await import(
+                  "@/ruleEngine/compilers/persistPropSoftPlate"
+                );
+                const persisted = await persistSynthesizedPropPlate({
+                  db,
+                  writeFile: (p, d) => u.oss.writeFile(p, d),
+                  projectId,
+                  storyboardId: storyboardId ?? null,
+                  base64: synth.base64,
+                  propClassId: label.propClassId,
+                  canonical: label.canonical,
+                  glyphText: label.glyphText,
+                  plateMode: label.plateMode ?? synth.plateMode,
+                  poseOccupancy: occForPlate,
+                });
+                if (persisted?.assetId) {
+                  (lastComposed as { propSource?: string }).propSource = "synth_persisted";
+                  (lastComposed as { propAssetId?: number }).propAssetId = persisted.assetId;
+                }
+              } catch (persistErr) {
+                console.warn("[generateFlowImage] prop plate persist failed", u.error(persistErr).message);
+              }
+              const occ =
+                occForPlate ||
+                (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string } } | undefined)
+                  ?.primaryIntentSeal?.poseOccupancy ||
+                "";
+              const bendForm =
+                occ === "bend_pickup" || /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc));
               const formBits = (lastComposed.generationContract?.mustShowFacts ?? [])
                 .filter((f) => f.id === "prop_form" || f.id === "prop_glyph" || f.id === "prop_pose")
                 .map((f) => f.text)
+                .filter((t) => !(bendForm && /面颊|颊触|贴合\/划过|真实贴合/.test(String(t))))
                 .slice(0, 3);
               const anti = (lastComposed.generationContract?.forbiddenSubstitutions ?? [])
                 .filter((s) => /书本|卷轴|厚本|薄纸|替代/.test(s))
                 .slice(0, 2);
-              vendorPrompt = [...formBits, ...anti, `${label.canonical}入画于颊触纸角（薄纸片软板，非书、非手持卡片）`]
+              // bend_pickup: never cheek-sweep lead — ground pickup only
+              const propLead = bendForm
+                  ? `占位：躯干明显前倾弯腰，主手触地捏起纸；纸在地面/近地，禁止浮空纸片、禁止直立胸前举纸`
+                  : `${label.canonical}入画于触点（薄纸片软板，非书、非手持卡片）`;
+              vendorPrompt = [...formBits, ...anti, propLead]
                 .filter(Boolean)
                 .join("。")
                 .concat("。")
                 .concat(String(vendorPrompt).trim());
             }
+            } // !skipSynth
           } catch (synthErr) {
             console.warn("[generateFlowImage] prop soft plate synth failed", u.error(synthErr).message);
           }
+        }
+
+          // Fragment sil hang (bg_fragment) — side slot; may coexist with SCENE softEnv; never steal prop
+          // Also hang without SCENE (atmosphere_only path).
+          try {
+          const { deriveDesignIntentProfile, profileNeedsFragmentPlate } = await import(
+            "@/ruleEngine/compilers/designIntentProfile"
+          );
+          const fragDip = deriveDesignIntentProfile({
+            visualDescription: literaryDesc,
+            imagePrompt: composeCtx.compiledImagePrompt,
+            background: composeCtx.background,
+          });
+          const alreadyHasFragment = Boolean((lastComposed as { fragmentPlateHung?: boolean }).fragmentPlateHung);
+          // Scene-first: fragment_sil only when contract drops hall; else skirt is ZH Should
+          const skipFragPlate =
+            (lastComposed as { stillRefsContract?: { dropFullSoftEnv?: boolean } }).stillRefsContract
+              ?.dropFullSoftEnv !== true;
+          if (
+            profileNeedsFragmentPlate(fragDip) &&
+            !alreadyHasFragment &&
+            referenceList.length >= 1 &&
+            !skipFragPlate
+          ) {
+            const { synthesizePropSoftPlate } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+            const frag = await synthesizePropSoftPlate({
+              propClassId: "generic",
+              canonical: "次角碎片裙摆",
+              softPlateHint: "cloth_fold",
+              plateMode: "fragment_sil",
+            });
+            if (frag.base64) {
+              referenceList.push({ type: "image" as const, base64: frag.base64 });
+              (lastComposed as { fragmentPlateHung?: boolean }).fragmentPlateHung = true;
+              const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+              roles.push("propSoft");
+              (lastComposed as { refsRoles?: string[] }).refsRoles = roles.slice(0, referenceList.length);
+            }
+          }
+
+          // Scene-first: only drop softEnv when contract explicitly says so (not bend-by-default)
+          const atmNeed =
+            fragDip.atmosphere ||
+            /烛火|烛光|月光|暖光|冷光|夜色|灯火/.exec(String(literaryDesc))?.[0] ||
+            null;
+          const alreadyAtm = Boolean((lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung);
+          const softEnvDropLatch = (() => {
+            const c = (lastComposed as { stillRefsContract?: { dropFullSoftEnv?: boolean } }).stillRefsContract;
+            return c?.dropFullSoftEnv === true;
+          })();
+          // Skirt fragment: ZH only when SCENE softEnv present (Should enhancement)
+          const hasSceneSoft =
+            softEnvPlatePresent ||
+            Boolean(lastComposed.keepSoftEnvRef) ||
+            (lastComposed as { softEnvContinuity?: string }).softEnvContinuity === "must";
+          if (hasSceneSoft && !softEnvDropLatch) {
+            if (!/裙摆|衣角|碎片/.test(vendorPrompt) && /裙摆|衣角|碎片/.test(String(literaryDesc ?? ""))) {
+              vendorPrompt = `背景浅景深，裙摆/衣角虚化可辨（加强项）。${String(vendorPrompt).trim()}`;
+            }
+            if (!/浅景深|主场景/.test(vendorPrompt)) {
+              vendorPrompt = `背景：主场景浅景深虚化，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
+            }
+            // Mild blur on SCENE softEnv for DOF (best-effort)
+            try {
+              const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+              const softIdx = roles.lastIndexOf("softEnv");
+              if (softIdx >= 0 && referenceList[softIdx]?.base64) {
+                const { softenSoftEnvPlateForAtmosphere } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+                const blurred = await softenSoftEnvPlateForAtmosphere(referenceList[softIdx]!.base64, {
+                  softEnvContinuity:
+                    (lastComposed as { softEnvContinuity?: string }).softEnvContinuity ?? "must",
+                  sceneMust: true,
+                });
+                if (blurred.softened && blurred.base64) {
+                  referenceList[softIdx] = { type: "image" as const, base64: blurred.base64 };
+                }
+              }
+            } catch {
+              /* optional */
+            }
+          }
+          if (softEnvDropLatch) {
+            (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = true;
+            (lastComposed as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = false;
+            (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = "none";
+            lastComposed.keepSoftEnvRef = false;
+          }
+          if (atmNeed && !alreadyAtm) {
+            if (softEnvDropLatch) {
+              // ZH-only atmosphere — no softEnv role when intentional fragment-only drop
+              (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung = true;
+              (lastComposed as { atmosphereZhOnly?: boolean }).atmosphereZhOnly = true;
+              if (!vendorPrompt.includes(String(atmNeed))) {
+                vendorPrompt = `保留${atmNeed}氛围可辨，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
+              }
+              lastPipeline = {
+                ...lastPipeline,
+                autoHealed: [...(lastPipeline.autoHealed ?? []), "atm:zh_only_no_softEnv"],
+              };
+            } else if (
+              !softEnvPlatePresent &&
+              !(lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity &&
+              referenceList.length >= 1
+            ) {
+              const { synthesizeAtmospherePlate } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+              const atmPlate = await synthesizeAtmospherePlate({ atmosphere: String(atmNeed) });
+              if (atmPlate?.base64) {
+                referenceList.push({ type: "image" as const, base64: atmPlate.base64 });
+                softEnvPlatePresent = true;
+                (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung = true;
+                (lastComposed as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = true;
+                (lastComposed as { softEnvContinuity?: string }).softEnvContinuity =
+                  (lastComposed as { softEnvContinuity?: string }).softEnvContinuity === "must"
+                    ? "must"
+                    : "optional";
+                const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+                roles.push("softEnv");
+                (lastComposed as { refsRoles?: string[] }).refsRoles = roles.slice(0, referenceList.length);
+                if (!vendorPrompt.includes(String(atmNeed))) {
+                  vendorPrompt = `保留${atmNeed}氛围可辨，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
+                }
+              }
+            }
+          }
+        } catch {
+          /* optional fragment / atmosphere */
         }
 
         // Gate: prop missing after synth → soft debt (allow); only brick if never attempted
@@ -1278,9 +1802,20 @@ export async function runGenerateFlowImageCore(
 
         // Enhance / form parity: re-assert prop_form / glyph / pose facts into egress (same kernel as compose)
         try {
-          const facts = (lastComposed.generationContract?.mustShowFacts ?? []).filter((f) =>
-            f.id === "prop_form" || f.id === "prop_glyph" || f.id === "prop_pose" || f.id === "contact_event",
-          );
+          const bendParity =
+            (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string } } | undefined)
+              ?.primaryIntentSeal?.poseOccupancy === "bend_pickup" ||
+            /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc));
+          const facts = (lastComposed.generationContract?.mustShowFacts ?? []).filter((f) => {
+            if (!(f.id === "prop_form" || f.id === "prop_glyph" || f.id === "prop_pose" || f.id === "contact_event")) {
+              return false;
+            }
+            // bend: never re-inject cheek contact legislation
+            if (bendParity && /面颊|颊触|贴合\/划过|真实贴合|contact_event/.test(`${f.id}${f.text}`)) {
+              return false;
+            }
+            return true;
+          });
           const missingFacts = facts.filter((f) => {
             const tip = String(f.text ?? "").slice(0, 12);
             return tip && !String(vendorPrompt).includes(tip);
@@ -1427,19 +1962,55 @@ export async function runGenerateFlowImageCore(
           let softEnvBaked = Boolean(
             (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity,
           );
-          // Upper-body bias when softEnv was NOT baked (bake already face-crops — avoid double destroy)
+          // Upper-body / action-body bias when softEnv was NOT baked
           if (eventObj && !softEnvBaked && referenceList[0]?.base64) {
             const { resolveIdentityCropTopRatio } = await import(
               "@/ruleEngine/compilers/eventPlateReadiness"
             );
+            const sealCrop2 = (lastComposed.generationContract as {
+              primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
+            } | undefined)?.primaryIntentSeal;
+            const preferActionBody =
+              (lastComposed as { stillRefsContract?: { identityPreferActionBody?: boolean } }).stillRefsContract
+                ?.identityPreferActionBody === true ||
+              sealCrop2?.poseOccupancy === "bend_pickup" ||
+              sealCrop2?.primaryObjective === "action_primary" ||
+              /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? ""));
             const topRatio = resolveIdentityCropTopRatio({
               objectiveClass: lastComposed.generationContract?.objectiveClass,
               keepSoftEnvRef: lastComposed.keepSoftEnvRef,
               softEnvContinuity: continuity,
+              poseOccupancy: sealCrop2?.poseOccupancy,
+              primaryObjective: sealCrop2?.primaryObjective,
             });
-            const face = await cropIdentityPlateToFaceBias(referenceList[0].base64, { topRatio });
+            const face = await cropIdentityPlateToFaceBias(referenceList[0].base64, {
+              topRatio,
+              preferActionBody,
+            });
             if (face.cropped && face.base64) {
               referenceList[0] = { type: "image" as const, base64: face.base64 };
+            }
+            const replaceStand2 =
+              (lastComposed as { stillRefsContract?: { identityReplaceStandingSheet?: boolean } })
+                .stillRefsContract?.identityReplaceStandingSheet === true ||
+              preferActionBody ||
+              sealCrop2?.poseOccupancy === "bend_pickup";
+            if (replaceStand2 && referenceList[0]?.base64) {
+              try {
+                const { composeBendIdentityPlate } = await import(
+                  "@/ruleEngine/compilers/eventPlateReadiness"
+                );
+                const bendId = await composeBendIdentityPlate({
+                  faceSourceBase64: referenceList[0].base64,
+                });
+                if (bendId.usedFace && bendId.base64) {
+                  referenceList[0] = { type: "image" as const, base64: bendId.base64 };
+                  (lastComposed as { bendIdentityReplaced?: boolean }).bendIdentityReplaced = true;
+                  (lastComposed as { bendIdentityReason?: string }).bendIdentityReason = bendId.reason;
+                }
+              } catch {
+                /* keep */
+              }
             }
           }
           if (!refsRolesEcho.length || refsRolesEcho.length !== referenceList.length) {
@@ -1458,35 +2029,96 @@ export async function runGenerateFlowImageCore(
             role: (refsRolesEcho[i] as "identity" | "propSoft" | "softEnv") || "identity",
           }));
           if (!softEnvBaked) {
+            // Scene-first: only strip softEnv when contract.dropFullSoftEnv
+            const dropLatch =
+              (lastComposed as { stillRefsContract?: { dropFullSoftEnv?: boolean } }).stillRefsContract
+                ?.dropFullSoftEnv === true;
             const pick = await applyContinuityAwareRefBudget({
               refs: tagged,
               propRequired: eventObj,
               maxSlots: 3,
-              softEnvContinuity: continuity,
+              softEnvContinuity: dropLatch ? "none" : continuity,
               allowPixelBake: false,
             });
             referenceList = pick.refs.map((r) => ({ type: "image" as const, base64: r.base64 }));
             refsRolesEcho = pick.roles;
-            propPlatePresent = pick.roles.includes("propSoft") || propPlatePresent;
-            softEnvPlatePresent = pick.roles.includes("softEnv") || pick.softEnvBakedIntoIdentity;
-            softEnvBaked = pick.softEnvBakedIntoIdentity;
-            (lastComposed as { refsRoles?: string[] }).refsRoles = pick.roles;
-            (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = pick.droppedSoftEnv;
-            (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity =
-              pick.softEnvBakedIntoIdentity;
+            if (dropLatch) {
+              const nextRefs: typeof referenceList = [];
+              const nextRoles: string[] = [];
+              for (let i = 0; i < referenceList.length; i++) {
+                const role = refsRolesEcho[i] || "identity";
+                if (role === "softEnv") continue;
+                nextRefs.push(referenceList[i]!);
+                nextRoles.push(String(role));
+              }
+              referenceList = nextRefs;
+              refsRolesEcho = nextRoles;
+              softEnvPlatePresent = false;
+              (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = true;
+              (lastComposed as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = false;
+              (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = "none";
+              (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = false;
+              (lastComposed as { vendorDroppedSoftEnv?: boolean }).vendorDroppedSoftEnv = true;
+              lastComposed.keepSoftEnvRef = false;
+            } else {
+              (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = pick.droppedSoftEnv;
+              softEnvPlatePresent = pick.roles.includes("softEnv") || pick.softEnvBakedIntoIdentity;
+              (lastComposed as { vendorDroppedSoftEnv?: boolean }).vendorDroppedSoftEnv = Boolean(
+                pick.droppedSoftEnv,
+              );
+              if (softEnvPlatePresent) {
+                (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = false;
+              }
+            }
+            propPlatePresent =
+              pick.roles.includes("propSoft") ||
+              propPlatePresent ||
+              (lastComposed as { fragmentPlateHung?: boolean }).fragmentPlateHung === true;
+            softEnvBaked = dropLatch ? false : pick.softEnvBakedIntoIdentity;
+            (lastComposed as { refsRoles?: string[] }).refsRoles = refsRolesEcho;
+            (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity = softEnvBaked;
             (lastComposed as { softEnvBakeFailed?: boolean }).softEnvBakeFailed = pick.bakeFailed;
           } else {
             softEnvPlatePresent = true;
             (lastComposed as { refsRoles?: string[] }).refsRoles = refsRolesEcho;
           }
+          const sealBind = (lastComposed.generationContract as {
+            primaryIntentSeal?: { poseOccupancy?: string };
+            designIntentProfile?: { plateMode?: string };
+          } | undefined)?.primaryIntentSeal;
           const bindZh = buildEventRefOrdinalBinding({
             roles: refsRolesEcho as Array<"identity" | "propSoft" | "softEnv">,
             propRequired: eventObj,
             thinSheets: Boolean(thin),
             softEnvBakedIntoIdentity: softEnvBaked,
+            poseOccupancy: sealBind?.poseOccupancy,
+            plateMode: (lastComposed.generationContract as { designIntentProfile?: { plateMode?: string } } | undefined)
+              ?.designIntentProfile?.plateMode,
+            fragmentPlateHung: Boolean((lastComposed as { fragmentPlateHung?: boolean }).fragmentPlateHung),
           });
           if (bindZh && !/参考绑定：/.test(vendorPrompt)) {
             vendorPrompt = `${String(vendorPrompt).trim()}。${bindZh}`;
+          }
+          // Scene-first: if keepSoftEnvRef but softEnv slot missing after budget, honest debt + strong ban
+          if (
+            lastComposed.keepSoftEnvRef &&
+            !dropLatch &&
+            !refsRolesEcho.includes("softEnv") &&
+            !softEnvBaked
+          ) {
+            (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = true;
+            if (!/禁止灰棚/.test(vendorPrompt)) {
+              vendorPrompt = `主场景软环境须可辨，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
+            }
+          }
+          // Anti-kneel lead when bend occupancy
+          if (
+            sealBind?.poseOccupancy === "bend_pickup" ||
+            /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? ""))
+          ) {
+            if (!/站姿弯腰|禁止蹲跪/.test(vendorPrompt.slice(0, 80))) {
+              vendorPrompt = `占位：站姿弯腰捡拾，躯干前倾；禁止蹲跪盘坐替代弯腰。${String(vendorPrompt).trim()}`;
+            }
           }
           // Orphan --sref SCENE-* without independent softEnv slot confuses vendor
           {
@@ -1497,8 +2129,19 @@ export async function runGenerateFlowImageCore(
               softEnvBakedIntoIdentity: softEnvBaked,
             });
           }
-          // Soft-env honesty + candle atmosphere lead keep
+          // Soft-env honesty + candle / shallow DOF lead
           if (
+            (lastComposed as { stillRefsContract?: { dropFullSoftEnv?: boolean } }).stillRefsContract
+              ?.dropFullSoftEnv === true &&
+            ((lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv ||
+              (lastComposed as { vendorDroppedSoftEnv?: boolean }).vendorDroppedSoftEnv)
+          ) {
+            (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = false;
+            const atm = /烛火|烛光|月光|暖光|冷光|夜色|灯火/.exec(String(literaryDesc))?.[0];
+            if (atm && !vendorPrompt.includes(atm) && !vendorPrompt.includes("氛围可辨")) {
+              vendorPrompt = `保留${atm}氛围可辨，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
+            }
+          } else if (
             lastComposed.keepSoftEnvRef &&
             !softEnvPlatePresent &&
             !(lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity
@@ -1512,9 +2155,14 @@ export async function runGenerateFlowImageCore(
             }
             (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = true;
           } else if (softEnvPlatePresent || softEnvBaked) {
+            (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = false;
+            (lastComposed as { vendorDroppedSoftEnv?: boolean }).vendorDroppedSoftEnv = false;
             const atm = /烛火|烛光|月光|暖光|冷光|夜色|灯火/.exec(String(literaryDesc))?.[0];
             if (atm && !vendorPrompt.includes(atm)) {
               vendorPrompt = `保留${atm}氛围可辨。${String(vendorPrompt).trim()}`;
+            }
+            if (!/浅景深/.test(vendorPrompt)) {
+              vendorPrompt = `背景浅景深虚化。${String(vendorPrompt).trim()}`;
             }
           }
         } catch {
@@ -1708,6 +2356,105 @@ export async function runGenerateFlowImageCore(
           /* optional */
         }
 
+        // Sample Must正铅：首发按 shotDesignSample 挂载（单法源，禁仅靠后置 inject）
+        try {
+          const sample =
+            (composeCtx as { shotDesignSample?: import("@/ruleEngine/design/shotDesignSample").ShotDesignSample })
+              .shotDesignSample ??
+            (lastComposed as { shotDesignSample?: import("@/ruleEngine/design/shotDesignSample").ShotDesignSample })
+              .shotDesignSample;
+          if (sample?.must?.length) {
+            const { mergeDebtInjectsByPrecedence } = await import("@/ruleEngine/design/stillDebtPrecedence");
+            const { sampleMustSurviveStems } = await import("@/ruleEngine/design/shotDesignSample");
+            const merged = mergeDebtInjectsByPrecedence(
+              [{ layer: "sample_must", lines: sampleMustSurviveStems(sample) }],
+              { mustStems: sampleMustSurviveStems(sample) },
+            );
+            for (const line of merged.lines) {
+              if (line && !String(vendorPrompt).includes(line.slice(0, 8))) {
+                vendorPrompt = `${line}。${String(vendorPrompt).trim()}`;
+              }
+            }
+            (lastComposed as { shotDesignSample?: typeof sample }).shotDesignSample = sample;
+            lastPipeline = {
+              ...lastPipeline,
+              autoHealed: [...(lastPipeline.autoHealed ?? []), "sample_must:first_shot"],
+            };
+          }
+        } catch {
+          /* optional */
+        }
+
+        // Literary repair delta (auto re-vendor): apply propSoft/drop_softEnv/seed before spend
+        const litDelta = (lastComposed as {
+          _litRepairDelta?: Awaited<
+            ReturnType<typeof import("@/ruleEngine/quality/applyLiteraryRepairDeltas").applyLiteraryRepairDeltas>
+          >;
+        })._litRepairDelta;
+        if (litDelta) {
+          // Must swap plates before spend — inject-only is auxiliary
+          if (
+            litDelta.referenceList?.length &&
+            (litDelta.platesSwapped || litDelta.propSoftBase64 || litDelta.droppedSoftEnv)
+          ) {
+            referenceList = litDelta.referenceList.map((r) => ({
+              type: "image" as const,
+              base64: r.base64,
+            }));
+            (lastComposed as { refsRoles?: string[] }).refsRoles = litDelta.refsRoles;
+            propPlatePresent = (litDelta.refsRoles ?? []).includes("propSoft");
+            propPlateMissing = !propPlatePresent;
+            softEnvPlatePresent = (litDelta.refsRoles ?? []).includes("softEnv");
+            if (litDelta.droppedSoftEnv) {
+              (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = true;
+              lastComposed.keepSoftEnvRef = false;
+            }
+            if (litDelta.propSoftBase64) {
+              (lastComposed as { propPlateGrade?: string }).propPlateGrade = "synthetic_geometry";
+              (lastComposed as { synthesizedPropPlate?: boolean }).synthesizedPropPlate = true;
+              propPlatePresent = true;
+              propPlateMissing = false;
+            }
+            (lastComposed as { litPlatesSwapped?: boolean }).litPlatesSwapped = Boolean(litDelta.platesSwapped);
+            (lastComposed as { litClaimPlateRepair?: boolean }).litClaimPlateRepair = Boolean(
+              litDelta.claimPlateRepair,
+            );
+          } else if (litDelta.platesSwapped === false) {
+            lastPipeline = {
+              ...lastPipeline,
+              autoHealed: [...(lastPipeline.autoHealed ?? []), "lit_delta:inject_only_no_claim"],
+            };
+          }
+          if (litDelta.injectLines?.length) {
+            vendorPrompt = `${litDelta.injectLines.join("。")}。${String(vendorPrompt).trim()}`;
+          }
+          delete (lastComposed as { _litRepairDelta?: unknown })._litRepairDelta;
+        }
+
+        // Final bend strip: never let cheek legislation escape to vendor
+        try {
+          const sealStrip =
+            (lastComposed.generationContract as { primaryIntentSeal?: import("@/ruleEngine/compilers/primaryIntentSeal").PrimaryIntentCarrierSet })
+              ?.primaryIntentSeal ?? null;
+          const { stripHostileCheekLegislation } = await import("@/ruleEngine/compilers/stillSealGate");
+          const stripped = stripHostileCheekLegislation(vendorPrompt, sealStrip, {
+            currentVisualDescription: literaryDesc,
+          });
+          vendorPrompt = stripped.prompt;
+          if (stripped.stripped.length) {
+            lastPipeline = {
+              ...lastPipeline,
+              autoHealed: [...(lastPipeline.autoHealed ?? []), "stripHostileCheek:preVendor"],
+            };
+          }
+        } catch {
+          /* optional */
+        }
+
+        // Persist last refs for literary auto-repair
+        (lastComposed as { lastReferenceList?: Array<{ type: "image"; base64: string }> }).lastReferenceList =
+          referenceList.map((r) => ({ type: "image" as const, base64: r.base64 }));
+
         let url: string;
         let savePath: string;
         let imageBase64: string;
@@ -1733,6 +2480,15 @@ export async function runGenerateFlowImageCore(
           ossWriteFile: (p, d) => u.oss.writeFile(p, d),
           getSmallImageUrl: (p) => u.oss.getSmallImageUrl(p),
           imageRunner: deps.imageRunner,
+          prevGenFingerprint: (lastComposed as { genFingerprint?: string }).genFingerprint ?? null,
+          deltaHints: litDelta?.deltaHints ?? (lastComposed as { litRepairDeltaHints?: string[] }).litRepairDeltaHints ?? null,
+          visualDescription: literaryDesc,
+          poseOccupancy: (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string }; designIntentProfile?: { poseOccupancy?: string } } | undefined)
+            ?.primaryIntentSeal?.poseOccupancy ??
+            (lastComposed.generationContract as { designIntentProfile?: { poseOccupancy?: string } } | undefined)
+              ?.designIntentProfile?.poseOccupancy,
+          primaryIntentSeal: (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string; sealHash?: string } } | undefined)
+            ?.primaryIntentSeal,
           runSeedream: async (promptOverride?: string) => {
             const seedPrompt = promptOverride || vendorPrompt;
             if (deps.imageRunner) {
@@ -1793,6 +2549,21 @@ export async function runGenerateFlowImageCore(
         (lastComposed as { workflowHash?: string }).workflowHash = vendorOut.workflowHash;
         (lastComposed as { propPlateGrade?: string }).propPlateGrade = vendorOut.propPlateGrade;
         (lastComposed as { egressCompressed?: boolean }).egressCompressed = vendorOut.egressCompressed;
+        if (vendorOut.vendorPromptUsed) {
+          (lastComposed as { vendorPromptUsed?: string }).vendorPromptUsed = vendorOut.vendorPromptUsed;
+        }
+        try {
+          const { createHash } = require("crypto") as typeof import("crypto");
+          const fp = createHash("sha256")
+            .update(
+              `${vendorOut.vendorPromptUsed || vendorPrompt}|${(lastComposed as { refsRoles?: string[] }).refsRoles?.join(",") ?? ""}|${referenceList.length}`,
+            )
+            .digest("hex")
+            .slice(0, 24);
+          (lastComposed as { genFingerprint?: string }).genFingerprint = fp;
+        } catch {
+          (lastComposed as { genFingerprint?: string }).genFingerprint = `fp_${Date.now().toString(36)}`;
+        }
         const vendorMs = vendorOut.vendorMs || Date.now() - vendorT0;
         (lastComposed as { vendorCalled?: boolean; vendorMs?: number; refsRoles?: string[] }).vendorCalled =
           vendorCalled;
@@ -1805,6 +2576,7 @@ export async function runGenerateFlowImageCore(
             ctaLabel: "重试生图",
           });
         }
+        (lastComposed as { lastImageBase64?: string }).lastImageBase64 = imageBase64;
         return {
           url,
           savePath,
@@ -1822,8 +2594,143 @@ export async function runGenerateFlowImageCore(
           vendorCalled,
           vendorMs,
         };
-      },
+      };
+
+    let loopOut = await runStillVisualFidelityLoop({
+      qualityMode,
+      storyboardId,
+      description: literaryDesc,
+      checklist,
+      healBudget: budget,
+      strengthen: body.strengthen,
+      judgeFn: deps.vlmJudgeFn,
+      db,
+      bgPolicy: bgPol.policy,
+      generateOnce,
     });
+
+    // Literary auto-repair re-vendor (budget 2) — real delta, not stamp-and-wait
+    try {
+      const { reassertLiteraryEffectsAfterStill, literaryEffectsPersistSlice } = await import(
+        "@/ruleEngine/quality/literaryEffectsAfterStill"
+      );
+      const { applyLiteraryRepairDeltas } = await import("@/ruleEngine/quality/applyLiteraryRepairDeltas");
+      const seal =
+        (lastComposed.generationContract as { primaryIntentSeal?: import("@/ruleEngine/compilers/primaryIntentSeal").PrimaryIntentCarrierSet })
+          ?.primaryIntentSeal ?? null;
+      const MAX_LIT = 3;
+      for (let litRound = 0; litRound < MAX_LIT; litRound++) {
+        const lit = await reassertLiteraryEffectsAfterStill({
+          visualDescription: literaryDesc,
+          promptUsed: loopOut.promptUsed,
+          seal,
+          refsRoles: (lastComposed as { refsRoles?: string[] }).refsRoles,
+          propPlateGrade: (lastComposed as { propPlateGrade?: string }).propPlateGrade,
+          propPlateMissing: (lastComposed as { propPlateMissing?: boolean }).propPlateMissing,
+          imageBase64: loopOut.imageBase64 ?? (lastComposed as { lastImageBase64?: string }).lastImageBase64,
+          videoMotionStartHint: (lastComposed.generationContract as { videoMotionStartHint?: string } | undefined)
+            ?.videoMotionStartHint,
+          shotDesignSample: (lastComposed as { shotDesignSample?: import("@/ruleEngine/design/shotDesignSample").ShotDesignSample })
+            .shotDesignSample,
+          episodeShot: (lastComposed as { episodeShot?: Record<string, unknown> }).episodeShot,
+          droppedSoftEnv: (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv,
+          fragmentPlateHung: (lastComposed as { fragmentPlateHung?: boolean }).fragmentPlateHung,
+          referenceList: (lastComposed as { lastReferenceList?: Array<{ type: "image"; base64: string; role?: string }> })
+            .lastReferenceList,
+        });
+        (lastComposed as { literaryEffectsPersist?: Record<string, unknown> }).literaryEffectsPersist =
+          literaryEffectsPersistSlice(lit);
+        if (lit.sampleMustFulfilled === true || lit.literaryEffectsQualified === true) break;
+        const trunkStillMiss = (lit.sampleMustMissIds ?? lit.missingEffects.map((m) => m.id)).some((id) =>
+          /prop\.|fg\.|bg\.|identity\.|camera\./.test(String(id)),
+        );
+        // Cap early when trunk Must cleared path is stuck without plate-swappable trunk miss
+        if (!trunkStillMiss && litRound >= 2) break;
+        const delta = await applyLiteraryRepairDeltas({
+          missingEffects: [...lit.missingEffects, ...lit.shouldMisses.slice(0, 2)],
+          deltaHints: lit.repairDeltaHints,
+          injectLines: lit.repairInjectLines,
+          poseOccupancy: seal?.poseOccupancy ?? null,
+          visualDescription: literaryDesc,
+          referenceList: (lastComposed as { lastReferenceList?: Array<{ type: "image"; base64: string; role?: string }> })
+            .lastReferenceList,
+          refsRoles: (lastComposed as { refsRoles?: string[] }).refsRoles,
+          softEnvBase64: (() => {
+            const roles = (lastComposed as { refsRoles?: string[] }).refsRoles ?? [];
+            const refs =
+              (lastComposed as { lastReferenceList?: Array<{ base64?: string; role?: string }> })
+                .lastReferenceList ?? [];
+            const idx = roles.indexOf("softEnv");
+            if (idx >= 0) return refs[idx]?.base64;
+            const byRole = refs.find((r) => r.role === "softEnv");
+            return byRole?.base64;
+          })(),
+        });
+        // Refuse inject-only revendor claim when plates were not swapped
+        if (!delta.claimPlateRepair && !delta.platesSwapped) {
+          lastPipeline = {
+            ...lastPipeline,
+            autoHealed: [
+              ...(lastPipeline.autoHealed ?? []),
+              `lit_auto_revendor_blocked_no_plate_swap:${litRound + 1}`,
+              ...delta.sources,
+            ],
+          };
+          if (
+            !delta.propSoftBase64 &&
+            !delta.referenceList?.some((r) => (r.role === "propSoft" || r.role === "softEnv") && r.base64)
+          ) {
+            continue;
+          }
+        }
+        (lastComposed as { _litRepairDelta?: typeof delta })._litRepairDelta = delta;
+        (lastComposed as { litRepairDeltaHints?: string[] }).litRepairDeltaHints = delta.deltaHints;
+        if (delta.droppedSoftEnv) {
+          (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = true;
+          (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = "none";
+          lastComposed.keepSoftEnvRef = false;
+        }
+        if (delta.refsRoles?.includes("softEnv") && !delta.droppedSoftEnv) {
+          (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = false;
+          lastComposed.keepSoftEnvRef = true;
+          (lastComposed as { softEnvContinuity?: string }).softEnvContinuity =
+            (lastComposed as { softEnvContinuity?: string }).softEnvContinuity ?? "must";
+        }
+        lastPipeline = {
+          ...lastPipeline,
+          autoHealed: [
+            ...(lastPipeline.autoHealed ?? []),
+            delta.claimPlateRepair
+              ? `lit_auto_revendor:${litRound + 1}:plates_swapped`
+              : `lit_auto_revendor:${litRound + 1}:aux`,
+            ...delta.sources,
+          ],
+        };
+        const once = await generateOnce({
+          strengthen: {},
+          mode: "generate",
+          fixHints: delta.injectLines,
+          forceFullCompose: true,
+          round: 100 + litRound,
+        });
+        loopOut = {
+          ...loopOut,
+          url: once.url,
+          savePath: once.savePath,
+          promptUsed: once.promptUsed,
+          imageBase64: once.imageBase64,
+          autoHealed: [
+            ...(loopOut.autoHealed ?? []),
+            delta.claimPlateRepair
+              ? `lit_auto_revendor:${litRound + 1}:plates_swapped`
+              : `lit_auto_revendor:${litRound + 1}:aux`,
+          ],
+          editStrategy: once.strategy,
+        };
+      }
+    } catch (litErr) {
+      console.warn("[generateFlowImage] literary auto-revendor failed", u.error(litErr).message);
+    }
 
     budget = loopOut.healBudget;
     return await finalizeSuccess(db, {
@@ -1968,17 +2875,22 @@ async function finalizeSuccess(
 ) {
   // Literary + visual gate: hq_ok only when L1 visualPass (or L0 when VLM skipped/disabled)
   // Prefer pipeline-cleared coverage over stale compose flag (contact_geom untilClear inject)
-  const coverageOk =
-    input.pipelineCoverageOk !== false &&
-    (input.pipelineCoverageOk === true ||
-      input.composed.descCoverageOk !== false ||
-      (input.pipelineCoverageMissing?.length ?? 0) === 0);
-  const coverageMissing =
+  const coverageMissingRaw =
     (input.pipelineCoverageOk === false
       ? input.pipelineCoverageMissing
       : input.composed.descCoverageOk === false
         ? input.composed.descCoverageMissing
         : []) ?? [];
+  // Soft lit debts (wound under bend) must not drive hard coverage CTA
+  const coverageMissing = coverageMissingRaw.filter(
+    (id) => !/lit:wound_visible|wound_visible/i.test(String(id)),
+  );
+  const coverageOk =
+    input.pipelineCoverageOk !== false &&
+    (input.pipelineCoverageOk === true ||
+      input.composed.descCoverageOk !== false ||
+      coverageMissing.length === 0 ||
+      (coverageMissingRaw.length > 0 && coverageMissing.length === 0));
   const keyMissing = /VLM_API_KEY_MISSING|api\s*key/i.test(String(input.vlmError ?? ""));
   const { decideAutoRepairPolicy } =
     require("@/ruleEngine/quality/autoRepairPolicy") as typeof import("@/ruleEngine/quality/autoRepairPolicy");
@@ -1992,11 +2904,94 @@ async function finalizeSuccess(
       /* optional */
     }
   }
+  // Produce poseEvidence from VD/egress when caller did not stamp (feeds handoff + untilClear)
+  let poseEvidence = input.poseEvidence;
+  if (!poseEvidence || !(poseEvidence as { primaryPose?: string }).primaryPose) {
+    try {
+      const { producePoseEvidence, poseEvidenceForUntilClear } =
+        require("@/ruleEngine/quality/poseEvidenceProducer") as typeof import("@/ruleEngine/quality/poseEvidenceProducer");
+      poseEvidence = poseEvidenceForUntilClear(
+        producePoseEvidence({
+          visualDescription: input.literaryDesc,
+          promptUsed: input.promptUsed,
+        }),
+      ) as Record<string, unknown>;
+    } catch {
+      /* optional */
+    }
+  }
+
+  // Literary primary effects qualify (no Comfy / no Key) — L0+L1 must
+  let litAfter: Awaited<
+    ReturnType<
+      typeof import("@/ruleEngine/quality/literaryEffectsAfterStill").reassertLiteraryEffectsAfterStill
+    >
+  > | null = null;
+  try {
+    const { reassertLiteraryEffectsAfterStill } =
+      require("@/ruleEngine/quality/literaryEffectsAfterStill") as typeof import("@/ruleEngine/quality/literaryEffectsAfterStill");
+    const seal =
+      (input.composed.generationContract as { primaryIntentSeal?: import("@/ruleEngine/compilers/primaryIntentSeal").PrimaryIntentCarrierSet })
+        ?.primaryIntentSeal ??
+      (input.composed as { primaryIntentSeal?: import("@/ruleEngine/compilers/primaryIntentSeal").PrimaryIntentCarrierSet })
+        .primaryIntentSeal ??
+      null;
+    litAfter = await reassertLiteraryEffectsAfterStill({
+      visualDescription: input.literaryDesc,
+      promptUsed: input.promptUsed,
+      seal,
+      refsRoles: (input.composed as { refsRoles?: string[] }).refsRoles,
+      propPlateGrade: (input.composed as { propPlateGrade?: string }).propPlateGrade,
+      propPlateMissing: (input.composed as { propPlateMissing?: boolean }).propPlateMissing,
+      imageBase64: (input.composed as { lastImageBase64?: string }).lastImageBase64,
+      videoMotionStartHint: (input.composed.generationContract as { videoMotionStartHint?: string } | undefined)
+        ?.videoMotionStartHint,
+    });
+    // Feed local pose into poseEvidence for untilClear / CTA
+    if (litAfter.localPoseSignals.primaryPoseGuess) {
+      poseEvidence = {
+        ...(poseEvidence ?? {}),
+        primaryPose: litAfter.localPoseSignals.primaryPoseGuess,
+        holdCardSuspected: litAfter.localPoseSignals.holdCardSuspected,
+        groundPropSuspected: litAfter.localPoseSignals.groundPropSuspected,
+        source: "localStillPoseHeuristic",
+      };
+    }
+    // Propagate gray/void scene signals into dominance (same truth as literary trunk)
+    if (
+      litAfter.localPoseSignals.grayStudioSuspected === true ||
+      litAfter.localPoseSignals.voidBgSuspected === true ||
+      litAfter.localPoseSignals.sceneIllegibleSuspected === true
+    ) {
+      input.sceneDominanceEvidence = {
+        ...(input.sceneDominanceEvidence ?? {}),
+        grayStudio:
+          litAfter.localPoseSignals.grayStudioSuspected === true ||
+          litAfter.localPoseSignals.voidBgSuspected === true ||
+          litAfter.localPoseSignals.sceneIllegibleSuspected === true,
+        voidBg: litAfter.localPoseSignals.voidBgSuspected === true,
+        sceneIllegible: litAfter.localPoseSignals.sceneIllegibleSuspected === true,
+        source: "localStillPoseHeuristic",
+      };
+    }
+    // Sync modality hints onto generationContract
+    if (litAfter.videoMotionStartHint && input.composed.generationContract) {
+      (input.composed.generationContract as { videoMotionStartHint?: string }).videoMotionStartHint =
+        litAfter.videoMotionStartHint;
+    }
+    if (litAfter.i2vCriticalFacts?.length && input.composed.generationContract) {
+      (input.composed.generationContract as { i2vCriticalFacts?: string[] }).i2vCriticalFacts =
+        litAfter.i2vCriticalFacts;
+    }
+  } catch {
+    /* optional */
+  }
+
   const evidenceHash = hashLiteraryDesc(
     JSON.stringify({
       contact: input.contactGeomEvidence ?? null,
       prop: input.propReadableEvidence ?? null,
-      pose: input.poseEvidence ?? null,
+      pose: poseEvidence ?? null,
       role: input.roleScopeEvidence ?? null,
       dominance: input.sceneDominanceEvidence ?? null,
     }),
@@ -2014,7 +3009,7 @@ async function finalizeSuccess(
     keyAbsent: keyMissing,
     fidelityItems: input.fidelityItems,
     descCoverageMissing: coverageMissing,
-    poseEvidence: (input.poseEvidence as { primaryPose?: string; secondaryPose?: string; faceCuOnly?: boolean }) ?? null,
+    poseEvidence: (poseEvidence as { primaryPose?: string; secondaryPose?: string; faceCuOnly?: boolean }) ?? null,
   });
   const literaryGate = vlmSkipped
     ? input.allowHqOk === true && stampGate.ok
@@ -2029,7 +3024,8 @@ async function finalizeSuccess(
     coverageOk &&
     literaryGate &&
     !input.collapsed &&
-    !sheetLeak;
+    !sheetLeak &&
+    litAfter?.literaryEffectsQualified !== false;
   let stillQuality: "missing" | "weak" | "hq_ok" = hq ? "hq_ok" : "weak";
   const { stillQualityUserMessage, pixelDimStatus: pixelDimStatusFn } =
     require("@/ruleEngine/quality/practiceCompleteness") as typeof import("@/ruleEngine/quality/practiceCompleteness");
@@ -2047,6 +3043,15 @@ async function finalizeSuccess(
     input.repairIrdPrimaryAction === "apply_auto_enhance";
   // vlm_error / keyMissing: structure-led auto repair; Key optional never bricks Generate
   const prevRound = Math.max(0, Number(prevAutoRepairRound ?? 0));
+  const earlyContam = String(
+    (input.composed.generationContract as { contaminationClass?: string } | undefined)
+      ?.contaminationClass ??
+      ((input.composed as { sources?: string[] }).sources ?? [])
+        .map((s) => /^contaminationClass:(.+)$/.exec(String(s))?.[1])
+        .find(Boolean) ??
+      "",
+  ).trim();
+  const litMissFindings = (litAfter?.missingEffects ?? []).map((m) => m.id);
   const autoRepair = decideAutoRepairPolicy({
     repairIrdPrimaryAction: input.repairIrdPrimaryAction,
     fidelityStopReason: input.fidelityStopReason,
@@ -2055,9 +3060,12 @@ async function finalizeSuccess(
     round: prevRound + 1,
     findings: [
       ...(coverageMissing ?? []),
-      ...((input.fidelityItems ?? []).filter((i) => !i.pass).map((i) => i.id) ?? []),
+      ...((input.fidelityItems ?? []).filter((i) => !i.pass && !/unmeasured/i.test(String(i.evidence ?? ""))).map((i) => i.id) ?? []),
+      ...(earlyContam && earlyContam !== "none" ? [earlyContam] : []),
+      ...litMissFindings,
     ],
     missingSlots: input.repairMissingSlots,
+    contaminationClass: earlyContam || null,
   });
   const litEnhanceable = Boolean(autoRepair.preferLitEnhance);
   const primary = buildPrimaryBlock(
@@ -2087,9 +3095,21 @@ async function finalizeSuccess(
                 : "文学细节契约未过；请手改 VD 或复制给 Chat 反推补全后重生成；弱图不可作视频首帧"
           : input.fidelityStopReason === "vlm_error"
           ? keyMissing
-            ? autoRepair.autoRepairStage === "handoff_human"
-              ? `${stillQualityUserMessage({ keyAbsent: true })} 当前图仍不可作视频首帧；可人审放行或继续生成修复。`
-              : "像素诊断未配置，系统将按结构契约继续自动修复首帧；可再次点击生成；当前结果仍不可直接作视频首帧。"
+            ? litAfter && litAfter.literaryEffectsQualified === false
+              ? `${stillQualityUserMessage({
+                  keyAbsent: true,
+                  missingEffects: litAfter.missingEffects,
+                  literaryEffectsQualified: false,
+                  sampleMustFulfilled: litAfter.sampleMustFulfilled === false,
+                  realizationDegraded: litAfter.realization?.realizationDegraded,
+                  realizationNote: litAfter.ctaLabel,
+                  softEnvMissingHonest: Boolean(
+                    (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest,
+                  ),
+                })} 当前图仍不可作视频首帧；请继续生成智能修。`
+              : autoRepair.autoRepairStage === "handoff_human"
+                ? `${stillQualityUserMessage({ keyAbsent: true })} 当前图仍不可作视频首帧；可人审放行或继续生成修复。`
+                : "像素诊断未配置，系统将按结构契约继续自动修复首帧；可再次点击生成；当前结果仍不可直接作视频首帧。"
             : `图已出，但未过高质量：视觉评审不可用${input.infraEditBypassUsed ? "（已尝试 1 次禁拼图重抽）" : ""}。请修复评审配置后人审或重抽；当前弱图不可作视频首帧。${
                 input.vlmError ? `（${input.vlmError.slice(0, 60)}）` : ""
               }`
@@ -2107,7 +3127,8 @@ async function finalizeSuccess(
   const blockSilentRegen = false;
   const refreshStoryboardBeforeRegen = nextStepOut === "split_shot";
   const vlmCta =
-    litDebtStop
+    litAfter?.ctaLabel ||
+    (litDebtStop
       ? input.repairIrdPrimaryAction === "confirm_split"
         ? input.repairCtaLabel || "确认智能拆镜"
         : litEnhanceable
@@ -2121,11 +3142,61 @@ async function finalizeSuccess(
         : input.pendingHumanRejudge
           ? "人审通过或修复评审配置"
           : "修复评审配置后重试"
-      : primary.ctaLabel;
+      : primary.ctaLabel);
+  // Literary miss always wins over vlm_error/keyAbsent structure copy
+  const litMissUserMessage = (() => {
+    if (
+      !litAfter ||
+      (litAfter.literaryEffectsQualified !== false && litAfter.sampleMustFulfilled !== false)
+    ) {
+      return null;
+    }
+    try {
+      const { stillQualityUserMessage: sqm } =
+        require("@/ruleEngine/quality/practiceCompleteness") as typeof import("@/ruleEngine/quality/practiceCompleteness");
+      return sqm({
+        keyAbsent: keyMissing,
+        missingEffects: litAfter.sampleMustMissIds?.length
+          ? litAfter.sampleMustMissIds
+          : litAfter.missingEffects,
+        literaryEffectsQualified: false,
+        sampleMustFulfilled: false,
+        bendHostileRefsForced: true,
+        platesSwapped: Boolean((input.composed as { litPlatesSwapped?: boolean }).litPlatesSwapped),
+        poseEvidenceOk: (() => {
+          // Honest: any action/occupancy Must miss ⇒ pose not ok (never「已换板重出」假绿)
+          const miss = litAfter.sampleMustMissIds ?? litAfter.missingEffects.map((m) => m.id);
+          if (miss.some((id) => /action\.|occupancy\./.test(String(id)))) return false;
+          return true;
+        })(),
+      });
+    } catch {
+      return `设计意图样本未兑现：${(litAfter.sampleMustMissIds ?? litAfter.missingEffects.map((m) => m.id)).slice(0, 3).join("、")}；已换板但姿态未过；弱图不可作视频首帧`;
+    }
+  })();
+  const litOkKeyAbsentMessage = (() => {
+    if (!litAfter || litAfter.literaryEffectsQualified !== true || !keyMissing || hq) return null;
+    try {
+      const { stillQualityUserMessage: sqm } =
+        require("@/ruleEngine/quality/practiceCompleteness") as typeof import("@/ruleEngine/quality/practiceCompleteness");
+      return sqm({
+        keyAbsent: true,
+        literaryEffectsQualified: true,
+        sampleMustFulfilled: true,
+        weak: true,
+      });
+    } catch {
+      return "设计意图必须元素已兑现；像素未测（Key 可选，非失败）；弱图不可自动作视频首帧，可人审放行或继续生成";
+    }
+  })();
   const userMessage = hq
     ? input.composed.didSynthesize
       ? "已按设计智能合成并标记高质量首帧"
       : "已标记高质量首帧"
+    : litMissUserMessage
+      ? litMissUserMessage
+      : litOkKeyAbsentMessage
+        ? litOkKeyAbsentMessage
     : (input.composed as { actuatorDegraded?: boolean }).actuatorDegraded &&
         Boolean(input.composed.keepSoftEnvRef) &&
         /contact_geom|prop_readable/.test(
@@ -2142,10 +3213,102 @@ async function finalizeSuccess(
           ? "成图文学保真自动重试次数已用尽；弱图不可作视频首帧"
           : input.collapsed
             ? "静照提示词文学主体塌缩，已回退合成正文；弱图不可作视频首帧"
-            : !coverageOk
-              ? `描写动作未覆盖完整（缺 ${coverageMissing.join("、") || "硬约束"}），弱图不可作视频首帧`
-              : primary.userMessage;
+            : (() => {
+                const vd = String(input.literaryDesc ?? "");
+                const wantsBend = /弯腰|捡起|捡拾|俯身/.test(vd);
+                const pose = String((poseEvidence as { primaryPose?: string } | undefined)?.primaryPose ?? "");
+                const poseBad =
+                  pose === "kneel_hold" ||
+                  pose === "upright_desk" ||
+                  pose === "lean_table" ||
+                  pose === "desk_lean" ||
+                  (/跪|捧持|胸前/.test(String(input.promptUsed ?? "")) && wantsBend);
+                const propMissing = Boolean(
+                  (input.composed as { propPlateMissing?: boolean }).propPlateMissing,
+                );
+                if (wantsBend && poseBad) {
+                  return "设计意图未全达（动作占位被跪持/展示替代）；弱图不可作视频首帧；请重出动作主导静帧";
+                }
+                if (propMissing && wantsBend) {
+                  return "设计意图缺触地道具软板（propSoft）；可继续试拍，请挂板或自动合成后重出";
+                }
+                if (!coverageOk && coverageMissing.length) {
+                  return `描写动作未覆盖完整（缺 ${coverageMissing.join("、")}），弱图不可作视频首帧`;
+                }
+                return primary.userMessage;
+              })();
   const ctaResolved = (() => {
+    try {
+      const { resolveStillPrimaryCta } =
+        require("@/ruleEngine/design/shootableArchitecture") as typeof import("@/ruleEngine/design/shootableArchitecture");
+      const vd = String(input.literaryDesc ?? "");
+      const wantsBend = /弯腰|捡起|捡拾|俯身/.test(vd);
+      const pose = String((poseEvidence as { primaryPose?: string } | undefined)?.primaryPose ?? "");
+      const poseBad =
+        pose === "kneel_hold" ||
+        pose === "upright_desk" ||
+        pose === "lean_table" ||
+        pose === "desk_lean";
+      return resolveStillPrimaryCta({
+        primaryNextStep: nextStepOut,
+        irdPrimaryAction: input.repairIrdPrimaryAction,
+        stillQuality: hq ? "hq_ok" : "weak",
+        visualPass: input.visualPass,
+        keyOptional: keyMissing,
+        pixelDimStatus: keyMissing ? "unmeasured" : input.visualPass ? "measured_pass" : "measured_fail",
+        contaminationClass: (input.composed.generationContract as { contaminationClass?: string } | undefined)
+          ?.contaminationClass,
+        deliveryTier: undefined,
+        debtKind:
+          litAfter?.debtKind ||
+          (wantsBend && poseBad
+            ? "action_misfire"
+            : (input.composed as { propPlateMissing?: boolean }).propPlateMissing
+              ? "prop_plate"
+              : (input.composed as { debtKind?: string }).debtKind),
+      });
+    } catch {
+      return null;
+    }
+  })();
+  let deliveryTier =
+    hq && input.visualPass && litAfter?.literaryEffectsQualified !== false
+      ? "burn"
+      : litAfter?.literaryEffectsQualified === false
+        ? "draft"
+        : hq || !keyMissing
+          ? "preview"
+          : "draft";
+  if (litAfter?.literaryEffectsQualified === true && !input.visualPass && keyMissing) {
+    deliveryTier = "preview";
+  }
+  let contaminationClass = "none";
+  try {
+    const { classifyStillContamination } =
+      require("@/ruleEngine/compilers/stillSealGate") as typeof import("@/ruleEngine/compilers/stillSealGate");
+    const seal =
+      (input.composed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string } })
+        ?.primaryIntentSeal ?? null;
+    contaminationClass = classifyStillContamination({
+      promptUsed: input.promptUsed,
+      seal,
+      composeSources: (input.composed as { sources?: string[] }).sources,
+      propPlateMissing: Boolean((input.composed as { propPlateMissing?: boolean }).propPlateMissing),
+      previousDroppedOffBeat: ((input.composed as { sources?: string[] }).sources ?? []).some((s) =>
+        /previous\.dropped/.test(s),
+      ),
+    });
+    const gcContam = String(
+      (input.composed.generationContract as { contaminationClass?: string } | undefined)?.contaminationClass ?? "",
+    ).trim();
+    if (gcContam) contaminationClass = gcContam;
+    if (contaminationClass !== "none" && deliveryTier === "burn") deliveryTier = "draft";
+  } catch {
+    /* optional */
+  }
+  const ctaResolvedFinal = (() => {
+    if (!ctaResolved) return null;
+    if (contaminationClass === "none") return ctaResolved;
     try {
       const { resolveStillPrimaryCta } =
         require("@/ruleEngine/design/shootableArchitecture") as typeof import("@/ruleEngine/design/shootableArchitecture");
@@ -2156,9 +3319,12 @@ async function finalizeSuccess(
         visualPass: input.visualPass,
         keyOptional: keyMissing,
         pixelDimStatus: keyMissing ? "unmeasured" : input.visualPass ? "measured_pass" : "measured_fail",
+        contaminationClass,
+        deliveryTier: deliveryTier as "draft" | "preview" | "burn",
+        debtKind: (input.composed as { debtKind?: string }).debtKind,
       });
     } catch {
-      return null;
+      return ctaResolved;
     }
   })();
   const ctaOut =
@@ -2166,14 +3332,18 @@ async function finalizeSuccess(
     Boolean(input.composed.keepSoftEnvRef) &&
     !hq
       ? "启动Comfy或人审"
-      : ctaResolved?.label || vlmCta;
-  const deliveryTier = hq && input.visualPass ? "burn" : hq || !keyMissing ? "preview" : "draft";
+      : litAfter?.ctaLabel ||
+        ctaResolvedFinal?.label ||
+        ctaResolved?.label ||
+        vlmCta;
   const requireFixBeforeBurn =
     Boolean((input.composed as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn) ||
     litDebtStop ||
     nextStepOut === "split_shot" ||
     nextStepOut === "chat_repair" ||
-    Boolean((input.composed as { fidelityRequireFix?: boolean }).fidelityRequireFix);
+    Boolean((input.composed as { fidelityRequireFix?: boolean }).fidelityRequireFix) ||
+    contaminationClass !== "none" ||
+    litAfter?.literaryEffectsQualified === false;
   const { assessStillVideoReadiness } =
     require("@/ruleEngine/qc/stillVideoReadiness") as typeof import("@/ruleEngine/qc/stillVideoReadiness");
   const readiness = assessStillVideoReadiness({
@@ -2183,18 +3353,47 @@ async function finalizeSuccess(
     fidelityItems: input.fidelityItems,
     promptUsed: input.promptUsed,
     visualDescription: input.literaryDesc,
-    i2vCriticalFacts: (input.composed.generationContract as { i2vCriticalFacts?: string[] } | undefined)
-      ?.i2vCriticalFacts,
+    i2vCriticalFacts:
+      litAfter?.i2vCriticalFacts ??
+      (input.composed.generationContract as { i2vCriticalFacts?: string[] } | undefined)?.i2vCriticalFacts,
     contract: input.composed.generationContract ?? null,
+    literaryEffectsQualified: litAfter?.literaryEffectsQualified,
     stillMeta: {
       grayStudio: Boolean((input.sceneDominanceEvidence as { grayStudio?: boolean } | undefined)?.grayStudio),
       sceneDominanceEvidence: input.sceneDominanceEvidence,
+      contaminationClass,
+      deliveryTier,
+      literaryEffectsQualified: litAfter?.literaryEffectsQualified,
+      missingEffects: litAfter?.missingEffects,
+      realizationOccupancy: litAfter?.realization?.realizationOccupancy,
+      realizationDegraded: litAfter?.realization?.realizationDegraded,
+      realizationReason: litAfter?.realization?.realizationReason,
+      primaryIntentSeal: litAfter?.realization
+        ? {
+            ...(((input.composed.generationContract as { primaryIntentSeal?: Record<string, unknown> } | undefined)
+              ?.primaryIntentSeal as Record<string, unknown>) ?? {}),
+            intentOccupancy: litAfter.realization.intentOccupancy,
+            realizationOccupancy: litAfter.realization.realizationOccupancy,
+            realizationDegraded: litAfter.realization.realizationDegraded,
+            realizationReason: litAfter.realization.realizationReason,
+            realizationLadder: litAfter.realization.ladder,
+          }
+        : (input.composed.generationContract as { primaryIntentSeal?: unknown } | undefined)?.primaryIntentSeal,
     },
   });
 
   if (input.persistToStoryboard && input.storyboardId) {
     const row = await db("o_storyboard").where({ id: input.storyboardId }).first();
     const prevMeta = parseStillMetaFromReason(row?.reason);
+    const litPersist = (() => {
+      try {
+        const { literaryEffectsPersistSlice } =
+          require("@/ruleEngine/quality/literaryEffectsAfterStill") as typeof import("@/ruleEngine/quality/literaryEffectsAfterStill");
+        return litAfter ? literaryEffectsPersistSlice(litAfter) : {};
+      } catch {
+        return {};
+      }
+    })();
     const pipelineMeta = {
       literaryChars: input.literaryChars,
       collapsed: input.collapsed,
@@ -2218,7 +3417,7 @@ async function finalizeSuccess(
       stageCost: input.stageCost,
       contactGeomEvidence: input.contactGeomEvidence,
       propReadableEvidence: input.propReadableEvidence,
-      poseEvidence: input.poseEvidence,
+      poseEvidence: poseEvidence,
       roleScopeEvidence: input.roleScopeEvidence,
       sceneDominanceEvidence: input.sceneDominanceEvidence,
       evidenceHash,
@@ -2226,6 +3425,34 @@ async function finalizeSuccess(
       generationContract: input.composed.generationContract,
       contractVersion: (input.composed.generationContract as { contractVersion?: string } | undefined)?.contractVersion,
       contractHash: (input.composed.generationContract as { contractHash?: string } | undefined)?.contractHash,
+      designIntentProfile:
+        (input.composed.generationContract as { designIntentProfile?: unknown } | undefined)
+          ?.designIntentProfile ??
+        (input.composed as { designIntentProfile?: unknown }).designIntentProfile,
+      primaryIntentSeal:
+        (input.composed.generationContract as { primaryIntentSeal?: unknown } | undefined)
+          ?.primaryIntentSeal ??
+        (input.composed as { primaryIntentSeal?: unknown }).primaryIntentSeal,
+      contaminationClass,
+      deliveryTier,
+      i2vCriticalFacts:
+        litAfter?.i2vCriticalFacts ??
+        (input.composed.generationContract as { i2vCriticalFacts?: string[] } | undefined)?.i2vCriticalFacts,
+      videoMotionStartHint:
+        litAfter?.videoMotionStartHint ??
+        (input.composed.generationContract as { videoMotionStartHint?: string } | undefined)
+          ?.videoMotionStartHint,
+      ...litPersist,
+      beatIsolationFailed:
+        contaminationClass === "off_beat_cu" ||
+        ((input.composed as { sources?: string[] }).sources ?? []).some((s) =>
+          /previous\.dropped_off_beat|contaminationClass:off_beat/i.test(String(s)),
+        ),
+      offBeatContamination:
+        contaminationClass === "off_beat_cu" ||
+        ((input.composed as { sources?: string[] }).sources ?? []).some((s) =>
+          /previous\.dropped_off_beat|contaminationClass:off_beat/i.test(String(s)),
+        ),
       evidenceBoundHash: evidenceHash,
       autoRepairStage: autoRepair.autoRepairStage,
       autoRepairRound: autoRepair.autoRepairRound,
@@ -2246,6 +3473,7 @@ async function finalizeSuccess(
               ?.objectiveClass,
             i2vReady: readiness.i2vReady,
             stillQuality: hq ? "hq_ok" : "weak",
+            contaminationClass,
           });
         } catch {
           return undefined;
@@ -2276,8 +3504,19 @@ async function finalizeSuccess(
       ? markHqOk({
           ...prevMeta,
           composeSources: input.composed.sources,
-          promptUsed: input.promptUsed.slice(0, 2000),
+          promptUsed: (() => {
+            let pu = input.promptUsed.slice(0, 2000);
+            try {
+              const { homologizeStillPromptForStore } =
+                require("@/ruleEngine/compilers/stillPromptHomology") as typeof import("@/ruleEngine/compilers/stillPromptHomology");
+              pu = homologizeStillPromptForStore(pu).prompt || pu;
+            } catch {
+              /* optional */
+            }
+            return pu.slice(0, 2000);
+          })(),
           literaryDescHash: hashLiteraryDesc(String(input.literaryDesc ?? "")),
+          literaryHash: hashLiteraryDesc(String(input.literaryDesc ?? "")),
           compositionContractApplied: input.composed.compositionContractApplied,
           resolvedQuality: input.resolvedQuality,
           composeMode: input.composed.composeMode,
@@ -2291,8 +3530,19 @@ async function finalizeSuccess(
           stillQuality: "weak" as const,
           qualityMode: "draft",
           composeSources: input.composed.sources,
-          promptUsed: input.promptUsed.slice(0, 2000),
+          promptUsed: (() => {
+            let pu = input.promptUsed.slice(0, 2000);
+            try {
+              const { homologizeStillPromptForStore } =
+                require("@/ruleEngine/compilers/stillPromptHomology") as typeof import("@/ruleEngine/compilers/stillPromptHomology");
+              pu = homologizeStillPromptForStore(pu).prompt || pu;
+            } catch {
+              /* optional */
+            }
+            return pu.slice(0, 2000);
+          })(),
           literaryDescHash: hashLiteraryDesc(String(input.literaryDesc ?? "")),
+          literaryHash: hashLiteraryDesc(String(input.literaryDesc ?? "")),
           resolvedQuality: input.resolvedQuality,
           promptState: input.composed.composeMode === "fidelity" ? "fidelity" : "composed",
           composeMode: input.composed.composeMode,
@@ -2454,6 +3704,12 @@ async function finalizeSuccess(
       actuatorDegradedReason: (input.composed as { actuatorDegradedReason?: string }).actuatorDegradedReason,
       propPlateGrade: (input.composed as { propPlateGrade?: string }).propPlateGrade,
       egressCompressed: Boolean((input.composed as { egressCompressed?: boolean }).egressCompressed),
+      vendorPromptUsed: (() => {
+        const v = String((input.composed as { vendorPromptUsed?: string }).vendorPromptUsed ?? "").trim();
+        const pu = String(input.promptUsed ?? "").trim();
+        if (v && v !== pu) return v.slice(0, 2000);
+        return undefined;
+      })(),
       autoRepairStage: autoRepair.autoRepairStage,
       autoRepairRound: autoRepair.autoRepairRound,
       autoRepairBudgetLeft: autoRepair.autoRepairBudgetLeft,
@@ -2463,27 +3719,13 @@ async function finalizeSuccess(
       ...(input.policy.hasSensitiveTerms ? { policyWarnings: input.policy.warnings } : {}),
       ...poseAnchorMeta,
     });
-    // Persist vendor egress (pipeline SSOT) — same string sent to vendor; strip lock soup
-    let promptWrite: string | undefined =
-      input.composed.ok && input.promptUsed.trim() && !isDirtyStillPrompt(input.composed.visualBody)
-        ? input.promptUsed
-        : undefined;
-    if (promptWrite) {
-      try {
-        const { homologizeStillPromptForStore } = await import(
-          "@/ruleEngine/compilers/stillPromptHomology"
-        );
-        promptWrite = homologizeStillPromptForStore(promptWrite).prompt || promptWrite;
-      } catch {
-        /* optional */
-      }
-    }
+    // Literary SSOT stays in o_storyboard.prompt — never overwrite with vendor egress.
+    // Egress lives in reason.promptUsed / vendorPromptUsed (stamped via hqMeta/pipelineMeta).
     await db("o_storyboard").where({ id: input.storyboardId }).update({
       filePath: input.savePath,
       state: "已完成",
       shouldGenerateImage: 1,
       reason,
-      ...(promptWrite ? { prompt: promptWrite } : {}),
     });
     // Video-only stale for this shot — do not wipe neighbor still hq_ok
     try {
@@ -2548,7 +3790,22 @@ async function finalizeSuccess(
 
   return {
     url: input.url,
+    prompt: (() => {
+      try {
+        const { resolveLiteraryStillPrompt } =
+          require("@/ruleEngine/compilers/literaryStillSsot") as typeof import("@/ruleEngine/compilers/literaryStillSsot");
+        return (
+          resolveLiteraryStillPrompt({
+            visualDescription: input.literaryDesc,
+            compiledImagePrompt: (input.composed as { compiledImagePrompt?: string })?.compiledImagePrompt,
+          }).literary || String(input.literaryDesc ?? "").trim()
+        );
+      } catch {
+        return String(input.literaryDesc ?? "").trim() || undefined;
+      }
+    })(),
     promptUsed: input.promptUsed,
+    egressPrompt: input.promptUsed,
     contentPolicyWarnings: input.policy.hasSensitiveTerms ? input.policy.warnings : undefined,
     feedback: input.feedback,
     referenceCount: input.referenceCount,
@@ -2588,7 +3845,21 @@ async function finalizeSuccess(
     synthesizedPropPlate: Boolean((input.composed as { synthesizedPropPlate?: boolean }).synthesizedPropPlate),
     refsRoles: (input.composed as { refsRoles?: string[] }).refsRoles,
     droppedSoftEnv: Boolean((input.composed as { droppedSoftEnv?: boolean }).droppedSoftEnv),
-    softEnvMissingHonest: Boolean((input.composed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest),
+    vendorDroppedSoftEnv: Boolean(
+      (input.composed as { vendorDroppedSoftEnv?: boolean }).vendorDroppedSoftEnv ||
+        (input.composed as { droppedSoftEnv?: boolean }).droppedSoftEnv,
+    ),
+    softEnvMissingHonest: (() => {
+      const dropped = Boolean(
+        (input.composed as { droppedSoftEnv?: boolean }).droppedSoftEnv ||
+          (input.composed as { vendorDroppedSoftEnv?: boolean }).vendorDroppedSoftEnv,
+      );
+      const cont = String((input.composed as { softEnvContinuity?: string }).softEnvContinuity ?? "");
+      if (dropped || cont === "none") return false;
+      return Boolean((input.composed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest);
+    })(),
+    fragmentPlateHung: Boolean((input.composed as { fragmentPlateHung?: boolean }).fragmentPlateHung),
+    atmosphereZhOnly: Boolean((input.composed as { atmosphereZhOnly?: boolean }).atmosphereZhOnly),
     softEnvBakedIntoIdentity: Boolean(
       (input.composed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity,
     ),
@@ -2604,16 +3875,52 @@ async function finalizeSuccess(
     egressCompressed: Boolean((input.composed as { egressCompressed?: boolean }).egressCompressed),
     keyOptional: keyMissing,
     pixelDimStatus: flowPixelDimStatus,
-    debtKind:
-      (input.composed as { fidelityDebtKind?: string }).fidelityDebtKind ||
-      (input.composed as { identityDebtKind?: string }).identityDebtKind ||
-      ((input.composed as { actuatorDegraded?: boolean }).actuatorDegraded
-        ? "actuator_degraded"
-        : (input.composed as { propPlateGrade?: string }).propPlateGrade === "synthetic_geometry"
-          ? "prop_form"
-          : keyMissing
-            ? "key_unmeasured"
-            : undefined),
+    debtKind: (() => {
+      if (litAfter?.debtKind) return litAfter.debtKind;
+      if (contaminationClass === "off_beat_cu") return "contamination";
+      if (contaminationClass === "contact_zombie" || contaminationClass === "locus_mangled") {
+        return "action_misfire";
+      }
+      if (contaminationClass === "plate_geometry" || contaminationClass === "glyph_identity") {
+        return "prop_plate";
+      }
+      const existing =
+        (input.composed as { fidelityDebtKind?: string }).fidelityDebtKind ||
+        (input.composed as { identityDebtKind?: string }).identityDebtKind ||
+        ((input.composed as { actuatorDegraded?: boolean }).actuatorDegraded
+          ? "actuator_degraded"
+          : (input.composed as { propPlateGrade?: string }).propPlateGrade === "synthetic_geometry"
+            ? "prop_form"
+            : litAfter?.literaryEffectsQualified === false
+              ? litAfter.debtKind || "action_misfire"
+              : keyMissing
+                ? "key_unmeasured"
+                : undefined);
+      if (existing && existing !== "key_unmeasured") return existing;
+      if (litAfter?.literaryEffectsQualified === false) return litAfter.debtKind || "action_misfire";
+      try {
+        const { judgeStillHeuristicNoVlm } =
+          require("@/ruleEngine/quality/heuristicStillJudge") as typeof import("@/ruleEngine/quality/heuristicStillJudge");
+        const hj = judgeStillHeuristicNoVlm({
+          visualDescription: input.literaryDesc,
+          promptUsed: input.promptUsed,
+          propPlateGrade: (input.composed as { propPlateGrade?: string }).propPlateGrade,
+          vlmKeyPresent: !keyMissing && Boolean(input.visualPassAt),
+        });
+        if (hj.debtKind && hj.debtKind !== "key_unmeasured") return hj.debtKind;
+      } catch {
+        /* optional */
+      }
+      return existing;
+    })(),
+    designIntentProfile:
+      (input.composed.generationContract as { designIntentProfile?: unknown } | undefined)
+        ?.designIntentProfile ??
+      (input.composed as { designIntentProfile?: unknown }).designIntentProfile,
+    primaryIntentSeal:
+      (input.composed.generationContract as { primaryIntentSeal?: unknown } | undefined)
+        ?.primaryIntentSeal ??
+      (input.composed as { primaryIntentSeal?: unknown }).primaryIntentSeal,
     bgMode: input.composed.bgMode,
     bgPolicy: input.bgPolicy ?? input.composed.bgPolicy,
     bgPolicyReason: input.composed.bgPolicyReason,
@@ -2622,14 +3929,31 @@ async function finalizeSuccess(
     blockSilentRegen,
     refreshStoryboardBeforeRegen,
     deliveryTier,
+    contaminationClass,
+    beatIsolationFailed:
+      contaminationClass === "off_beat_cu" ||
+      ((input.composed as { sources?: string[] }).sources ?? []).some((s) =>
+        /previous\.dropped_off_beat|contaminationClass:off_beat/i.test(String(s)),
+      ),
+    offBeatContamination:
+      contaminationClass === "off_beat_cu" ||
+      ((input.composed as { sources?: string[] }).sources ?? []).some((s) =>
+        /previous\.dropped_off_beat|contaminationClass:off_beat/i.test(String(s)),
+      ),
     requireFixBeforeBurn,
-    ctaKind: ctaResolved?.kind,
+    ctaKind: ctaResolvedFinal?.kind ?? ctaResolved?.kind,
     autoRepairStage: autoRepair.autoRepairStage,
     autoRepairRound: autoRepair.autoRepairRound,
     autoRepairBudgetLeft: autoRepair.autoRepairBudgetLeft,
     handoffReason: autoRepair.handoffReason,
     i2vReady: readiness.i2vReady,
     i2vBlockReason: readiness.reason,
+    literaryEffectsQualified: litAfter?.literaryEffectsQualified,
+    missingEffects: litAfter?.missingEffects,
+    localPoseSignals: litAfter?.localPoseSignals,
+    repairInjectLines: litAfter?.repairInjectLines,
+    repairDeltaHints: litAfter?.repairDeltaHints,
+    videoMotionStartHint: litAfter?.videoMotionStartHint,
     promptLintConflicts: input.composed.promptLintConflicts,
     promptProvenance: [
       { source: "visualDescription", note: "lead" },
@@ -2639,7 +3963,7 @@ async function finalizeSuccess(
     evidenceHash,
     contactGeomEvidence: input.contactGeomEvidence,
     propReadableEvidence: input.propReadableEvidence,
-    poseEvidence: input.poseEvidence,
+    poseEvidence: poseEvidence,
     roleScopeEvidence: input.roleScopeEvidence,
     sceneDominanceEvidence: input.sceneDominanceEvidence,
   };

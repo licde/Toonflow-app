@@ -164,6 +164,17 @@ export function expandOneLitContactXorShot(shot: Record<string, unknown>): {
   oral.shotSize = "特写";
   oral.visualDescription = oralVd;
   oral.xorSplit = true;
+  // XOR oral child: no prop soft chain (paper-in-mouth regression)
+  oral._contactEventMustProp = false;
+  delete oral._contactEventPropClass;
+  delete oral._contactEventPropAlias;
+  delete oral._propSoftCodes;
+  delete oral.propSoftCodes;
+  if (oral.generation && typeof oral.generation === "object") {
+    const g = oral.generation as Record<string, unknown>;
+    delete g.propSoftCodes;
+    delete g.propCodes;
+  }
   oral.duration = Math.max(2, Number(shot.duration) || 2);
   {
     const gen = { ...((oral.generation as Record<string, unknown>) ?? {}) };
@@ -195,6 +206,7 @@ export function expandOneLitContactXorShot(shot: Record<string, unknown>): {
       shots: [cheek, oral],
       edges: [
         { kind: "xor_mutex", fromShotKey: cheek.clientId as string, toShotKey: oral.clientId as string },
+        // prop_cont only to cheek — oral pruned (no paper-in-mouth chain)
         { kind: "prop_cont", fromShotKey: parentId, toShotKey: cheek.clientId as string },
         { kind: "look_cont", fromShotKey: parentId, toShotKey: cheek.clientId as string },
         { kind: "look_cont", fromShotKey: parentId, toShotKey: oral.clientId as string },

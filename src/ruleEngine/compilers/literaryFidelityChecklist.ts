@@ -33,6 +33,11 @@ export interface StillFidelityItem {
   strengthenKey: string;
   strengthenValue: string;
   forbidden?: boolean;
+  /**
+   * Soft / L3 detail — assert passes without blocking coverage/CTA.
+   * Under bend_pickup, wound/shallow-scar is soft (not cheek-contact L0).
+   */
+  soft?: boolean;
 }
 
 export interface LiteraryFidelityAssertResult {
@@ -323,6 +328,16 @@ export function buildLiteraryFidelityChecklist(input: {
       pickVdLiteraryPrimary,
     } = require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
 
+    // bend_pickup wins: cheek contact must not become hard L0; wound = soft L3 detail
+    let bendWins = /弯腰|捡起|捡拾|俯身捡/.test(desc);
+    try {
+      const { resolvePoseOccupancy } =
+        require("./designIntentProfile") as typeof import("./designIntentProfile");
+      bendWins = bendWins || resolvePoseOccupancy(desc) === "bend_pickup";
+    } catch {
+      /* keep regex */
+    }
+
     const litAudit = auditLiteraryDetailQuality({
       visualDescription: desc,
       shotSize: input.shotSize,
@@ -338,6 +353,7 @@ export function buildLiteraryFidelityChecklist(input: {
           healInject: "颊触与口创互斥：纸未入口或另镜；禁含纸咬唇",
           strengthenKey: keys.composition ?? "composition",
           strengthenValue: "contact_role_xor",
+          soft: bendWins,
         });
       }
     } else if (hasContactRoleXorSatisfaction(desc) && !seen.has("lit:contact_role_xor_ok")) {
@@ -350,6 +366,7 @@ export function buildLiteraryFidelityChecklist(input: {
         healInject: "保持颊触与口创互斥，禁含纸咬唇",
         strengthenKey: keys.composition ?? "composition",
         strengthenValue: "xor_ok",
+        soft: bendWins,
       });
     }
     if (/浅痕|红痕|划痕可见|渗血|血珠/.test(desc) && !seen.has("lit:wound_visible")) {
@@ -357,12 +374,16 @@ export function buildLiteraryFidelityChecklist(input: {
       items.push({
         id: "lit:wound_visible",
         kind: "composition",
-        // L0: literary VD atom must survive into egress (design intent, not VLM-only)
-        mustTokens: ["渗血", "血珠", "浅痕", "红痕"].filter((t) => desc.includes(t)).slice(0, 1),
+        mustTokens: bendWins
+          ? []
+          : ["渗血", "血珠", "浅痕", "红痕"].filter((t) => desc.includes(t)).slice(0, 1),
         vlmQuestion: "图中触面浅痕/渗血是否在声明部位可见？",
-        healInject: "伤痕可见度须落在声明部位，禁无痕或错位",
+        healInject: bendWins
+          ? "细节：面颊浅痕可辨（非颊触立法）"
+          : "伤痕可见度须落在声明部位，禁无痕或错位",
         strengthenKey: keys.composition ?? "composition",
         strengthenValue: "wound_visible",
+        soft: bendWins,
       });
     }
     if (
@@ -395,6 +416,21 @@ export function buildLiteraryFidelityChecklist(input: {
     for (const locus of extractDeclaredContactLoci(desc)) {
       const id = `contact:${locus}`;
       if (seen.has(id)) continue;
+      // bend sealed: cheek/face loci from lingering contact verbs → soft detail only
+      if (bendWins && /颊|脸|额|唇|口|嘴/.test(locus)) {
+        seen.add(id);
+        items.push({
+          id,
+          kind: "composition",
+          mustTokens: [],
+          vlmQuestion: `浅痕细节部位「${locus}」是否可辨（非接触几何主失败）？`,
+          healInject: `细节：${locus}浅痕可辨（非颊触升格）`,
+          strengthenKey: keys.composition ?? "composition",
+          strengthenValue: locus,
+          soft: true,
+        });
+        continue;
+      }
       seen.add(id);
       const geomTouch = /划过|贴|压在|抵在/.test(desc) && desc.includes(locus);
       items.push({
@@ -409,8 +445,9 @@ export function buildLiteraryFidelityChecklist(input: {
           : `接触落点必须落在${locus}，禁止悬浮漂移`,
         strengthenKey: keys.composition ?? "composition",
         strengthenValue: locus,
+        soft: bendWins && geomTouch,
       });
-      if (geomTouch) {
+      if (geomTouch && !bendWins) {
         const gid = `contact_geom:${locus}`;
         if (!seen.has(gid)) {
           seen.add(gid);
@@ -535,6 +572,11 @@ export function assertLiteraryFidelity(
   const passed: StillFidelityItem[] = [];
 
   for (const item of items) {
+    // Soft / L3 detail — never hard-fail coverage or CTA
+    if (item.soft) {
+      passed.push(item);
+      continue;
+    }
     // VLM-only items (no prompt tokens) — do not fail L0
     if (!item.mustTokens.length && item.vlmQuestion) {
       passed.push(item);

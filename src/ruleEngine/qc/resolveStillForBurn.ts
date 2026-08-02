@@ -7,7 +7,10 @@ type KnexLike = any;
 export type ResolvedStillForBurn = {
   storyboardId?: number;
   filePath: string;
+  /** Literary / edit SSOT (o_storyboard.prompt) */
   prompt: string;
+  /** Vendor pipeline egress for sheetLeak/contact/mouth gates */
+  promptUsed?: string;
   reasonRaw?: string | null;
   row?: Record<string, unknown> | null;
   /** How the still was found (debug / FE) */
@@ -22,10 +25,25 @@ function pack(row: Record<string, unknown> | undefined, source: string): Resolve
   if (!row) {
     return { filePath: "", prompt: "", resolveSource: source };
   }
+  let promptUsed = "";
+  try {
+    const { parseStillMetaFromReason } =
+      require("../compilers/stillQuality") as typeof import("../compilers/stillQuality");
+    const meta = parseStillMetaFromReason(row.reason);
+    promptUsed = String(meta?.promptUsed ?? "").trim();
+  } catch {
+    try {
+      const raw = row.reason != null ? JSON.parse(String(row.reason)) : null;
+      promptUsed = String((raw as { promptUsed?: string } | null)?.promptUsed ?? "").trim();
+    } catch {
+      /* keep empty */
+    }
+  }
   return {
     storyboardId: row.id != null ? Number(row.id) : undefined,
     filePath: pathOf(row),
     prompt: String(row.prompt ?? "").trim(),
+    promptUsed: promptUsed || undefined,
     reasonRaw: row.reason != null ? String(row.reason) : null,
     row,
     resolveSource: source,

@@ -151,18 +151,38 @@ export async function mergeAssociateAssetIds(
   charCodes: string[] = [],
   codeToId?: Record<string, number>,
   preferredOrder?: string[],
-  opts?: { excludeScene?: boolean; softEnvRef?: boolean; propSoftCodes?: string[] },
+  opts?: {
+    excludeScene?: boolean;
+    softEnvRef?: boolean;
+    propSoftCodes?: string[];
+    /** When skirt_blur / fragment: keep only lead CHAR plates */
+    secondaryCharacterBudget?: "none" | "hands_only" | "upper_body" | "ensemble" | "skirt_blur";
+    leadCharCodes?: string[];
+  },
 ): Promise<{ assetIds: number[]; warnings: ReferenceWarning[]; softEnvAssetId?: number; propSoftAssetId?: number }> {
   const refs = parsePromptRefs(prompt);
   const softEnv = Boolean(opts?.softEnvRef);
+  const stripSecondary =
+    opts?.secondaryCharacterBudget === "skirt_blur" || opts?.secondaryCharacterBudget === "hands_only";
+  const leadCodeSet = new Set((opts?.leadCharCodes ?? []).map((c) => c.toUpperCase()).filter(Boolean));
   // soft_env: keep SCENE codes in resolve so we can append one soft plate later
   const propSoft = (opts?.propSoftCodes ?? []).filter(
     (c) => /^PROP-/i.test(c) || /纸|信|文书|帕|巾|剑|刀|扳指|戒指|玉佩|道具/.test(c),
   );
-  const codes = [...new Set([...charCodes, ...refs.crefs, ...refs.srefs, ...propSoft])].filter((c) => {
+  let codes = [...new Set([...charCodes, ...refs.crefs, ...refs.srefs, ...propSoft])].filter((c) => {
     if (opts?.excludeScene && !softEnv && /^SCENE-/i.test(c)) return false;
     return true;
   });
+  // Fragment budget: drop non-lead CHAR codes before resolve
+  if (stripSecondary) {
+    const charList = codes.filter((x) => /^CHAR-/i.test(x));
+    const keepFirst = charList[0]?.toUpperCase() ?? "";
+    codes = codes.filter((c) => {
+      if (!/^CHAR-/i.test(c)) return true;
+      if (leadCodeSet.size === 0) return c.toUpperCase() === keepFirst;
+      return leadCodeSet.has(c.toUpperCase());
+    });
+  }
   const order = preferredOrder?.length
     ? preferredOrder
     : resolveShotIdentityBinding({
@@ -189,13 +209,16 @@ export async function mergeAssociateAssetIds(
   let finalIds = orderedIds;
   let softEnvAssetId: number | undefined;
   let propSoftAssetId: number | undefined;
-  if (opts?.excludeScene && finalIds.length) {
+  // softEnv hung whenever softEnvRef — NOT only under excludeScene (bend keeps softEnv with excludeScene=false)
+  const needScenePass = Boolean(opts?.excludeScene || softEnv) && finalIds.length > 0;
+  if (needScenePass) {
     const rows = await db("o_assets")
       .whereIn("id", finalIds)
       .select("id", "type", "remark", "name");
     const sceneIds: number[] = [];
     const sceneSet = new Set<number>();
     const propRows: Array<{ id: number; name?: string }> = [];
+    const charLikeIds: number[] = [];
     for (const a of rows as Array<{ id: number; type?: string; remark?: string; name?: string }>) {
       if (isSceneAssetRow(a)) {
         sceneSet.add(a.id);
@@ -204,19 +227,65 @@ export async function mergeAssociateAssetIds(
       if (/prop|道具|纸|文书|帕|巾|剑|刀|扳指|戒指/i.test(`${a.type ?? ""}${a.remark ?? ""}${a.name ?? ""}`)) {
         propRows.push(a);
       }
+      if (
+        /char|role|character|定妆|人物/i.test(`${a.type ?? ""}${a.remark ?? ""}${a.name ?? ""}`) ||
+        /assetCode:CHAR-/i.test(String(a.remark ?? ""))
+      ) {
+        charLikeIds.push(a.id);
+      }
     }
-    finalIds = finalIds.filter((id) => !sceneSet.has(id));
+    // excludeScene: strip SCENE from middle, re-append as softEnv slot last
+    if (opts?.excludeScene) {
+      finalIds = finalIds.filter((id) => !sceneSet.has(id));
+    }
+    // skirt_blur: keep only first / lead character plate among associates
+    if (stripSecondary && charLikeIds.length > 1) {
+      const keepChar = charLikeIds[0];
+      const drop = new Set(charLikeIds.filter((id) => id !== keepChar));
+      finalIds = finalIds.filter((id) => !drop.has(id));
+    }
     // PROP soft plate after identity, before soft env
-    if (propRows.length || propSoft.length) {
+    if (opts?.excludeScene && (propRows.length || propSoft.length)) {
       propSoftAssetId = propRows[0]?.id;
       if (propSoftAssetId && !finalIds.includes(propSoftAssetId)) {
         finalIds.push(propSoftAssetId);
       }
     }
-    // soft_env: one SCENE plate after identity (禁灰棚；禁建立镜头抢戏)
+    // soft_env: one SCENE plate (禁灰棚；禁建立镜头抢戏) — also when keepSoftEnvRef without excludeScene
     if (softEnv && sceneIds.length) {
       softEnvAssetId = sceneIds[0];
-      finalIds.push(softEnvAssetId);
+      if (!finalIds.includes(softEnvAssetId)) {
+        finalIds.push(softEnvAssetId);
+      }
+    }
+  } else if (stripSecondary && finalIds.length) {
+    // Even without excludeScene/softEnv: strip extra CHAR-like associates
+    try {
+      const rows = await db("o_assets")
+        .whereIn("id", finalIds)
+        .select("id", "type", "remark", "name");
+      const charLikeIds: number[] = [];
+      for (const a of rows as Array<{ id: number; type?: string; remark?: string; name?: string }>) {
+        if (
+          isSceneAssetRow(a) ||
+          /prop|道具/i.test(`${a.type ?? ""}${a.name ?? ""}`)
+        ) {
+          continue;
+        }
+        if (
+          /char|role|character|定妆|人物/i.test(`${a.type ?? ""}${a.remark ?? ""}${a.name ?? ""}`) ||
+          /assetCode:CHAR-/i.test(String(a.remark ?? ""))
+        ) {
+          charLikeIds.push(a.id);
+        }
+      }
+      if (charLikeIds.length > 1) {
+        const keepChar = charLikeIds[0];
+        const drop = new Set(charLikeIds.filter((id) => id !== keepChar));
+        finalIds = finalIds.filter((id) => !drop.has(id));
+      }
+    } catch {
+      /* optional */
     }
   }
 
@@ -297,7 +366,13 @@ export async function buildReferenceListForStoryboard(
   prompt: string,
   charCodes: string[] = [],
   preferredOrder?: string[],
-  opts?: { excludeScene?: boolean; softEnvRef?: boolean; propSoftCodes?: string[] },
+  opts?: {
+    excludeScene?: boolean;
+    softEnvRef?: boolean;
+    propSoftCodes?: string[];
+    secondaryCharacterBudget?: "none" | "hands_only" | "upper_body" | "ensemble" | "skirt_blur";
+    leadCharCodes?: string[];
+  },
 ): Promise<{
   referenceList: { type: "image"; base64: string }[];
   warnings: ReferenceWarning[];
@@ -332,7 +407,13 @@ export async function buildReferenceListForStoryboard(
     charCodes,
     undefined,
     order,
-    { excludeScene: opts?.excludeScene, softEnvRef: softEnv, propSoftCodes },
+    {
+      excludeScene: opts?.excludeScene,
+      softEnvRef: softEnv,
+      propSoftCodes,
+      secondaryCharacterBudget: opts?.secondaryCharacterBudget,
+      leadCharCodes: opts?.leadCharCodes,
+    },
   );
 
   // Keep 四视图 as identity cref; warn so compose can tighten single-frame lock (no-VLM path)
@@ -438,12 +519,15 @@ export async function buildReferenceListForStoryboard(
           : `特写仅保留1张身份板（丢弃${referenceList.length - 1}张额外参考）`,
       });
       referenceList.splice(cap);
-    } else if (softEnvKept) {
-      sheetWarnings.push({
-        code: "softEnvKept",
-        message: "特写保留软环境场景板（非建立镜头抢戏）",
-      });
     }
+  }
+  if (softEnvKept) {
+    sheetWarnings.push({
+      code: "softEnvKept",
+      message: opts?.excludeScene
+        ? "特写保留软环境场景板（非建立镜头抢戏）"
+        : "keepSoftEnvRef：SCENE softEnv 已挂入参考（身份+软环境可进 Seedream）",
+    });
   }
   return {
     referenceList,

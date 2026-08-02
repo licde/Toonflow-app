@@ -103,10 +103,31 @@ export default router.post(
         previewBlocks.push("empty_face_conflict");
       }
 
+      // Literary SSOT for edit surface — never return egress soup as `prompt`
+      let literaryPrompt = "";
+      try {
+        const { resolveLiteraryStillPrompt } =
+          await import("@/ruleEngine/compilers/literaryStillSsot");
+        literaryPrompt = resolveLiteraryStillPrompt({
+          visualDescription: ctx.visualDescription,
+          compiledImagePrompt: ctx.compiledImagePrompt,
+          background: ctx.background,
+          spatialRelation: ctx.spatialRelation,
+        }).literary;
+      } catch {
+        literaryPrompt = String(ctx.visualDescription ?? result.visualBody ?? "").trim();
+      }
+      if (!literaryPrompt) literaryPrompt = String(result.visualBody ?? "").trim();
+      const egressPrompt = result.prompt;
+
       return res.status(200).send(
         success({
           ok: result.ok && previewBlocks.filter((b) => b === "empty_face_conflict").length === 0,
-          prompt: result.prompt,
+          /** Edit SSOT — peeled imagePrompt ∪ VD */
+          prompt: literaryPrompt,
+          /** Vendor compose egress — side channel only */
+          egressPrompt,
+          promptUsed: egressPrompt,
           visualBody: result.visualBody,
           didSynthesize: result.didSynthesize,
           scrubbed: result.scrubbed,
@@ -133,7 +154,7 @@ export default router.post(
           pixelHq: false,
           burnReady: false,
           note:
-            "preview≡composeStillPrompt 同核；仅验收提示词项，≠成图像素HQ，不可据此燃片；无 cref 仍须 generate 路径 BLOCK",
+            "preview≡composeStillPrompt 同核；prompt=文学SSOT，egressPrompt=送厂拼装；≠成图像素HQ，不可据此燃片",
         }),
       );
     } catch (e) {

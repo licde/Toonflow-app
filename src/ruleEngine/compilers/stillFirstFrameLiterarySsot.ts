@@ -44,11 +44,15 @@ export const STILL_PRIMARY_LOOK_HEAL_TEMPLATE =
 
 /** Neighbor continuity / previous atoms that must not overwrite a different beat. */
 const CONTAMINATION_ATOMS =
-  /端坐|太师椅|摩挲扳指|扳指|蒲团跪|跪低位|低位|蒲团|跪于|咬唇|紧咬下唇|紧咬|渗血|lip_bite|划过面颊|纸角划过|前景：[^，。]{0,12}唇/;
+  /端坐|太师椅|摩挲扳指|扳指|蒲团跪|跪低位|低位|蒲团|跪于|咬唇|紧咬下唇|紧咬|渗血|渗出血珠|lip_bite|划过面颊|纸角划过|前景：[^，。]{0,12}唇|胸前手持|手持卡片|胸前展示|跪坐持/;
 
 /** Off-beat mouth / CU atoms — previous refine must drop when current VD lacks them. */
 export const OFF_BEAT_MOUTH_CU_ATOMS =
-  /咬唇|紧咬下唇|紧咬|渗血|lip_bite_blood|lip_bite|划过面颊|纸角划过|侧脸特写|唇部特写|前景：[^，。]{0,16}唇/;
+  /咬唇|紧咬下唇|紧咬|渗血|渗出血珠|lip_bite_blood|lip_bite|划过面颊|纸角划过|侧脸特写|唇部特写|前景：[^，。]{0,16}唇/;
+
+/** Placard / kneel-hold pose atoms hostile to bend_pickup. */
+export const OFF_BEAT_HOLD_CARD_ATOMS =
+  /胸前手持|手持卡片|胸前展示|举卡|跪坐持|占位：跪坐|伏案靠桌/;
 
 /** Current-shot action-primary stems that previous must survive (or drop previous). */
 export const ACTION_PRIMARY_SURVIVE_STEMS = /弯腰|捡起|捡|捏紧|指节|俯身/;
@@ -64,6 +68,11 @@ export function previousBodyHasOffBeatContamination(
   const vd = String(visualDescription ?? "");
   if (!prev.trim()) return false;
   if (OFF_BEAT_MOUTH_CU_ATOMS.test(prev) && !OFF_BEAT_MOUTH_CU_ATOMS.test(vd)) return true;
+  // Bend pickup current: drop previous hold-card / kneel / blood even without full CU match
+  if (ACTION_PRIMARY_SURVIVE_STEMS.test(vd)) {
+    if (OFF_BEAT_HOLD_CARD_ATOMS.test(prev) && !OFF_BEAT_HOLD_CARD_ATOMS.test(vd)) return true;
+    if (/渗血|渗出血珠|咬唇/.test(prev) && !/渗血|咬唇|血珠/.test(vd)) return true;
+  }
   if (CONTAMINATION_ATOMS.test(prev) && !CONTAMINATION_ATOMS.test(vd)) {
     // Seating soup in previous while current is action-primary pickup
     if (ACTION_PRIMARY_SURVIVE_STEMS.test(vd) && /端坐|太师椅|扳指|蒲团|跪/.test(prev)) return true;
@@ -222,6 +231,44 @@ export function softenContinuityForFirstFrame(input: {
       .replace(/[，,]{2,}/g, "，")
       .trim();
     stripped = true;
+  }
+
+  // Neighbor oral-CU full clauses (特写咬唇渗血) — drop even when 浅痕 co-occurs if VD has no oral beat
+  try {
+    const { isOffBeatOralCuClause, isBendSealed } =
+      require("./stillSealGate") as typeof import("./stillSealGate");
+    const bendLike =
+      isBendSealed({
+        poseOccupancy: /弯腰|捡起|捡拾|俯身/.test(vd) ? "bend_pickup" : null,
+        primaryObjective: /弯腰|捡起|捡拾/.test(vd) ? "action_primary" : null,
+      }) || /弯腰|捡起|捡拾|俯身/.test(vd);
+    if (bendLike || !/咬|渗血|血珠|紧咬/.test(vd)) {
+      const clauses = raw.split(/[。；;\n]+/).map((s) => s.trim()).filter(Boolean);
+      const kept: string[] = [];
+      for (const c of clauses) {
+        if (isOffBeatOralCuClause(c, vd)) {
+          stripped = true;
+          continue;
+        }
+        kept.push(c);
+      }
+      raw = kept.join("。").trim();
+      // Residual tokens
+      if (!/咬|渗血|血珠/.test(vd)) {
+        const cleaned = raw
+          .replace(/特写[。．]?/g, "")
+          .replace(/紧咬下唇[^，。；]{0,16}/g, "")
+          .replace(/唇瓣渗出血珠|渗出血珠|眼神隐忍/g, "")
+          .replace(/\s{2,}/g, " ")
+          .trim();
+        if (cleaned !== raw) {
+          raw = cleaned;
+          stripped = true;
+        }
+      }
+    }
+  } catch {
+    /* optional */
   }
 
   const cast = uniqueBareCastingNames(input.castNames ?? []).filter((n) => n.length >= 2);

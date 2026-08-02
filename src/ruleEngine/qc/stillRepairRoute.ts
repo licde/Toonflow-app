@@ -41,7 +41,49 @@ export function routeStillRepair(input: {
   /** Prefer pure VD for lit debt audit (not full compose prompt) */
   visualDescription?: string | null;
   castNames?: string[] | null;
+  /** Literary primary effects miss — wins over Key-absent structure copy */
+  literaryEffectsQualified?: boolean | null;
+  missingEffects?: Array<string | { id?: string }> | null;
+  literaryCtaLabel?: string | null;
 }): StillRepairDecision {
+  // Literary L0/L1 miss beats Key-absent「结构可试拍」
+  if (input.literaryEffectsQualified === false) {
+    const missIds = (input.missingEffects ?? [])
+      .map((m) => (typeof m === "string" ? m : String(m?.id ?? "")))
+      .filter(Boolean)
+      .slice(0, 4);
+    try {
+      const { stillQualityUserMessage } =
+        require("../quality/practiceCompleteness") as typeof import("../quality/practiceCompleteness");
+      return {
+        route: "identity",
+        nextStep: "batch_still",
+        ctaLabel: input.literaryCtaLabel || "重出动作主导静帧",
+        userMessage: stillQualityUserMessage({
+          keyAbsent: true,
+          missingEffects: missIds,
+          literaryEffectsQualified: false,
+        }),
+        preserveLayout: false,
+        swapLayoutTemplate: false,
+        layoutPreserveEdit: false,
+        missingSlots: missIds,
+      };
+    } catch {
+      return {
+        route: "identity",
+        nextStep: "batch_still",
+        ctaLabel: input.literaryCtaLabel || "重出动作主导静帧",
+        userMessage: missIds.length
+          ? `缺主效果：${missIds.join("、")}；弱图不可作视频首帧；请继续生成智能修`
+          : "文学主效果未全达；弱图不可作视频首帧；请继续生成智能修",
+        preserveLayout: false,
+        swapLayoutTemplate: false,
+        layoutPreserveEdit: false,
+        missingSlots: missIds,
+      };
+    }
+  }
   if (input.missingCref) {
     return {
       route: "human",

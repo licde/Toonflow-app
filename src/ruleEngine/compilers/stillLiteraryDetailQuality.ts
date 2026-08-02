@@ -815,13 +815,32 @@ export function auditLiteraryDetailQuality(input: {
   };
 }
 
+/** Body contact loci only — never costume-parenthetical「含紫袍金绣」etc. */
+const BODY_LOCUS_OK =
+  /^(?:面颊|颊|脸|额|颈|肩|腕|手|指|下唇|唇|口|嘴|锁骨|胸|背|膝|地|掌)$/;
+
 export function extractDeclaredContactLoci(visualDescription?: string | null): string[] {
-  const slots = detectStructuralSlots(visualDescription);
+  // Strip clothing lock parentheticals before locus extract (含…绣/等)
+  const cleaned = String(visualDescription ?? "")
+    .replace(/（含[^）]{0,24}）/g, "")
+    .replace(/\(含[^)]{0,24}\)/g, "")
+    .replace(/服装锁定：[^\n。]{0,80}/g, "")
+    .replace(/禁止换袍换色[^。；\n]{0,40}/g, "");
+  const slots = detectStructuralSlots(cleaned);
   const loci: string[] = [];
   for (const s of slots.contactStruct) {
-    const m = s.match(/(?:划过|贴[在着]?|压[在着]?|抵[在着]?|咬|含|拂过|擦过|抹|塞进|塞入|在)([\u4e00-\u9fff]{1,3})/);
-    if (m?.[1] && !FACING_RE.test(m[1])) loci.push(m[1]);
-    else if (s.length <= 3 && !FACING_RE.test(s)) loci.push(s);
+    // Do not use bare「含」— costume「含紫袍金绣」false positive
+    const m = s.match(
+      /(?:划过|贴[在着]?|压[在着]?|抵[在着]?|咬|拂过|擦过|抹|塞进|塞入|在)([\u4e00-\u9fff]{1,3})/,
+    );
+    if (m?.[1] && !FACING_RE.test(m[1])) {
+      const loc = m[1]!;
+      if (BODY_LOCUS_OK.test(loc) || /颊|脸|唇|手|指|额|颈|肩|腕|掌|地/.test(loc)) {
+        loci.push(loc);
+      }
+    } else if (s.length <= 3 && !FACING_RE.test(s) && BODY_LOCUS_OK.test(s)) {
+      loci.push(s);
+    }
   }
   return [...new Set(loci)];
 }

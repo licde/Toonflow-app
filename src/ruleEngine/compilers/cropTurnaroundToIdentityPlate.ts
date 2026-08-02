@@ -18,6 +18,11 @@ export type CropTurnaroundOpts = {
    * when assumeSheet (character cref), crop left ~1/3 front plate.
    */
   threeViewStrip?: boolean;
+  /**
+   * bend / action_primary: avoid top-row face-only cell.
+   * 2×2 → bottom-left (often full/upper body); refuse pure face-CU as sole action anchor.
+   */
+  preferActionBody?: boolean;
 };
 
 export type CropTurnaroundResult = {
@@ -60,19 +65,44 @@ export async function cropTurnaroundSheetToIdentityPlate(
 
     if (aspect >= 3) {
       cropW = Math.max(1, Math.floor(w / 4));
-      reason = "four_up_left_quarter";
+      if (opts?.preferActionBody) {
+        // Skip top face-band of classic four-up cell → mid/lower action body
+        top = Math.floor(h * 0.28);
+        cropH = Math.max(1, h - top);
+        reason = "four_up_left_action_body";
+      } else {
+        reason = "four_up_left_quarter";
+      }
     } else if (aspect >= 2.05 && opts?.assumeSheet) {
       // 正/侧/背三视图横条（定妆常见）→ 左侧正面格；仅角色 sheet，勿裁场景横图
       cropW = Math.max(1, Math.floor(w / 3));
-      reason = "three_view_left_third";
+      if (opts?.preferActionBody) {
+        top = Math.floor(h * 0.28);
+        cropH = Math.max(1, h - top);
+        reason = "three_view_left_action_body";
+      } else {
+        reason = "three_view_left_third";
+      }
     } else if (aspect >= 1.55) {
       cropW = Math.max(1, Math.floor(w * (opts?.assumeSheet ? 0.38 : 0.48)));
-      reason = opts?.assumeSheet ? "hero_left_front_plate" : "hero_left_half";
+      if (opts?.preferActionBody) {
+        top = Math.floor(h * 0.22);
+        cropH = Math.max(1, h - top);
+        reason = opts?.assumeSheet ? "hero_left_action_body" : "hero_left_half_action";
+      } else {
+        reason = opts?.assumeSheet ? "hero_left_front_plate" : "hero_left_half";
+      }
     } else if (opts?.assumeSheet && aspect >= 0.9 && aspect < 1.55) {
-      // Classic 2×2 定妆格（正/侧/背/头）→ 仅留左上正面单帧
+      // Classic 2×2 定妆格（正/侧/背/头）
       cropW = Math.max(1, Math.floor(w / 2));
       cropH = Math.max(1, Math.floor(h / 2));
-      reason = "grid_2x2_top_left";
+      if (opts.preferActionBody) {
+        // Bottom-left: usually standing/upper-body — not top-row face CU
+        top = Math.max(0, h - cropH);
+        reason = "grid_2x2_bottom_left_action";
+      } else {
+        reason = "grid_2x2_top_left";
+      }
     } else {
       return { base64: raw, cropped: false, reason: "not_wide_sheet", aspectBefore: aspect };
     }

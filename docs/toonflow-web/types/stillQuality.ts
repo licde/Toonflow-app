@@ -78,6 +78,15 @@ export interface StillMeta {
   softEnvMissingHonest?: boolean;
   softEnvBakedIntoIdentity?: boolean;
   softEnvContinuity?: "must" | "optional" | "none" | string;
+  /** Intentional drop of full SCENE softEnv (action/fragment) — not softEnvMissing */
+  droppedSoftEnv?: boolean;
+  /**
+   * Vendor intentionally dropped SCENE softEnv (canvas may still show hall asset).
+   * FE must not CTA「补场景软板」when true.
+   */
+  vendorDroppedSoftEnv?: boolean;
+  fragmentPlateHung?: boolean;
+  atmosphereZhOnly?: boolean;
   propSource?: string;
   vendorCalled?: boolean;
   vendorMs?: number;
@@ -103,10 +112,71 @@ export interface StillMeta {
     | string;
   /** draft | preview | burn — out ≠ hq_ok */
   deliveryTier?: "draft" | "preview" | "burn" | string;
+  /** Literary primary effects L0+L1 bar (no Comfy / no Key) */
+  literaryEffectsQualified?: boolean;
+  /** Sample Must fulfillment (closed loop; same as literaryEffectsQualified when atoms judged) */
+  sampleMustFulfilled?: boolean;
+  sampleFulfillment?: {
+    mustFulfilled?: boolean;
+    mustMissIds?: string[];
+    shouldMissIds?: string[];
+    atoms?: Array<{ id: string; bar?: string; pass?: boolean; evidence?: string; repairHint?: string[] }>;
+  };
+  missingEffects?: Array<string | { id?: string; tier?: string; bar?: string; reason?: string }>;
+  literaryCtaLabel?: string;
+  localPoseSignals?: {
+    holdCardSuspected?: boolean;
+    groundPropSuspected?: boolean;
+    uprightTorsoSuspected?: boolean;
+    primaryPoseGuess?: string;
+  };
+  repairInjectLines?: string[];
+  repairDeltaHints?: string[];
+  videoMotionStartHint?: string;
+  /** Seal-gate contamination class — never blocks generate; may gate I2V inherit */
+  contaminationClass?:
+    | "none"
+    | "off_beat_cu"
+    | "contact_zombie"
+    | "locus_mangled"
+    | "plate_geometry"
+    | "glyph_identity"
+    | string;
+  beatIsolationFailed?: boolean;
+  offBeatContamination?: boolean;
   /** Design debt must clear before burn — does NOT block generate */
   requireFixBeforeBurn?: boolean;
   /** Shared CTA kind for Chat/Web */
   ctaKind?: string;
+  /** DesignIntentProfile echo (classes / plateMode / objective / occupancy) */
+  designIntentProfile?: {
+    classes?: string[];
+    plateMode?: string;
+    glyphPolicy?: string;
+    primaryObjective?: string;
+    propClassId?: string | null;
+    poseOccupancy?: string;
+    gripLocus?: string[];
+    secondaryBudget?: string;
+    fragment?: string;
+    dofBudget?: string;
+  } | null;
+  /** Sealed L0 carriers — handoff / reseal homology with BE */
+  primaryIntentSeal?: {
+    poseOccupancy?: string;
+    gripLocus?: string[];
+    primarySpatialStems?: string[];
+    primaryObjective?: string;
+    propInHand?: boolean;
+    sealHash?: string;
+    literaryHash?: string;
+  } | null;
+  /** Gated untilClear heal inject (next compose consumes via seal gate) */
+  untilClearGatedInject?: string[] | null;
+  untilClearForceFull?: boolean | null;
+  /** Vendor pipeline egress —「实际出图词」; edit surface stays column prompt */
+  promptUsed?: string | null;
+  vendorPromptUsed?: string | null;
 }
 
 /** Split structure/form debt vs Key-optional unmeasured vs actuator degrade (三分流). */
@@ -123,19 +193,96 @@ export function resolveStillDebtSemantics(meta: StillMeta | null | undefined): {
   explain: string;
 } {
   if (!meta) return { kind: "none", ctaLabel: "", explain: "" };
+  const sampleMiss =
+    meta.sampleFulfillment?.mustFulfilled === false ||
+    meta.sampleMustFulfilled === false ||
+    (meta.sampleFulfillment?.mustMissIds?.length ?? 0) > 0;
+  const missFx = (meta.missingEffects ?? [])
+    .map((m) => (typeof m === "string" ? m : String(m?.id ?? "")))
+    .filter(Boolean);
+  const missIds =
+    (meta.sampleFulfillment?.mustMissIds?.length
+      ? meta.sampleFulfillment.mustMissIds
+      : missFx) ?? [];
+  // Sample Must owns primary debt — never collapse to 「须补描写」
+  if (sampleMiss || meta.literaryEffectsQualified === false || missIds.length) {
+    const label =
+      meta.literaryCtaLabel ||
+      (missIds.some((m) => /prop|glyph|fg\./.test(m))
+        ? "挂真道具板后重出"
+        : missIds.some((m) => /bg\.scene_soft|bg\.composition/.test(m))
+          ? "补场景软板"
+          : missIds.some((m) => /fragment|secondary|bg\./.test(m))
+            ? "本拍隔离重出"
+            : "重出动作主导静帧");
+    return {
+      kind: "lit_slot",
+      ctaLabel: label,
+      explain: `设计意图样本未兑现：${missIds.slice(0, 4).join("、") || "Must"}；非单部位补丁；请继续生成智能修。`,
+    };
+  }
   const slots = meta.missingSlots ?? [];
   const blob = `${meta.userMessage ?? ""} ${meta.ctaLabel ?? ""} ${slots.join(" ")}`;
+  // Doctrine CTA persona — preferPersona / forbidProgrammingRed (single SSOT with BE)
+  const doctrineCta = ((): {
+    forbidPhrases: string[];
+    preferPersona: string[];
+  } => {
+    try {
+      // FE bundle may not have ruleEngine; fall back to inlined prefer phrases
+      const prefer = [
+        "重出动作主导静帧",
+        "挂真道具板后重出",
+        "已降级 Seedream·可继续",
+        "本拍隔离重出",
+      ];
+      return { forbidPhrases: ["手改 VD", "须 Comfy", "必须装 Key", "force_compose", "delta_hash"], preferPersona: prefer };
+    } catch {
+      return { forbidPhrases: [], preferPersona: [] };
+    }
+  })();
+  const pickPersona = (fallback: string): string => {
+    const hit = doctrineCta.preferPersona.find((p) => p === fallback || fallback.includes(p.slice(0, 4)));
+    return hit ?? fallback;
+  };
   if (meta.debtKind === "action_misfire" || /action_misfire|动作主导/.test(blob)) {
     return {
       kind: "lit_slot",
-      ctaLabel: "重出动作主导静帧",
+      ctaLabel: pickPersona("重出动作主导静帧"),
       explain: "本拍动作（捡/捏/弯腰）未忠实实现；请 full 重出，勿手改邻镜文学。",
     };
   }
-  if (meta.debtKind === "contamination" || /跨镜污染|beatIsolation/.test(blob)) {
+  const contam = String(meta.contaminationClass ?? "").trim();
+  if (contam && contam !== "none") {
+    if (contam === "off_beat_cu" || meta.beatIsolationFailed || meta.offBeatContamination) {
+      return {
+        kind: "lit_slot",
+        ctaLabel: pickPersona("本拍隔离重出"),
+        explain: "检测到邻镜原子串入本拍 egress；已隔离后请重出，勿手改剧本。",
+      };
+    }
+    if (contam === "plate_geometry" || contam === "glyph_identity") {
+      return {
+        kind: "prop_plate",
+        ctaLabel: pickPersona("挂真道具板后重出"),
+        explain: "道具板几何/字形债；可继续试拍，烧片前请挂真板或同源重出。",
+      };
+    }
     return {
       kind: "lit_slot",
-      ctaLabel: "本拍隔离重出",
+      ctaLabel: pickPersona("重出动作主导静帧"),
+      explain: `静帧污染分型（${contam}）：已剥敌对立法，请继续生成修复，勿手改剧本。`,
+    };
+  }
+  if (
+    meta.debtKind === "contamination" ||
+    meta.beatIsolationFailed ||
+    meta.offBeatContamination ||
+    /跨镜污染|beatIsolation/.test(blob)
+  ) {
+    return {
+      kind: "lit_slot",
+      ctaLabel: pickPersona("本拍隔离重出"),
       explain: "检测到邻镜原子串入本拍 egress；已隔离后请重出，勿手改剧本。",
     };
   }
@@ -143,7 +290,7 @@ export function resolveStillDebtSemantics(meta: StillMeta | null | undefined): {
   if (meta.actuatorDegraded || meta.debtKind === "actuator_degraded") {
     return {
       kind: "actuator_degraded",
-      ctaLabel: "已降级 Seedream·可继续",
+      ctaLabel: pickPersona("已降级 Seedream·可继续"),
       explain: `可选 Comfy 不可用（${meta.actuatorDegradedReason || "degraded"}），已走 Seedream 主路径；交付门槛不变，非须配置 Comfy。`,
     };
   }
@@ -155,7 +302,7 @@ export function resolveStillDebtSemantics(meta: StillMeta | null | undefined): {
     if (/卷棒|纸卷|prop_form|形态|抵颏|synthetic_geometry/.test(blob + String(meta.propPlateGrade ?? ""))) {
       return {
         kind: "prop_form",
-        ctaLabel: "挂真道具板后重出",
+        ctaLabel: pickPersona("挂真道具板后重出"),
         explain: "当前为 synthetic_geometry 几何软板，不冒充形态锁；请挂真 PROP 资产后再出。",
       };
     }
@@ -166,7 +313,7 @@ export function resolveStillDebtSemantics(meta: StillMeta | null | undefined): {
       return {
         kind: "key_unmeasured",
         ctaLabel: humanRejudgePrimaryCta(meta),
-        explain: "像素诊断 Key 未装/未测（可选）。文学与形态约束仍有效；请人审放行，勿当作缺约束。",
+        explain: "像素诊断 Key 未装/未测（可选）。设计意图主效果仍以文学合格门为准；请人审放行，勿当作缺约束。",
       };
     }
   }
@@ -185,9 +332,12 @@ export function resolveStillDebtSemantics(meta: StillMeta | null | undefined): {
     };
   }
   if (
-    meta.softEnvMissingHonest ||
-    slots.some((s) => /softEnv/i.test(s)) ||
-    /SOFT-ENV-BAKE-FAILED|烘焙失败/.test(blob)
+    (meta.softEnvMissingHonest ||
+      slots.some((s) => /softEnv/i.test(s)) ||
+      /SOFT-ENV-BAKE-FAILED|烘焙失败/.test(blob)) &&
+    meta.droppedSoftEnv !== true &&
+    meta.vendorDroppedSoftEnv !== true &&
+    meta.softEnvContinuity !== "none"
   ) {
     return {
       kind: "soft_env",
@@ -197,11 +347,20 @@ export function resolveStillDebtSemantics(meta: StillMeta | null | undefined): {
         : "软环境 SCENE 板未挂上；成图易灰棚，建议补场景软板。",
     };
   }
+  // Skirt fragment is Should — never primary soft_env CTA when hall already hung
+  if (
+    meta.fragmentPlateHung !== true &&
+    /裙摆|碎片/.test(blob) &&
+    (meta.refsRoles ?? []).includes("softEnv") &&
+    meta.droppedSoftEnv !== true
+  ) {
+    // fall through — no fragment nag when SCENE present
+  }
   if (slots.length) {
     return {
       kind: "lit_slot",
       ctaLabel: resolveStillRepairCtaLabel(meta),
-      explain: `缺结构槽 ${slots.join("/")}；可增强或手改 VD。`,
+      explain: `缺结构槽 ${slots.join("/")}；可增强补填后重出。`,
     };
   }
   return { kind: "none", ctaLabel: resolveStillRepairCtaLabel(meta), explain: "" };
@@ -223,12 +382,67 @@ export function stillQualityBadgeLabel(meta: StillMeta | null | undefined): stri
   if (!meta) return "缺静照";
   if (meta.sheetLeak) return "拼版弱图";
   if (meta.stillQuality === "hq_ok" && meta.visualPass) return "可燃片";
+  const missFx = (meta.missingEffects ?? [])
+    .map((m) => (typeof m === "string" ? m : String(m?.id ?? "")))
+    .filter(Boolean);
+  if (meta.literaryEffectsQualified === false || missFx.length) {
+    return missFx.length ? `缺主效果·${missFx[0]}` : "缺主效果·弱图";
+  }
   if (meta.pixelDimStatus === "unmeasured" || meta.keyOptional) {
     if (meta.stillQuality === "weak" || meta.pendingHumanRejudge) return "未测·弱图";
   }
   if (meta.stillQuality === "weak" || meta.pendingHumanRejudge) return "弱图不可作视频首帧";
   if (meta.stillQuality === "missing") return "缺静照";
   return "待验收";
+}
+
+/** Hydrate literary qualify fields from o_storyboard.reason / API body into StillMeta. */
+export function literaryFieldsFromReason(reason: Record<string, unknown> | null | undefined): Partial<StillMeta> {
+  if (!reason || typeof reason !== "object") return {};
+  const out: Partial<StillMeta> = {};
+  if (typeof reason.literaryEffectsQualified === "boolean") {
+    out.literaryEffectsQualified = reason.literaryEffectsQualified;
+  }
+  if (typeof reason.sampleMustFulfilled === "boolean") {
+    out.sampleMustFulfilled = reason.sampleMustFulfilled;
+  }
+  if (reason.sampleFulfillment && typeof reason.sampleFulfillment === "object") {
+    out.sampleFulfillment = reason.sampleFulfillment as StillMeta["sampleFulfillment"];
+  }
+  if (typeof reason.droppedSoftEnv === "boolean") {
+    out.droppedSoftEnv = reason.droppedSoftEnv;
+  }
+  if (typeof reason.vendorDroppedSoftEnv === "boolean") {
+    out.vendorDroppedSoftEnv = reason.vendorDroppedSoftEnv;
+  }
+  if (typeof reason.fragmentPlateHung === "boolean") {
+    out.fragmentPlateHung = reason.fragmentPlateHung;
+  }
+  if (typeof reason.atmosphereZhOnly === "boolean") {
+    out.atmosphereZhOnly = reason.atmosphereZhOnly;
+  }
+  if (typeof reason.softEnvContinuity === "string") {
+    out.softEnvContinuity = reason.softEnvContinuity;
+  }
+  if (Array.isArray(reason.missingEffects)) {
+    out.missingEffects = reason.missingEffects as StillMeta["missingEffects"];
+  }
+  if (reason.localPoseSignals && typeof reason.localPoseSignals === "object") {
+    out.localPoseSignals = reason.localPoseSignals as StillMeta["localPoseSignals"];
+  }
+  if (Array.isArray(reason.repairInjectLines)) {
+    out.repairInjectLines = reason.repairInjectLines.map(String);
+  }
+  if (Array.isArray(reason.repairDeltaHints)) {
+    out.repairDeltaHints = reason.repairDeltaHints.map(String);
+  }
+  if (typeof reason.videoMotionStartHint === "string") {
+    out.videoMotionStartHint = reason.videoMotionStartHint;
+  }
+  if (typeof reason.literaryCtaLabel === "string") {
+    out.literaryCtaLabel = reason.literaryCtaLabel;
+  }
+  return out;
 }
 
 /** BE I5 homology: sheetLeak / single_frame collage → CTA「禁拼版重抽」(≠ generic HQ regen). */

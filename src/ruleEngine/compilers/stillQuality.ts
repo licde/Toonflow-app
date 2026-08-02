@@ -17,6 +17,10 @@ export interface StillQualityMeta {
   qualityMode?: "hq_update" | "draft" | string;
   composeSources?: string[];
   promptUsed?: string;
+  /** Actuator-compressed bytes when different from promptUsed */
+  vendorPromptUsed?: string;
+  /** Alias of literaryDescHash for ingress forceFull parity */
+  literaryHash?: string;
   videoStale?: boolean;
   healLogTail?: string;
   resolvedQuality?: string;
@@ -41,6 +45,14 @@ export interface StillQualityMeta {
   /** M7: VD+dialogue+duration design fingerprint at video/still compile — drift → recompile */
   designContentHash?: string;
   dialogueFingerprint?: string;
+  /** Literary primary effects L0+L1 (no Comfy / no Key) */
+  literaryEffectsQualified?: boolean;
+  missingEffects?: Array<string | { id?: string; tier?: string; bar?: string; reason?: string }>;
+  localPoseSignals?: Record<string, unknown>;
+  repairInjectLines?: string[];
+  repairDeltaHints?: string[];
+  videoMotionStartHint?: string;
+  literaryCtaLabel?: string;
   /** keep/upload path — must not forge visualPass */
   keepPath?: boolean;
   fidelityStopReason?: string;
@@ -255,6 +267,9 @@ export function stillApiFieldsFromReason(reason: unknown): {
   userMessage?: string;
   primaryNextStep?: string;
   stateHint?: "weak_keep" | "ok";
+  /** Vendor egress — FE「实际出图词」; edit surface stays o_storyboard.prompt */
+  promptUsed?: string;
+  vendorPromptUsed?: string;
 } {
   const meta = parseStillMetaFromReason(reason);
   if (!meta) return {};
@@ -276,6 +291,10 @@ export function stillApiFieldsFromReason(reason: unknown): {
       | string
       | undefined,
     stateHint,
+    promptUsed: meta.promptUsed ? String(meta.promptUsed).slice(0, 2000) : undefined,
+    vendorPromptUsed: meta.vendorPromptUsed
+      ? String(meta.vendorPromptUsed).slice(0, 2000)
+      : undefined,
   };
 }
 

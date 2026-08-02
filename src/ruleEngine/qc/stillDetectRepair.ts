@@ -28,9 +28,9 @@ function collectLitDebt(vd: string, shotSize: string): {
 
 function litDebtMessage(missingSlots: string[]): string {
   if (!missingSlots.length) {
-    return "静帧弱且文学细节/道具契约未过；请手改 VD（禁只 regen）";
+    return "静帧弱且文学细节/道具契约未过；请增强补填后再出（禁只 regen）";
   }
-  return `静帧弱且文学细节缺槽：${missingSlots.join("/")}；请手改 VD（禁只 regen）`;
+  return `静帧弱且文学细节缺槽：${missingSlots.join("/")}；请增强补填后再出（禁只 regen）`;
 }
 
 export function assertStillDetectForBurn(input: {
@@ -47,6 +47,11 @@ export function assertStillDetectForBurn(input: {
     fidelityStopReason?: string | null;
     vlmError?: string | null;
     fidelityItems?: Array<{ id: string; pass?: boolean; evidence?: string; fixHint?: string }>;
+    debtKind?: string | null;
+    propPlateGrade?: string | null;
+    keyOptional?: boolean | null;
+    promptUsed?: string | null;
+    designIntentProfile?: unknown;
   } | null;
   fidelityFailed?: boolean;
   shot?: Record<string, unknown> | null;
@@ -200,6 +205,32 @@ export function assertStillDetectForBurn(input: {
       try {
         const { runUntilClearDetect, untilClearBurnCta } =
           require("../quality/untilClearRuntime") as typeof import("../quality/untilClearRuntime");
+        let fidelityItems = (input.stillMeta?.fidelityItems ?? []).map((i) => ({
+          id: i.id,
+          pass: i.pass !== false,
+          fixHint: i.fixHint,
+        }));
+        // Wire heuristic judge when VLM Key absent — not dead code
+        try {
+          const { judgeStillHeuristicNoVlm } =
+            require("../quality/heuristicStillJudge") as typeof import("../quality/heuristicStillJudge");
+          const hj = judgeStillHeuristicNoVlm({
+            visualDescription: vd,
+            promptUsed: String(input.stillMeta?.promptUsed ?? input.stillPrompt ?? ""),
+            propPlateGrade: String(input.stillMeta?.propPlateGrade ?? ""),
+            vlmKeyPresent: Boolean(input.stillMeta?.visualPassAt) && input.stillMeta?.keyOptional !== true,
+          });
+          if (hj.atomMisses.length) {
+            for (const m of hj.atomMisses) {
+              fidelityItems.push({ id: m, pass: false, fixHint: hj.hints[0] });
+            }
+            if (hj.debtKind && !input.stillMeta?.debtKind) {
+              (input.stillMeta as Record<string, unknown>).debtKind = hj.debtKind;
+            }
+          }
+        } catch {
+          /* optional */
+        }
         const findings = runUntilClearDetect({
           phase: "video_burn",
           visualDescription: vd,
@@ -207,13 +238,71 @@ export function assertStillDetectForBurn(input: {
           stillQuality: degraded ?? input.stillQuality,
           visualPass: input.stillMeta?.visualPass,
           visualPassAt: input.stillMeta?.visualPassAt,
-          fidelityItems: (input.stillMeta?.fidelityItems ?? []).map((i) => ({
-            id: i.id,
-            pass: i.pass !== false,
-            fixHint: i.fixHint,
-          })),
+          fidelityItems,
+          descCoverageMissing: (input.stillMeta as { descCoverageMissing?: string[] } | undefined)
+            ?.descCoverageMissing,
+          poseEvidence: (() => {
+            try {
+              const { producePoseEvidence, poseEvidenceForUntilClear } =
+                require("../quality/poseEvidenceProducer") as typeof import("../quality/poseEvidenceProducer");
+              const produced = producePoseEvidence({
+                visualDescription: vd,
+                promptUsed: String(input.stillMeta?.promptUsed ?? input.stillPrompt ?? ""),
+              });
+              const shaped = poseEvidenceForUntilClear(produced);
+              if (input.stillMeta && shaped.primaryPose) {
+                (input.stillMeta as Record<string, unknown>).poseEvidence = shaped;
+              }
+              return shaped;
+            } catch {
+              return (input.stillMeta as { poseEvidence?: { primaryPose?: string } } | undefined)
+                ?.poseEvidence;
+            }
+          })(),
         });
         if (findings.length) debtCta = untilClearBurnCta(findings);
+        // Wire heal → seal gate → stamp for next compose (honest: inject only when gated)
+        if (findings.length && input.stillMeta) {
+          try {
+            const { runUntilClearHeal } =
+              require("../quality/untilClearRuntime") as typeof import("../quality/untilClearRuntime");
+            const {
+              applyNormSupplement,
+              sealPrimaryIntentCarriers,
+              primaryIntentSealEcho,
+            } = require("../compilers/primaryIntentSeal") as typeof import("../compilers/primaryIntentSeal");
+            const { deriveDesignIntentProfile } =
+              require("../compilers/designIntentProfile") as typeof import("../compilers/designIntentProfile");
+            const heal = runUntilClearHeal(
+              {
+                phase: "video_burn",
+                visualDescription: vd,
+                shotSize,
+                stillQuality: degraded ?? input.stillQuality,
+              },
+              findings,
+            );
+            const dip = deriveDesignIntentProfile({ visualDescription: vd, shotSize });
+            const seal =
+              (input.stillMeta as { primaryIntentSeal?: import("../compilers/primaryIntentSeal").PrimaryIntentCarrierSet })
+                .primaryIntentSeal ??
+              sealPrimaryIntentCarriers({ profile: dip });
+            const gated = applyNormSupplement({
+              seal,
+              lines: heal.injectLines ?? [],
+              layer: "L1",
+            });
+            const meta = input.stillMeta as Record<string, unknown>;
+            meta.primaryIntentSeal = primaryIntentSealEcho(seal);
+            meta.untilClearGatedInject = gated.ordered;
+            meta.untilClearForceFull = Boolean(heal.forceFull);
+            meta.untilClearHealActuators = heal.actuators;
+            // Honest: do not claim inject wired into current egress — next compose consumes
+            meta.untilClearInjectPending = gated.ordered.length > 0;
+          } catch {
+            /* optional heal wire */
+          }
+        }
       } catch {
         /* optional */
       }

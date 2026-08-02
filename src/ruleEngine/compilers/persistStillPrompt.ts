@@ -27,7 +27,15 @@ export async function composeAndPersistStillPrompt(
     referenceUrlCount?: number;
     qualityMode?: "hq_update" | "draft";
   },
-): Promise<{ ok: boolean; result: ComposeStillResult; prompt?: string; blockReason?: string }> {
+): Promise<{
+  ok: boolean;
+  result: ComposeStillResult;
+  /** Literary edit SSOT — never egress soup */
+  prompt?: string;
+  egressPrompt?: string;
+  promptUsed?: string;
+  blockReason?: string;
+}> {
   const row = await db("o_storyboard").where({ id: input.storyboardId }).first();
   if (!row) {
     return {
@@ -65,6 +73,17 @@ export async function composeAndPersistStillPrompt(
     purpose: "compose",
   });
   const currentHash = computeComposeHash(ctx);
+  let litHash = "";
+  try {
+    const { literaryComposeHash } = await import("./composeStillPrompt");
+    litHash = literaryComposeHash({
+      visualDescription: ctx.visualDescription,
+      compiledImagePrompt: ctx.compiledImagePrompt,
+      background: ctx.background,
+    });
+  } catch {
+    litHash = hashLiteraryDesc(String(ctx.visualDescription ?? ""));
+  }
   const ingress = buildStillPreviousIngress({
     reason: row.reason,
     storedPrompt: row.prompt,
@@ -73,6 +92,9 @@ export async function composeAndPersistStillPrompt(
     currentHash,
     preferFidelity: shouldDefaultFidelityCompose(ctx),
     loadPrevious: true,
+    currentClientId: String(input.storyboardId ?? ""),
+    literaryHash: litHash,
+    visualDescription: ctx.visualDescription,
   });
   const meta = ingress.prevMeta;
   ctx.previousVisualBody = ingress.previousVisualBody;
@@ -132,7 +154,7 @@ export async function composeAndPersistStillPrompt(
     };
   }
 
-  // Pipeline SSOT: persist egress (literary body + safe tails), not raw assemble-collapse risk
+  // Persist egress to reason only — never overwrite literary o_storyboard.prompt
   const { runStillPromptPipeline } = await import("./stillPromptPipeline");
   const { buildIdentitySlots } = await import("../kernels/promptKernel");
   const { extractDesignFields } = await import("../design/designFieldRegistry");
@@ -211,11 +233,31 @@ export async function composeAndPersistStillPrompt(
     /* optional */
   }
 
+  // Echo seal/profile/contam from compose so refine/repair/I2V handoff can read before image gen
+  const gc = (result.generationContract ?? {}) as {
+    primaryIntentSeal?: unknown;
+    designIntentProfile?: unknown;
+    contaminationClass?: string;
+    i2vCriticalFacts?: string[];
+    videoMotionStartHint?: string;
+  };
+  const contamFromCompose =
+    String(gc.contaminationClass ?? "").trim() ||
+    (result.sources ?? [])
+      .map((s) => /^contaminationClass:(.+)$/.exec(String(s))?.[1])
+      .find(Boolean) ||
+    "";
+  const offBeat =
+    (result.sources ?? []).some((s) => /previous\.dropped_off_beat|contaminationClass:off_beat/i.test(String(s))) ||
+    contamFromCompose === "off_beat_cu";
+  const deliveryTierCompose =
+    contamFromCompose && contamFromCompose !== "none" ? "draft" : "preview";
+
+  // Reuse ingress litHash (VD ∪ peeled imagePrompt ∪ bg) — do not redeclare
   await db("o_storyboard")
     .where({ id: input.storyboardId })
     .update({
-      // SSOT: only composed prompt slot — never write recipe layers back into visualDescription
-      prompt: promptToStore,
+      // Literary SSOT column untouched — egress only in reason.promptUsed
       reason: mergeReasonMeta(row.reason, {
         promptState,
         composeMode,
@@ -231,7 +273,18 @@ export async function composeAndPersistStillPrompt(
         autoHealed: pipeline.autoHealed,
         pipelineVersion: pipeline.pipelineVersion,
         recipeHeals: pipeline.recipeHeals ?? result.recipeHeals,
-        literaryDescHash: hashLiteraryDesc(String(ctx.visualDescription ?? "")),
+        literaryDescHash: litHash,
+        literaryHash: litHash,
+        generationContract: result.generationContract ?? undefined,
+        designIntentProfile: gc.designIntentProfile,
+        primaryIntentSeal: gc.primaryIntentSeal,
+        ...(contamFromCompose && contamFromCompose !== "none"
+          ? { contaminationClass: contamFromCompose }
+          : {}),
+        deliveryTier: deliveryTierCompose,
+        ...(gc.i2vCriticalFacts?.length ? { i2vCriticalFacts: gc.i2vCriticalFacts } : {}),
+        ...(gc.videoMotionStartHint ? { videoMotionStartHint: gc.videoMotionStartHint } : {}),
+        ...(offBeat ? { beatIsolationFailed: true, offBeatContamination: true } : {}),
         ...(designContentHash
           ? { designContentHash, dialogueFingerprint: dialogueFingerprint || undefined }
           : {}),
@@ -239,7 +292,7 @@ export async function composeAndPersistStillPrompt(
         stillIntentClass,
         // M7: design hash recorded; video stale if prior hash differs
         ...(meta?.literaryDescHash &&
-        meta.literaryDescHash !== hashLiteraryDesc(String(ctx.visualDescription ?? ""))
+        meta.literaryDescHash !== litHash
           ? { chainStale: { still: false, video: true, burn: true }, videoStale: true }
           : {}),
         ...(meta?.designContentHash &&
@@ -250,7 +303,29 @@ export async function composeAndPersistStillPrompt(
       }),
     });
 
-  return { ok: true, result, prompt: promptToStore };
+  // API `prompt` = literary edit SSOT; egress stays in reason / side channels
+  let literaryPrompt = "";
+  try {
+    const { resolveLiteraryStillPrompt } =
+      require("./literaryStillSsot") as typeof import("./literaryStillSsot");
+    literaryPrompt = resolveLiteraryStillPrompt({
+      visualDescription: ctx.visualDescription,
+      compiledImagePrompt: ctx.compiledImagePrompt,
+      background: ctx.background,
+      spatialRelation: ctx.spatialRelation,
+    }).literary;
+  } catch {
+    literaryPrompt = String(ctx.visualDescription ?? result.visualBody ?? "").trim();
+  }
+  if (!literaryPrompt) literaryPrompt = String(result.visualBody ?? "").trim();
+
+  return {
+    ok: true,
+    result,
+    prompt: literaryPrompt,
+    egressPrompt: promptToStore,
+    promptUsed: promptToStore,
+  };
 }
 
 export async function batchComposeAndPersistStillPrompts(
@@ -266,6 +341,8 @@ export async function batchComposeAndPersistStillPrompts(
     storyboardId: number;
     ok: boolean;
     prompt?: string;
+    egressPrompt?: string;
+    promptUsed?: string;
     userMessage?: string;
     blockReason?: string;
     composeMode?: string;
@@ -275,6 +352,8 @@ export async function batchComposeAndPersistStillPrompts(
     storyboardId: number;
     ok: boolean;
     prompt?: string;
+    egressPrompt?: string;
+    promptUsed?: string;
     userMessage?: string;
     blockReason?: string;
     composeMode?: string;
@@ -290,6 +369,8 @@ export async function batchComposeAndPersistStillPrompts(
       storyboardId: id,
       ok: out.ok,
       prompt: out.prompt,
+      egressPrompt: out.egressPrompt,
+      promptUsed: out.promptUsed ?? out.egressPrompt,
       userMessage: out.result.userMessage ?? out.result.blockReason,
       blockReason: out.result.blockReason ?? out.blockReason,
       composeMode: out.result.composeMode,

@@ -107,6 +107,10 @@ export interface ComposeStillContext {
   referenceUrlCount?: number;
   /** Prior composed body for refine (without recipe/tokens) */
   previousVisualBody?: string | null;
+  /** Gated untilClear heal inject lines (from prior stillMeta) — must pass primary seal */
+  gatedHealInject?: string[] | null;
+  /** Prior primaryIntentSeal — reseal when literaryHash drifts */
+  priorPrimaryIntentSeal?: import("./primaryIntentSeal").PrimaryIntentCarrierSet | null;
   /** Sibling / episode VDs for action lexicon harvest (declare-only on current shot) */
   episodeVisualDescriptions?: string[] | null;
   episodeShot?: Record<string, unknown> | null;
@@ -337,6 +341,30 @@ export function extractEntityAnchors(text: string, extraNames: string[] = []): s
 function pickPrimaryDescription(ctx: ComposeStillContext): { text: string; source: string; trimmed?: boolean } | null {
   const { shouldWarnOneBeat } = require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
   const rejectMulti = (text: string): boolean => shouldWarnOneBeat(text);
+  try {
+    const { resolveLiteraryStillPrompt } =
+      require("./literaryStillSsot") as typeof import("./literaryStillSsot");
+    const lit = resolveLiteraryStillPrompt({
+      visualDescription: ctx.visualDescription,
+      compiledImagePrompt: ctx.compiledImagePrompt,
+      background: ctx.background,
+      spatialRelation: ctx.spatialRelation,
+    });
+    if (lit.literary && !rejectMulti(lit.literary)) {
+      return {
+        text: lit.literary.slice(0, 800),
+        source:
+          lit.source === "imagePrompt"
+            ? "shot.compiledImagePrompt"
+            : lit.source === "union"
+              ? "shot.literaryUnion"
+              : "shot.visualDescription",
+        trimmed: lit.literary.length > 800,
+      };
+    }
+  } catch {
+    /* fall through */
+  }
   const vd = String(ctx.visualDescription ?? "").trim();
   if (vd) {
     if (rejectMulti(vd)) return null;
@@ -347,7 +375,6 @@ function pickPrimaryDescription(ctx: ComposeStillContext): { text: string; sourc
     if (rejectMulti(compiled)) return null;
     return { text: compiled.slice(0, 360), source: "shot.compiledImagePrompt", trimmed: false };
   }
-  // Do NOT fall back to motion-template videoDesc as literary still body (VD SSOT)
   const sb = scrubStillPromptNoise(stripIdentityTokens(String(ctx.promptFromStoryboard ?? "")).body).cleaned;
   if (sb && measureVisualBody(sb).ok) {
     if (rejectMulti(sb)) return null;
@@ -426,8 +453,44 @@ function cuCastBlockResult(
   };
 }
 
-/** Format spatial for 站位 inject when axis/anchors present (G6 design consume). */
-export function formatSpatialStandingLine(spatialRelation: unknown): string | null {
+/** Format spatial for 站位 inject when axis/anchors present (G6 design consume).
+ * When stripFullSecondary / bg_fragment: rewrite secondary standing anchors only —
+ * never wipe primary occupancy stems (弯腰/捡/跪/俯身). */
+export function formatSpatialStandingLine(
+  spatialRelation: unknown,
+  opts?: { stripFullSecondary?: boolean },
+): string | null {
+  const PRIMARY_OCC = /弯腰|捡起|俯身|跪坐|伏案|站立持|主手|指节/;
+  const rewriteFragment = (raw: string): string | null => {
+    if (!opts?.stripFullSecondary) return raw.slice(0, 80);
+    // Preserve primary occupancy clauses before stripping secondary standing
+    const primaryBits = (raw.match(/[^/，,;；]*?(?:弯腰|捡起|俯身|跪坐|伏案|站立持)[^/，,;；]*/g) ?? [])
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 2);
+    let s = raw
+      .replace(/anchors?\s*=\s*[^;；]*/gi, (m) =>
+        m
+          .replace(/[^/，,]*次角[^/，,]*站立[^/，,]*/g, "仅裙摆碎片虚化")
+          .replace(/[^/，,]*配角[^/，,]*站立[^/，,]*/g, "仅裙摆碎片虚化")
+          .replace(/[^/，,]*二号[^/，,]*站立[^/，,]*/g, "仅裙摆碎片虚化")
+          .replace(/[^/，,]*立像[^/，,]*/g, "仅衣角碎片")
+          .replace(/[^/，,]*半身立像[^/，,]*/g, "仅衣角碎片")
+          .replace(/([^/，,]*)(次角|配角|二号)([^/，,]*)站立/g, "$1$2$3仅裙摆碎片虚化"),
+      )
+      // Only rewrite secondary standing phrases — not bare 站立 on primary
+      .replace(/(?:次角|配角|二号角色?)[^。；]{0,8}站立/g, "次角仅裙摆/衣角碎片虚化")
+      .replace(/完整立像|半身立像/g, "仅裙摆/衣角碎片虚化");
+    if (primaryBits.length && !PRIMARY_OCC.test(s)) {
+      s = `${primaryBits.join("；")}；${s}`;
+    }
+    if (/仅裙摆|衣角碎片|虚化/.test(s) || PRIMARY_OCC.test(s)) return s.slice(0, 100);
+    if (/axis\s*=/.test(s)) {
+      const axis = s.match(/axis\s*=\s*[^\s;；]+/i)?.[0];
+      return axis ? `${axis}；次角仅裙摆碎片虚化` : "次角仅裙摆/衣角碎片虚化浅景深";
+    }
+    return "次角仅裙摆/衣角碎片虚化浅景深";
+  };
   if (spatialRelation == null) return null;
   if (typeof spatialRelation === "object" && !Array.isArray(spatialRelation)) {
     const o = spatialRelation as { axis?: string; anchors?: string[] | string };
@@ -435,11 +498,14 @@ export function formatSpatialStandingLine(spatialRelation: unknown): string | nu
     const anchors = Array.isArray(o.anchors)
       ? o.anchors.map((a) => String(a).trim()).filter(Boolean).join("/")
       : String(o.anchors ?? "").trim();
-    if (axis || anchors) return [axis && `axis=${axis}`, anchors && `anchors=${anchors}`].filter(Boolean).join(" ");
+    if (axis || anchors) {
+      const line = [axis && `axis=${axis}`, anchors && `anchors=${anchors}`].filter(Boolean).join(" ");
+      return rewriteFragment(line);
+    }
   }
   const s = String(spatialRelation ?? "").trim();
   if (!s) return null;
-  if (/axis\s*=|anchors\s*=|站位|左右|前后|高位|低位/.test(s)) return s.slice(0, 80);
+  if (/axis\s*=|anchors\s*=|站位|左右|前后|高位|低位|弯腰|捡/.test(s)) return rewriteFragment(s);
   return null;
 }
 
@@ -483,7 +549,19 @@ function layerDesignConsume(ctx: ComposeStillContext, parts: string[], sources: 
     parts.push(`色温：${temp}`);
     sources.push("design.colorTemp");
   }
-  const spatial = formatSpatialStandingLine(ctx.spatialRelation);
+  let stripFullSecondary = false;
+  try {
+    const { resolveBgFragment } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    stripFullSecondary = resolveBgFragment({
+      visualDescription: ctx.visualDescription,
+      background: ctx.background,
+      spatialRelation: ctx.spatialRelation,
+    }).stripFullSecondary;
+  } catch {
+    /* optional */
+  }
+  const spatial = formatSpatialStandingLine(ctx.spatialRelation, { stripFullSecondary });
   if (spatial && !parts.some((p) => /^(站位：|空间关系：)/.test(p))) {
     parts.push(`站位：${spatial}`);
     sources.push("design.spatialRelation");
@@ -503,7 +581,19 @@ function layerShootableExtras(ctx: ComposeStillContext, parts: string[], sources
     sources.push("shot.shotSize");
   }
   if (ctx.spatialRelation) {
-    const spatial = formatSpatialStandingLine(ctx.spatialRelation);
+    let stripFullSecondary = false;
+    try {
+      const { resolveBgFragment } =
+        require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      stripFullSecondary = resolveBgFragment({
+        visualDescription: ctx.visualDescription,
+        background: ctx.background,
+        spatialRelation: ctx.spatialRelation,
+      }).stripFullSecondary;
+    } catch {
+      /* optional */
+    }
+    const spatial = formatSpatialStandingLine(ctx.spatialRelation, { stripFullSecondary });
     if (spatial && !parts.some((p) => /^(站位：|空间关系：)/.test(p))) {
       parts.push(`站位：${spatial}`);
       sources.push("shot.spatialRelation");
@@ -901,16 +991,21 @@ function hasAnyAnchor(ctx: ComposeStillContext): boolean {
 }
 
 function preserveUserPatches(rawBody: string, designText: string): string | null {
-  const scrubbed = scrubStillPromptNoise(rawBody).cleaned;
-  const compact = scrubbed.replace(/\s+/g, "");
-  // Keep short Chinese beats (e.g. 侧光从窗格打下) — not full Visual measure
-  if (compact.length < 4) return null;
-  // Drop if mostly duplicate of design
-  if (designText && scrubbed.includes(designText.slice(0, Math.min(20, designText.length)))) return null;
-  if (/safe area|power blocking|9:16安全区/i.test(scrubbed) && compact.length < 20) {
-    return null;
+  try {
+    const { gateUserPatchAgainstLiterary } =
+      require("./literaryStillSsot") as typeof import("./literaryStillSsot");
+    return gateUserPatchAgainstLiterary({ rawPatch: rawBody, literary: designText });
+  } catch {
+    const scrubbed = scrubStillPromptNoise(rawBody).cleaned;
+    const compact = scrubbed.replace(/\s+/g, "");
+    if (compact.length < 4) return null;
+    if (designText && scrubbed.includes(designText.slice(0, Math.min(20, designText.length)))) return null;
+    if (/safe area|power blocking|9:16安全区/i.test(scrubbed) && compact.length < 20) {
+      return null;
+    }
+    if (/定妆为准|锁定脸型|禁止重塑五官/.test(scrubbed)) return null;
+    return scrubbed;
   }
-  return scrubbed;
 }
 
 /**
@@ -1367,7 +1462,137 @@ export function composeStillPrompt(
     characterNames: charNamesForBind,
     episodeShot: ctx.episodeShot,
   });
+  // Stamp DesignIntentProfile early so early-return debt paths still persist carriers
+  try {
+    const { deriveDesignIntentProfile } =
+      require("./designIntentProfile") as typeof import("./designIntentProfile");
+    const { clampProfileToPriorSeal } =
+      require("./primaryIntentSeal") as typeof import("./primaryIntentSeal");
+    let dipEarly = deriveDesignIntentProfile({
+      visualDescription: primary?.text ?? ctx.visualDescription,
+      imagePrompt: ctx.compiledImagePrompt,
+      shotSize: ctx.shotSize,
+      background: ctx.background,
+      foreground: ctx.foreground,
+      spatialRelation: ctx.spatialRelation,
+      microExpression: ctx.microExpression,
+      characterNames: charNamesForBind,
+      bgBlur: (ctx as { bgBlur?: boolean }).bgBlur,
+    });
+    if (ctx.priorPrimaryIntentSeal?.sealHash) {
+      let earlyHash = "";
+      try {
+        const { literaryL0Blob } = require("./literaryStillSsot") as typeof import("./literaryStillSsot");
+        const { createHash } = require("crypto") as typeof import("crypto");
+        earlyHash = createHash("sha256")
+          .update(
+            literaryL0Blob({
+              visualDescription: primary?.text ?? ctx.visualDescription,
+              compiledImagePrompt: ctx.compiledImagePrompt,
+              background: ctx.background,
+            }),
+          )
+          .digest("hex")
+          .slice(0, 16);
+      } catch {
+        /* optional */
+      }
+      dipEarly = clampProfileToPriorSeal(dipEarly, ctx.priorPrimaryIntentSeal, earlyHash);
+    }
+    (generationContract as { designIntentProfile?: unknown }).designIntentProfile = {
+      classes: dipEarly.classes,
+      plateMode: dipEarly.plateMode,
+      glyphPolicy: dipEarly.glyphPolicy,
+      glyphText: dipEarly.glyphText,
+      propClassId: dipEarly.propClassId,
+      primaryObjective: dipEarly.primaryObjective,
+      poseOccupancy: dipEarly.poseOccupancy,
+      gripLocus: dipEarly.gripLocus,
+      seatingXorPickup: dipEarly.seatingXorPickup,
+      contactXorPickup: dipEarly.contactXorPickup,
+      secondaryBudget: dipEarly.secondaryBudget,
+      fragment: dipEarly.fragment,
+      dofBudget: dipEarly.dofBudget,
+      formScale: dipEarly.formScale,
+      atmosphere: dipEarly.atmosphere,
+    };
+    try {
+      const { sealPrimaryIntentCarriers, primaryIntentSealEcho } =
+        require("./primaryIntentSeal") as typeof import("./primaryIntentSeal");
+      let literaryHash = "";
+      try {
+        const { literaryL0Blob } = require("./literaryStillSsot") as typeof import("./literaryStillSsot");
+        const { createHash } = require("crypto") as typeof import("crypto");
+        literaryHash = createHash("sha256")
+          .update(
+            literaryL0Blob({
+              visualDescription: primary?.text ?? ctx.visualDescription,
+              compiledImagePrompt: ctx.compiledImagePrompt,
+              background: ctx.background,
+              foreground: ctx.foreground,
+              spatialRelation: ctx.spatialRelation,
+            }),
+          )
+          .digest("hex")
+          .slice(0, 16);
+      } catch {
+        try {
+          const { hashLiteraryDesc } = require("../qc/stillFirstFrameGate") as typeof import("../qc/stillFirstFrameGate");
+          literaryHash = hashLiteraryDesc(String(primary?.text ?? ctx.visualDescription ?? ""));
+        } catch {
+          /* optional */
+        }
+      }
+      const earlySeal = sealPrimaryIntentCarriers({
+        profile: dipEarly,
+        literaryHash,
+        spatialRelation: ctx.spatialRelation,
+      });
+      (generationContract as { primaryIntentSeal?: unknown }).primaryIntentSeal =
+        primaryIntentSealEcho(earlySeal);
+    } catch {
+      /* optional */
+    }
+  } catch {
+    /* optional */
+  }
   const bgPolicyResult = modality.bgPolicy;
+  // Seal softEnv from Match sample: bg.scene_soft Must → keepSoftEnvRef + continuity=must (同源 DIP/contract)
+  let keepSoftEnvSealed = Boolean(bgPolicyResult.keepSoftEnvRef);
+  let softEnvContinuitySealed: "must" | "optional" | "none" =
+    bgPolicyResult.softEnvContinuity ?? (keepSoftEnvSealed ? "optional" : "none");
+  try {
+    const sample = (ctx as {
+      shotDesignSample?: { must?: Array<{ id?: string }> };
+    }).shotDesignSample;
+    const sceneMust = Boolean(
+      sample?.must?.some((m) => m.id === "bg.scene_soft" || m.id === "bg.composition"),
+    );
+    if (sceneMust) {
+      keepSoftEnvSealed = true;
+      softEnvContinuitySealed = "must";
+      bgPolicyResult.keepSoftEnvRef = true;
+      bgPolicyResult.softEnvContinuity = "must";
+      (modality as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = true;
+      (modality as { softEnvContinuity?: string }).softEnvContinuity = "must";
+      sources.push("seal.sample.bg.scene_soft");
+      if (
+        !supportParts.some((p) => /主场景浅景深|殿内轮廓|禁止灰棚/.test(p)) &&
+        !/主场景浅景深/.test(String(bgPolicyResult.bgGuidance ?? ""))
+      ) {
+        supportParts.push("背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化");
+        sources.push("seal.sample.bg.scene_soft.guidance");
+      }
+      // compress-readable: never leave skirt-only as sole bg when scene Must
+      if (/背景仅次角裙摆|仅裙摆\/衣角碎片虚化浅景深/.test(String(bgPolicyResult.bgGuidance ?? ""))) {
+        bgPolicyResult.bgGuidance =
+          "背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化，禁止次角完整正脸抢戏";
+        bgPolicyResult.reason = `${bgPolicyResult.reason}|seal_scene_soft_must`;
+      }
+    }
+  } catch {
+    /* optional */
+  }
   if (bgPolicyResult.bgGuidance) {
     supportParts.push(bgPolicyResult.bgGuidance);
     sources.push(`bgPolicy.${bgPolicyResult.policy}`);
@@ -1429,12 +1654,20 @@ export function composeStillPrompt(
     descParts.push(predPack.hardConstraintLine);
     sources.push("desc.hardConstraint");
   }
-  // Contact-event: force prop-in-frame + contact geom positive constraints
+  // Contact-event: force prop-in-frame + contact geom — skip cheek legislation when bend_pickup wins
   try {
     const { isContactEventVd, matchContactEventVd, loadContactEventPolicy } =
       require("./contactEventPolicy") as typeof import("./contactEventPolicy");
     const litForContact = String(vdRaw || primary?.text || mergedDesc || "");
-    if (isContactEventVd(litForContact)) {
+    const bendPrimary =
+      /弯腰|捡起|捡拾|俯身/.test(litForContact) ||
+      (generationContract as { designIntentProfile?: { poseOccupancy?: string; contactXorPickup?: boolean } })
+        ?.designIntentProfile?.poseOccupancy === "bend_pickup" ||
+      Boolean(
+        (generationContract as { designIntentProfile?: { contactXorPickup?: boolean } })?.designIntentProfile
+          ?.contactXorPickup,
+      );
+    if (isContactEventVd(litForContact) && !bendPrimary) {
       const m = matchContactEventVd(litForContact);
       const prop = m.propCanonical || m.propAlias || "道具";
       const locus = m.locus || "面颊";
@@ -2007,6 +2240,7 @@ export function composeStillPrompt(
           qp02Blocked: false,
           missingLeadAsset: namedNoImage,
           dirtyInput,
+          generationContract,
         };
       }
     } catch {
@@ -2037,6 +2271,8 @@ export function composeStillPrompt(
     contract: generationContract,
     visualDescription: primary?.text ?? ctx.visualDescription ?? "",
     characterNames: charNamesForBind,
+    primaryIntentSeal: (generationContract as { primaryIntentSeal?: import("./primaryIntentSeal").PrimaryIntentCarrierSet })
+      .primaryIntentSeal,
   });
   if (objectiveApplied.prompt !== prompt) {
     prompt = objectiveApplied.prompt;
@@ -2076,6 +2312,183 @@ export function composeStillPrompt(
     /* optional */
   }
 
+  // DesignIntentProfile lean egress — positiveLeads only (debtHints stay off vendor prompt)
+  // Seal PrimaryIntentCarrierSet after match; supplements pass gate
+  try {
+    const { deriveDesignIntentProfile, designIntentEgressSplit } =
+      require("./designIntentProfile") as typeof import("./designIntentProfile");
+    const {
+      sealPrimaryIntentCarriers,
+      shouldResealPrimaryIntent,
+      clampProfileToPriorSeal,
+      applyNormSupplement,
+      gatePromptThroughPrimarySeal,
+      primaryIntentSealEcho,
+      orderEgressLeadsByPriority,
+    } = require("./primaryIntentSeal") as typeof import("./primaryIntentSeal");
+    let dip = deriveDesignIntentProfile({
+      visualDescription: primary?.text ?? ctx.visualDescription,
+      imagePrompt: ctx.compiledImagePrompt,
+      shotSize: ctx.shotSize,
+      background: ctx.background,
+      foreground: ctx.foreground,
+      spatialRelation: ctx.spatialRelation,
+      microExpression: ctx.microExpression,
+      characterNames: charNamesForBind,
+      bgBlur: (ctx as { bgBlur?: boolean }).bgBlur,
+    });
+    let literaryHash = "";
+    try {
+      const { literaryL0Blob } = require("./literaryStillSsot") as typeof import("./literaryStillSsot");
+      const { createHash } = require("crypto") as typeof import("crypto");
+      const blob = literaryL0Blob({
+        visualDescription: primary?.text ?? ctx.visualDescription,
+        compiledImagePrompt: ctx.compiledImagePrompt,
+        background: ctx.background,
+        foreground: ctx.foreground,
+        spatialRelation: ctx.spatialRelation,
+      });
+      literaryHash = createHash("sha256").update(blob).digest("hex").slice(0, 16);
+    } catch {
+      try {
+        const { hashLiteraryDesc } = require("../qc/stillFirstFrameGate") as typeof import("../qc/stillFirstFrameGate");
+        literaryHash = hashLiteraryDesc(String(primary?.text ?? ctx.visualDescription ?? ""));
+      } catch {
+        literaryHash = String(primary?.text ?? ctx.visualDescription ?? "").slice(0, 64);
+      }
+    }
+    const priorSeal = ctx.priorPrimaryIntentSeal ?? null;
+    if (shouldResealPrimaryIntent(priorSeal, literaryHash) && priorSeal?.sealHash) {
+      sources.push("designIntent.reseal");
+    } else if (priorSeal?.sealHash) {
+      const clamped = clampProfileToPriorSeal(dip, priorSeal, literaryHash);
+      if (clamped !== dip) {
+        dip = clamped;
+        sources.push("designIntent.priorSealSticky");
+      }
+    }
+    const seal = sealPrimaryIntentCarriers({
+      profile: dip,
+      literaryHash,
+      spatialRelation: ctx.spatialRelation,
+    });
+    let { positiveLeads, debtHints } = designIntentEgressSplit(dip);
+    // Visual-detail additive lines also pass seal gate (never elevate contact)
+    const detailGated = applyNormSupplement({ seal, lines: positiveLeads, layer: "L3" });
+    positiveLeads = orderEgressLeadsByPriority(detailGated.ordered, seal);
+    if (detailGated.dropped.length) {
+      sources.push(`designIntent.detailDropped:${detailGated.dropped.length}`);
+    }
+    // Consume gated heal inject through norm gate (L0-safe)
+    const healLines = (ctx.gatedHealInject ?? []).map((s) => String(s).trim()).filter(Boolean);
+    if (healLines.length) {
+      const gated = applyNormSupplement({ seal, lines: healLines, layer: "L1" });
+      if (gated.ordered.length) {
+        positiveLeads = orderEgressLeadsByPriority([...gated.ordered, ...positiveLeads], seal);
+        sources.push("designIntent.gatedHealInject");
+      }
+      if (gated.dropped.length) {
+        sources.push(`designIntent.healDropped:${gated.dropped.length}`);
+      }
+    }
+    if (positiveLeads.length) {
+      const leadBlock = positiveLeads.join("。");
+      if (!prompt.includes(positiveLeads[0]!.slice(0, 8))) {
+        prompt = `${leadBlock}。${prompt}`.replace(/。{2,}/g, "。").trim();
+        sources.push("designIntent.positiveLeads");
+        sources.push(`designIntent.plate:${dip.plateMode}`);
+        sources.push(`designIntent.occupancy:${dip.poseOccupancy}`);
+      }
+    }
+    const gatedPrompt = gatePromptThroughPrimarySeal({ prompt, seal });
+    if (gatedPrompt.prompt !== prompt) {
+      prompt = gatedPrompt.prompt;
+      sources.push("designIntent.sealGate");
+    }
+    // L2/L3 AV enhance (doctrine/LLM template) — never reseals L0; non-blocking
+    try {
+      const { enhanceStillAvAfterSeal } =
+        require("../design/stillAvLlmEnhance") as typeof import("../design/stillAvLlmEnhance");
+      let llmLines: string[] | null = null;
+      const enableAv =
+        Boolean((ctx as { enableAvLlmEnhance?: boolean }).enableAvLlmEnhance) ||
+        Boolean((ctx as { literaryDetailLlmFill?: boolean }).literaryDetailLlmFill);
+      if (enableAv) {
+        try {
+          const { buildLitFillSuggestions } =
+            require("../design/literaryDetailLlmFill") as typeof import("../design/literaryDetailLlmFill");
+          const fill = buildLitFillSuggestions({
+            shots: [
+              {
+                shotIndex: 0,
+                visualDescription: primary?.text ?? ctx.visualDescription,
+                shotSize: ctx.shotSize,
+                narrative: { spatialRelation: ctx.spatialRelation },
+              },
+            ],
+            literaryDetailLlmFill: true,
+            intentVisualEnhance: true,
+          });
+          if (fill.enabled && fill.suggestions.length) {
+            llmLines = fill.suggestions
+              .flatMap((s) =>
+                String(s.suggestedAppend ?? "")
+                  .split(/[。；;\n]+/)
+                  .map((x) => x.trim())
+                  .filter((x) => x.length >= 4),
+              )
+              .slice(0, 6);
+          }
+        } catch {
+          /* template optional */
+        }
+      }
+      const enh = enhanceStillAvAfterSeal({
+        seal,
+        atmosphere: dip.atmosphere,
+        hasSkirtFragment: dip.classes.includes("bg_fragment"),
+        enableLlm: enableAv && Boolean(llmLines?.length),
+        llmLines,
+      });
+      for (const line of enh.stillLines) {
+        if (line && !prompt.includes(line.slice(0, Math.min(8, line.length)))) {
+          prompt = `${prompt}。${line}`.replace(/。{2,}/g, "。").trim();
+        }
+      }
+      sources.push(...enh.sources);
+      if (enh.videoMotionHint) {
+        (generationContract as { videoMotionStartHint?: string }).videoMotionStartHint = enh.videoMotionHint;
+        sources.push("avEnhance.videoMotionHint");
+      }
+    } catch {
+      /* optional */
+    }
+    // Stash seal for post-seal untilClear inject gate
+    (ctx as { _activePrimarySeal?: typeof seal })._activePrimarySeal = seal;
+    (generationContract as { designIntentProfile?: unknown; designIntentDebtHints?: string[]; primaryIntentSeal?: unknown }).designIntentProfile =
+      {
+        classes: dip.classes,
+        plateMode: dip.plateMode,
+        glyphPolicy: dip.glyphPolicy,
+        glyphText: dip.glyphText,
+        propClassId: dip.propClassId,
+        primaryObjective: dip.primaryObjective,
+        poseOccupancy: dip.poseOccupancy,
+        gripLocus: dip.gripLocus,
+        seatingXorPickup: dip.seatingXorPickup,
+        contactXorPickup: dip.contactXorPickup,
+        secondaryBudget: dip.secondaryBudget,
+        fragment: dip.fragment,
+        dofBudget: dip.dofBudget,
+        formScale: dip.formScale,
+        atmosphere: dip.atmosphere,
+      };
+    (generationContract as { designIntentDebtHints?: string[] }).designIntentDebtHints = debtHints;
+    (generationContract as { primaryIntentSeal?: unknown }).primaryIntentSeal = primaryIntentSealEcho(seal);
+  } catch {
+    /* optional */
+  }
+
   // Egress single-pipe: lint conflicts / FLOW_ONLY / face orientation (vendor-bound)
   {
     const linted = lintStillPromptBody({
@@ -2102,7 +2515,7 @@ export function composeStillPrompt(
   if (!coverage.ok) {
     warnings.push(`descCoverage missing: ${coverage.missing.join(",")}`);
   }
-  // untilClear: inject healInject for contact_geom / contact / look / lit / atmosphere atoms
+  // untilClear: inject healInject — all lines through applyNormSupplement (bend seal drops cheek)
   let coverageFinal = coverage;
   if (!coverage.ok) {
     const injectable = coverage.missing.filter((id) =>
@@ -2112,6 +2525,16 @@ export function composeStillPrompt(
       try {
         const { buildLiteraryFidelityChecklist, assertLiteraryFidelity } =
           require("./literaryFidelityChecklist") as typeof import("./literaryFidelityChecklist");
+        const { applyNormSupplement } =
+          require("./primaryIntentSeal") as typeof import("./primaryIntentSeal");
+        const activeSeal =
+          (ctx as { _activePrimarySeal?: import("./primaryIntentSeal").PrimaryIntentCarrierSet })
+            ._activePrimarySeal ??
+          ((generationContract as { primaryIntentSeal?: import("./primaryIntentSeal").PrimaryIntentCarrierSet })
+            .primaryIntentSeal as import("./primaryIntentSeal").PrimaryIntentCarrierSet | undefined);
+        const bendSealed =
+          activeSeal?.poseOccupancy === "bend_pickup" ||
+          /弯腰|捡起|捡拾|俯身/.test(String(primary?.text ?? ctx.visualDescription ?? ""));
         const items = buildLiteraryFidelityChecklist({
           description: primary?.text ?? ctx.visualDescription,
           characterNames: charNamesForBind,
@@ -2121,27 +2544,59 @@ export function composeStillPrompt(
         });
         const byId = new Map(items.map((it) => [it.id, it]));
         let next = prompt;
+        const pendingInject: string[] = [];
         for (const id of injectable) {
+          // bend sealed: skip contact_geom mouth-ban / cheek inject ids entirely
+          if (bendSealed && /^contact_geom:/i.test(id)) {
+            sources.push(`descCoverage.untilClear.skipContact:${id}`);
+            continue;
+          }
+          if (bendSealed && (/^contact:/i.test(id) || /wound_visible/i.test(id))) {
+            sources.push(`descCoverage.untilClear.skipSoft:${id}`);
+            continue;
+          }
           const bit = String(byId.get(id)?.healInject ?? "").trim();
           if (!bit) continue;
+          if (byId.get(id)?.soft) {
+            sources.push(`descCoverage.untilClear.skipSoftItem:${id}`);
+            continue;
+          }
           if (next.includes(bit.slice(0, Math.min(8, bit.length)))) continue;
-          next = `${String(next).trim()}，${bit}`;
+          pendingInject.push(bit);
           sources.push(`descCoverage.untilClear.inject:${id}`);
         }
-        // Also ensure mouth-ban tokens for contact_geom even if healInject truncated
-        for (const id of injectable) {
-          const m = /^contact_geom:(.+)$/.exec(id);
-          if (!m) continue;
-          const locus = m[1]!;
-          const mouthBan = `禁口含；禁纸入口；仅${locus}触非口含`;
-          // Must have all three L0 tokens — 纸未入口≠自动跳过禁纸入口
-          if (
-            !/禁口含/.test(next) ||
-            !/(?:禁纸入口|纸未入口)/.test(next) ||
-            !new RegExp(`仅(?:${locus}|颊)触`).test(next)
-          ) {
-            next = `${String(next).trim()}，${mouthBan}`;
-            sources.push(`descCoverage.untilClear.mouthBan:${locus}`);
+        // Mouth-ban only when not bend-sealed
+        if (!bendSealed) {
+          for (const id of injectable) {
+            const m = /^contact_geom:(.+)$/.exec(id);
+            if (!m) continue;
+            const locus = m[1]!;
+            const mouthBan = `禁口含；禁纸入口；仅${locus}触非口含`;
+            if (
+              !/禁口含/.test(next) ||
+              !/(?:禁纸入口|纸未入口)/.test(next) ||
+              !new RegExp(`仅(?:${locus}|颊)触`).test(next)
+            ) {
+              pendingInject.push(mouthBan);
+              sources.push(`descCoverage.untilClear.mouthBan:${locus}`);
+            }
+          }
+        }
+        if (pendingInject.length && activeSeal) {
+          const gated = applyNormSupplement({ seal: activeSeal, lines: pendingInject, layer: "L1" });
+          for (const bit of gated.ordered) {
+            if (!next.includes(bit.slice(0, Math.min(8, bit.length)))) {
+              next = `${String(next).trim()}，${bit}`;
+            }
+          }
+          if (gated.dropped.length) {
+            sources.push(`descCoverage.untilClear.gateDropped:${gated.dropped.length}`);
+          }
+        } else if (pendingInject.length && !activeSeal) {
+          for (const bit of pendingInject) {
+            if (!next.includes(bit.slice(0, Math.min(8, bit.length)))) {
+              next = `${String(next).trim()}，${bit}`;
+            }
           }
         }
         if (next !== prompt) {
@@ -2319,6 +2774,49 @@ export function composeStillPrompt(
     };
   }
 
+  // Final seal gate: strip contact zombie / face recipe; never throw (non-block generate)
+  try {
+    const { assertEgressObeysPrimarySeal, classifyStillContamination } =
+      require("./stillSealGate") as typeof import("./stillSealGate");
+    const activeSeal =
+      (ctx as { _activePrimarySeal?: import("./primaryIntentSeal").PrimaryIntentCarrierSet })
+        ._activePrimarySeal ??
+      ((generationContract as { primaryIntentSeal?: import("./primaryIntentSeal").PrimaryIntentCarrierSet })
+        .primaryIntentSeal as import("./primaryIntentSeal").PrimaryIntentCarrierSet | undefined);
+    const gated = assertEgressObeysPrimarySeal({ prompt, seal: activeSeal });
+    prompt = gated.prompt;
+    sources.push(...gated.sources);
+    const contam = classifyStillContamination({
+      promptUsed: prompt,
+      seal: activeSeal,
+      composeSources: sources,
+    });
+    if (contam !== "none") {
+      sources.push(`contaminationClass:${contam}`);
+      (generationContract as { contaminationClass?: string }).contaminationClass = contam;
+    }
+    try {
+      const { buildI2vCriticalFactsFromSeal } =
+        require("./stillSealGate") as typeof import("./stillSealGate");
+      const facts = buildI2vCriticalFactsFromSeal(activeSeal ?? null);
+      if (facts.length) {
+        (generationContract as { i2vCriticalFacts?: string[] }).i2vCriticalFacts = facts;
+        sources.push("i2vCriticalFacts.fromSeal");
+      }
+    } catch {
+      /* optional */
+    }
+  } catch {
+    /* optional */
+  }
+
+  // Echo softEnv seal onto contract for compress/vendor homology
+  if (generationContract) {
+    (generationContract as { keepSoftEnvRef?: boolean; softEnvContinuity?: string }).keepSoftEnvRef =
+      keepSoftEnvSealed;
+    (generationContract as { softEnvContinuity?: string }).softEnvContinuity = softEnvContinuitySealed;
+  }
+
   return {
     ok: true,
     prompt,
@@ -2339,8 +2837,8 @@ export function composeStillPrompt(
     orderedCrefCodes: identityBind.orderedCodes,
     bgPolicy: bgPolicyResult.policy,
     excludeScene: bgPolicyResult.excludeScene,
-    keepSoftEnvRef: bgPolicyResult.keepSoftEnvRef,
-    softEnvContinuity: bgPolicyResult.softEnvContinuity,
+    keepSoftEnvRef: keepSoftEnvSealed,
+    softEnvContinuity: softEnvContinuitySealed,
     bgMode: modality.bgMode,
     promptLintConflicts: warnings
       .filter((w) => w.startsWith("promptLint:"))
@@ -2421,6 +2919,10 @@ export type StillPreviousIngress = {
   previousVisualBody: string | undefined;
   /** Mode for composeStillPrompt after forceFull policy (explicit requestedMode wins). */
   effectiveMode: ComposeMode;
+  /** Heal inject lines from prior literary qualify (read back for smart repair) */
+  literaryRepairInjectLines?: string[];
+  literaryRepairDeltaHints?: string[];
+  literaryEffectsQualified?: boolean | null;
 };
 
 export function buildStillPreviousIngress(input: {
@@ -2445,8 +2947,9 @@ export function buildStillPreviousIngress(input: {
 
   let prevBody = "";
   if (loadPrevious) {
+    // Literary SSOT only — never seed previousVisualBody from vendor reason.promptUsed
     const raw = scrubStillPromptNoise(
-      stripIdentityTokens(String(prevMeta?.promptUsed ?? input.storedPrompt ?? requestPrompt)).body,
+      stripIdentityTokens(String(input.storedPrompt ?? requestPrompt)).body,
     ).cleaned;
     prevBody = raw ? stripStaleBindingFromPrevious(raw) : "";
   }
@@ -2474,7 +2977,11 @@ export function buildStillPreviousIngress(input: {
   const metaClient = String((prevMeta as { clientId?: string } | null)?.clientId ?? "").trim();
   const curClient = String(input.currentClientId ?? "").trim();
   if (metaClient && curClient && metaClient !== curClient) forceFull = true;
-  const metaLit = String((prevMeta as { literaryHash?: string } | null)?.literaryHash ?? "").trim();
+  const metaLit = String(
+    (prevMeta as { literaryHash?: string; literaryDescHash?: string } | null)?.literaryHash ??
+      (prevMeta as { literaryDescHash?: string } | null)?.literaryDescHash ??
+      "",
+  ).trim();
   const curLit = String(input.literaryHash ?? "").trim();
   if (metaLit && curLit && metaLit !== curLit) forceFull = true;
   try {
@@ -2487,23 +2994,50 @@ export function buildStillPreviousIngress(input: {
     /* optional */
   }
 
+  const litQualified = (prevMeta as { literaryEffectsQualified?: boolean } | null)?.literaryEffectsQualified;
+  const litInject = ((prevMeta as { repairInjectLines?: string[] } | null)?.repairInjectLines ?? []).filter(
+    Boolean,
+  );
+  const litDelta = ((prevMeta as { repairDeltaHints?: string[] } | null)?.repairDeltaHints ?? []).filter(
+    Boolean,
+  );
+  // Unqualified literary bar → force full recompose + read back heal inject
+  if (litQualified === false || litInject.length) {
+    forceFull = true;
+  }
+
   const effectiveMode = forceFull && !input.requestedMode ? "full" : composeMode;
+  // previousVisualBody only for refine/fidelity when not forceFull — literary storedPrompt only
+  const allowPrev =
+    !forceFull &&
+    Boolean(prevBody) &&
+    (effectiveMode === "refine" || effectiveMode === "fidelity");
   return {
     prevMeta,
     prevBody,
     composeMode,
     forceFull,
-    previousVisualBody: forceFull || !prevBody ? undefined : prevBody,
+    previousVisualBody: allowPrev ? prevBody : undefined,
     effectiveMode,
+    literaryRepairInjectLines: litInject.length ? litInject : undefined,
+    literaryRepairDeltaHints: litDelta.length ? litDelta : undefined,
+    literaryEffectsQualified: litQualified ?? null,
   };
 }
 
-/** Hash VD + compiled imagePrompt for ingress stale detection. */
+/** Hash VD + peeled imagePrompt (+ bg) for ingress stale detection / reseal. */
 export function literaryComposeHash(input: {
   visualDescription?: string | null;
   compiledImagePrompt?: string | null;
+  background?: string | null;
 }): string {
-  const raw = `${String(input.visualDescription ?? "").trim()}\n${String(input.compiledImagePrompt ?? "").trim()}`;
+  let raw = "";
+  try {
+    const { literaryL0Blob } = require("./literaryStillSsot") as typeof import("./literaryStillSsot");
+    raw = literaryL0Blob(input);
+  } catch {
+    raw = `${String(input.visualDescription ?? "").trim()}\n${String(input.compiledImagePrompt ?? "").trim()}\n${String(input.background ?? "").trim()}`;
+  }
   let h = 0;
   for (let i = 0; i < raw.length; i++) h = (Math.imul(31, h) + raw.charCodeAt(i)) | 0;
   return `lit_${(h >>> 0).toString(16)}`;
