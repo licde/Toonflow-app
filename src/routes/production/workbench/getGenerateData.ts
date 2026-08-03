@@ -50,6 +50,9 @@ interface TrackItem {
   promptHash?: string;
   medias: TrackMedia[];
   videoList: VideoItem[];
+  /** SSOT 镜号 from o_storyboard.index+1 — not trackList array order */
+  displayNo?: number;
+  storyboardIndexMin?: number | null;
 }
 
 export default router.post(
@@ -74,6 +77,52 @@ export default router.post(
     const isRef = Array.isArray(videoMode) ? true : false;
 
     const storyboardList = await u.db("o_storyboard").where({ scriptId, projectId }).orderBy("index", "asc");
+    // Heal: one panel = one track — never collapse empty/"1"; split shared trackIds
+    try {
+      const usedKeys = new Set<string>();
+      const trackIdOwners = new Map<number, number>();
+      for (const sb of storyboardList) {
+        if (sb.id == null) continue;
+        let trackKey = String(sb.track ?? "").trim();
+        const collapse = !trackKey || trackKey === "1";
+        if (collapse || usedKeys.has(trackKey)) {
+          trackKey = String(sb.index ?? sb.id);
+          if (usedKeys.has(trackKey)) trackKey = `${trackKey}-${sb.id}`;
+        }
+        usedKeys.add(trackKey);
+
+        let trackId =
+          sb.trackId != null && Number.isFinite(Number(sb.trackId)) ? Number(sb.trackId) : undefined;
+        if (trackId != null) {
+          const owner = trackIdOwners.get(trackId);
+          if (owner != null && owner !== sb.id) trackId = undefined;
+          else trackIdOwners.set(trackId, sb.id);
+        }
+
+        if (trackId == null) {
+          trackId = Date.now() + Math.floor(Math.random() * 1000);
+          await u.db("o_videoTrack").insert({
+            id: trackId,
+            scriptId,
+            projectId,
+            duration: Number(sb.duration) || 3,
+            prompt: String(sb.videoDesc ?? ""),
+          });
+          trackIdOwners.set(trackId, sb.id);
+        }
+
+        const patch: Record<string, unknown> = {};
+        if (sb.trackId !== trackId) patch.trackId = trackId;
+        if (String(sb.track ?? "") !== trackKey) patch.track = trackKey;
+        if (Object.keys(patch).length) {
+          await u.db("o_storyboard").where({ id: sb.id }).update(patch);
+          (sb as { trackId?: number; track?: string }).trackId = trackId;
+          (sb as { track?: string }).track = trackKey;
+        }
+      }
+    } catch (e) {
+      console.warn("[getGenerateData] trackId heal failed", u.error(e).message);
+    }
     await Promise.all(
       storyboardList.map(async (i) => {
         i.filePath = i.filePath ? await u.oss.getSmallImageUrl(i.filePath) : "";
@@ -81,6 +130,8 @@ export default router.post(
     );
     const storyboardTrackRecord: Record<number, any[]> = {};
     storyboardList.forEach((i) => {
+      const tid = i.trackId != null ? Number(i.trackId) : NaN;
+      if (!Number.isFinite(tid)) return; // skip still-unbound (should be healed above)
       const stillFields = stillApiFieldsFromReason(i.reason);
       const media = {
         src: i.filePath,
@@ -91,11 +142,8 @@ export default router.post(
         index: i.index,
         ...stillFields,
       };
-      if (storyboardTrackRecord[i.trackId!]) {
-        storyboardTrackRecord[i.trackId!].push(media);
-      } else {
-        storyboardTrackRecord[i.trackId!] = [media];
-      }
+      if (!storyboardTrackRecord[tid]) storyboardTrackRecord[tid] = [];
+      storyboardTrackRecord[tid].push(media);
     });
     // 按 storyboardId 分组的资产数据，key 为 storyboardId
     const otherDataMap: Record<number, any[]> = {};
@@ -303,6 +351,26 @@ export default router.post(
         burnDurationSec: burnDurationSec ?? (item?.duration != null ? Number(item.duration) : undefined),
         promptHash,
         selectVideoId: Number(item?.videoId)!,
+        /** SSOT 镜号 — never trackList array order */
+        displayNo: (() => {
+          try {
+            const { storyboardDisplayNo } = require("@/ruleEngine/compilers/storyboardDisplaySsot") as typeof import("@/ruleEngine/compilers/storyboardDisplaySsot");
+            const idxs = trackStoryboards
+              .map((s) => (s.index != null ? Number(s.index) : null))
+              .filter((n): n is number => n != null && Number.isFinite(n));
+            const minIdx = idxs.length ? Math.min(...idxs) : null;
+            const pkgSi = (pkgShot as { shotIndex?: number } | undefined)?.shotIndex;
+            return storyboardDisplayNo({ index: minIdx, packageShotIndex: pkgSi });
+          } catch {
+            return trackStoryboards[0]?.index != null ? Number(trackStoryboards[0].index) + 1 : 1;
+          }
+        })(),
+        storyboardIndexMin: (() => {
+          const idxs = trackStoryboards
+            .map((s) => (s.index != null ? Number(s.index) : null))
+            .filter((n): n is number => n != null && Number.isFinite(n));
+          return idxs.length ? Math.min(...idxs) : null;
+        })(),
         medias: (() => {
           const storyboardMedias = storyboardTrackRecord[trackId] ?? [];
           const assetMedias = storyboardMedias.flatMap((s) => otherDataMap[s.id] ?? []);
@@ -327,8 +395,11 @@ export default router.post(
 
           const hasImageAssetData = filteredAssets.filter((i) => i.src);
           const notHasImageAssetData = filteredAssets.filter((i) => !i.src);
+          // Prefer storyboard stills with pixels first (empty placeholders last)
+          const sbWithSrc = storyboardMedias.filter((m) => m.src);
+          const sbEmpty = storyboardMedias.filter((m) => !m.src);
 
-          return [...hasImageAssetData, ...storyboardMedias, ...notHasImageAssetData];
+          return [...sbWithSrc, ...hasImageAssetData, ...sbEmpty, ...notHasImageAssetData];
         })(),
         videoList: await Promise.all(
           videoList
@@ -352,15 +423,47 @@ export default router.post(
         ),
       });
     }
+    // Sort tracks by panel index SSOT — 「第N段」follows displayNo, not insert order
+    try {
+      const { sortTracksByStoryboardIndex } =
+        require("@/ruleEngine/compilers/storyboardDisplaySsot") as typeof import("@/ruleEngine/compilers/storyboardDisplaySsot");
+      const sorted = sortTracksByStoryboardIndex(
+        trackList as Array<{ storyboardIndexMin?: number | null; displayNo?: number; id?: number }>,
+      );
+      trackList.length = 0;
+      trackList.push(...(sorted as typeof trackList));
+    } catch {
+      trackList.sort((a, b) => {
+        const ai = (a as { storyboardIndexMin?: number }).storyboardIndexMin ?? 9999;
+        const bi = (b as { storyboardIndexMin?: number }).storyboardIndexMin ?? 9999;
+        return ai - bi;
+      });
+    }
     res.status(200).send(
       success({
         storyboardList: await Promise.all(
-          storyboardList.map(async (s) => ({
-            ...s,
-            src: s.filePath,
-            // Workbench first-frame picker: state「已完成」≠ hq_ok
-            ...stillApiFieldsFromReason(s.reason),
-          })),
+          storyboardList.map(async (s) => {
+            let displayNo = s.index != null ? Number(s.index) + 1 : 1;
+            try {
+              const { storyboardDisplayNo, formatStoryboardBadge } =
+                require("@/ruleEngine/compilers/storyboardDisplaySsot") as typeof import("@/ruleEngine/compilers/storyboardDisplaySsot");
+              displayNo = storyboardDisplayNo({ index: s.index });
+              return {
+                ...s,
+                src: s.filePath,
+                displayNo,
+                badge: formatStoryboardBadge(displayNo),
+                ...stillApiFieldsFromReason(s.reason),
+              };
+            } catch {
+              return {
+                ...s,
+                src: s.filePath,
+                displayNo,
+                ...stillApiFieldsFromReason(s.reason),
+              };
+            }
+          }),
         ),
         trackList,
       }),

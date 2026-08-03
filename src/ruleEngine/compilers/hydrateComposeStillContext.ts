@@ -11,6 +11,14 @@ import { resolveAssetTier } from "../bundle/assetVisualBrief";
 import { normalizeDialogueSpeaker, normalizeDialogueSpeakers } from "./normalizeDialogueSpeaker";
 
 function digMicro(shot: Record<string, unknown> | undefined): string | null {
+  // XOR: dialogue_native + closed mouth → heal to speak_ready (design SSOT), then dig
+  try {
+    const { healMouthXorOnShot } =
+      require("../design/mouthXorHeal") as typeof import("../design/mouthXorHeal");
+    if (shot) healMouthXorOnShot(shot as import("../design/mouthXorHeal").MouthXorShot);
+  } catch {
+    /* optional */
+  }
   const sd = shot?.shotDesign as
     | {
         performance?: {
@@ -31,7 +39,7 @@ function digMicro(shot: Record<string, unknown> | undefined): string | null {
   } catch {
     /* optional */
   }
-  // XOR: dialogue_native drops closed-mouth from micro string
+  // After heal, closed mouth should already be speak_ready; belt: still drop if residual
   const lipSync = String(
     (shot?.shotDesign as { lipSyncPolicy?: string } | undefined)?.lipSyncPolicy ?? "",
   );
@@ -95,34 +103,76 @@ function dialogueBeatFromShot(
   return null;
 }
 
-async function resolvePackageShot(
+/**
+ * SingleShotClosedCompose bind: storyboardId hit, or shotIndex === o_storyboard.index+1.
+ * Never silently map by DB row order (that hydrates the wrong shot JSON).
+ */
+export async function resolvePackageShot(
   db: Knex,
   projectId: number,
   scriptId: number,
   storyboardId: number,
-): Promise<{ shot?: Record<string, unknown>; idx: number; pkg: EpisodePackage | null }> {
+): Promise<{
+  shot?: Record<string, unknown>;
+  idx: number;
+  pkg: EpisodePackage | null;
+  bindOk: boolean;
+  bindCode?: "BIND_SHOT_MISMATCH" | "BIND_SHOT_UNBOUND";
+  boundShotIndex?: number;
+}> {
   const pkg = await loadEpisodePackage(db, projectId, scriptId);
-  if (!pkg?.shots?.length) return { idx: -1, pkg };
+  if (!pkg?.shots?.length) {
+    return { idx: -1, pkg, bindOk: false, bindCode: "BIND_SHOT_UNBOUND" };
+  }
   const shots = pkg.shots as unknown as Record<string, unknown>[];
   let idx = shots.findIndex((s) => Number((s as { storyboardId?: number }).storyboardId) === Number(storyboardId));
-  if (idx >= 0) return { shot: shots[idx], idx, pkg };
-
-  // Fallback: align by row order within same script
-  const rows = await db("o_storyboard")
-    .where({ projectId, scriptId })
-    .orderBy("id", "asc")
-    .select("id");
-  const rowIdx = rows.findIndex((r: { id: number }) => Number(r.id) === Number(storyboardId));
-  if (rowIdx >= 0 && rowIdx < shots.length) {
-    idx = rowIdx;
-    return { shot: shots[idx], idx, pkg };
+  if (idx >= 0) {
+    const shot = shots[idx]!;
+    const boundShotIndex = Number((shot as { shotIndex?: number }).shotIndex ?? idx + 1);
+    return { shot, idx, pkg, bindOk: true, boundShotIndex };
   }
 
-  // Fallback: shotIndex field equals 1-based position
-  idx = shots.findIndex((s) => Number((s as { shotIndex?: number }).shotIndex) === rowIdx + 1);
-  if (idx >= 0) return { shot: shots[idx], idx, pkg };
+  const sbRow = await db("o_storyboard")
+    .where({ id: storyboardId, projectId, scriptId })
+    .select("id", "index")
+    .first();
+  if (!sbRow) {
+    return { idx: -1, pkg, bindOk: false, bindCode: "BIND_SHOT_UNBOUND" };
+  }
+  const wantIndex =
+    sbRow.index != null && Number.isFinite(Number(sbRow.index)) ? Number(sbRow.index) + 1 : null;
+  if (wantIndex != null) {
+    idx = shots.findIndex((s) => Number((s as { shotIndex?: number }).shotIndex) === wantIndex);
+    if (idx >= 0) {
+      const shot = shots[idx]!;
+      // Force-bind storyboardId onto package so later getCompiled / generate never row-order guess
+      if (Number((shot as { storyboardId?: number }).storyboardId) !== Number(storyboardId)) {
+        (shot as { storyboardId?: number }).storyboardId = Number(storyboardId);
+        try {
+          const { saveEpisodePackage } = await import("../storage/episodePackageStore");
+          await saveEpisodePackage(db, pkg);
+        } catch {
+          /* best-effort writeback */
+        }
+      }
+      return {
+        shot,
+        idx,
+        pkg,
+        bindOk: true,
+        boundShotIndex: wantIndex,
+        bindCode: undefined,
+      };
+    }
+  }
 
-  return { idx: -1, pkg };
+  return {
+    idx: -1,
+    pkg,
+    bindOk: false,
+    bindCode: "BIND_SHOT_MISMATCH",
+    boundShotIndex: wantIndex ?? undefined,
+  };
 }
 
 export async function hydrateComposeStillContext(
@@ -189,8 +239,21 @@ export async function hydrateComposeStillContext(
   const scriptId = input.scriptId ?? sb.scriptId;
   if (scriptId) {
     try {
-      const { shot, idx, pkg } = await resolvePackageShot(db, input.projectId, scriptId, input.storyboardId);
-      if (pkg && input.storyboardId) {
+      const { shot, idx, pkg, bindOk, bindCode, boundShotIndex } = await resolvePackageShot(
+        db,
+        input.projectId,
+        scriptId,
+        input.storyboardId,
+      );
+      (ctx as { bindOk?: boolean; bindCode?: string; boundShotIndex?: number }).bindOk = bindOk;
+      (ctx as { bindOk?: boolean; bindCode?: string; boundShotIndex?: number }).bindCode = bindCode;
+      if (boundShotIndex != null) {
+        (ctx as { boundShotIndex?: number }).boundShotIndex = boundShotIndex;
+      }
+      if (!bindOk) {
+        (ctx as { closedCompose?: boolean }).closedCompose = false;
+      }
+      if (pkg && input.storyboardId && bindOk) {
         try {
           const compiled = getCompiledPromptForStoryboard(pkg, input.storyboardId, "image");
           if (compiled?.trim()) {
@@ -200,7 +263,7 @@ export async function hydrateComposeStillContext(
           /* compiled optional */
         }
       }
-      if (shot) {
+      if (shot && bindOk) {
         ctx.visualDescription = (shot.visualDescription as string) ?? ctx.visualDescription ?? null;
         const codes = (shot.charCodes as string[] | undefined) ?? [];
         if (codes.length) (ctx as { shotCharCodes?: string[] }).shotCharCodes = codes.map((c) => String(c).toUpperCase());
@@ -231,6 +294,25 @@ export async function hydrateComposeStillContext(
         } | undefined;
         ctx.foreground = sd?.composition?.foreground ?? null;
         ctx.background = sd?.composition?.background ?? null;
+        try {
+          const { resolveFramingMode } =
+            require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
+          const mouthDetail = (
+            shot.shotDesign as { performance?: { microExpression?: { mouthDetail?: string } } } | undefined
+          )?.performance?.microExpression?.mouthDetail;
+          (ctx as { mouthDetail?: string | null }).mouthDetail = mouthDetail ?? null;
+          (ctx as { framingMode?: string }).framingMode = resolveFramingMode({
+            visualDescription: ctx.visualDescription,
+            shotSize: ctx.shotSize,
+            foreground: ctx.foreground,
+            mouthDetail,
+          });
+          if (sd?.cameraAnchor?.bgBlur != null) {
+            (ctx as { bgBlur?: boolean }).bgBlur = Boolean(sd.cameraAnchor.bgBlur);
+          }
+        } catch {
+          /* optional */
+        }
         // P0: full shotDesign into compose — episodeShot + cameraAnchor
         ctx.episodeShot = shot;
         const cam = sd?.cameraAnchor;
@@ -286,35 +368,33 @@ export async function hydrateComposeStillContext(
             (prev.shotSize as string) ??
             ((prev.narrative as { shotSize?: string } | undefined)?.shotSize) ??
             null;
+          // SoftContinuity opt-in only: do not dump neighbor prose into still body by default
           try {
-            const { buildCrossShotContinuityInject } = await import("../qc/crossShotContinuity");
             const cont = String(
               (shot.narrative as { continuityFrom?: string } | undefined)?.continuityFrom ?? "",
-            );
-            const inj = buildCrossShotContinuityInject({
-              continuityFrom: cont,
-              neighborShotSize: ctx.neighborShotSize,
-              neighborStillPresent: true,
-            });
-            if (inj.promptFragment) {
-              ctx.continuityInject = inj.promptFragment;
+            ).trim();
+            if (cont) {
+              const { buildCrossShotContinuityInject } = await import("../qc/crossShotContinuity");
+              const inj = buildCrossShotContinuityInject({
+                continuityFrom: cont,
+                neighborShotSize: ctx.neighborShotSize,
+                neighborStillPresent: true,
+              });
+              // Keep as note source only — strip from hard legislation path in compose
+              if (inj.promptFragment) {
+                (ctx as { continuitySoftNote?: string }).continuitySoftNote = inj.promptFragment;
+                // Do NOT set continuityInject for closed compose (default off)
+              }
             }
           } catch {
             /* optional */
           }
         }
-        // Episode VD lexicon: neighbor ±3 shots (exclude current) for action-primary harvest
-        if (pkg?.shots?.length) {
-          const win: string[] = [];
-          const lo = Math.max(0, idx - 3);
-          const hi = Math.min(pkg.shots.length - 1, idx + 3);
-          for (let i = lo; i <= hi; i++) {
-            if (i === idx) continue;
-            const vd = String((pkg.shots[i] as { visualDescription?: string })?.visualDescription ?? "").trim();
-            if (vd.length >= 4) win.push(vd);
-          }
-          if (win.length) ctx.episodeVisualDescriptions = win.slice(0, 12);
-        }
+        // Episode VD window: diagnostic lexicon only — never attach for legislation
+        // (SingleShotClosedCompose: neighbor ±3 must not drive prop/hardConstraint)
+        (ctx as { episodeLexiconLegislates?: boolean }).episodeLexiconLegislates = false;
+        // Leave episodeVisualDescriptions unset so classifyStillIntent won't harvest neighbors
+        ctx.episodeVisualDescriptions = undefined;
       }
     } catch {
       /* package optional */

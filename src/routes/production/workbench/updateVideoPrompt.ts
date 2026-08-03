@@ -82,7 +82,7 @@ export default router.post(
         burnAllowed: false,
         decision: "manual_thin_shell",
         nextStep: "chat_repair",
-        ctaLabel: "完善后重编译",
+        ctaLabel: "智能修复",
         userMessage: "手改薄壳已落库但不可烧片",
       });
       await u.db("o_videoTrack").where("id", id).update({ prompt: text, reason, state: "需完善" });
@@ -129,7 +129,7 @@ export default router.post(
           decision: qd.decision,
           nextStep: qd.nextStep,
           reasons: qd.reasons,
-          ctaLabel: qd.envelope?.ctaLabel ?? (burnAllowed ? undefined : "完善后重编译"),
+          ctaLabel: qd.envelope?.ctaLabel ?? (burnAllowed ? undefined : "智能修复"),
           userMessage: qd.envelope?.userMessage ?? (burnAllowed ? undefined : "手改提示词未达烧片标准"),
         };
       } catch {

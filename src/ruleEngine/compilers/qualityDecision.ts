@@ -86,8 +86,15 @@ function wrap(
   extra: Partial<QualityDecisionResult> & { reasons: string[]; nextStep?: BurnGateEnvelope["nextStep"] },
   batchMode?: boolean,
 ): QualityDecisionResult {
-  // Batch: convert hard fail → soft_defer but keep actionable nextStep (split_shot / batch_still / chat_repair).
-  const effective: QualityDecisionKind = batchMode && !burnAllowed && decision !== "auto" ? "soft_defer" : decision;
+  // Wave-2 never-block: quality debts → soft_defer + actionable nextStep; still allow soft burn path
+  const forceSoft =
+    !burnAllowed &&
+    decision !== "auto" &&
+    (batchMode ||
+      /face_budget|split_shot|still_onebeat|vis_|raise_duration|soft_patch|rePush/i.test(
+        String(decision) + (extra.reasons ?? []).join(","),
+      ));
+  const effective: QualityDecisionKind = forceSoft ? "soft_defer" : decision;
   const nextStep =
     extra.nextStep ??
     (effective === "soft_defer" && decision === "split_shot"
@@ -102,9 +109,10 @@ function wrap(
   });
   return {
     decision: effective,
-    burnAllowed,
-    softDefer: effective === "soft_defer",
-    softDeferRaiseAllowed: effective === "soft_defer",
+    // Soft path may still deliver with debt marks (never hard-block UX)
+    burnAllowed: forceSoft ? true : burnAllowed,
+    softDefer: effective === "soft_defer" || forceSoft,
+    softDeferRaiseAllowed: effective === "soft_defer" || forceSoft,
     reasons: extra.reasons,
     envelope,
     nextStep: envelope.nextStep,
@@ -208,6 +216,52 @@ export function decideVideoQuality(input: QualityDecisionInput): QualityDecision
         vendorMax: vmax,
         splitHint: undefined,
       };
+    }
+  }
+
+  // L2 face budget: action bow/kneel + speak on wide → Confirm split (industry MCU)
+  if (input.shot) {
+    try {
+      const { assessFaceBudget } = require("./faceBudgetPolicy") as typeof import("./faceBudgetPolicy");
+      const { hasOnCameraDialogue } = require("../design/onCameraDialogue") as typeof import("../design/onCameraDialogue");
+      const shot = input.shot as Record<string, unknown>;
+      const vd = String(shot.visualDescription ?? shot.picture ?? "");
+      const onCam = hasOnCameraDialogue(
+        (shot.narrative as { dialogue?: { lines?: unknown } } | undefined)?.dialogue?.lines,
+      );
+      const budget = assessFaceBudget({
+        visualDescription: vd,
+        shotSize: String(shot.shotSize ?? (shot.narrative as { shotSize?: string } | undefined)?.shotSize ?? ""),
+        hasDialogue: onCam,
+        lipSyncPolicy: String(
+          (shot.shotDesign as { lipSyncPolicy?: string } | undefined)?.lipSyncPolicy ?? "",
+        ),
+        realizationOccupancy: String(shot.realizationOccupancy ?? ""),
+        intentOccupancy: String(shot.intentOccupancy ?? ""),
+        videoIntentClass: onCam ? "speak_lip" : undefined,
+      });
+      if (budget.unreachable && budget.primaryAction === "confirm_split") {
+        return wrap(
+          "split_shot",
+          true,
+          [
+            ...baseBlocks,
+            {
+              id: "FACE-BUDGET",
+              message: "对白+低头动作+过宽景别：已标债·可降级出片；智能修复静默拆镜（动作→对白近景）",
+              reverseTrigger: "face_budget_unreachable",
+            },
+          ],
+          {
+            reasons: ["face_budget_unreachable", "implementation_degraded"],
+            nextStep: "split_shot",
+            splitHint: budget.splitHint ?? "action_then_dialogue_mcu",
+          },
+          input.batchMode,
+        );
+      }
+    } catch {
+      /* optional face budget */
     }
   }
 

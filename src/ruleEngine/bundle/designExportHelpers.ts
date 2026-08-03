@@ -1,6 +1,7 @@
 /**
  * Shared helpers for design-phase export gates (speakers, scene keys, self-report mismatch).
  */
+import type { Knex } from "knex";
 import type { ScriptBundle } from "./types";
 import { normalizeAssetCode } from "../codes/assetCodeContract";
 import { collectReferencedCodes } from "./assetClosureGate";
@@ -62,7 +63,8 @@ export function speakersMissingFromCd(bundle: ScriptBundle): string[] {
 export type CdAssetLike = {
   code?: string;
   name?: string;
-  L0?: { stub?: boolean; identity?: string; gender?: string; visual?: string };
+  L0?: { stub?: boolean; identity?: string; gender?: string; visual?: string; fromWarehouse?: boolean };
+  warehouseHasImage?: boolean;
 };
 
 /**
@@ -116,13 +118,18 @@ export function auditCastCoverage(bundle: ScriptBundle): {
     const codeHit = code ? referenced.includes(code) : false;
     const isRelevant = nameHit || codeHit || a.L0?.stub === true;
 
-    if (a.L0?.stub === true) {
+    // Warehouse plate homology: real o_assets image / fromWarehouse stamp satisfies L0
+    const warehouseBacked = Boolean(
+      (a as { warehouseHasImage?: boolean }).warehouseHasImage ||
+        (a.L0 as { fromWarehouse?: boolean } | undefined)?.fromWarehouse,
+    );
+    if (a.L0?.stub === true && !warehouseBacked) {
       stubOrIncomplete.push(label);
       continue;
     }
     if (isRelevant) {
       const identity = String(a.L0?.identity ?? "").trim();
-      if (!identity || identity === label || identity === a.code) {
+      if ((!identity || identity === label || identity === a.code) && !warehouseBacked) {
         stubOrIncomplete.push(label);
       }
     }
@@ -140,6 +147,127 @@ export function auditCastCoverage(bundle: ScriptBundle): {
     labels,
     block: labels.length > 0,
   };
+}
+
+/**
+ * DC-16 homology: when o_assets has a real identity plate (imageId), write L0.identity
+ * into characterDesign so package audit matches warehouse (no false BLOCK).
+ */
+export async function hydrateCdL0FromWarehouseAssets(
+  db: Knex,
+  projectId: number,
+  bundle: ScriptBundle,
+): Promise<string[]> {
+  const cd = (bundle.characterDesign ?? { assets: [] }) as {
+    assets: CdAssetLike[];
+  };
+  cd.assets = cd.assets ?? [];
+  // Prefer role rows; also accept any row stamped with charCode (type drift)
+  const rows = await db("o_assets").where({ projectId }).select("id", "name", "remark", "describe", "prompt", "imageId", "type");
+
+  const byName = new Map<string, (typeof rows)[0]>();
+  const byCode = new Map<string, (typeof rows)[0]>();
+  for (const r of rows) {
+    const name = String(r.name ?? "").trim();
+    const type = String(r.type ?? "");
+    const isRole = /role|角色|character/i.test(type) || !type;
+    if (name && (isRole || /charCode|assetCode:CHAR-/i.test(String(r.remark ?? "")))) {
+      byName.set(name, r);
+    }
+    const m = String(r.remark ?? "").match(/(?:assetCode|charCode):([A-Za-z]+-[A-Za-z0-9]+)/i);
+    if (m?.[1]) byCode.set(normalizeAssetCode(m[1]) ?? m[1].toUpperCase(), r);
+  }
+
+  const speakers = collectDialogueSpeakers(bundle);
+  const referenced = collectReferencedCodes(bundle).filter((c) => c.startsWith("CHAR-") && !isCharOrphCode(c));
+  const healed: string[] = [];
+
+  const stampFromWarehouse = (asset: CdAssetLike, wh: (typeof rows)[0], label: string) => {
+    const hasPlate = Boolean(wh.imageId);
+    const promptish = String(wh.describe || wh.prompt || "").trim();
+    if (!hasPlate && promptish.length < 8) return false;
+    const idText =
+      (promptish || String(wh.name || label).trim()).slice(0, 240) || `${label}定妆已入库`;
+    asset.L0 = {
+      ...(asset.L0 ?? {}),
+      stub: false,
+      identity: idText,
+      fromWarehouse: true,
+    };
+    asset.warehouseHasImage = hasPlate;
+    return true;
+  };
+
+  const ensureAsset = (label: string, code?: string): CdAssetLike => {
+    let hit = cd.assets.find((a) => {
+      const n = assetDisplayName(a.name);
+      const c = a.code ? normalizeAssetCode(a.code) ?? a.code : "";
+      return (n && n === label) || (code && c === code);
+    });
+    if (!hit) {
+      hit = { code: code || undefined, name: label, L0: {} };
+      cd.assets.push(hit);
+    } else if (code && !hit.code) {
+      hit.code = code;
+    }
+    return hit;
+  };
+
+  for (const a of cd.assets) {
+    if (isCharOrphCode(a.code ? normalizeAssetCode(a.code) ?? a.code : undefined)) continue;
+    const label = assetDisplayName(a.name) || a.code || "";
+    const code = a.code ? normalizeAssetCode(a.code) ?? a.code : undefined;
+    const identity = String(a.L0?.identity ?? "").trim();
+    const needs =
+      a.L0?.stub === true || !identity || identity === label || identity === a.code;
+    if (!needs) continue;
+    const wh = (code && byCode.get(code)) || (label && byName.get(label));
+    if (!wh) continue;
+    if (stampFromWarehouse(a, wh, label)) healed.push(label || code || "?");
+  }
+
+  // Speakers present in warehouse but missing from CD → seed with warehouse identity
+  for (const sp of speakers) {
+    const wh = byName.get(sp);
+    if (!wh) continue;
+    const existing = cd.assets.find((a) => assetDisplayName(a.name) === sp);
+    if (existing) {
+      const identity = String(existing.L0?.identity ?? "").trim();
+      const needs =
+        existing.L0?.stub === true || !identity || identity === sp || identity === existing.code;
+      if (needs && stampFromWarehouse(existing, wh, sp)) healed.push(sp);
+      continue;
+    }
+    const asset = ensureAsset(sp);
+    if (stampFromWarehouse(asset, wh, sp)) healed.push(sp);
+  }
+
+  // Referenced CHAR codes missing from CD → seed from warehouse remark/code
+  const vlt = (bundle.visualLockTable ?? {}) as { characterAssets?: Record<string, string> };
+  vlt.characterAssets = vlt.characterAssets ?? {};
+  for (const code of referenced) {
+    const nCode = normalizeAssetCode(code) ?? code;
+    const already = cd.assets.some((a) => {
+      const c = a.code ? normalizeAssetCode(a.code) ?? a.code : "";
+      return c === nCode;
+    });
+    const wh = byCode.get(nCode);
+    if (!wh) continue;
+    const label = String(wh.name || nCode).trim();
+    if (already) {
+      const hit = ensureAsset(label, nCode);
+      if (stampFromWarehouse(hit, wh, label)) healed.push(label);
+    } else {
+      const asset = ensureAsset(label, nCode);
+      if (stampFromWarehouse(asset, wh, label)) {
+        healed.push(label);
+        vlt.characterAssets[nCode] = label;
+      }
+    }
+  }
+  bundle.visualLockTable = vlt;
+  bundle.characterDesign = cd;
+  return [...new Set(healed)];
 }
 
 export function sceneColorLockHasChineseKeys(bundle: ScriptBundle): string[] {

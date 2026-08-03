@@ -53,9 +53,10 @@ export const lang01Adapter: CheckAdapter = {
       const video = String(s.videoPrompt ?? (s.generation as { videoPrompt?: string })?.videoPrompt ?? "");
       const flat = flattenDialogueText(dial);
       if (!flat || !checkLangVid01({ dialogueLines: flat, videoPrompt: video })) continue;
-      const linesBlock = dial
-        .map((l) => `"${l.text ?? ""}" — ${l.speaker ?? "角色"} (dialogue), lip-sync active`)
-        .join("\n");
+      const linesBlock = [
+        ...dial.map((l) => `"${l.text ?? ""}"`),
+        "口型同步开启。",
+      ].join("\n");
       const next = /\[Audio\]/i.test(video)
         ? video.replace(/\[Audio\][\s\S]*?(?=\[Narrative\]|$)/i, `[Audio]\n${linesBlock}\n\n`)
         : `${video}\n\n[Audio]\n${linesBlock}\n`;

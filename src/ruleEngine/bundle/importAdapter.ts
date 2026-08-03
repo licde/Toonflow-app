@@ -822,6 +822,18 @@ async function importScriptBundleLocked(db: Knex, raw: unknown, opts: ImportOpti
     }
     idMap = sync.idMap;
     mediaPreservedCount += sync.mediaPreservedCount ?? 0;
+    // Force-bind storyboardId onto preDesign shots (SingleShotClosedCompose)
+    try {
+      const pdShots = bundle.preDesignPack?.shots;
+      if (pdShots?.length) {
+        for (let i = 0; i < pdShots.length; i++) {
+          const sid = sync.panels[i]?.id;
+          if (sid != null) (pdShots[i] as { storyboardId?: number }).storyboardId = Number(sid);
+        }
+      }
+    } catch {
+      /* optional */
+    }
     // M14: after expand, pack shot count must match synced panels
     const packShotN = bundle.preDesignPack.shots?.length ?? 0;
     const expanded =

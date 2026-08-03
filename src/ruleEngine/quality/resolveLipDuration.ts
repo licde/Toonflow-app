@@ -32,14 +32,14 @@ export type LipDurationResolveResult = {
 function lipLineFromPolicy(policy: string, hasDialogue: boolean): string | undefined {
   if (!hasDialogue) return undefined;
   const p = policy.toLowerCase().replace(/-/g, "_");
-  if (!p || p === "none" || p === "silent") return "no lip sync";
+  if (!p || p === "none" || p === "silent") return "无口型同步";
   if (p === "dialogue_native" || p === "natural" || p === "natural_emphasized" || p.includes("natural")) {
-    return "natural mouth movement for dialogue, lip-sync active";
+    return "口型同步开启，对白嘴型自然";
   }
   if (p === "subtle_natural" || p === "subtle" || p.includes("subtle")) {
-    return "subtle lip sync, natural mouth movement";
+    return "口型轻微同步，嘴型自然";
   }
-  return "subtle lip sync, natural mouth movement";
+  return "口型轻微同步，嘴型自然";
 }
 
 /** Collapse bare `2s` / `3s` tokens (not part of duration N s, not Motion beat `0s-Ns:`). G3: preserve beat clocks. */
@@ -107,11 +107,11 @@ export function resolveLipDurationSingleSource(input: LipDurationResolveInput): 
         return {
           prompt,
           durationSec: input.durationSec != null ? Number(input.durationSec) : undefined,
-          lipLine: "no lip sync",
+          lipLine: "无口型同步",
           changes,
           blocked: true,
           blockCode: "NO-LIP-DIALOGUE",
-          blockMessage: "有出镜对白禁止 lipSyncPolicy=none/silent（no lip sync）",
+          blockMessage: "有出镜对白禁止 lipSyncPolicy=none/silent（无口型同步）",
           resolvedPolicy: policy,
         };
       }
@@ -120,25 +120,33 @@ export function resolveLipDurationSingleSource(input: LipDurationResolveInput): 
       lipLine = lipLineFromPolicy(policy, true);
       changes.push("upgrade_explicit_silent_on_camera");
     }
-    if (/no\s*lip[- ]*sync/i.test(prompt) || lipLine === "no lip sync") {
-      prompt = prompt.replace(/no\s*lip[- ]*sync[,]*/gi, "");
+    if (/no\s*lip[- ]*sync|无口型同步/i.test(prompt) || lipLine === "无口型同步" || lipLine === "no lip sync") {
+      prompt = prompt.replace(/no\s*lip[- ]*sync[,]*/gi, "").replace(/无口型同步[,]*/g, "");
       changes.push("strip_no_lip_on_dialogue");
-      if (lipLine === "no lip sync") {
-        lipLine = "subtle lip sync, natural mouth movement";
+      if (lipLine === "无口型同步" || lipLine === "no lip sync") {
+        lipLine = lipLineFromPolicy(DEFAULT_ONCAM_LIP_POLICY, true);
         policy = DEFAULT_ONCAM_LIP_POLICY;
         changes.push("upgrade_silent_policy_on_dialogue");
       }
     }
   }
 
-  if (lipLine && /lip-sync|lip sync/i.test(lipLine) && !/no lip sync/i.test(lipLine)) {
-    if (/no\s*lip[- ]*sync/i.test(prompt)) {
-      prompt = prompt.replace(/no\s*lip[- ]*sync[,]*/gi, "");
+  if (lipLine && /口型|lip-sync|lip sync/i.test(lipLine) && !/无口型|no lip sync/i.test(lipLine)) {
+    if (/no\s*lip[- ]*sync|无口型同步/i.test(prompt)) {
+      prompt = prompt.replace(/no\s*lip[- ]*sync[,]*/gi, "").replace(/无口型同步[,]*/g, "");
       changes.push("strip_no_lip_conflict");
     }
   }
-  if (!hasDialogue && (lipLine === "no lip sync" || /lip-sync\s*active/i.test(prompt))) {
-    prompt = prompt.replace(/lip-sync\s*active[,]*/gi, "").replace(/natural mouth movement for dialogue[,]*/gi, "");
+  if (
+    !hasDialogue &&
+    (lipLine === "无口型同步" || lipLine === "no lip sync" || /lip-sync\s*active|口型同步开启/i.test(prompt))
+  ) {
+    prompt = prompt
+      .replace(/lip-sync\s*active[,]*/gi, "")
+      .replace(/natural mouth movement for dialogue[,]*/gi, "")
+      .replace(/口型同步开启。?/g, "")
+      .replace(/对白嘴型自然[,]*/g, "")
+      .replace(/口型轻微同步，嘴型自然[,]*/g, "");
     changes.push("strip_lip_when_silent");
   }
 
@@ -167,11 +175,15 @@ export function resolveLipDurationSingleSource(input: LipDurationResolveInput): 
     }
   }
 
+  const lipAlready =
+    /口型同步开启|口型轻微同步|对白嘴型自然/i.test(prompt) ||
+    (lipLine ? new RegExp(lipLine.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(prompt) : false);
   if (
     lipLine &&
     hasDialogue &&
+    lipLine !== "无口型同步" &&
     lipLine !== "no lip sync" &&
-    !new RegExp(lipLine.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(prompt)
+    !lipAlready
   ) {
     if (/\[Audio\]/i.test(prompt)) {
       prompt = prompt.replace(/(\[Audio\][^\[]*)/i, (m) => `${m.trim()}\n${lipLine}`);

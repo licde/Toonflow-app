@@ -1,0 +1,94 @@
+{
+  "version": "1.2.0",
+  "description": "DesignIntentProfile doctrine SSOT — conflict, occupancy, egress budget, plate ladder, literary primary effects, noComfyNoKey. No shot-name hardcoding.",
+  "conflictPriority": [
+    "contact_geom > glyph strength (cheek → glyph should_second)",
+    "pose_occupancy primary 1: bend_pickup XOR desk_lean XOR kneel_hold",
+    "action_grip + doc_readable may coexist",
+    "bg_fragment > spatial full-figure secondary",
+    "warehouse asset > synth",
+    "single primary prop; secondary prop soft_defer",
+    "降方案不降意图：realizationLadder bend→kneel→stand_hold；细节能出必出；冲突让路",
+    "trunk burn Must: period identity + paper in frame + non-gray softEnv；pose degrade does not block hq",
+    "literary L0 trunk must before hq_ok；pose intent debt does not block；I2V requires realizationOccupancy=bend_pickup"
+  ],
+  "classes": [
+    "action_grip",
+    "doc_readable",
+    "contact_geom",
+    "bg_fragment",
+    "prop_cu",
+    "hand_cu",
+    "seating_power",
+    "atmosphere_keep",
+    "perf_micro",
+    "empty_os",
+    "pose_occupancy",
+    "grip_locus",
+    "seating_xor_pickup"
+  ],
+  "poseOccupancy": ["bend_pickup", "kneel_hold", "desk_lean", "stand_hold", "other"],
+  "gripLocusAtoms": ["lead_hand", "knuckles_pale", "prop_in_hand"],
+  "plateModes": ["readable_doc", "cheek_sweep", "object_inset", "fragment_sil", "none"],
+  "glyphPolicy": ["must_first", "should_second", "omit"],
+  "refSlotOrder": ["softEnv", "identity", "propSoft"],
+  "refSlotOrderNote": "softEnv Must / continuity=must → softEnv-first so Seedream hall not dropped under cap2; otherwise identity-first fallback in budget when continuity none",
+  "plateLadder": ["asset", "fe", "synth"],
+  "egressNegBudget": 4,
+  "egressNegCarveOut": {
+    "bend_pickup": ["手持卡片挡脸", "灰棚白棚", "胸前展示卡", "现代西装校服", "无纸直立假绿"],
+    "contact_geom": ["手持卡片挡脸", "灰棚白棚", "口含纸"]
+  },
+  "forbidInLead": true,
+  "ctaPersona": {
+    "forbidProgrammingRed": true,
+    "forbidPhrases": ["手改 VD", "须 Comfy", "必须装 Key", "force_compose", "delta_hash"],
+    "preferPersona": ["重出动作主导静帧", "挂真道具板后重出", "已降级 Seedream·可继续", "本拍隔离重出"]
+  },
+  "qualifyBar": "L0+L1",
+  "noComfyNoKey": {
+    "actionPrimarySeedream": true,
+    "propSoftRequired": true,
+    "localPoseHeuristic": true,
+    "fragmentOverFullSoftEnv": false,
+    "fragmentOverFullOnlyWithoutScene": true
+  },
+  "refsContract": {
+    "description": "Generic vendor ref-slot rules by primaryObjective×poseOccupancy. Whole-shot design intent; bend_pickup is one occupancy row. Scene-first: hall softEnv kept as independent slot when SCENE asset present; skirt fragment is Should/ZH. Never collage SCENE under identity (allowPixelBake false).",
+    "rows": [
+      "action_primary|bend_pickup → keep softEnv when SCENE; forcePropOccupancySynth + identityReplaceStandingSheet (face crop only); no dropFullSoftEnv",
+      "contact_geom → keep softEnv optional; propSoft resynth; no face-band force",
+      "prop_readable → forcePropOccupancySynth; softEnv drop only if bg_fragment Must without scene",
+      "bg_fragment Must without scene → dropFullSoftEnv",
+      "default → identity/scene keep"
+    ]
+  },
+  "singleSourceFreeze": {
+    "driveFields": ["visualDescription", "shotDesign", "narrative.spatialRelation"],
+    "forbidReverseCover": ["generation.imagePrompt"],
+    "completeOnlyWhen": "sampleMustFulfilled",
+    "debtPrecedence": [
+      "beat_isolate",
+      "sample_must",
+      "untilClear_gated",
+      "lit_plate_delta",
+      "ird_design_only",
+      "fidelity_inject"
+    ]
+  },
+  "literaryPrimaryEffects": [
+    { "id": "prop.in_frame.paper", "tier": "L0", "bar": "must" },
+    { "id": "bg.no_gray_studio", "tier": "L0", "bar": "must" },
+    { "id": "identity.no_modern_attire", "tier": "L0", "bar": "must" },
+    { "id": "occupancy.bend_pickup", "tier": "L0", "bar": "should" },
+    { "id": "prop.locus.ground_or_lead_hand", "tier": "L0", "bar": "should" },
+    { "id": "grip.knuckles_pale", "tier": "L1", "bar": "should" },
+    { "id": "prop.glyph.should", "tier": "L1", "bar": "should" },
+    { "id": "bg.fragment.skirt", "tier": "L2", "bar": "should" },
+    { "id": "atmosphere.warm_light", "tier": "L2", "bar": "should" },
+    { "id": "secondary.no_full_stand", "tier": "L2", "bar": "should" },
+    { "id": "detail.wound_shallow", "tier": "L3", "bar": "detail" },
+    { "id": "mouth.neutral_closed", "tier": "handoff", "bar": "should" },
+    { "id": "i2v.motion_from_still", "tier": "handoff", "bar": "should" }
+  ]
+}

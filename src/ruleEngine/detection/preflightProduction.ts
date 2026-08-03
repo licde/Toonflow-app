@@ -340,8 +340,34 @@ export async function runProductionPreflight(
     designBrief,
     characters,
   });
+  // CD must come from blueprint (package shots alone have no L0) — else DC-16 false BLOCK
+  {
+    const bpCd =
+      (blueprint.characterDesign as ScriptBundle["characterDesign"] | undefined) ??
+      (blueprint as { characterDesign?: ScriptBundle["characterDesign"] }).characterDesign;
+    const bpVlt = blueprint.visualLockTable as ScriptBundle["visualLockTable"] | undefined;
+    if (bpCd) workingBundle.characterDesign = bpCd;
+    if (bpVlt) workingBundle.visualLockTable = bpVlt;
+  }
   if (preShots?.length && workingBundle.preDesignPack) {
     (workingBundle.preDesignPack as { shots: unknown }).shots = preShots;
+  }
+  try {
+    const { hydrateCdL0FromWarehouseAssets } =
+      require("../bundle/designExportHelpers") as typeof import("../bundle/designExportHelpers");
+    const healed = await hydrateCdL0FromWarehouseAssets(db, input.projectId, workingBundle);
+    if (healed.length) {
+      const { saveProjectBlueprint, loadProjectBlueprint: loadBp } =
+        await import("../storage/episodePackageStore");
+      const bp = (await loadBp(db, input.projectId)) ?? {};
+      await saveProjectBlueprint(db, input.projectId, {
+        ...bp,
+        characterDesign: workingBundle.characterDesign,
+        visualLockTable: workingBundle.visualLockTable ?? bp.visualLockTable,
+      });
+    }
+  } catch {
+    /* optional warehouse homology */
   }
   try {
     const { softHealTouchHomology } =
@@ -369,6 +395,8 @@ export async function runProductionPreflight(
           ?.shots ?? [];
       if (cleaned.length) {
         const fresh = (await loadEpisodePackage(db, input.projectId, input.scriptId)) ?? pkg;
+        const keepCd = workingBundle.characterDesign;
+        const keepVlt = workingBundle.visualLockTable;
         pkg = hydratePackageFromPreDesign(fresh, cleaned, {
           fxByShotIndex: fxByShotFromAudit(
             (workingBundle as { fxFeasibilityAudit?: unknown }).fxFeasibilityAudit ??
@@ -384,6 +412,8 @@ export async function runProductionPreflight(
         if (workingBundle.preDesignPack) {
           (workingBundle.preDesignPack as { shots: unknown }).shots = cleaned;
         }
+        if (keepCd) workingBundle.characterDesign = keepCd;
+        if (keepVlt) workingBundle.visualLockTable = keepVlt;
       }
     }
   } catch {
@@ -406,6 +436,9 @@ export async function runProductionPreflight(
     ...bundle,
     planData: workingBundle.planData ?? planData,
     preDesignPack: workingBundle.preDesignPack ?? bundle.preDesignPack,
+    // Keep hydrated CD/VLT — episodePackageToScriptBundle omits them
+    characterDesign: workingBundle.characterDesign,
+    visualLockTable: workingBundle.visualLockTable,
   };
 
   const gapResult: BundleGapAuditResult = auditAllBundleGaps(workingBundle, tier);

@@ -11,6 +11,7 @@ export type StillRecipeShotMode =
   | "os_vo"
   | "empty"
   | "ecu_face"
+  | "ecu_mouth"
   | "face_or_scene";
 
 export type StillRecipeAdapt = {
@@ -57,18 +58,37 @@ export function resolveStillRecipeAdapt(input: {
   if ((input.hasSeatingOrKneel || cls.seating) && (mode === "hand_cu" || mode === "prop_cu")) {
     mode = "face_or_scene";
   }
+  // Oral / lips insert — SingleShotClosed intent adapt (not shotIndex)
+  try {
+    const { isOralMicroNotActionPrimary, resolveFramingMode } =
+      require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
+    const framing = resolveFramingMode({
+      visualDescription: input.visualDescription,
+      shotSize: input.shotSize,
+    });
+    if (
+      framing === "lips_ecu" ||
+      isOralMicroNotActionPrimary(input.visualDescription) ||
+      /唇部|咬唇|lip_bite|渗血/.test(String(input.visualDescription ?? ""))
+    ) {
+      mode = "ecu_mouth";
+    }
+  } catch {
+    /* optional */
+  }
   const nonFace =
     mode === "hand_cu" || mode === "prop_cu" || mode === "empty" || mode === "os_vo" || !cls.flags.allowFaceRecipe;
+  const lipsEcu = mode === "ecu_mouth";
   return {
     mode,
-    omitFacePowerBlocking: nonFace || mode === "ecu_face",
+    omitFacePowerBlocking: nonFace || mode === "ecu_face" || lipsEcu,
     omitFaceMicroExpression: nonFace,
-    useNonFaceHqRecipe: nonFace,
+    useNonFaceHqRecipe: nonFace || lipsEcu,
     useNonFaceIdentityLock: mode === "hand_cu" || mode === "prop_cu",
-    limitMustAppearToPrimary: mode === "hand_cu" || mode === "prop_cu" || mode === "empty",
+    limitMustAppearToPrimary: mode === "hand_cu" || mode === "prop_cu" || mode === "empty" || lipsEcu,
     omitMouthLipGuard: mode === "hand_cu" || mode === "prop_cu" || mode === "empty" || mode === "os_vo",
     omitFaceSkeleton: nonFace,
-    intentClass: cls.intentClass,
+    intentClass: lipsEcu ? "ecu_mouth" : cls.intentClass,
   };
 }
 
@@ -79,6 +99,10 @@ export const HAND_CU_IDENTITY_LOCK = "锁定角色定妆手部/袖口/配饰纹�
 
 export const PROP_CU_HQ_RECIPE =
   "竖屏9:16安全区构图，道具主体清晰不裁切，浅景深，高细节视频首帧；本镜以物件为主，禁止硬加人像头面部抢戏。";
+
+/** Lips / oral insert — replaces face-uncropped half-body HQ pull. */
+export const ECU_MOUTH_HQ_RECIPE =
+  "竖屏9:16安全区，唇部/口鼻局部特写占画幅主区，咬唇渗血与微表情可读，浅景深；禁止半身腰线入画，禁止手持纸类文书抢戏，禁止灰棚白棚。";
 
 export { stripCollidingRecipeLayers };
 

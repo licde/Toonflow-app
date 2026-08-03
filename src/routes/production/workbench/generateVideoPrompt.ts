@@ -534,33 +534,43 @@ export default router.post(
         vendorId: "agnesai",
         fxGrade: fxGradeStr,
       });
-      // Design/import lip stamp: workbench is not the split station — force burn block + CTA
+      // Design/import lip stamp: heal_then_burn — 不硬拒，清 stale + 降级反馈后允许烧
       {
-        const meta = (pkg as { meta?: { lipConfirmRequired?: boolean; importOkNotExitPass?: boolean } } | null)?.meta;
+        const meta = (pkg as { meta?: Record<string, unknown> } | null)?.meta ?? {};
         const shotStale = String((workingShot as { promptState?: string } | null | undefined)?.promptState ?? "") === "stale";
-        if (meta?.lipConfirmRequired || meta?.importOkNotExitPass || shotStale) {
-          if (qd.burnAllowed || qd.decision === "auto") {
-            qd = {
-              ...qd,
-              decision: "split_shot",
-              burnAllowed: false,
-              nextStep: "split_shot",
-              reasons: [
-                ...qd.reasons,
-                ...(meta?.lipConfirmRequired ? ["lipConfirmRequired"] : []),
-                ...(meta?.importOkNotExitPass ? ["importOkNotExitPass"] : []),
-                ...(shotStale ? ["promptState_stale"] : []),
-              ],
-              splitHint: qd.splitHint ?? "reaction_shot",
-            };
+        const hits: string[] = [];
+        if (meta.lipConfirmRequired) hits.push("lipConfirmRequired");
+        if (meta.importOkNotExitPass) hits.push("importOkNotExitPass");
+        if (shotStale) hits.push("promptState_stale");
+        if (hits.length) {
+          if (shotStale) (workingShot as { promptState?: string }).promptState = "composed";
+          if (meta.lipConfirmRequired || meta.importOkNotExitPass) {
+            meta.lipConfirmRequired = false;
+            meta.importOkNotExitPass = false;
+            meta.healThenBurnAbsorbed = hits;
+            meta.implementationDegraded = true;
+            (pkg as { meta?: Record<string, unknown> }).meta = meta;
+            try {
+              const { saveEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
+              if (resolvedScriptId) await saveEpisodePackage(u.db, pkg!);
+            } catch {
+              /* best-effort */
+            }
           }
+          // Soft feedback only — do NOT force burnAllowed=false / split_shot hard gate
           if (qd.envelope) {
             qd.envelope = {
               ...qd.envelope,
-              userMessage:
-                "设计/导入拆镜未闭合（lipConfirm 或 prompt 已 stale），请回 SB Confirm 智能拆或重导后再烧；本台不执行拆镜。",
-              primaryNextStep: "split_shot",
-            };
+              userMessage: `实现已降级继续：已吸收 ${hits.join(",")}（智能修复同源，不阻断生成）`,
+              primaryNextStep: qd.burnAllowed ? "burn" : qd.envelope.primaryNextStep,
+              ctaLabel: "智能修复",
+              implementationDegraded: true,
+              softWarnings: hits,
+            } as typeof qd.envelope;
+          }
+          // Prefer allow burn after absorb when only warehouse/stale held it back
+          if (!qd.burnAllowed && hits.every((h) => /lipConfirm|importOk|stale/i.test(h))) {
+            qd = { ...qd, burnAllowed: true, decision: qd.decision === "split_shot" ? "auto" : qd.decision };
           }
         }
       }
@@ -902,7 +912,7 @@ export default router.post(
           decision: qd.decision,
           nextStep: qd.nextStep,
           reasons: qd.reasons,
-          ctaLabel: qd.envelope?.ctaLabel ?? "完善后重编译",
+          ctaLabel: qd.envelope?.ctaLabel ?? "智能修复",
           userMessage: qd.envelope?.userMessage ?? "提示词已落库但不可烧片",
           ...fidelityExtraReason,
         });

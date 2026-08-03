@@ -1,0 +1,104 @@
+{
+  "version": "1.0.0",
+  "description": "Prop form positive dims SSOT — size/silhouette/thickness/material/surface; antiSub bag separate from lead. No shot-name hardcoding.",
+  "classes": {
+    "paper_doc": {
+      "formPositive": {
+        "size": "掌心至书页幅面的单张笺面（禁止第二张散落纸）",
+        "silhouette": "矩形薄纸片/薄笺展开或纸角平面，轮廓清晰",
+        "thickness": "薄纸片可折痕，非厚本",
+        "material": "略泛黄纸面",
+        "surface": "纸面墨迹区可辨"
+      },
+      "poseMustPositive": "以展开纸角或薄纸片贴合/划过接触部位或主手捏持",
+      "antiSub": [
+        "书本",
+        "册页",
+        "线装书",
+        "卷轴",
+        "厚本",
+        "翻页书",
+        "执卷",
+        "捧书翻阅",
+        "纸卷",
+        "小卷",
+        "卷棒",
+        "筒状纸",
+        "卷成棒",
+        "两根小卷",
+        "手持卡片",
+        "胸前展示卡",
+        "挡脸举物",
+        "问候卡式持物"
+      ],
+      "poseAntiSub": [
+        "捧书",
+        "翻书",
+        "执卷轴",
+        "摊开册页",
+        "棒状抵颏",
+        "双卷贴颏",
+        "卷棒贴颏",
+        "双手举纸挡脸"
+      ],
+      "glyphRequired": true,
+      "softPlateHint": "thin_sheets"
+    },
+    "cloth": {
+      "formPositive": {
+        "size": "帕巾尺度",
+        "silhouette": "软褶皱垂坠轮廓",
+        "thickness": "薄软可叠",
+        "material": "布帛纹理",
+        "surface": "织物褶皱可见"
+      },
+      "poseMustPositive": "布帛贴合或拂过接触部位",
+      "antiSub": ["金属片", "木板", "纸板冒充布帛"],
+      "poseAntiSub": [],
+      "glyphRequired": false,
+      "softPlateHint": "cloth_fold"
+    },
+    "blade": {
+      "formPositive": {
+        "size": "刃缘局部入画",
+        "silhouette": "薄锋线",
+        "thickness": "薄刃",
+        "material": "金属冷缘",
+        "surface": "锋面反光克制"
+      },
+      "poseMustPositive": "刃缘抵近或贴合接触部位",
+      "antiSub": ["粗棒", "玩具刀"],
+      "poseAntiSub": ["悬空舞刀"],
+      "glyphRequired": false,
+      "softPlateHint": "blade_edge"
+    },
+    "digit_prop": {
+      "formPositive": {
+        "size": "指上或掌中小件",
+        "silhouette": "环/玉小轮廓",
+        "thickness": "小件厚度",
+        "material": "玉或金属",
+        "surface": "小件与指同框"
+      },
+      "poseMustPositive": "小件与手指同框贴合或摩挲",
+      "antiSub": ["大手持大件", "完整兵器入画抢戏"],
+      "poseAntiSub": [],
+      "glyphRequired": false,
+      "softPlateHint": "digit_ring"
+    },
+    "generic": {
+      "formPositive": {
+        "size": "本类真实小件尺度",
+        "silhouette": "本类真实外形",
+        "thickness": "非夸大大物",
+        "material": "本类材质",
+        "surface": "表面可辨"
+      },
+      "poseMustPositive": "道具以声明姿态入画",
+      "antiSub": [],
+      "poseAntiSub": [],
+      "glyphRequired": false,
+      "softPlateHint": "generic"
+    }
+  }
+}

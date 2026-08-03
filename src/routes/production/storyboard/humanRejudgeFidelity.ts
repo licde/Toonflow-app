@@ -341,6 +341,32 @@ export default router.post(
           } catch {
             er = {};
           }
+          let adaptFeedback: import("@/ruleEngine/quality/adaptFeedbackWriteback").AdaptFeedbackEntry[] =
+            [];
+          try {
+            const {
+              adaptFeedbackFromHumanRejudge,
+              mergeAdaptFeedback,
+              adaptFeedbackPersistSlice,
+            } = await import("@/ruleEngine/quality/adaptFeedbackWriteback");
+            const prevFb = Array.isArray(er.adaptFeedback) ? (er.adaptFeedback as typeof adaptFeedback) : [];
+            const shotIdx = Number(prev?.shotIndex ?? prev?.index ?? 0) || null;
+            const newFb = adaptFeedbackFromHumanRejudge({ items, shotIndex: shotIdx });
+            adaptFeedback = prevFb;
+            for (const fb of newFb) {
+              adaptFeedback = mergeAdaptFeedback(adaptFeedback, fb);
+            }
+            if (burnOk && !newFb.length) {
+              adaptFeedback = mergeAdaptFeedback(adaptFeedback, {
+                kind: "realization_adapt_ok",
+                shotIndex: shotIdx,
+                note: "human_pass",
+              });
+            }
+            Object.assign(er, adaptFeedbackPersistSlice(adaptFeedback));
+          } catch {
+            /* optional adapt feedback */
+          }
           const now = new Date().toISOString();
           await u.db("o_video").where({ id: videoId }).update({
             errorReason: JSON.stringify({
@@ -352,6 +378,7 @@ export default router.post(
               ctaLabel: burnOk ? "成片人审通过" : "SVQ 未测维 · 人审",
               humanRejudgeCorpusId: id,
               humanOverride: burnOk ? "human_checklist" : undefined,
+              adaptFeedback,
             }),
             state: burnOk ? vRow.state : vRow.state,
           });

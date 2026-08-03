@@ -34,6 +34,7 @@ export default router.post(
                 result[`${item.id}:${item.sources}`] = item.filePath ? await u.oss.getSmallImageUrl(item.filePath) : "";
             }))
 
-        res.status(200).send(success({ data: result }));
+        // Flat map: { "id:sources": url } — FE resolveUrls reads response.data as this object
+        res.status(200).send(success(result));
     },
 );

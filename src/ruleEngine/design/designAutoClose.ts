@@ -45,6 +45,9 @@ export type BundleAutoCloseResult = {
     changes: AutoCloseChange[];
     chatRetryRequired: boolean;
   };
+  /** Wave-2 industry silent repair surface for FE */
+  repairChangelog?: unknown[];
+  industryResidualDebts?: string[];
 };
 
 /** untilClear rules need more than one diagnose→patch round (practice ladder). */
@@ -851,6 +854,40 @@ export function runDesignAutoClose(
       }
     }
 
+    // Industry AV Wave-2: silent design satisfy (face split / near / av atoms)
+    try {
+      const { runIndustryAvSilentRepair, collectRepairChangelog } =
+        require("./industryAvSilentRepair") as typeof import("./industryAvSilentRepair");
+      const pdInd = (plan.planData ?? {}) as Record<string, unknown>;
+      const packInd =
+        (pdInd.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+        (plan.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+        {};
+      const shotsInd = [...(packInd.shots ?? [])];
+      if (shotsInd.length) {
+        const ind = runIndustryAvSilentRepair(shotsInd, { maxMs: 6000 });
+        if (ind.changed > 0 || ind.diffs.length) {
+          packInd.shots = ind.shots;
+          if (pdInd.preDesignPack) (pdInd.preDesignPack as { shots: unknown }).shots = ind.shots;
+          else pdInd.preDesignPack = { shots: ind.shots };
+          plan.planData = pdInd;
+          if (plan.preDesignPack) (plan.preDesignPack as { shots: unknown }).shots = ind.shots;
+          touched = true;
+          changes.push({
+            ruleId: "DEX-FACE-BUDGET",
+            detail: `industry_silent changed=${ind.changed};diffs=${ind.diffs.join(",") || "none"};residual=${ind.residualDebts.join(",") || "none"}`,
+            path: "preDesignPack.shots",
+          });
+          (plan as { repairChangelog?: unknown }).repairChangelog = collectRepairChangelog(ind.shots);
+          if (ind.residualDebts.length) {
+            (plan as { industryResidualDebts?: string[] }).industryResidualDebts = ind.residualDebts;
+          }
+        }
+      }
+    } catch {
+      /* optional industry pass */
+    }
+
     // PROP-CONT: declare-only propState carry (never invent VD) — import/design homology
     if (failed.has("DEX-PROP-CONT") || Boolean(opts?.forceExpand)) {
       try {
@@ -1075,5 +1112,9 @@ export function applyDesignAutoCloseToBundle(
       changes: result.changes,
       chatRetryRequired: result.chatRetryRequired && result.remainingFailedIds.length > 0,
     },
+    repairChangelog: Array.isArray((result.plan as { repairChangelog?: unknown }).repairChangelog)
+      ? ((result.plan as { repairChangelog: unknown[] }).repairChangelog)
+      : undefined,
+    industryResidualDebts: (result.plan as { industryResidualDebts?: string[] }).industryResidualDebts,
   };
 }

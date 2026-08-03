@@ -124,11 +124,17 @@ export function stillQualityUserMessage(opts: {
   realizationNote?: string | null;
   /** softEnv keepSoft but role/bytes missing — never claim「必须元素已兑现」 */
   softEnvMissingHonest?: boolean | null;
+  /** Should-only misses surfaced in UX (bend/glyph) — does not block trunk */
+  shouldMissIds?: string[] | null;
 }): string {
   const missIds = (opts.missingEffects ?? [])
     .map((m) => (typeof m === "string" ? m : String(m?.id ?? "")))
     .filter(Boolean)
     .slice(0, 4);
+  const shouldIds = (opts.shouldMissIds ?? []).map(String).filter(Boolean).slice(0, 2);
+  const shouldNote = shouldIds.length
+    ? `；细节待增强：${shouldIds.join("、")}`
+    : "";
   if (opts.softEnvMissingHonest === true) {
     return "软环境板未挂入厂商参考（keepSoft≠像素殿）；场景 Must 未兑现；弱图不可作视频首帧；请继续生成智能修";
   }
@@ -143,7 +149,7 @@ export function stillQualityUserMessage(opts: {
     const note =
       String(opts.realizationNote ?? "").trim() ||
       "实现已降级：弯腰→持纸站姿/跪持；设计意图仍为弯腰捡拾";
-    return `${note}；主干可烧；弱图不可作弯腰视频首帧`;
+    return `${note}${shouldNote}；主干可烧；弱图债·可烧视频`;
   }
   const sampleMiss = trunkMiss || (missIds.length > 0 && opts.literaryEffectsQualified !== true);
   // Whole-shot design intent miss — not a body-part patch; egress-only ≠ fulfilled
@@ -176,16 +182,17 @@ export function stillQualityUserMessage(opts: {
   if (opts.vendorPollFail) {
     return "成图诊断未完成（轮询失败）；弱图不可作视频首帧；可稍后重试诊断";
   }
-  // Design intent Must fulfilled; Key absent → honest unmeasured
+  // Design intent Must fulfilled; Key absent → honest unmeasured (never imply burn-ready)
   if (
     (opts.sampleMustFulfilled === true || opts.literaryEffectsQualified === true) &&
     opts.keyAbsent &&
-    opts.softEnvMissingHonest !== true
+    opts.softEnvMissingHonest !== true &&
+    opts.realizationDegraded !== true
   ) {
-    return "设计意图必须元素已兑现；像素未测（Key 可选，非失败）；弱图不可自动作视频首帧，可人审放行或继续生成";
+    return `设计意图必须元素已兑现${shouldNote}；像素未测（Key 可选，非失败）；弱图债·可烧视频（设计意图优先）`;
   }
   if (opts.keyAbsent) {
-    return "设计意图待核；像素未测（Key 可选，非失败）；弱图不可作视频首帧，可人审放行或继续生成";
+    return "设计意图待核；像素未测（Key 可选，非失败）；弱图债·可烧视频，可人审或继续生成";
   }
   if (opts.measuredFail) {
     return "设计意图像素复核未过；请按债条修复后重出；弱图不可作视频首帧";

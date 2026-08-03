@@ -183,6 +183,8 @@ export function hydratePackageFromPreDesign(
 
     return {
       ...es,
+      storyboardId:
+        (raw as { storyboardId?: number }).storyboardId ?? es.storyboardId,
       visualDescription: raw.visualDescription ?? es.visualDescription,
       promptState: rawAny.promptState ?? es.promptState,
       videoStale: rawAny.videoStale ?? es.videoStale,

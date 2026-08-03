@@ -74,6 +74,8 @@ export interface StillQualityMeta {
   autoRepairRound?: number;
   autoRepairBudgetLeft?: number;
   handoffReason?: string;
+  /** VD/shotDesign changed — FE should rebuild flow / not reuse stale flowId soup */
+  flowStaleHint?: boolean;
 }
 
 export function stillQualityAllowsBurn(q?: StillQuality | null): boolean {
@@ -167,6 +169,11 @@ export function invalidateStillQuality(meta?: Partial<StillQualityMeta> | null):
     promptState: "stale",
     visualPass: false,
     visualPassAt: undefined,
+    // VD / shotDesign change → old compose hash / egress soup must not refine
+    composeHash: undefined,
+    literaryDescHash: undefined,
+    literaryHash: undefined,
+    flowStaleHint: true,
   };
 }
 
@@ -285,11 +292,15 @@ export function stillApiFieldsFromReason(reason: unknown): {
     stillQuality,
     visualPass,
     sheetLeak: meta.sheetLeak as boolean | undefined,
-    ctaLabel: meta.ctaLabel as string | undefined,
-    userMessage: meta.userMessage as string | undefined,
-    primaryNextStep: (meta.primaryNextStep ?? (meta as { nextStep?: string }).nextStep) as
-      | string
-      | undefined,
+    ctaLabel:
+      (meta.ctaLabel as string | undefined) ||
+      (stillQuality === "weak" ? "智能修复" : undefined),
+    userMessage:
+      (meta.userMessage as string | undefined) ||
+      (stillQuality === "weak" ? "弱图不可作视频首帧 — 请点「智能修复」重出 HQ 静照" : undefined),
+    primaryNextStep: (meta.primaryNextStep ??
+      (meta as { nextStep?: string }).nextStep ??
+      (stillQuality === "weak" ? "regen_storyboard_hq" : undefined)) as string | undefined,
     stateHint,
     promptUsed: meta.promptUsed ? String(meta.promptUsed).slice(0, 2000) : undefined,
     vendorPromptUsed: meta.vendorPromptUsed

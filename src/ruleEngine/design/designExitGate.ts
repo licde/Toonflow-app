@@ -1717,6 +1717,46 @@ export function runDesignExitGate(
     /* optional */
   }
 
+  // Cinematic face-budget WARN (industry MCU) — never hard-block exit; Confirm split owns repair
+  if (stageId === "SB" || stageId === "W3") {
+    try {
+      const { assessFaceBudget } =
+        require("../compilers/faceBudgetPolicy") as typeof import("../compilers/faceBudgetPolicy");
+      const { hasOnCameraDialogue } =
+        require("./onCameraDialogue") as typeof import("./onCameraDialogue");
+      for (const s of preDesignShots(pd)) {
+        const vd = String(s.visualDescription ?? "");
+        const onCam = hasOnCameraDialogue(
+          (s.narrative as { dialogue?: { lines?: unknown } } | undefined)?.dialogue?.lines,
+        );
+        if (!onCam) continue;
+        const budget = assessFaceBudget({
+          visualDescription: vd,
+          shotSize: String(s.shotSize ?? ""),
+          hasDialogue: true,
+          lipSyncPolicy: String(
+            (s.shotDesign as { lipSyncPolicy?: string } | undefined)?.lipSyncPolicy ?? "dialogue_native",
+          ),
+          videoIntentClass: "speak_lip",
+        });
+        if (budget.unreachable) {
+          warnings.push(
+            `DEX-FACE-BUDGET:shot${s.shotIndex ?? "?"}:对白+低头+过宽→Confirm拆镜(${budget.splitHint ?? "action_then_dialogue_mcu"})`.slice(
+              0,
+              160,
+            ),
+          );
+        } else if (!budget.ok && budget.primaryAction === "regen_storyboard_hq") {
+          warnings.push(
+            `DEX-FACE-READ:shot${s.shotIndex ?? "?"}:对白低头近景脸风险·建议抬脸静照`.slice(0, 160),
+          );
+        }
+      }
+    } catch {
+      /* optional */
+    }
+  }
+
   const round = opts?.optimizeRound ?? 0;
   const maxR = checklist.maxOptimizeRoundsPerStage ?? 5;
   let nextAction: DesignExitResult["nextAction"] = "proceed";

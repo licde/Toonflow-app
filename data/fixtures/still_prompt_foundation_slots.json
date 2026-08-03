@@ -1,0 +1,55 @@
+{
+  "version": "1.0.0",
+  "description": "Foundational still-prompt slots that must survive objective/lint compression.",
+  "categories": [
+    "identity",
+    "contact",
+    "prop",
+    "layout",
+    "contract"
+  ],
+  "slots": [
+    {
+      "id": "identity:cref",
+      "category": "identity",
+      "required": "always_when_present",
+      "pattern": "--cref\\s+\\S+"
+    },
+    {
+      "id": "identity:face_lock",
+      "category": "identity",
+      "required": "when_in_original",
+      "pattern": "禁止重塑五官|锁定脸型"
+    },
+    {
+      "id": "identity:look_anchor",
+      "category": "identity",
+      "required": "when_in_original",
+      "pattern": "本镜主look"
+    },
+    {
+      "id": "contact:mouth_xor",
+      "category": "contact",
+      "required": "when_vd_xor",
+      "pattern": "禁口含.*禁纸入口|纸未入口"
+    },
+    {
+      "id": "contact:geom",
+      "category": "contact",
+      "required": "contact_geom_objective",
+      "pattern": "贴合|划过接触|禁止悬空"
+    },
+    {
+      "id": "layout:sheet_ban",
+      "category": "layout",
+      "required": "when_in_original",
+      "pattern": "单镜头成片|禁四视图"
+    },
+    {
+      "id": "strip:secondary_dominance",
+      "category": "contact",
+      "forbidden": "完整立像|半身立像|配角站立|沈母站立",
+      "when": "contact_geom_objective"
+    }
+  ]
+}

@@ -53,6 +53,26 @@ export default router.post(
       });
       if (req.body.ratio) ctx.videoRatio = req.body.ratio;
 
+      const { assertSingleShotClosedInputs, filterInjectToDeclaredAtoms } = await import(
+        "@/ruleEngine/compilers/singleShotClosedCompose"
+      );
+      const closedAssert = assertSingleShotClosedInputs({
+        storyboardId: req.body.storyboardId,
+        boundShotIndex: ctx.boundShotIndex,
+        bindOk: ctx.bindOk !== false || !req.body.storyboardId,
+        bindCode: ctx.bindCode,
+        visualDescription: ctx.visualDescription,
+        purpose: "compose",
+      });
+      if (ctx.strengthen) {
+        const filtered: Record<string, string> = {};
+        for (const [k, v] of Object.entries(ctx.strengthen)) {
+          const kept = filterInjectToDeclaredAtoms([String(v)], ctx.visualDescription);
+          if (kept.length) filtered[k] = kept[0]!;
+        }
+        ctx.strengthen = Object.keys(filtered).length ? filtered : null;
+      }
+
       let sbReason: unknown;
       let sbPrompt: string | undefined;
       if (req.body.storyboardId) {
@@ -60,6 +80,7 @@ export default router.post(
         sbReason = row?.reason;
         sbPrompt = row?.prompt != null ? String(row.prompt) : undefined;
       }
+      const { literaryComposeHash } = await import("@/ruleEngine/compilers/composeStillPrompt");
       const ingress = buildStillPreviousIngress({
         reason: sbReason,
         storedPrompt: sbPrompt,
@@ -68,6 +89,12 @@ export default router.post(
         currentHash: computeComposeHash(ctx),
         preferFidelity: shouldDefaultFidelityCompose(ctx),
         loadPrevious: Boolean(req.body.storyboardId),
+        currentClientId: String((ctx as { clientId?: string }).clientId ?? req.body.storyboardId ?? ""),
+        literaryHash: literaryComposeHash({
+          visualDescription: ctx.visualDescription,
+          compiledImagePrompt: ctx.compiledImagePrompt,
+        }),
+        visualDescription: ctx.visualDescription,
       });
       ctx.previousVisualBody = ingress.previousVisualBody;
       const result = composeStillPrompt(ctx, { mode: ingress.effectiveMode });
@@ -96,6 +123,8 @@ export default router.post(
       // Preview ≡ generate compose kernel; surface egress warnings (never fake-green)
       const previewBlocks: string[] = [];
       if (!result.ok) previewBlocks.push(result.blockReason || "compose_blocked");
+      if (ctx.bindOk === false) previewBlocks.push(String(ctx.bindCode || "BIND_SHOT_MISMATCH"));
+      if (!closedAssert.closedCompose) previewBlocks.push(...closedAssert.reasons);
       if ((result.warnings ?? []).some((w) => /EMPTY-SHOT|CAST-CREF/i.test(w))) {
         previewBlocks.push("egress_quality_warn");
       }
@@ -153,6 +182,10 @@ export default router.post(
           /** Preview is prompt-layer only — never claim pixel HQ / burn-ready */
           pixelHq: false,
           burnReady: false,
+          closedCompose: closedAssert.closedCompose && ctx.bindOk !== false,
+          boundShotIndex: ctx.boundShotIndex ?? null,
+          bindOk: ctx.bindOk !== false,
+          bindCode: ctx.bindCode ?? null,
           note:
             "preview≡composeStillPrompt 同核；prompt=文学SSOT，egressPrompt=送厂拼装；≠成图像素HQ，不可据此燃片",
         }),

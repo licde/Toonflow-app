@@ -15,6 +15,7 @@ const AGNES_CAPABILITY: VendorCapabilityEx = {
   controllable: ["duration", "audio", "resolution", "mode", "aspectRatio", "referenceCount"],
   textOnly: ["shotSize", "camera", "microExpr", "emotion", "colorTemp", "fx", "spatial"],
   nativeAudio: true,
+  nativeExpression: false,
   durationBuckets: VENDOR_DURATION_BUCKETS.agnesai,
 };
 
@@ -81,6 +82,7 @@ export function resolveVendorCapability(vendorId?: string | null): VendorCapabil
       ...DEFAULT_VIDEO_CAPABILITY,
       vendorId: vendorId ?? "agnesai",
       nativeAudio: enhanced.nativeAudio,
+      nativeExpression: enhanced.nativeExpression ?? false,
       durationBuckets: enhanced.durationBuckets,
     };
   }
@@ -89,6 +91,7 @@ export function resolveVendorCapability(vendorId?: string | null): VendorCapabil
     controllable: hit.controllable ?? AGNES_CAPABILITY.controllable,
     textOnly: hit.textOnly ?? AGNES_CAPABILITY.textOnly,
     nativeAudio: hit.nativeAudio ?? enhanced.nativeAudio,
+    nativeExpression: hit.nativeExpression ?? enhanced.nativeExpression ?? false,
     durationBuckets: hit.durationBuckets ?? enhanced.durationBuckets,
   };
 }

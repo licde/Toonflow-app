@@ -1466,7 +1466,14 @@ const workbench = {
 		autoLayoutTB: "Automatic typesetting-top and bottom layout",
 		getFlowData: "Refresh workspace",
 		confirm: "Switch episode confirmation",
-		confirmEpisodesSwitch: "The current task is still in progress. Switching episodes will reconnect the session. Do you want to continue switching?"
+		confirmEpisodesSwitch: "The current task is still in progress. Switching episodes will reconnect the session. Do you want to continue switching?",
+		rulePanel: {
+			title: "Rule checks",
+			refresh: "Refresh",
+			autofix: "Auto-fix",
+			empty: "No issues",
+			preflightBlock: "Preflight blocked — fix BLOCK items first"
+		}
 	},
 	task: {
 		title: "Task List",

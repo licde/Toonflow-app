@@ -336,7 +336,129 @@ export function scoreVideoDesignIntentFidelity(
     }
   }
 
-  const warnOnlyIds = new Set(["av_scene_sfx"]);
+  // LANG: CJK dialogue must survive in Audio (no EN spoken wrapper)
+  if (ctx.dialogueLines.length) {
+    const cjkHit = ctx.dialogueLines.some((t) => t.length >= 2 && audio.includes(t.slice(0, Math.min(6, t.length))));
+    const enSpoken = /\b(he said|she said|says\s+"|I am|I'm|hello|thank you)\b/i.test(audio);
+    items.push({
+      id: "lang_cjk_dialogue",
+      label: "源语言台词进 Audio",
+      pass: cjkHit && !enSpoken,
+      expected: ctx.dialogueLines[0]?.slice(0, 24),
+      actual: audio.slice(0, 64),
+    });
+  }
+
+  // EXPR: eyes into Motion when authored (speak shots included)
+  const eyes =
+    ctx.microExpression && typeof ctx.microExpression === "object"
+      ? String(ctx.microExpression.eyes ?? "").trim()
+      : "";
+  if (eyes) {
+    items.push({
+      id: "expr_eyes",
+      label: "眼神微表情进 Motion",
+      pass: motion.includes(eyes.slice(0, Math.min(6, eyes.length))) || /微表情：眼神/.test(motion),
+      expected: eyes,
+      actual: motion.slice(0, 48),
+    });
+  }
+
+  // Composition FG short-anchor
+  if (ctx.compositionForeground) {
+    const fg = ctx.compositionForeground.slice(0, 6);
+    items.push({
+      id: "composition_fg",
+      label: "前景构图锚",
+      pass: visual.includes(fg) || visual.includes("前景"),
+      expected: ctx.compositionForeground.slice(0, 24),
+      actual: visual.slice(0, 48),
+    });
+  }
+
+  // Composition BG short-anchor (skirt fragment etc.)
+  if (ctx.compositionBackground) {
+    const bg = ctx.compositionBackground.slice(0, 4);
+    items.push({
+      id: "composition_bg",
+      label: "背景构图锚",
+      pass: visual.includes(bg) || visual.includes("背景"),
+      expected: ctx.compositionBackground.slice(0, 24),
+      actual: visual.slice(0, 48),
+    });
+  }
+
+  // Emotion intensity projection (not bare number only)
+  if (ctx.emotionIntensity != null && ctx.emotionIntensity >= 6) {
+    items.push({
+      id: "emotion_projection",
+      label: "情绪强度投影到表演词",
+      pass:
+        /隐忍|决绝|情绪|表演/.test(motion + narrative) ||
+        narrative.includes(`情绪强度:${ctx.emotionIntensity}`),
+      expected: "隐忍决绝/情绪强度",
+      actual: (motion + narrative).slice(0, 48),
+    });
+  }
+
+  // Paper friction SFX when VD implies paper grip
+  if (/休书|纸|捏紧/.test(vd) && !sfx) {
+    items.push({
+      id: "sfx_paper_friction_hint",
+      label: "纸张摩擦音效应进入 Audio",
+      pass: /纸张摩擦|摩擦/.test(audio),
+      expected: "纸张摩擦",
+      actual: audio.slice(0, 48),
+    });
+  }
+
+  // Speak shot should not stay wide in Camera when industry promotes near
+  if (
+    (ctx.videoIntent.intentClass === "speak_lip" || ctx.dialogueLines.length > 0) &&
+    /中景|全景/.test(String(ctx.shotSize ?? ""))
+  ) {
+    items.push({
+      id: "dialogue_near_shot",
+      label: "对白镜制作近景",
+      pass: /近景|特写/.test(camera),
+      expected: "近景",
+      actual: camera.slice(0, 32),
+    });
+  }
+
+  // Voice character from audioPrompt
+  if (ctx.audioPrompt && ctx.audioPrompt.length >= 4) {
+    items.push({
+      id: "voice_character",
+      label: "声线进 Audio",
+      pass: audio.includes("声线") || audio.includes(ctx.audioPrompt.slice(0, 6)),
+      expected: ctx.audioPrompt.slice(0, 32),
+      actual: audio.slice(0, 64),
+    });
+  }
+
+  // Action verbs for bend/pick/pinch shots — plate-first may use kneel/lift-face instead of 弯腰
+  if (/弯腰|捡|捏紧|俯身/.test(vd)) {
+    const plateOk = /跪持|站姿持|抬视线|面容可读|触及|捏紧|捡/.test(motion);
+    const bendOk = /弯腰|俯身|触及|捏紧|捡/.test(motion);
+    items.push({
+      id: "motion_action_verbs",
+      label: "VD 动作链进 Motion",
+      pass: bendOk || plateOk,
+      expected: "弯腰/跪持/捏紧",
+      actual: motion.slice(0, 64),
+    });
+  }
+
+  // No legacy [FX] F0 section
+  items.push({
+    id: "no_fx_section_stub",
+    label: "禁止 [FX] F0 段",
+    pass: !/\[FX\]\s*F0\b/i.test(prompt),
+    expected: "无 [FX] 段",
+  });
+
+  const warnOnlyIds = new Set(["av_scene_sfx", "no_fx_section_stub"]);
   const blockers = items.filter((i) => !i.pass && !warnOnlyIds.has(i.id));
   return { items, pass: blockers.length === 0, blockers };
 }
@@ -475,6 +597,65 @@ export function repairVideoPromptForDesignIntent(
     }
   }
 
+  // Eyes micro into Motion (speak-safe)
+  const eyes =
+    ctx.microExpression && typeof ctx.microExpression === "object"
+      ? String(ctx.microExpression.eyes ?? "").trim()
+      : "";
+  if (eyes) {
+    let motion = sectionBody(out, "Motion");
+    if (!motion.includes(eyes.slice(0, Math.min(4, eyes.length))) && !/微表情：眼神/.test(motion)) {
+      motion = `${motion.replace(/。\s*$/, "")}；微表情：眼神${eyes.slice(0, 16)}`;
+      out = injectSection(out, "Motion", motion);
+      repairs.push("reinject_expr_eyes");
+    }
+  }
+
+  // Composition FG / voice / CJK dialogue / action phases
+  if (ctx.compositionForeground) {
+    let visual = sectionBody(out, "Visual");
+    if (!visual.includes("前景") && !visual.includes(ctx.compositionForeground.slice(0, 4))) {
+      visual = `${visual}。前景：${ctx.compositionForeground.slice(0, 24)}`;
+      out = injectSection(out, "Visual", visual);
+      repairs.push("reinject_composition_fg");
+    }
+  }
+  if (ctx.audioPrompt && ctx.audioPrompt.length >= 4) {
+    let audio = sectionBody(out, "Audio");
+    if (!audio.includes("声线") && !audio.includes(ctx.audioPrompt.slice(0, 4))) {
+      audio = `${audio}\n声线：${ctx.audioPrompt.slice(0, 80)}`.trim();
+      out = injectSection(out, "Audio", audio);
+      repairs.push("reinject_voice_character");
+    }
+  }
+  if (ctx.dialogueLines.length) {
+    let audio = sectionBody(out, "Audio");
+    const missing = ctx.dialogueLines.filter((t) => t.length >= 2 && !audio.includes(t.slice(0, 4)));
+    if (missing.length || /\b(he said|she said|says\s+")\b/i.test(audio)) {
+      const dialBlock = [
+        ...ctx.dialogueLines.map((t) => (t.startsWith('"') || t.startsWith("“") ? t : `"${t}"`)),
+        "口型同步开启。",
+      ].join("\n");
+      const keepSfx = (audio.match(/音效：[^\n]+/g) || []).join("\n");
+      const keepVoice = (audio.match(/声线：[^\n]+/g) || []).join("\n");
+      audio = [dialBlock, keepSfx, keepVoice].filter(Boolean).join("\n");
+      out = injectSection(out, "Audio", audio);
+      repairs.push("reinject_cjk_dialogue");
+    }
+  }
+  if (/弯腰|捡|捏紧|俯身/.test(vd) && !/弯腰|俯身|触及|捏紧/.test(sectionBody(out, "Motion"))) {
+    const d = Math.max(2, Number(authorDur) || 3);
+    const a = Math.max(0.5, Math.round((d / 3) * 10) / 10);
+    const b = Math.max(a + 0.5, Math.round(((2 * d) / 3) * 10) / 10);
+    const phases = [`0s-${a}s: 弯腰俯身`, `${a}s-${b}s: 指尖触及物件`, `${b}s-${d}s: 捏紧纸缘`].join("\n");
+    out = injectSection(out, "Motion", phases);
+    repairs.push("reinject_action_phases");
+  }
+  if (/\[FX\]\s*F0\b/i.test(out)) {
+    out = out.replace(/\n*\[FX\]\s*F0[^\n]*/gi, "");
+    repairs.push("strip_fx_section_stub");
+  }
+
   return { prompt: out, repairs };
 }
 
@@ -486,6 +667,7 @@ export function fidelityHitsToVirdFindings(
     shot_size: "DEX-VID-SHOT-SIZE",
     motion_template: "DEX-VID-MOTION-TEMPLATE",
     motion_contact: "DEX-VID-MOTION-VERB",
+    motion_action_verbs: "VID-PERF-MOTION",
     section_integrity: "DEX-VID-SECTION-GLUE",
     no_lip_sync: "DEX-VID-VOICE-MODE",
     no_f0_fx_echo: "DEX-VID-FX-F0-ECHO",
@@ -493,6 +675,10 @@ export function fidelityHitsToVirdFindings(
     vd_body: "DEX-VID-LIT-SURVIVE",
     duration: "DEX-VID-BEAT-DURATION",
     lit_contact_xor: "DEX-LIT-CONTACT-XOR",
+    lang_cjk_dialogue: "VID-LANG-01",
+    expr_eyes: "VID-EXPR-SPEAK",
+    composition_fg: "VID-COMP-01",
+    voice_character: "VID-AV-SFX",
   };
   return hits
     .filter((h) => !h.pass)

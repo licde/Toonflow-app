@@ -1,12 +1,15 @@
 import type { EpisodeShot, ShotType } from "../types";
 import { parseCrefsSrefsFromPrompt } from "../compilers/compileOrGenerateVideoPrompt";
 import { normalizeAssetCode } from "../codes/assetCodeContract";
+import { normalizeStoryboardTableMd } from "./normalizeStoryboardTableMd";
+
+export { normalizeStoryboardTableMd } from "./normalizeStoryboardTableMd";
 
 const SHOT_TYPES: ShotType[] = ["CHAR-SCENE", "PURE-SCENE", "PURE-PROP", "CHAR-PROP"];
 
 /** 解析 Markdown 分镜表 → EpisodeShot[]（场/镜兼容） */
 export function parseStoryboardTable(markdown: string, storyboardIds?: number[]): EpisodeShot[] {
-  const lines = markdown.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const lines = normalizeStoryboardTableMd(markdown).split(/\n+/).map((l) => l.trim()).filter(Boolean);
   const shots: EpisodeShot[] = [];
   let index = 0;
 

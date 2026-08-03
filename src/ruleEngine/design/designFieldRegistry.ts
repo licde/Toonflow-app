@@ -306,6 +306,12 @@ function hasFiveSections(prompt: string): boolean {
   return /\[Visual\]/i.test(prompt) || /\[Motion\]/i.test(prompt) || /\[Camera\]/i.test(prompt) || /\[Audio\]/i.test(prompt);
 }
 
+function audioAlreadyHasCjkDialogue(body: string, fragment: string): boolean {
+  const cjk = fragment.match(/[\u4e00-\u9fff]{2,24}/g) ?? [];
+  if (!cjk.length) return /[\u4e00-\u9fff]/.test(body) && /["「]|口型同步/.test(body);
+  return cjk.some((tok) => body.includes(tok));
+}
+
 function injectIntoNamedSection(prompt: string, section: string, fragment: string): string {
   const bit = fragment.trim();
   if (!bit) return prompt;
@@ -317,8 +323,15 @@ function injectIntoNamedSection(prompt: string, section: string, fragment: strin
   if (re.test(prompt)) {
     return prompt.replace(re, (_m, body: string) => {
       let bodyTrim = String(body).trim();
+      // Skip dialogue inject when Audio already has same CJK lines (prevent EN dual-track re-entry)
+      if (/^audio$/i.test(section) && audioAlreadyHasCjkDialogue(bodyTrim, bit)) {
+        return `[${section}]\n${bodyTrim}\n\n`;
+      }
       // Audio XOR: injecting dialogue / lip-sync must replace silence scaffold, not comma-append
-      if (/^audio$/i.test(section) && /says\s+|lip-sync\s*active|\(dialogue\)/i.test(bit)) {
+      if (
+        /^audio$/i.test(section) &&
+        /says\s+|lip-sync\s*active|\(dialogue\)|口型同步开启|[：:]\s*["「]/i.test(bit)
+      ) {
         if (/no\s*(spoken\s*)?dialogue|ambient\/?SFX\s*only|无对白|无台词/i.test(bodyTrim)) {
           bodyTrim = "";
         }

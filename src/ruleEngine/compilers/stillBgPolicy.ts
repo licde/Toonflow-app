@@ -18,6 +18,8 @@ export interface StillBgPolicyInput {
   sceneEstablishingHint?: boolean | null;
   /** Workflow has SCENE linked — enables soft_env plate retention */
   hasSceneLink?: boolean | null;
+  /** Package shotDesign.cameraAnchor.bgBlur — soft rim, not establishing */
+  bgBlur?: boolean | null;
 }
 
 export type SoftEnvContinuity = "must" | "optional" | "none";
@@ -121,6 +123,8 @@ export function resolveStillBgPolicy(input: StillBgPolicyInput): StillBgPolicyRe
     (!midWide &&
       (/特写|侧脸|正脸|咬唇|渗血/.test(desc) || (/面颊/.test(desc) && /特写|近景/.test(desc))) &&
       !/全景|远景|中景对峙|双人同框|中景/.test(desc));
+  // Face CU + explicit bgBlur: soft rim only — never treat as establishing keep_plate
+  const bgBlur = Boolean(input.bgBlur);
   if (faceCu) {
     const keepSoft = hasSceneLink;
     return {
@@ -130,8 +134,8 @@ export function resolveStillBgPolicy(input: StillBgPolicyInput): StillBgPolicyRe
       keepSoftEnvRef: keepSoft,
       softEnvContinuity: continuityOf(keepSoft, hasSceneLink),
       omitSrefToken: !keepSoft,
-      bgGuidance: softInteriorGuidance(desc, false, keepSoft),
-      reason: "faceCuDropScene",
+      bgGuidance: softInteriorGuidance(desc, false, keepSoft || bgBlur),
+      reason: bgBlur ? "faceCuDropScene:bgBlur" : "faceCuDropScene",
       pack,
       sceneEstablishing: false,
     };

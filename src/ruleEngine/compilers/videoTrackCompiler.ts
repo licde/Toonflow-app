@@ -61,8 +61,16 @@ export async function loadStoryboardVideoEnrichment(
         audioPrompt: shot.generation.audioPrompt ?? row?.audioPrompt,
         fxPrompt: shot.generation.fxPrompt ?? row?.fxPrompt,
         dialogueLines: dialogueFromShot(shot),
-        lipSyncPolicy: shot.narrative.lipSyncPolicy,
-        shotSize: shot.narrative.shotSize,
+        lipSyncPolicy: (() => {
+          try {
+            const { resolveLipSyncPolicyFromShot } =
+              require("../quality/resolveLipSyncPolicy") as typeof import("../quality/resolveLipSyncPolicy");
+            return resolveLipSyncPolicyFromShot(shot as unknown as Record<string, unknown>) || undefined;
+          } catch {
+            return shot.narrative.lipSyncPolicy ?? (shot as { shotDesign?: { lipSyncPolicy?: string } }).shotDesign?.lipSyncPolicy;
+          }
+        })(),
+        shotSize: shot.narrative.shotSize ?? shot.shotSize,
         duration: shot.narrative.duration ?? (row?.duration ? Number(row.duration) : undefined),
         visualDescription: shot.visualDescription,
         foreground: shot.narrative.composition?.foreground,

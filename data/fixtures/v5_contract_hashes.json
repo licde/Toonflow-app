@@ -1,0 +1,14 @@
+{
+  "version": "1.0.4",
+  "updated": "2026-08-03",
+  "note": "video intent debt mount + shot3 fidelity baseline",
+  "hashes": {
+    "docs/toonflow-web/types/stillQuality.ts": "aad82757a9417232",
+    "docs/toonflow-web/types/stillIntentOps.ts": "06de0a0635ece9ac",
+    "docs/toonflow-web/types/videoIntentOps.ts": "19b5d23139e2536d",
+    "docs/toonflow-web/components/RulePanel.vue": "98827ec1252e1d24",
+    "docs/toonflow-web/components/LitDetailDebtBar.vue": "dd5392b719c70315",
+    "docs/toonflow-web/components/VideoIntentDebtBar.vue": "b501e47657546945",
+    "docs/toonflow-web/components/ShotWorkbenchDebtMount.vue": "743946d31c77283d"
+  }
+}

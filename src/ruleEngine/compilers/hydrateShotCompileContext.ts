@@ -9,6 +9,7 @@ import { resolveRequiredDuration } from "./resolveRequiredDuration";
 import { classifyVideoIntent, type VideoIntentClassification } from "./videoIntentPolicy";
 import { isNonLiteraryDialogueKey } from "../design/dialogueCoverage";
 import { preferLiteraryVisualDesc } from "./resolveTrackStoryboard";
+import type { RealizationAdaptPack } from "./realizationAdapt";
 
 export type ShotCompileGaps = {
   missingVisualDescription: boolean;
@@ -52,6 +53,12 @@ export type ShotCompileContext = {
   sfxIntent?: string | null;
   avCausality?: { audioBeat?: string; visualPeak?: string } | null;
   promptAnchors?: string[] | null;
+  /** Composition / spatial / emotion — still-primary; spine short-anchor */
+  compositionForeground?: string | null;
+  compositionBackground?: string | null;
+  spatialRelation?: string | null;
+  emotionIntensity?: number | null;
+  bgBlur?: boolean | null;
   designShot?: PreDesignShot | null;
   videoIntent: VideoIntentClassification;
   gaps: ShotCompileGaps;
@@ -59,6 +66,10 @@ export type ShotCompileContext = {
   canAuthorFromDesign: boolean;
   vendorId?: string | null;
   warnings: string[];
+  /** Still meta passthrough for contact/realization handoff */
+  shotMeta?: Record<string, unknown> | null;
+  /** Plate-first adapt pack from still meta or built at hydrate */
+  realizationAdaptPack?: RealizationAdaptPack | null;
 };
 
 function asNum(v: unknown): number | null {
@@ -185,6 +196,16 @@ function extractContinuityHint(shot?: PreDesignShot | null, shotMeta?: Record<st
   let t = String(raw ?? "")
     .replace(/^continuity:\s*/i, "")
     .trim();
+  // Markers → continuity (承接/接信)
+  if (!t || t.length < 2) {
+    const markers =
+      (shot?.narrative as { markers?: Array<{ type?: string; desc?: string }> } | undefined)?.markers ??
+      (shotMeta?.narrative as { markers?: Array<{ type?: string; desc?: string }> } | undefined)?.markers;
+    if (Array.isArray(markers) && markers.length) {
+      const m = markers.find((x) => /承接|接信|连续/.test(String(x?.type ?? "") + String(x?.desc ?? "")));
+      if (m) t = String(m.desc || m.type || "").trim();
+    }
+  }
   // True summary: strip hollow tokens; keep subject/pose atoms
   if (t && /^(同上|承接上镜|continue|prev)$/i.test(t)) t = "";
   if (!t || t.length < 2) return null;
@@ -264,6 +285,78 @@ function extractImplBind(
       ? [anchorsRaw.trim()]
       : null;
   return { sfxIntent, avCausality, promptAnchors };
+}
+
+function extractRealizationAdaptPack(
+  shotMeta?: Record<string, unknown> | null,
+  input?: {
+    visualDescription?: string;
+    durationSec?: number;
+    dialoguePresent?: boolean;
+    emotionIntensity?: number | null;
+  },
+): RealizationAdaptPack | null {
+  const raw = shotMeta?.realizationAdaptPack as RealizationAdaptPack | undefined;
+  if (raw?.motionBody || raw?.motionPhases?.length) return raw;
+  try {
+    const { buildRealizationAdaptPack } =
+      require("./realizationAdapt") as typeof import("./realizationAdapt");
+    const meta = shotMeta ?? {};
+    const hasReal =
+      meta.realizationOccupancy ||
+      meta.realizationDegraded === true ||
+      meta.intentOccupancy ||
+      /弯腰|捡起/.test(String(input?.visualDescription ?? ""));
+    if (!hasReal && !input?.visualDescription) return raw ?? null;
+    return buildRealizationAdaptPack({
+      visualDescription: input?.visualDescription,
+      durationSec: input?.durationSec,
+      dialoguePresent: input?.dialoguePresent,
+      intentOccupancy: meta.intentOccupancy as import("./designIntentProfile").PoseOccupancy | undefined,
+      realizationOccupancy: meta.realizationOccupancy as import("./designIntentProfile").PoseOccupancy | undefined,
+      realizationDegraded: meta.realizationDegraded === true,
+      stillMeta: meta,
+      emotionIntensity: input?.emotionIntensity,
+      sfxIntent: String(meta.sfxIntent ?? "").trim() || null,
+      avCausality: meta.avCausality as { audioBeat?: string } | undefined,
+    });
+  } catch {
+    return raw ?? null;
+  }
+}
+
+function extractCompositionSpatial(
+  shot?: PreDesignShot | null,
+  shotMeta?: Record<string, unknown> | null,
+): {
+  compositionForeground: string | null;
+  compositionBackground: string | null;
+  spatialRelation: string | null;
+  emotionIntensity: number | null;
+  bgBlur: boolean | null;
+} {
+  const sd =
+    (shot as { shotDesign?: Record<string, unknown> } | null)?.shotDesign ??
+    (shotMeta?.shotDesign as Record<string, unknown> | undefined);
+  const narr =
+    (shot as { narrative?: Record<string, unknown> } | null)?.narrative ??
+    (shotMeta?.narrative as Record<string, unknown> | undefined);
+  const comp =
+    (sd?.composition as { foreground?: string; background?: string } | undefined) ??
+    (narr?.composition as { foreground?: string; background?: string } | undefined);
+  const cam =
+    (sd?.cameraAnchor as { bgBlur?: boolean } | undefined) ??
+    (narr?.cameraAnchor as { bgBlur?: boolean } | undefined);
+  const spatial = String(narr?.spatialRelation ?? shotMeta?.spatialRelation ?? "").trim() || null;
+  const emoRaw = narr?.emotionIntensity ?? shotMeta?.emotionIntensity ?? (shot as { emotionIntensity?: number })?.emotionIntensity;
+  const emo = Number(emoRaw);
+  return {
+    compositionForeground: String(comp?.foreground ?? "").trim() || null,
+    compositionBackground: String(comp?.background ?? "").trim() || null,
+    spatialRelation: spatial,
+    emotionIntensity: Number.isFinite(emo) && emo > 0 ? emo : null,
+    bgBlur: typeof cam?.bgBlur === "boolean" ? cam.bgBlur : null,
+  };
 }
 
 /**
@@ -458,9 +551,28 @@ export function hydrateShotCompileContextSync(input: {
   ).trim() || null;
   const cameraMotion = extractCameraMotion(shot, meta);
   const continuityHint = extractContinuityHint(shot, meta);
-  const microExpression = extractMicroExpression(shot, meta);
   const beatDurationSec = extractBeatDuration(shot, meta);
   const { sfxIntent, avCausality, promptAnchors } = extractImplBind(shot, meta);
+  const {
+    compositionForeground,
+    compositionBackground,
+    spatialRelation,
+    emotionIntensity,
+    bgBlur,
+  } = extractCompositionSpatial(shot, meta);
+
+  // Homology: heal mouth XOR on design SSOT before spine (never invent dialogue)
+  if (shot || meta) {
+    try {
+      const { healMouthXorOnShot } =
+        require("../design/mouthXorHeal") as typeof import("../design/mouthXorHeal");
+      const target = (shot ?? meta) as import("../design/mouthXorHeal").MouthXorShot;
+      healMouthXorOnShot(target);
+    } catch {
+      /* optional */
+    }
+  }
+  const microExpression = extractMicroExpression(shot, meta);
 
   const shotIndex =
     input.shotIndex != null
@@ -534,6 +646,13 @@ export function hydrateShotCompileContextSync(input: {
 
   const canAuthorFromDesign = Boolean(visualDescription || dialogueLines.length > 0);
 
+  const realizationAdaptPack = extractRealizationAdaptPack(meta, {
+    visualDescription,
+    durationSec: durationSec > 0 ? durationSec : authorDurationSec || 3,
+    dialoguePresent: dialogueLines.length > 0,
+    emotionIntensity,
+  });
+
   return {
     projectId: input.projectId,
     shotIndex,
@@ -563,12 +682,19 @@ export function hydrateShotCompileContextSync(input: {
     sfxIntent,
     avCausality,
     promptAnchors,
+    compositionForeground,
+    compositionBackground,
+    spatialRelation,
+    emotionIntensity,
+    bgBlur,
     designShot: shot,
     videoIntent,
     gaps,
     canAuthorFromDesign,
     vendorId: input.vendorId ?? null,
     warnings,
+    shotMeta: meta,
+    realizationAdaptPack,
   };
 }
 

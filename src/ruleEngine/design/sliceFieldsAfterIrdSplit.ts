@@ -51,6 +51,17 @@ export function sliceFieldsAfterIrdSplit(shots: Record<string, unknown>[]): {
       s.irdConfirmRequired = true;
       s._healInducedVd = true;
     }
+    // Inherit parent axis / wardrobe / identity after split
+    try {
+      const { buildSplitChildContinuitySeed, applySplitChildContinuity } =
+        require("../compilers/splitChildContinuity") as typeof import("../compilers/splitChildContinuity");
+      if (parent) {
+        const seeded = applySplitChildContinuity(s, buildSplitChildContinuitySeed(parent));
+        Object.assign(s, seeded);
+      }
+    } catch {
+      /* optional */
+    }
 
     const parentNarr = (parent?.narrative ?? s.narrative) as {
       dialogue?: { lines?: unknown };

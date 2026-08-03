@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "note": "Deferred untilClear classes mount in waves — avoid fake full-clear",
+  "waves": {
+    "W1": {
+      "classes": ["PROMPT_FIDELITY", "IDENTITY_PLATE"],
+      "status": "live"
+    },
+    "W2": {
+      "classes": [
+        "CONTACT_MOTION_BEATS",
+        "STILL_CONTACT_HANDOFF",
+        "STILL_POSE_HANDOFF",
+        "PROP_POSE_CHAIN",
+        "MOUTH_LIP_HANDOFF",
+        "CONTACT_ROLE_XOR",
+        "VIDEO_STALE_WRITEBACK",
+        "SHEET_LEAK"
+      ],
+      "status": "planned"
+    },
+    "W3": {
+      "classes": [
+        "AUDIO_DESIGN_BEAT",
+        "AUDIO_LITERARY_XOR",
+        "AV_CAUSALITY_SURVIVAL",
+        "SCENE_FX_CONTINUITY",
+        "CASCADE_INVALIDATION",
+        "EPISODE_STILL_READINESS",
+        "DRAFT_VS_HQ",
+        "QC_SOFT_DELIVER",
+        "DESIGN_CHAIN_CONTRACT",
+        "DURATION_NAR14",
+        "HUMAN_REJUDGE_STILL",
+        "HUMAN_REJUDGE_VIDEO",
+        "VIDEO_HUMAN_REJUDGE",
+        "RECIPE_COLLISION",
+        "EMPTY_OS_ENSEMBLE",
+        "IMPORT_SOFT_ESCAPE",
+        "INTENT_PIC_SYNC",
+        "INTENT_DECAY",
+        "REPAIR_CONFIDENCE",
+        "VIRD_APPLY"
+      ],
+      "status": "planned"
+    }
+  }
+}

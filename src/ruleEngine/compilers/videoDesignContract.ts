@@ -20,29 +20,34 @@ export function audioBodyForMode(input: {
   dialogueLines?: string[];
   sfx?: string | null;
   ambient?: string | null;
+  /** Voice character from generation.audioPrompt — not ambient floor */
+  voiceCharacter?: string | null;
 }): string {
   const dial = (input.dialogueLines ?? [])
     .map((t) => String(t ?? "").trim())
     .filter((t) => t && !isNonLiteraryDialogueKey(t));
   const sfx = String(input.sfx ?? "").trim();
-  const ambient = String(input.ambient ?? "环境底噪").trim();
+  const ambient = String(input.ambient ?? "").trim();
+  const voice = String(input.voiceCharacter ?? "").trim();
   const sfxLine = sfx ? `音效：${sfx}` : "";
+  const voiceLine = voice ? `声线：${voice.slice(0, 80)}` : "";
+  const ambientLine = ambient && ambient !== voice ? ambient : "";
 
   switch (input.audioMode) {
     case "dialogue_lip":
-      if (!dial.length) return `无对白。仅环境音效。\n${sfxLine}`.trim();
-      return `${dial.map((d) => `"${d}"`).join("\n")}\n口型同步开启。\n${sfxLine}`.trim();
+      if (!dial.length) return `无对白。仅环境音效。\n${sfxLine}\n${voiceLine}`.trim();
+      return `${dial.map((d) => `"${d}"`).join("\n")}\n口型同步开启。\n${sfxLine}\n${voiceLine}`.trim();
     case "sfx_peak":
-      return `无对白。仅环境音效。\n${sfxLine || "音效：事件峰"}\n${ambient}`.trim();
+      return `无对白。仅环境音效。\n${sfxLine || "音效：事件峰"}\n${ambientLine}\n${voiceLine}`.trim();
     case "os_or_ambient":
-      if (dial.length) return `${dial.map((d) => `（OS）${d}`).join("\n")}\n${sfxLine}`.trim();
-      return `无对白。仅环境音效。\n${sfxLine}`.trim();
+      if (dial.length) return `${dial.map((d) => `（OS）${d}`).join("\n")}\n${sfxLine}\n${voiceLine}`.trim();
+      return `无对白。仅环境音效。\n${sfxLine}\n${voiceLine}`.trim();
     case "ambient":
-      return `无对白。仅环境音效。\n${sfxLine}\n${ambient}`.trim();
+      return `无对白。仅环境音效。\n${sfxLine}\n${ambientLine || "环境底噪"}\n${voiceLine}`.trim();
     case "dialogue_or_ambient":
     default:
-      if (dial.length) return `${dial.map((d) => `"${d}"`).join("\n")}\n口型同步开启。\n${sfxLine}`.trim();
-      return `无对白。仅环境音效。\n${sfxLine}`.trim();
+      if (dial.length) return `${dial.map((d) => `"${d}"`).join("\n")}\n口型同步开启。\n${sfxLine}\n${voiceLine}`.trim();
+      return `无对白。仅环境音效。\n${sfxLine}\n${voiceLine}`.trim();
   }
 }
 
@@ -197,10 +202,14 @@ export function scrubVideoPromptForBurn(input: {
     prompt = prompt.replace(/口型同步开启。?/g, "");
     changes.push("strip_orphan_lip");
   }
-  // F0 grade is no-VFX — strip mistaken prose echoes
+  // F0 grade is no-VFX — strip mistaken prose echoes + legacy [FX] section
   if (/视觉特效呼应\s*[：:]\s*F0\b/i.test(prompt)) {
     prompt = prompt.replace(/\n?视觉特效呼应\s*[：:]\s*F0[^\n]*/gi, "");
     changes.push("strip_f0_fx_echo");
+  }
+  if (/\[FX\]\s*F0\b/i.test(prompt) || /\[FX\]\s*$/im.test(prompt)) {
+    prompt = prompt.replace(/\n*\[FX\]\s*F0[^\n]*/gi, "").replace(/\n*\[FX\]\s*(?=\n\[|\s*$)/gi, "");
+    changes.push("strip_fx_section_stub");
   }
   return { prompt, changes };
 }

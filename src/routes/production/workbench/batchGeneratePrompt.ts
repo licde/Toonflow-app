@@ -73,21 +73,23 @@ export default router.post(
         }
       }
 
-      // Gate BEFORE 生成中 — warehouse debt soft_defer (同源 pkg SSOT)
+      // heal_then_burn：仓债不硬拒批量提示词
       {
         const { readWarehouseDebtFromPackage, warehouseDebtBlocksVideo } =
           require("@/ruleEngine/bundle/warehouseDebtMeta") as typeof import("@/ruleEngine/bundle/warehouseDebtMeta");
         const debt = readWarehouseDebtFromPackage(pkg);
-        if (warehouseDebtBlocksVideo(debt)) {
-          return res.status(400).send(
-            error("设计/导入仓债未闭，请回 SB Confirm 或增强设计后再批量生成提示词", {
-              code: "WAREHOUSE_DEBT_SOFT_DEFER",
-              decision: "soft_defer",
-              primaryNextStep: "enhance_design",
-              ctaLabel: "增强设计并继续",
-              warehouseDebt: debt,
-            }),
-          );
+        if (warehouseDebtBlocksVideo(debt) && pkg) {
+          const meta = ((pkg as { meta?: Record<string, unknown> }).meta ??= {});
+          meta.lipConfirmRequired = false;
+          meta.importOkNotExitPass = false;
+          meta.irdConfirmRequired = false;
+          meta.implementationDegraded = true;
+          try {
+            const { saveEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
+            await saveEpisodePackage(u.db, pkg);
+          } catch {
+            /* best-effort */
+          }
         }
       }
 
@@ -217,7 +219,7 @@ export default router.post(
                 decision: qd.decision,
                 nextStep: qd.nextStep,
                 reasons: qd.reasons,
-                ctaLabel: qd.envelope?.ctaLabel ?? (burnAllowed ? undefined : "完善后重编译"),
+                ctaLabel: qd.envelope?.ctaLabel ?? (burnAllowed ? undefined : "智能修复"),
                 userMessage: qd.envelope?.userMessage ?? (burnAllowed ? undefined : "提示词已落库但不可烧片"),
               };
             } catch {

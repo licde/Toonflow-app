@@ -167,7 +167,9 @@ export async function mergeAssociateAssetIds(
   const leadCodeSet = new Set((opts?.leadCharCodes ?? []).map((c) => c.toUpperCase()).filter(Boolean));
   // soft_env: keep SCENE codes in resolve so we can append one soft plate later
   const propSoft = (opts?.propSoftCodes ?? []).filter(
-    (c) => /^PROP-/i.test(c) || /纸|信|文书|帕|巾|剑|刀|扳指|戒指|玉佩|道具/.test(c),
+    (c) =>
+      /^PROP-/i.test(c) ||
+      /纸|信|文书|笺|帕|巾|剑|刀|扳指|戒指|玉佩|道具|休书|婚书|信笺/.test(c),
   );
   let codes = [...new Set([...charCodes, ...refs.crefs, ...refs.srefs, ...propSoft])].filter((c) => {
     if (opts?.excludeScene && !softEnv && /^SCENE-/i.test(c)) return false;
@@ -209,8 +211,10 @@ export async function mergeAssociateAssetIds(
   let finalIds = orderedIds;
   let softEnvAssetId: number | undefined;
   let propSoftAssetId: number | undefined;
-  // softEnv hung whenever softEnvRef — NOT only under excludeScene (bend keeps softEnv with excludeScene=false)
-  const needScenePass = Boolean(opts?.excludeScene || softEnv) && finalIds.length > 0;
+  // softEnv / propSoft hung whenever needed — NOT only under excludeScene (bend excludeScene=false)
+  const needPropPass = propSoft.length > 0;
+  const needScenePass =
+    Boolean(opts?.excludeScene || softEnv || needPropPass) && finalIds.length > 0;
   if (needScenePass) {
     const rows = await db("o_assets")
       .whereIn("id", finalIds)
@@ -224,7 +228,11 @@ export async function mergeAssociateAssetIds(
         sceneSet.add(a.id);
         sceneIds.push(a.id);
       }
-      if (/prop|道具|纸|文书|帕|巾|剑|刀|扳指|戒指/i.test(`${a.type ?? ""}${a.remark ?? ""}${a.name ?? ""}`)) {
+      if (
+        /prop|道具|纸|文书|笺|帕|巾|剑|刀|扳指|戒指|休书|婚书|信笺/i.test(
+          `${a.type ?? ""}${a.remark ?? ""}${a.name ?? ""}`,
+        )
+      ) {
         propRows.push(a);
       }
       if (
@@ -244,12 +252,17 @@ export async function mergeAssociateAssetIds(
       const drop = new Set(charLikeIds.filter((id) => id !== keepChar));
       finalIds = finalIds.filter((id) => !drop.has(id));
     }
-    // PROP soft plate after identity, before soft env
-    if (opts?.excludeScene && (propRows.length || propSoft.length)) {
+    // PROP soft plate whenever propSoft codes / prop rows — bend path included
+    // SingleShotClosed: never promote associate paper rows when propSoft codes empty (oral)
+    if (propSoft.length > 0 && (propRows.length || propSoft.length)) {
       propSoftAssetId = propRows[0]?.id;
       if (propSoftAssetId && !finalIds.includes(propSoftAssetId)) {
         finalIds.push(propSoftAssetId);
       }
+    } else if (!propSoft.length && propRows.length) {
+      // Strip undeclared prop associates from finalIds (oral / no prop codes)
+      const propSet = new Set(propRows.map((p) => p.id));
+      finalIds = finalIds.filter((id) => !propSet.has(id));
     }
     // soft_env: one SCENE plate (禁灰棚；禁建立镜头抢戏) — also when keepSoftEnvRef without excludeScene
     if (softEnv && sceneIds.length) {

@@ -1,0 +1,19 @@
+{
+  "id": "still_contact_softenv_accept_bar_v1",
+  "samplesRequired": 5,
+  "liveEnv": "STILL_ACTUATOR_LIVE=1",
+  "keyRequired": false,
+  "onFail": "edit_workflow_not_seedream_bans",
+  "humanChecklist": [
+    { "id": "no_gray_studio", "label": "非灰棚/白棚" },
+    { "id": "no_held_card_scroll_book", "label": "非手持大卡片/卷轴/书本" },
+    { "id": "pose_not_held_card", "label": "姿态非胸前展示卡/挡脸举物" },
+    { "id": "cheek_paper_geom", "label": "颊触纸角几何" },
+    { "id": "costume_match_silhouette", "label": "定妆上身剪影大体相符（寝衣/斗篷等）" },
+    { "id": "no_bake_collage", "label": "无 bake 拼贴伪影" }
+  ],
+  "deferred": [
+    { "id": "glyph_readable", "label": "字形可读（第二刀 inpaint，不挡第一刀）" }
+  ],
+  "notes": "VLM optional column when Key present; absence is not process failure. First knife: geom+costume+no held card; glyph deferred."
+}

@@ -56,7 +56,15 @@ export async function persistSplitTripleAtomic(input: {
   if (syncStoryboard && scriptId) {
     const panels = preDesignShotsToPanels(rebound.shots as PreDesignShot[], { enrichFromDesign: true });
     try {
-      syncResult = await syncStoryboardToDb(db, projectId, scriptId, panels, { preserveMedia: true });
+      const sync = await syncStoryboardToDb(db, projectId, scriptId, panels, { preserveMedia: true });
+      syncResult = sync;
+      // SingleShotClosed bind: stamp DB storyboardId onto every split shot
+      for (let i = 0; i < rebound.shots.length; i++) {
+        const sid = sync.panels[i]?.id;
+        if (sid != null) {
+          (rebound.shots[i] as { storyboardId?: number }).storyboardId = Number(sid);
+        }
+      }
     } catch (e) {
       return {
         ok: false,

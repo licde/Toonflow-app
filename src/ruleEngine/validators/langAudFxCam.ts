@@ -11,7 +11,8 @@ export interface GateFinding {
 }
 
 const EN_SPOKEN =
-  /\b(he said|she said|I am|I'm|you are|we're|hello|please|thank you|yes\.|no\.|what are you|I love you|don't|won't|can't)\b/i;
+  /\b(he said|she said|says\s+["“]|I am|I'm|you are|we're|hello|please|thank you|yes\.|no\.|what are you|I love you|don't|won't|can't)\b/i;
+const EN_DIALOGUE_WRAPPER = /\bsays\s+["“「]|["”」]\s*\(dialogue\)|\(dialogue\)/i;
 const CJK = /[\u4e00-\u9fff]/;
 /** Quoted Latin dialogue-like spans (likely translated lines). */
 const QUOTED_EN_DIALOGUE = /["「]([A-Za-z][^"」]{8,})["」]/;
@@ -61,11 +62,13 @@ export function checkLangVid01(input: {
   if (!CJK.test(dialogue)) return null;
 
   const audioSection = video.match(/\[Audio\]([\s\S]*?)(?=\[Narrative\]|$)/i)?.[1] ?? video;
+  // Mixed CJK+EN wrappers still BLOCK (says / (dialogue) / he said)
+  const wrapperHit = EN_DIALOGUE_WRAPPER.test(audioSection) || /\b(he said|she said)\b/i.test(audioSection);
   const spokenHit = EN_SPOKEN.test(audioSection) && !CJK.test(audioSection);
   const quoted = QUOTED_EN_DIALOGUE.exec(audioSection);
   const taggedEn = AUDIO_EN_BLOCK.test(audioSection);
 
-  if (spokenHit || quoted || taggedEn) {
+  if (spokenHit || quoted || taggedEn || wrapperHit) {
     const sample = (quoted?.[1] ?? audioSection.replace(/\s+/g, " ").trim()).slice(0, 60);
     return {
       ruleId: "LANG-01",
@@ -73,7 +76,7 @@ export function checkLangVid01(input: {
       message: `镜 ${input.shotIndex ?? "?"} 中文台词被写成英文出现在 videoPrompt（禁译进 VID）`,
       shotIndex: input.shotIndex,
       reverseTrigger: "lang_vid_mismatch",
-      evidence: { sample, sourceHasCjk: true },
+      evidence: { sample, sourceHasCjk: true, mixedWrapper: wrapperHit },
     };
   }
   return null;

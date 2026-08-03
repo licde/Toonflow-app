@@ -248,7 +248,7 @@ export function applyAudioStrengthenToPrompt(
       .replace(/No spoken dialogue[^.]*\.?/gi, "")
       .trim();
     if (!/\[Audio\]/i.test(text) && /dialogue|台词|对白/i.test(text) === false) {
-      text = `${text}\n[Audio] spoken dialogue required; no silence template.`.trim();
+      text = `${text}\n[Audio]\n须有对白，禁止静音模板。`.trim();
     }
   }
   if (s.lipSyncPolicy) {

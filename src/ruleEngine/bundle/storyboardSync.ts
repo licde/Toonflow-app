@@ -22,7 +22,7 @@ export async function syncStoryboardToDb(
   projectId: number,
   scriptId: number,
   panels: StoryboardPanelInput[],
-  opts?: { replaceAll?: boolean; preserveMedia?: boolean },
+  opts?: { replaceAll?: boolean; preserveMedia?: boolean; pruneOrphans?: boolean },
 ): Promise<StoryboardSyncResult> {
   const idMap: Record<string, number> = {};
   let mediaPreservedCount = 0;
@@ -177,24 +177,24 @@ export async function syncStoryboardToDb(
     });
   }
 
-  // Non-replaceAll expand: prune orphan parent storyboard/videoTrack rows not in live panel set
+  // Non-replaceAll expand: prune orphan storyboard/videoTrack rows not in live panel set
   if (!opts?.replaceAll && panels.length) {
     const keepIds = new Set(resultPanels.map((p) => p.id).filter(Boolean) as number[]);
     const keepFlows = new Set(
       resultPanels.map((p) => p.flowId).filter((f): f is number => typeof f === "number" && f > 0),
     );
+    const splitish = panels.some(
+      (p) =>
+        Boolean((p as { _stillBeatSplitId?: string })._stillBeatSplitId) ||
+        Boolean((p as { _visualSplitId?: string })._visualSplitId) ||
+        Boolean((p as { _litXorSplitId?: string })._litXorSplitId) ||
+        Boolean((p as { burnParentForbidden?: boolean }).burnParentForbidden),
+    );
     const orphans = existingRows.filter((r) => {
       if (!r.id || keepIds.has(r.id)) return false;
       if (r.flowId && keepFlows.has(Number(r.flowId))) return false;
-      // Only prune when panels look like a split (child markers present)
-      const splitish = panels.some(
-        (p) =>
-          Boolean((p as { _stillBeatSplitId?: string })._stillBeatSplitId) ||
-          Boolean((p as { _visualSplitId?: string })._visualSplitId) ||
-          Boolean((p as { _litXorSplitId?: string })._litXorSplitId) ||
-          Boolean((p as { burnParentForbidden?: boolean }).burnParentForbidden),
-      );
-      return splitish;
+      // Default: only prune on split expand; resyncFromTable sets pruneOrphans
+      return Boolean(opts?.pruneOrphans) || splitish;
     });
     if (orphans.length) {
       const orphanIds = orphans.map((r) => r.id!);
@@ -214,34 +214,70 @@ export async function syncStoryboardToDb(
   return { panels: resultPanels, idMap, mediaPreservedCount };
 }
 
+/**
+ * One panel = one track. Never collapse empty/`"1"` tracks across panels;
+ * split already-merged rows that share a trackId.
+ */
 async function assignTrackIds(db: Knex, scriptId: number, projectId: number) {
   const rows = await db("o_storyboard").where({ scriptId, projectId }).orderBy("index", "asc");
-  const byTrack: Record<string, number[]> = {};
-  const byTrackVideoDesc: Record<string, string> = {};
+  const usedKeys = new Set<string>();
+  const trackIdOwners = new Map<number, number>(); // trackId → first storyboard id
+
   for (const row of rows) {
-    const t = row.track ?? "1";
-    if (!byTrack[t]) byTrack[t] = [];
-    byTrack[t].push(row.id!);
-    if (!byTrackVideoDesc[t] && row.videoDesc) byTrackVideoDesc[t] = String(row.videoDesc);
-  }
-  for (const track of Object.keys(byTrack)) {
-    const ids = byTrack[track]!;
-    const trackDuration = rows.filter((r) => r.track === track).reduce((s, r) => s + Number(r.duration || 0), 0);
-    const existing = await db("o_storyboard").where({ scriptId, projectId, track }).whereNotNull("trackId").first();
-    let trackId: number;
-    if (existing?.trackId) {
-      trackId = existing.trackId;
-      const update: Record<string, unknown> = { duration: trackDuration };
-      if (byTrackVideoDesc[track]) {
-        const trackRow = await db("o_videoTrack").where("id", trackId).select("prompt").first();
-        if (!trackRow?.prompt?.trim()) update.prompt = byTrackVideoDesc[track];
-      }
-      await db("o_videoTrack").where("id", trackId).update(update);
-    } else {
-      trackId = Date.now() + Math.floor(Math.random() * 1000);
-      await db("o_videoTrack").insert({ id: trackId, scriptId, projectId, duration: trackDuration, prompt: byTrackVideoDesc[track] ?? "" });
+    if (row.id == null) continue;
+    let trackKey = String(row.track ?? "").trim();
+    const collapseKey = !trackKey || trackKey === "1";
+    if (collapseKey || usedKeys.has(trackKey)) {
+      trackKey = String(row.index ?? row.id);
+      if (usedKeys.has(trackKey)) trackKey = `${trackKey}-${row.id}`;
     }
-    await db("o_storyboard").whereIn("id", ids).update({ trackId });
+    usedKeys.add(trackKey);
+
+    const duration = Number(row.duration || 0) || 3;
+    const videoDesc = String(row.videoDesc ?? "");
+    let trackId = row.trackId != null && Number.isFinite(Number(row.trackId)) ? Number(row.trackId) : undefined;
+
+    // Split merged tracks: second+ panel sharing same trackId gets a fresh track
+    if (trackId != null) {
+      const owner = trackIdOwners.get(trackId);
+      if (owner != null && owner !== row.id) {
+        trackId = undefined;
+      } else {
+        trackIdOwners.set(trackId, row.id);
+      }
+    }
+
+    if (trackId == null) {
+      const existingOnKey = await db("o_storyboard")
+        .where({ scriptId, projectId, track: trackKey })
+        .whereNotNull("trackId")
+        .whereNot("id", row.id)
+        .first();
+      // Do not reuse another panel's trackId even on same key after remap
+      if (existingOnKey?.trackId && !trackIdOwners.has(Number(existingOnKey.trackId))) {
+        trackId = Number(existingOnKey.trackId);
+        trackIdOwners.set(trackId, row.id);
+      } else {
+        trackId = Date.now() + Math.floor(Math.random() * 1000);
+        await db("o_videoTrack").insert({
+          id: trackId,
+          scriptId,
+          projectId,
+          duration,
+          prompt: videoDesc,
+        });
+        trackIdOwners.set(trackId, row.id);
+      }
+    } else {
+      const update: Record<string, unknown> = { duration };
+      const trackRow = await db("o_videoTrack").where("id", trackId).select("prompt").first();
+      if (videoDesc && !trackRow?.prompt?.trim()) update.prompt = videoDesc;
+      await db("o_videoTrack").where("id", trackId).update(update);
+    }
+
+    const patch: Record<string, unknown> = { trackId };
+    if (String(row.track ?? "") !== trackKey) patch.track = trackKey;
+    await db("o_storyboard").where({ id: row.id }).update(patch);
   }
 }
 

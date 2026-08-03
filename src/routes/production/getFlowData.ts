@@ -186,13 +186,61 @@ export default router.post(
                 assets2StoryboardMap[i.id!] ?? [],
                 i.prompt ?? "",
                 (extra as { charCodes?: string[] } | undefined)?.charCodes ?? [],
+                undefined,
+                undefined,
+                (() => {
+                  try {
+                    const { resolvePropSoftCodes } =
+                      require("@/ruleEngine/compilers/eventPlateReadiness") as typeof import("@/ruleEngine/compilers/eventPlateReadiness");
+                    const propSoftCodes = resolvePropSoftCodes({ visualDescription: i.prompt ?? "" });
+                    return propSoftCodes.length ? { propSoftCodes, softEnvRef: true } : { softEnvRef: true };
+                  } catch {
+                    return { softEnvRef: true };
+                  }
+                })(),
               );
+              let displayNo = (i.index != null ? Number(i.index) + 1 : 1);
+              let badge = `S${String(displayNo).padStart(2, "0")}`;
+              try {
+                const { storyboardDisplayNo, formatStoryboardBadge } =
+                  require("@/ruleEngine/compilers/storyboardDisplaySsot") as typeof import("@/ruleEngine/compilers/storyboardDisplaySsot");
+                displayNo = storyboardDisplayNo({ index: i.index });
+                badge = formatStoryboardBadge(displayNo);
+              } catch {
+                /* keep */
+              }
+              const associateAssetSrcs: Record<number, string> = {};
+              try {
+                const needUrls = refMerge.assetIds.filter((id) => id);
+                if (needUrls.length) {
+                  const rows = await u
+                    .db("o_assets")
+                    .leftJoin("o_image", "o_assets.imageId", "o_image.id")
+                    .whereIn("o_assets.id", needUrls)
+                    .select("o_assets.id", "o_image.filePath");
+                  for (const r of rows as { id: number; filePath?: string }[]) {
+                    if (r.filePath) {
+                      try {
+                        associateAssetSrcs[r.id] = await u.oss.getSmallImageUrl(r.filePath);
+                      } catch {
+                        /* skip */
+                      }
+                    }
+                  }
+                }
+              } catch {
+                /* optional */
+              }
               return {
                 id: i.id,
                 index: i.index,
+                displayNo,
+                badge,
                 duration: i.duration ? +i.duration : 0,
                 prompt: i.prompt,
                 associateAssetsIds: refMerge.assetIds,
+                associateAssetSrcs,
+                propSoftAssetId: refMerge.propSoftAssetId,
                 referenceWarnings: refMerge.warnings,
                 src: i.filePath,
                 state: i.state,
@@ -207,6 +255,38 @@ export default router.post(
             }),
           )
         ).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+        // VIS-SYNC-DRIFT: table rows vs live panels
+        try {
+          const { parseStoryboardTable } =
+            require("@/ruleEngine/parsers/storyboardTableParser") as typeof import("@/ruleEngine/parsers/storyboardTableParser");
+          const { detectVisSyncDrift } =
+            require("@/ruleEngine/compilers/storyboardDisplaySsot") as typeof import("@/ruleEngine/compilers/storyboardDisplaySsot");
+          const { normalizeStoryboardTableMd } =
+            require("@/ruleEngine/parsers/normalizeStoryboardTableMd") as typeof import("@/ruleEngine/parsers/normalizeStoryboardTableMd");
+          let tableMd = String(flowData.storyboardTable ?? "");
+          if (tableMd.trim()) {
+            const healed = normalizeStoryboardTableMd(tableMd);
+            if (healed !== tableMd) {
+              tableMd = healed;
+              flowData.storyboardTable = healed;
+            }
+          }
+          const tableRows = tableMd.trim() ? parseStoryboardTable(tableMd) : [];
+          const drift = detectVisSyncDrift({
+            tableRowCount: tableRows.length,
+            panels: flowData.storyboard ?? [],
+          });
+          flowData.visSyncDrift = drift;
+          if (drift.drifted) {
+            flowData.visSyncDebt = {
+              code: "VIS-SYNC-DRIFT",
+              message: drift.message,
+              ctaLabel: drift.ctaLabel,
+            };
+          }
+        } catch {
+          /* optional */
+        }
         flowData.script = scriptData?.content ?? "";
         res.status(200).send(success(flowData));
       } catch (err) {

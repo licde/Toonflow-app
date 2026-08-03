@@ -222,6 +222,9 @@ function loadMatrix(doctrine?: LiteraryIntentDoctrine): Record<StillIntentClass,
   return out;
 }
 
+const ECU_MOUTH =
+  /唇部特写|咬唇|紧咬下唇|lip_bite|渗出血珠|口鼻特写|大特写.?唇|局部特写.?唇/i;
+
 function deriveRecipeMode(
   framing: string,
   seating: boolean,
@@ -231,6 +234,8 @@ function deriveRecipeMode(
 ): StillRecipeShotMode {
   if (EMPTY_SHOT.test(framing)) return "empty";
   if (OS_VO.test(framing) && !handCuExplicit) return "os_vo";
+  // Oral / lips insert before mid-wide seating collapse
+  if (ECU_MOUTH.test(framing) && !/弯腰|捡起|休书/.test(framing)) return "ecu_mouth";
   if (seating || isMidWideShotSize(shotSize, doctrine)) {
     if (ECU_FACE.test(framing) && !seating) return "ecu_face";
     return "face_or_scene";
@@ -239,6 +244,7 @@ function deriveRecipeMode(
   if (PROP_CU.test(framing)) return "prop_cu";
   if (ECU_FACE.test(framing)) return "ecu_face";
   if (isCuShotSize(shotSize, doctrine) && handCuExplicit) return "hand_cu";
+  if (isCuShotSize(shotSize, doctrine) && ECU_MOUTH.test(framing)) return "ecu_mouth";
   return "face_or_scene";
 }
 
@@ -265,6 +271,10 @@ function pickIntentClass(input: {
   if (input.recipeMode === "prop_cu") {
     reasons.push("prop_cu");
     return { intentClass: "prop_cu", confidence: "high", reasons };
+  }
+  if (input.recipeMode === "ecu_mouth") {
+    reasons.push("ecu_mouth");
+    return { intentClass: "ecu_face", confidence: "high", reasons };
   }
   // True seating (furniture / power signals) wins over action extract
   if (input.seating) {

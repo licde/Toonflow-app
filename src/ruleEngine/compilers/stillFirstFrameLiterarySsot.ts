@@ -59,6 +59,7 @@ export const ACTION_PRIMARY_SURVIVE_STEMS = /弯腰|捡起|捡|捏紧|指节|俯
 
 /**
  * True when previous/continuity body carries neighbor mouth/CU atoms absent from current VD.
+ * Also bidirectional: mouth-CU current must drop action/paper previous (SingleShotClosedCompose).
  */
 export function previousBodyHasOffBeatContamination(
   previous?: string | null,
@@ -83,6 +84,19 @@ export function previousBodyHasOffBeatContamination(
     const needGrip = /捏紧|指节/.test(vd);
     if (needPickup && !/捡|弯腰|俯身/.test(prev)) return true;
     if (needGrip && !/捏紧|指节|捏/.test(prev)) return true;
+  }
+  // Reverse: mouth-CU / lip beat must not refine from bend/paper neighbor soup
+  const mouthCu =
+    OFF_BEAT_MOUTH_CU_ATOMS.test(vd) ||
+    (/特写|近景|CU|ecu/i.test(vd) && /唇|咬|渗血|眼神|面颊/.test(vd) && !ACTION_PRIMARY_SURVIVE_STEMS.test(vd));
+  if (mouthCu) {
+    if (/弯腰|捡起|捡|捏紧|指节|俯身|休书|婚书|信笺/.test(prev) && !/弯腰|捡|捏紧|休书|信笺/.test(vd)) {
+      return true;
+    }
+    if (OFF_BEAT_HOLD_CARD_ATOMS.test(prev) && !OFF_BEAT_HOLD_CARD_ATOMS.test(vd)) return true;
+  }
+  if (/镜头\s*[0-9０-９]+|shot\s*#?\s*\d+/i.test(prev) && !/镜头\s*[0-9０-９]+|shot\s*#?\s*\d+/i.test(vd)) {
+    return true;
   }
   return false;
 }

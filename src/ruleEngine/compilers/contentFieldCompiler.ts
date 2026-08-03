@@ -97,9 +97,16 @@ export function compileFx(fx?: string | null): string {
 export function compileDialogue(text?: string | null, speaker?: string | null): string {
   if (!text?.trim()) return "";
   const line = text.trim();
-  if (/^["「]|dialogue/i.test(line)) return speaker ? `${speaker}: ${line}` : line;
+  // Already quoted CJK / Chinese shell — never wrap with EN "says … (dialogue)"
+  if (/^["「]|dialogue/i.test(line) || /[\u4e00-\u9fff]/.test(line)) {
+    const quoted =
+      line.startsWith("「") || line.startsWith('"') || line.startsWith("“")
+        ? line
+        : `"${line.replace(/^["「]|["」]$/g, "")}"`;
+    return speaker ? `${speaker}：${quoted}` : quoted;
+  }
   const quoted = line.includes('"') || line.includes("「") ? line : `"${line}"`;
-  return speaker ? `${speaker} says ${quoted} (dialogue)` : `${quoted} (dialogue)`;
+  return speaker ? `${speaker}：${quoted}` : quoted;
 }
 
 export function compileLipSync(
@@ -117,8 +124,10 @@ export function compileLipSync(
 export function compileVoice(voice?: string | null, hasDialogue?: boolean): string {
   if (!hasDialogue && !voice?.trim()) return "";
   const v = voice?.trim();
-  if (!v) return hasDialogue ? "voice:default character timbre" : "";
-  return /^voice:/i.test(v) ? v : `voice:${v}`;
+  if (!v) return hasDialogue ? "声线：角色本色" : "";
+  if (/^voice:/i.test(v)) return `声线：${v.replace(/^voice:\s*/i, "")}`;
+  if (/^声线[：:]/.test(v)) return v;
+  return `声线：${v}`;
 }
 
 export function compileSfx(sfx?: string | null): string {

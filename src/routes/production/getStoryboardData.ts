@@ -74,6 +74,25 @@ export default router.post(
           scriptId: item.scriptId ?? undefined,
           characters: charactersWithUrl,
           index: item.index,
+          displayNo: (() => {
+            try {
+              const { storyboardDisplayNo } =
+                require("@/ruleEngine/compilers/storyboardDisplaySsot") as typeof import("@/ruleEngine/compilers/storyboardDisplaySsot");
+              return storyboardDisplayNo({ index: item.index });
+            } catch {
+              return item.index != null ? Number(item.index) + 1 : undefined;
+            }
+          })(),
+          badge: (() => {
+            try {
+              const { storyboardDisplayNo, formatStoryboardBadge } =
+                require("@/ruleEngine/compilers/storyboardDisplaySsot") as typeof import("@/ruleEngine/compilers/storyboardDisplaySsot");
+              return formatStoryboardBadge(storyboardDisplayNo({ index: item.index }));
+            } catch {
+              const n = item.index != null ? Number(item.index) + 1 : 1;
+              return `S${String(n).padStart(2, "0")}`;
+            }
+          })(),
         };
       }),
     );

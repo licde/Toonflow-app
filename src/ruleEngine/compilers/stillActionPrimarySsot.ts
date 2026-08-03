@@ -215,14 +215,30 @@ export function resolveActionPrimaryHit(input: {
   if (input.hasSeatingOrKneel || hasSeatingHardFurniture(text)) {
     return { hit: false, verbs: [], sources: ["seating_hard_block"] };
   }
+  // Oral / lip_bite micro is not bend/paper action-primary (SingleShotClosedCompose)
+  try {
+    const { isOralMicroNotActionPrimary } =
+      require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
+    if (isOralMicroNotActionPrimary(text)) {
+      return { hit: false, verbs: [], sources: ["oral_micro_not_action"] };
+    }
+  } catch {
+    if (
+      /咬唇|紧咬下唇|渗血|lip_bite|唇瓣/.test(text) &&
+      /特写|CU|近景/i.test(text) &&
+      !/弯腰|捡起|捏紧|俯身/.test(text)
+    ) {
+      return { hit: false, verbs: [], sources: ["oral_micro_not_action"] };
+    }
+  }
 
   const doctrine = input.doctrine ?? loadLiteraryIntentDoctrine();
-  const seeds = seedList(doctrine, input.extraLexicon);
+  const seeds = seedList(doctrine, input.extraLexicon).filter((s) => s !== "咬");
   const verbs = extractVdDeclaredActionVerbs(text, {
     castNames: input.castNames,
     doctrine,
     extraLexicon: input.extraLexicon,
-  });
+  }).filter((v) => v !== "咬" && !/^咬/.test(v));
   if (!verbs.length) return { hit: false, verbs: [], sources: [] };
 
   const sources: string[] = [];

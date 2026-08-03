@@ -72,6 +72,56 @@ export async function composeAndPersistStillPrompt(
     referenceUrlCount: input.referenceUrlCount ?? 0,
     purpose: "compose",
   });
+  // Path parity with generate: closed bind + inject ⊆ this-shot atoms
+  try {
+    const { assertSingleShotClosedInputs, filterInjectToDeclaredAtoms, stripForeignBeatAtomsFromEgress } =
+      await import("./singleShotClosedCompose");
+    const closed = assertSingleShotClosedInputs({
+      storyboardId: input.storyboardId,
+      boundShotIndex: (ctx as { boundShotIndex?: number }).boundShotIndex,
+      bindOk: (ctx as { bindOk?: boolean }).bindOk !== false,
+      bindCode: (ctx as { bindCode?: string }).bindCode,
+      visualDescription: ctx.visualDescription,
+      purpose: "compose",
+    });
+    if ((ctx as { bindOk?: boolean }).bindOk === false) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          prompt: "",
+          visualBody: "",
+          didSynthesize: false,
+          scrubbed: false,
+          composeMode: input.mode ?? "full",
+          sources: ["persist.closed.bindFail"],
+          warnings: closed.reasons,
+          entityAnchors: [],
+          compositionContractApplied: false,
+          complianceHit: false,
+          qp02Blocked: true,
+          missingLeadAsset: false,
+          dirtyInput: true,
+          blockReason: closed.code || "BIND_SHOT_MISMATCH",
+          userMessage: closed.userMessage || "分镜未绑定到正确的单镜设计包",
+          ctaLabel: closed.ctaLabel,
+        },
+        blockReason: closed.code || "BIND_SHOT_MISMATCH",
+      };
+    }
+    (ctx as { closedCompose?: boolean }).closedCompose = closed.closedCompose;
+    if (ctx.strengthen) {
+      const filtered: Record<string, string> = {};
+      for (const [k, v] of Object.entries(ctx.strengthen)) {
+        const kept = filterInjectToDeclaredAtoms([String(v)], ctx.visualDescription);
+        if (kept.length) filtered[k] = kept[0]!;
+      }
+      ctx.strengthen = Object.keys(filtered).length ? filtered : null;
+    }
+    void stripForeignBeatAtomsFromEgress;
+  } catch {
+    /* optional closed module */
+  }
   const currentHash = computeComposeHash(ctx);
   let litHash = "";
   try {
@@ -189,6 +239,20 @@ export async function composeAndPersistStillPrompt(
     const { homologizeStillPromptForStore } =
       require("./stillPromptHomology") as typeof import("./stillPromptHomology");
     promptToStore = homologizeStillPromptForStore(promptToStoreRaw).prompt || promptToStoreRaw;
+  } catch {
+    /* optional */
+  }
+  try {
+    const { stripForeignBeatAtomsFromEgress } =
+      require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
+    const scrubbed = stripForeignBeatAtomsFromEgress(promptToStore, ctx.visualDescription);
+    promptToStore = scrubbed.text;
+    if (scrubbed.stripped.length) {
+      result = {
+        ...result,
+        sources: [...(result.sources ?? []), ...scrubbed.stripped.map((s) => `closed.strip:${s}`)],
+      };
+    }
   } catch {
     /* optional */
   }

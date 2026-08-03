@@ -28,7 +28,14 @@ export function applyLifecycleInvalidation(
     case "asset_look_changed":
     case "shot_visual_changed":
       return {
-        stillMeta: invalidateStillQuality(currentStill),
+        stillMeta: {
+          ...invalidateStillQuality(currentStill),
+          // Clear prior vendor egress so FE/refine cannot recycle neighbor soup
+          promptUsed: undefined,
+          vendorPromptUsed: undefined,
+          composeMode: undefined,
+          composedAt: undefined,
+        },
         dirty: ["still", "prompt", "video", "qc"],
         primaryNextStep: "regen_storyboard_hq",
       };

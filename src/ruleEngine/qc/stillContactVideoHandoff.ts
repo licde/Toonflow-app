@@ -1,6 +1,7 @@
 /**
  * Still prop-in-frame ↔ video contact-event handoff gate (pre-burn).
- * Blocks occupancy debt and realization-degraded bend I2V inherit.
+ * Intent-first: pose realizationDegraded / occupancy kneel debt → WARN, never BLOCK burn.
+ * True missing prop on cheek-contact events still BLOCKs.
  */
 import {
   isContactEventVd,
@@ -25,7 +26,7 @@ export function assertStillContactVideoHandoff(input: {
     | "still_video_contact_handoff"
     | "still_weak_or_contam"
     | "still_occupancy_miss";
-  primaryNextStep?: "regen_storyboard_hq" | "confirm_enhance";
+  primaryNextStep?: "regen_storyboard_hq" | "confirm_enhance" | "burn";
   missingSlots?: string[];
 } {
   const meta = input.stillMeta ?? {};
@@ -42,7 +43,7 @@ export function assertStillContactVideoHandoff(input: {
           String(s),
         ),
       ));
-  // Literary primary effects unqualified → block green inherit (even if Key-absent unmeasured)
+  // Literary primary effects unqualified → WARN absorb (intent-first; not hard block burn)
   if (meta.literaryEffectsQualified === false) {
     const miss = Array.isArray(meta.missingEffects)
       ? (meta.missingEffects as Array<string | { id?: string }>)
@@ -51,15 +52,15 @@ export function assertStillContactVideoHandoff(input: {
           .slice(0, 4)
       : [];
     return {
-      ok: false,
-      severity: "BLOCK",
+      ok: true,
+      severity: "WARN",
       code: "STILL-OCCUPANCY-HANDOFF",
       reverseTrigger: "still_occupancy_miss",
-      primaryNextStep: "regen_storyboard_hq",
+      primaryNextStep: "burn",
       missingSlots: miss.length ? miss : ["literary_effects"],
       message: miss.length
-        ? `静帧文学主效果未达（${miss.join("、")}），禁止视频绿继承；请继续生成智能修`
-        : "静帧文学主效果未达，禁止视频绿继承；请继续生成智能修",
+        ? `静帧文学主效果未尽（${miss.join("、")}）·可烧视频（设计意图优先）`
+        : "静帧文学主效果未尽·可烧视频（设计意图优先）",
     };
   }
   const weakMarked =
@@ -73,26 +74,54 @@ export function assertStillContactVideoHandoff(input: {
       meta.literaryEffectsQualified !== true);
   if (contam || weakMarked) {
     return {
-      ok: false,
-      severity: "BLOCK",
+      ok: true,
+      severity: "WARN",
       code: "STILL-WEAK-HANDOFF",
       reverseTrigger: "still_weak_or_contam",
-      primaryNextStep: "regen_storyboard_hq",
+      primaryNextStep: "burn",
       missingSlots: contam
         ? (["beatIsolation", contamClass && contamClass !== "none" ? contamClass : "contamination"].filter(
             Boolean,
           ) as string[])
         : ["visualPass"],
       message: contam
-        ? `静帧存在跨镜污染/弱文学标记${contamClass && contamClass !== "none" ? `（${contamClass}）` : ""}，禁止视频绿继承；请 full 重出本拍可拍首帧`
-        : "静帧未 hq_ok/visualPass（draft≠hq_ok），禁止视频绿继承",
+        ? `静帧污染/弱标记已记账${contamClass && contamClass !== "none" ? `（${contamClass}）` : ""}·可烧视频`
+        : "静帧弱/draft 已记账·可烧视频（设计意图优先）",
+    };
+  }
+  if (meta.closedCompose === false) {
+    return {
+      ok: true,
+      severity: "WARN",
+      code: "STILL-WEAK-HANDOFF",
+      reverseTrigger: "still_weak_or_contam",
+      primaryNextStep: "burn",
+      missingSlots: ["closedCompose"],
+      message: "单镜封闭未尽·可烧视频（设计意图优先）",
+    };
+  }
+  const missingFx = Array.isArray(meta.missingEffects)
+    ? (meta.missingEffects as Array<string | { id?: string; reason?: string }>)
+    : [];
+  const forbiddenPaper = missingFx.some((m) => {
+    const reason = typeof m === "string" ? m : String(m?.reason ?? m?.id ?? "");
+    return /forbidden_undeclared_paper|framing_too_wide_oral/.test(reason);
+  });
+  if (forbiddenPaper || String(meta.contaminationClass ?? "") === "undeclared_prop") {
+    return {
+      ok: true,
+      severity: "WARN",
+      code: "STILL-WEAK-HANDOFF",
+      reverseTrigger: "still_weak_or_contam",
+      primaryNextStep: "burn",
+      missingSlots: ["forbidden_undeclared_prop"],
+      message: "未声明道具/景别债已记账·可烧视频",
     };
   }
 
   const vd = String(input.visualDescription ?? "").trim();
   const still = `${input.stillPrompt ?? ""} ${JSON.stringify(meta)}`;
 
-  // Realization ladder: degraded occupancy must not green-inherit bend I2V
   const seal = meta.primaryIntentSeal as
     | {
         poseOccupancy?: string;
@@ -113,19 +142,20 @@ export function assertStillContactVideoHandoff(input: {
     meta.realizationDegraded === true ||
     seal?.realizationDegraded === true ||
     (intentBend && realizationOcc.length > 0 && realizationOcc !== "bend_pickup");
+
+  // Intent-first: pose degrade is ledger only — never BLOCK burn
   if (intentBend && realizationDegraded) {
     return {
-      ok: false,
-      severity: "BLOCK",
+      ok: true,
+      severity: "WARN",
       code: "STILL-OCCUPANCY-HANDOFF",
       reverseTrigger: "still_occupancy_miss",
-      primaryNextStep: "regen_storyboard_hq",
-      missingSlots: ["realizationOccupancy", "i2v.motion_from_still"],
-      message: `实现占用已降级（${realizationOcc || "non_bend"}），禁止视频绿继承弯腰捡拾动作；可 draft 或重拍姿态`,
+      primaryNextStep: "burn",
+      missingSlots: ["realizationOccupancy"],
+      message: `姿态债：弯腰→${realizationOcc || "跪持/站持"} · 意图仍弯腰 · 可烧视频`,
     };
   }
 
-  // Occupancy debt — applies to action_primary / bend_pickup even without contact event
   const wantsBend = /弯腰|捡起|俯身捡|捡纸/.test(vd);
   const dip = meta.designIntentProfile as { poseOccupancy?: string } | undefined;
   const poseEv = String(
@@ -136,7 +166,6 @@ export function assertStillContactVideoHandoff(input: {
   );
   const occupancyBad =
     wantsBend &&
-    meta.realizationDegraded !== true &&
     (meta.debtKind === "action_misfire" ||
       poseEv === "lean_table" ||
       poseEv === "upright_desk" ||
@@ -146,14 +175,19 @@ export function assertStillContactVideoHandoff(input: {
         (meta.missingSlots as string[]).some((s) => /occupancy|action_misfire|pickup/i.test(String(s)))));
   if (occupancyBad) {
     return {
-      ok: false,
-      severity: "BLOCK",
+      ok: true,
+      severity: "WARN",
       code: "STILL-OCCUPANCY-HANDOFF",
       reverseTrigger: "still_occupancy_miss",
-      primaryNextStep: "regen_storyboard_hq",
+      primaryNextStep: "burn",
       missingSlots: ["poseOccupancy", "action_grip"],
-      message: "动作占位债未清（弯腰捡≠桌靠/跪坐）；禁止视频绿继承，请重出占位正确的静照",
+      message: "动作占位债已记账 · 意图仍弯腰捡拾 · 可烧视频",
     };
+  }
+
+  // Ground bend_pickup dominates: do not apply cheek-contact hard gates
+  if (intentBend || seal?.poseOccupancy === "bend_pickup") {
+    return { ok: true, severity: "ok" };
   }
 
   if (!isContactEventVd(vd)) {
@@ -193,22 +227,28 @@ export function assertStillContactVideoHandoff(input: {
   const heldCard =
     poseClass === "held_card" ||
     Boolean(meta.poseHandoffBlocked) ||
-    meta.propPlateGrade === "synthetic_geometry" ||
-    glyphDebt ||
     (/手持卡片|挡脸举物|胸前展示/.test(still) && !/禁止手持卡片/.test(still));
-  if (heldCard) {
+  // synthetic_geometry + glyph OK for readable 休书 — intent-first allow WARN
+  if (heldCard && !glyphDebt) {
     return {
       ok: false,
       severity: "BLOCK",
       code: "STILL-CONTACT-HANDOFF",
       reverseTrigger: "still_video_contact_handoff",
       primaryNextStep: "regen_storyboard_hq",
-      missingSlots: glyphDebt
-        ? ["contactGeom", "propPoseLocus", "glyph"]
-        : ["contactGeom", "propPoseLocus"],
-      message: glyphDebt
-        ? "接触/文书债未清（字迹或道具板）；禁止视频绿继承，请重出含可读表面的静照"
-        : "接触首帧姿态疑似手持展示卡/合成几何板，不可作颊触划过运动起点；请用 Seedream HQ 重出可拍静照",
+      missingSlots: ["contactGeom", "propPoseLocus"],
+      message: "接触首帧姿态疑似手持展示卡，不可作颊触划过运动起点；请重出可拍静照",
+    };
+  }
+  if (glyphDebt || meta.propPlateGrade === "synthetic_geometry") {
+    return {
+      ok: true,
+      severity: "WARN",
+      code: "STILL-CONTACT-HANDOFF",
+      reverseTrigger: "still_video_contact_handoff",
+      primaryNextStep: "burn",
+      missingSlots: glyphDebt ? ["glyph"] : ["propPlateGrade"],
+      message: "文书/合成板债已记账·题名可辨合法·可烧视频",
     };
   }
 

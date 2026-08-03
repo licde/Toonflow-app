@@ -83,10 +83,16 @@ export function applyVendorPromptPack(input: {
     }
   }
 
-  // No native audio: strip lip sync instructions
+  // No native audio: strip all lip sync instructions (ZH + legacy EN)
   if (input.nativeAudio === false || packId === "klingai" || packId === "minimax") {
-    if (/口型同步开启|lip-sync\s*active/i.test(prompt)) {
-      prompt = prompt.replace(/口型同步开启。?/g, "").replace(/lip-sync\s*active\.?/gi, "");
+    if (/口型同步|lip-sync|lip sync|对白嘴型|嘴型自然/i.test(prompt)) {
+      prompt = prompt
+        .replace(/口型同步开启。?/g, "")
+        .replace(/口型轻微同步，嘴型自然。?/g, "")
+        .replace(/对白嘴型自然。?/g, "")
+        .replace(/lip-sync\s*active\.?/gi, "")
+        .replace(/natural mouth movement[^\n,]*/gi, "")
+        .replace(/subtle lip sync[^\n,]*/gi, "");
       warnings.push("vendor_strip_lip_no_native_audio");
     }
   }
@@ -128,6 +134,7 @@ export function applyVendorPromptPack(input: {
 
 export function enhanceVendorCapability(vendorId?: string | null): VendorCapability & {
   nativeAudio: boolean;
+  nativeExpression: boolean;
   durationBuckets: number[];
 } {
   const key = String(vendorId ?? "agnesai").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -140,6 +147,7 @@ export function enhanceVendorCapability(vendorId?: string | null): VendorCapabil
     controllable: ["duration", "audio", "resolution", "mode", "aspectRatio", "referenceCount"],
     textOnly: ["shotSize", "camera", "microExpr", "emotion", "colorTemp", "fx", "spatial"],
     nativeAudio,
+    nativeExpression: false,
     durationBuckets,
   };
 }

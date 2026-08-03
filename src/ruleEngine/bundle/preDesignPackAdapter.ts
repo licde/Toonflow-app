@@ -1,6 +1,7 @@
 import type { PreDesignPack, PreDesignShot, StoryboardPanelInput } from "./types";
 import { enrichShotGenerationFromDesign } from "./modalityChainAudit";
 import { parsePromptRefs } from "../compilers/vendorPromptAdapter";
+import { normalizeStoryboardTableMd } from "../parsers/normalizeStoryboardTableMd";
 
 function linesToText(shot: PreDesignShot): string {
   const lines = shot.narrative?.dialogue?.lines ?? [];
@@ -29,7 +30,7 @@ export function preDesignShotsToStoryboardTable(shots: PreDesignShot[]): string 
       `| ${idx} | ${s.type ?? "CHAR-SCENE"} | ${s.sceneName ?? ""} | ${vd} | ${size} | ${perf} | ${line} | ${s.duration ?? 3}s |`,
     );
   });
-  return rows.join("\n");
+  return normalizeStoryboardTableMd(rows.join("\n"));
 }
 
 export function preDesignShotsToPanels(
@@ -84,6 +85,7 @@ export function preDesignShotsToPanels(
     const promptLiterary = literary.slice(0, 2000) || imagePrompt.slice(0, 2000);
     return {
       clientId: stableClientId,
+      id: (shot as { storyboardId?: number }).storyboardId,
       duration: shot.duration ?? 3,
       prompt: promptLiterary,
       videoDesc:

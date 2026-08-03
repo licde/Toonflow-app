@@ -1,0 +1,88 @@
+{
+  "version": "1.2.0",
+  "description": "Live mount bindings for UntilClearRuntime — W1 + ACTION_MISFIRE",
+  "phase1Classes": [
+    "BG_READABLE",
+    "CONTACT_GEOM",
+    "STILL_HQ_EGRESS",
+    "SPATIAL_LAYOUT",
+    "PAPER_DOC_READABLE",
+    "PROP_IN_FRAME",
+    "PROMPT_FIDELITY",
+    "IDENTITY_PLATE",
+    "ACTION_MISFIRE",
+    "SECONDARY_DOMINANCE"
+  ],
+  "bindings": [
+    {
+      "classId": "BG_READABLE",
+      "handlerModule": "src/ruleEngine/quality/handlers/bgReadableUntilClear.ts",
+      "stages": ["compose_L0", "fidelity_L1", "burn_detect"],
+      "healKinds": ["prompt_inject", "soft_env_ref", "fidelity_edit", "regen"],
+      "passKindsAllowed": ["measured_L1", "human", "unmeasured_no_hq"]
+    },
+    {
+      "classId": "CONTACT_GEOM",
+      "handlerModule": "src/ruleEngine/quality/handlers/contactGeomUntilClear.ts",
+      "stages": ["compose_L0", "fidelity_L1", "burn_detect"],
+      "healKinds": ["prompt_inject", "fidelity_edit", "regen", "cta_fork"],
+      "passKindsAllowed": ["measured_L1", "human", "unmeasured_no_hq"]
+    },
+    {
+      "classId": "STILL_HQ_EGRESS",
+      "handlerModule": "src/ruleEngine/quality/handlers/stillHqEgressUntilClear.ts",
+      "stages": ["fidelity_L1", "burn_detect", "track_cascade"],
+      "healKinds": ["cascade_burn"],
+      "passKindsAllowed": ["measured_L1", "human"]
+    },
+    {
+      "classId": "SPATIAL_LAYOUT",
+      "handlerModule": "src/ruleEngine/quality/handlers/spatialLayoutUntilClear.ts",
+      "stages": ["compose_L0", "fidelity_L1", "burn_detect"],
+      "healKinds": ["prompt_inject", "fidelity_edit", "regen"],
+      "passKindsAllowed": ["measured_L1", "human", "unmeasured_no_hq"]
+    },
+    {
+      "classId": "PAPER_DOC_READABLE",
+      "handlerModule": "src/ruleEngine/quality/handlers/paperDocReadableUntilClear.ts",
+      "stages": ["fidelity_L1", "burn_detect"],
+      "healKinds": ["fidelity_edit", "regen"],
+      "passKindsAllowed": ["measured_L1", "human", "unmeasured_no_hq"]
+    },
+    {
+      "classId": "PROP_IN_FRAME",
+      "handlerModule": "src/ruleEngine/quality/handlers/propInFrameUntilClear.ts",
+      "stages": ["compose_L0", "fidelity_L1", "burn_detect"],
+      "healKinds": ["prompt_inject", "fidelity_edit", "regen"],
+      "passKindsAllowed": ["measured_L1", "human", "unmeasured_no_hq"]
+    },
+    {
+      "classId": "PROMPT_FIDELITY",
+      "handlerModule": "src/ruleEngine/quality/handlers/promptFidelityUntilClear.ts",
+      "stages": ["compose_L0", "burn_detect"],
+      "healKinds": ["prompt_inject", "fidelity_edit", "writeback_vd", "regen"],
+      "passKindsAllowed": ["measured_L1", "human", "unmeasured_no_hq"]
+    },
+    {
+      "classId": "IDENTITY_PLATE",
+      "handlerModule": "src/ruleEngine/quality/handlers/identityPlateUntilClear.ts",
+      "stages": ["compose_L0", "design_exit", "burn_detect"],
+      "healKinds": ["enqueue_identity", "soft_env_ref", "regen"],
+      "passKindsAllowed": ["human", "unmeasured_no_hq"]
+    },
+    {
+      "classId": "ACTION_MISFIRE",
+      "handlerModule": "src/ruleEngine/quality/handlers/actionMisfireUntilClear.ts",
+      "stages": ["compose_L0", "fidelity_L1", "burn_detect"],
+      "healKinds": ["prompt_inject", "compose_regen", "regen"],
+      "passKindsAllowed": ["measured_L1", "human", "unmeasured_no_hq"]
+    },
+    {
+      "classId": "SECONDARY_DOMINANCE",
+      "handlerModule": "src/ruleEngine/quality/handlers/secondaryDominanceUntilClear.ts",
+      "stages": ["compose_L0", "fidelity_L1", "burn_detect"],
+      "healKinds": ["prompt_inject", "compose_regen", "regen"],
+      "passKindsAllowed": ["measured_L1", "human", "unmeasured_no_hq"]
+    }
+  ]
+}

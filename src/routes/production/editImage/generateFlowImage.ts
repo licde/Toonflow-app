@@ -95,6 +95,8 @@ export default router.post(
           softEnvMissingHonest: result.softEnvMissingHonest,
           droppedSoftEnv: result.droppedSoftEnv,
           propSource: result.propSource,
+          propAssetId: result.propAssetId,
+          propSoftPreviewUrl: result.propSoftPreviewUrl,
           refsRoles: result.refsRoles,
           vendorCalled: result.vendorCalled,
           vendorMs: result.vendorMs,

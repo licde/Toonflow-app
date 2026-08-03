@@ -1,6 +1,7 @@
 /**
  * Still pose anchor ↔ video Motion start-state handoff (pre-burn).
  * Prevents "首帧已贴合 + Motion 仍进入" incoherence for all contactEvent classes.
+ * Also warns when realization plate (kneel/stand) contradicts Motion bend verbs.
  */
 import {
   isContactEventVd,
@@ -8,6 +9,7 @@ import {
   type ContactStartState,
   inferContactStartStateFromStill,
 } from "../compilers/contactEventPolicy";
+import { motionContradictsRealization } from "../compilers/realizationAdapt";
 
 export type StillPoseAnchor = {
   prop?: string;
@@ -27,16 +29,43 @@ export function assertStillVideoPoseHandoff(input: {
 }): {
   ok: boolean;
   severity: "ok" | "WARN" | "BLOCK";
-  code?: "STILL-VIDEO-POSE-MISMATCH";
+  code?: "STILL-VIDEO-POSE-MISMATCH" | "REALIZATION-MOTION-MISMATCH";
   message?: string;
   stillPoseAnchor?: StillPoseAnchor;
-  primaryNextStep?: "regen_storyboard_hq" | "human_review" | "chat_repair";
+  primaryNextStep?: "regen_storyboard_hq" | "human_review" | "chat_repair" | "burn";
 } {
   const vd = String(input.visualDescription ?? "").trim();
+  const meta = input.stillMeta ?? {};
+  const motionBlob = String(input.videoPrompt ?? "");
+  const motionSection = motionBlob.match(/\[Motion\]([\s\S]*?)(?=\[Camera\]|$)/i)?.[1] ?? motionBlob;
+
+  const realizationOcc = String(meta.realizationOccupancy ?? "");
+  const realizationDegraded = meta.realizationDegraded === true;
+  const adaptPack = meta.realizationAdaptPack as
+    | import("../compilers/realizationAdapt").RealizationAdaptPack
+    | undefined;
+
+  if (
+    motionContradictsRealization({
+      motionBlob: motionSection,
+      realizationOccupancy: realizationOcc as import("../compilers/designIntentProfile").PoseOccupancy,
+      realizationDegraded,
+      adaptPack: adaptPack ?? null,
+    })
+  ) {
+    return {
+      ok: true,
+      severity: "WARN",
+      code: "REALIZATION-MOTION-MISMATCH",
+      message: `姿态债：首帧${realizationOcc || "跪持/站持"}与 Motion 弯腰动词不一致；须重编译 plate-first Motion`,
+      primaryNextStep: "burn",
+    };
+  }
+
   if (!isContactEventVd(vd)) return { ok: true, severity: "ok" };
 
   const declared = input.contactStartState ?? null;
-  const metaAnchor = input.stillMeta?.stillPoseAnchor as StillPoseAnchor | undefined;
+  const metaAnchor = meta.stillPoseAnchor as StillPoseAnchor | undefined;
   const inferred = inferContactStartStateFromStill({
     stillPrompt: input.stillPrompt,
     stillMeta: input.stillMeta,
@@ -47,7 +76,6 @@ export function assertStillVideoPoseHandoff(input: {
     source: metaAnchor?.source ?? "inferred",
   };
 
-  const motionBlob = String(input.videoPrompt ?? "");
   const vdImpliesEnter =
     /自.*侧进入|进入贴合|甩至|递向|从.*侧/.test(vd) && !/已贴|贴合停|持稳|微划/.test(vd);
   const motionImpliesEnter =

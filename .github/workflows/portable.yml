@@ -124,6 +124,9 @@ jobs:
       - name: Still quality closed loop (CU×cast / reverse SSOT / import demote)
         run: yarn test:still-quality-closed-loop
 
+      - name: SingleShotClosed — beat isolation / oral CU / bind / fail-closed
+        run: yarn test:g-still-beat-isolation
+
       - name: QP-02 design loop
         run: yarn test:qp02-design-loop
 

@@ -33,38 +33,38 @@ const COPY: Record<
   { userMessage: string; ctaLabel: string; userMessageKey: string }
 > = {
   batch_still: {
-    userMessage: "分镜静照还没有或未过检，请先生成/更新静照后再烧",
-    ctaLabel: "去生成静照",
+    userMessage: "分镜静照还没有或未过检，请先智能修复生成/更新静照后再烧",
+    ctaLabel: "智能修复",
     userMessageKey: "gate.batch_still",
   },
   regen_storyboard_hq: {
-    userMessage: "分镜静照未过高质量（不可作视频首帧），请更新高质量分镜图",
-    ctaLabel: "更新高质量分镜图",
+    userMessage: "分镜静照未过高质量（不可作视频首帧），请智能修复后重出高质量分镜图",
+    ctaLabel: "智能修复",
     userMessageKey: "gate.regen_storyboard_hq",
   },
   raise_duration: {
     userMessage: "台词/情绪需要更长镜头",
-    ctaLabel: "一键加长",
+    ctaLabel: "智能修复",
     userMessageKey: "gate.raise_duration",
   },
   split_shot: {
     userMessage: "一句太长/多拍冲突，请 Confirm 设计拆分（Orchestrator），勿只写 hint",
-    ctaLabel: "打开拆镜确认",
+    ctaLabel: "智能修复",
     userMessageKey: "gate.split_shot",
   },
   soft_patch: {
-    userMessage: "提示词需完善后才能烧片（运镜/五段/合规等）",
-    ctaLabel: "一键完善",
+    userMessage: "提示词需智能修复后才能烧片（运镜/五段/合规等）",
+    ctaLabel: "智能修复",
     userMessageKey: "gate.soft_patch",
   },
   retry_shot: {
     userMessage: "本镜需要重试生成",
-    ctaLabel: "重试本镜",
+    ctaLabel: "智能修复",
     userMessageKey: "gate.retry_shot",
   },
   chat_repair: {
     userMessage: "需要改剧本/设计",
-    ctaLabel: "复制给 Chat",
+    ctaLabel: "智能修复",
     userMessageKey: "gate.chat_repair",
   },
   human_review: {

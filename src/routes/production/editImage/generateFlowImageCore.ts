@@ -167,6 +167,9 @@ export async function runGenerateFlowImageCore(
   softEnvMissingHonest?: boolean;
   droppedSoftEnv?: boolean;
   propSource?: string;
+  /** Warehouse / synth PROP soft plate — FE hangs as upload card */
+  softAssetId?: number;
+  propSoftPreviewUrl?: string;
   refsRoles?: string[];
   vendorCalled?: boolean;
   vendorMs?: number;
@@ -195,6 +198,10 @@ export async function runGenerateFlowImageCore(
   handoffReason?: string;
   i2vReady?: boolean;
   i2vBlockReason?: string;
+  /** SingleShotClosedCompose echo */
+  closedCompose?: boolean;
+  boundShotIndex?: number | null;
+  contaminationClass?: string | null;
 }> {
   const { model, ratio, projectId, storyboardId, requireParentRef } = body;
   const references = orderReferenceUrls(body.references ?? []);
@@ -222,6 +229,62 @@ export async function runGenerateFlowImageCore(
   // Prefer request ratio for contract
   composeCtx.videoRatio = ratio || composeCtx.videoRatio;
 
+  const {
+    assertSingleShotClosedInputs,
+    filterInjectToDeclaredAtoms,
+    stripForeignBeatAtomsFromEgress,
+    isOralMicroNotActionPrimary,
+    isClosedComposeTrue,
+    gateHealInjectLines,
+  } = await import("@/ruleEngine/compilers/singleShotClosedCompose");
+  const closedAssert = assertSingleShotClosedInputs({
+    storyboardId,
+    boundShotIndex: composeCtx.boundShotIndex,
+    bindOk: composeCtx.bindOk !== false || !storyboardId,
+    bindCode: composeCtx.bindCode,
+    visualDescription: composeCtx.visualDescription,
+    compiledImagePrompt: composeCtx.compiledImagePrompt,
+    purpose: "generate",
+    episodeLexiconLegislates: Boolean(
+      (composeCtx as { episodeLexiconLegislates?: boolean }).episodeLexiconLegislates,
+    ),
+    continuityInject: (composeCtx as { continuityInject?: string }).continuityInject,
+    continuitySealed: Boolean((composeCtx as { continuitySealed?: boolean }).continuitySealed),
+    shotSize: composeCtx.shotSize,
+    foreground: composeCtx.foreground,
+    mouthDetail: (composeCtx as { mouthDetail?: string }).mouthDetail,
+  });
+  if (storyboardId && composeCtx.bindOk === false) {
+    const env = buildStillErrorEnvelope({
+      code: composeCtx.bindCode || "BIND_SHOT_MISMATCH",
+      errMsg: closedAssert.userMessage,
+    });
+    throw Object.assign(new Error(closedAssert.userMessage || env.userMessage), {
+      code: closedAssert.code || env.code,
+      primaryNextStep: "chat_repair",
+      userMessage: closedAssert.userMessage ?? env.userMessage,
+      ctaLabel: closedAssert.ctaLabel ?? "重新导入或重绑分镜",
+      stillQuality: "missing" as const,
+      closedCompose: false,
+      boundShotIndex: closedAssert.boundShotIndex,
+    });
+  }
+  // Fail-closed: only explicit true
+  (composeCtx as { closedCompose?: boolean }).closedCompose = isClosedComposeTrue(
+    closedAssert.closedCompose,
+  );
+  (composeCtx as { closedAssertReasons?: string[] }).closedAssertReasons = closedAssert.reasons;
+  (composeCtx as { framingMode?: string }).framingMode = closedAssert.framingMode;
+  void gateHealInjectLines;
+  if (composeCtx.strengthen) {
+    const filtered: Record<string, string> = {};
+    for (const [k, v] of Object.entries(composeCtx.strengthen)) {
+      const kept = filterInjectToDeclaredAtoms([String(v)], composeCtx.visualDescription);
+      if (kept.length) filtered[k] = kept[0]!;
+    }
+    composeCtx.strengthen = Object.keys(filtered).length ? filtered : null;
+  }
+
   let sbReason: unknown;
   let sbPrompt: string | undefined;
   if (storyboardId) {
@@ -248,13 +311,17 @@ export async function runGenerateFlowImageCore(
   try {
     const prevMeta = ingress.prevMeta as Record<string, unknown> | null;
     const gated = prevMeta?.untilClearGatedInject;
-    const litInject = ingress.literaryRepairInjectLines ?? [];
+    const litInject = filterInjectToDeclaredAtoms(
+      ingress.literaryRepairInjectLines ?? [],
+      composeCtx.visualDescription,
+    );
     const mergedInject = [
       ...(Array.isArray(gated) ? gated.map((s) => String(s)) : []),
       ...litInject,
     ].filter(Boolean);
-    if (mergedInject.length) {
-      composeCtx.gatedHealInject = [...new Set(mergedInject)].slice(0, 8);
+    const gatedFiltered = filterInjectToDeclaredAtoms(mergedInject, composeCtx.visualDescription);
+    if (gatedFiltered.length) {
+      composeCtx.gatedHealInject = [...new Set(gatedFiltered)].slice(0, 8);
     }
     const priorSeal = prevMeta?.primaryIntentSeal;
     if (priorSeal && typeof priorSeal === "object") {
@@ -275,14 +342,31 @@ export async function runGenerateFlowImageCore(
   if (!composed.ok) {
     const br = String(composed.blockReason ?? "");
     const bodyOk = String(composed.visualBody || composed.prompt || "").trim().length >= 12;
-    // Policy compose debts: soft-continue when we still have a shootable body
-    if (bodyOk && br !== "DEX-QP-02" && !composed.qp02Blocked && br !== "visual body too thin after compose") {
+    const hardNoSoft =
+      br === "DEX-STILL-ONEBEAT" ||
+      br === "DEX-STILL-OS-NAME" ||
+      br === "DEX-STILL-FILLER" ||
+      br === "BIND_SHOT_MISMATCH" ||
+      br === "BIND_SHOT_UNBOUND" ||
+      br === "CLOSED_COMPOSE_THIN_VD" ||
+      /ONEBEAT|BIND_SHOT|CLOSED_COMPOSE/i.test(br);
+    // Policy compose debts: soft-continue when we still have a shootable body — never for ONEBEAT/bind
+    if (
+      bodyOk &&
+      !hardNoSoft &&
+      br !== "DEX-QP-02" &&
+      !composed.qp02Blocked &&
+      br !== "visual body too thin after compose"
+    ) {
       composed = {
         ...composed,
         ok: true,
         sources: [...(composed.sources ?? []), "compose.policy.softContinue", `compose.debt:${br || "unknown"}`],
         requireFixBeforeBurn: true,
+        // softContinue must never fake closedCompose green
+        closedCompose: false,
       } as typeof composed;
+      (composeCtx as { closedCompose?: boolean }).closedCompose = false;
     } else {
       // Empty VD — try salvage from prompt scraps before refusing
       const salvage = String(composeCtx.visualDescription || composeCtx.videoDesc || prompt || "").trim();
@@ -629,7 +713,15 @@ export async function runGenerateFlowImageCore(
       Boolean((composeCtx as { sceneEstablishing?: boolean }).sceneEstablishing) ||
       /建立镜头|establishing|空镜建立|全景建立/i.test(String(literaryDesc ?? "")),
     hasSceneLink,
+    bgBlur: Boolean((composeCtx as { bgBlur?: boolean }).bgBlur),
   });
+  // Oral ECU: softEnv rim-only — prefer excludeScene + keepSoftEnvRef; never bake hall paper
+  if (isOralMicroNotActionPrimary(literaryDesc)) {
+    (bgPol as { excludeScene?: boolean }).excludeScene = true;
+    (bgPol as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = Boolean(hasSceneLink);
+    (bgPol as { softEnvContinuity?: string }).softEnvContinuity = hasSceneLink ? "optional" : "none";
+    (bgPol as { reason?: string }).reason = `${bgPol.reason || "faceCu"}:oral_rim`;
+  }
   const seatingPack = bgPol.pack;
   const intent = classifyStillIntent({
     visualDescription: literaryDesc,
@@ -705,6 +797,10 @@ export async function runGenerateFlowImageCore(
     bgMode: bgPol.bgMode,
     bgPolicy: bgPol.policy,
     bgPolicyReason: bgPol.reason,
+    closedCompose: isClosedComposeTrue((composeCtx as { closedCompose?: boolean }).closedCompose),
+    boundShotIndex: composeCtx.boundShotIndex ?? null,
+    framingMode: (composeCtx as { framingMode?: string }).framingMode ?? closedAssert.framingMode,
+    closedAssertReasons: (composeCtx as { closedAssertReasons?: string[] }).closedAssertReasons ?? [],
   } as typeof composed;
   if (bgPol.bgGuidance && bgPol.keepSoftEnvRef) {
     (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = bgPol.softEnvContinuity;
@@ -809,6 +905,21 @@ export async function runGenerateFlowImageCore(
           checklist,
         });
         let vendorPrompt = lastPipeline.egressPrompt;
+        try {
+          const stripped = stripForeignBeatAtomsFromEgress(vendorPrompt, literaryDesc);
+          if (stripped.stripped.length) {
+            vendorPrompt = stripped.text;
+            lastComposed = {
+              ...lastComposed,
+              sources: [
+                ...(lastComposed.sources ?? []),
+                ...stripped.stripped.map((s) => `closed.strip:${s}`),
+              ],
+            } as typeof lastComposed;
+          }
+        } catch {
+          /* optional */
+        }
         const pol = precheckContentPolicy(vendorPrompt);
         if (pol.hasSensitiveTerms) vendorPrompt = pol.softenedPrompt;
 
@@ -821,10 +932,13 @@ export async function runGenerateFlowImageCore(
         let synthesizedProp = false;
         if (storyboardId) {
           const { resolvePropSoftCodes } = await import("@/ruleEngine/compilers/eventPlateReadiness");
-          const propCodes = resolvePropSoftCodes({
-            contract: lastComposed.generationContract,
-            visualDescription: literaryDesc,
-          });
+          // Oral / lip-CU beat: never hang paper/休书 propSoft plates from neighbor contracts
+          const propCodes = isOralMicroNotActionPrimary(literaryDesc)
+            ? []
+            : resolvePropSoftCodes({
+                contract: lastComposed.generationContract,
+                visualDescription: literaryDesc,
+              });
           const built = await buildReferenceListForStoryboard(
             db,
             projectId,
@@ -1033,6 +1147,42 @@ export async function runGenerateFlowImageCore(
               sceneRefsDropped += 1;
             }
           }
+          // Identity contamination latch: reject modern/gray studio as image0 when period expected
+          if (identityPlates[0]?.base64) {
+            try {
+              const { probeIdentityPlateContamination } = await import(
+                "@/ruleEngine/compilers/eventPlateReadiness"
+              );
+              const periodExpected =
+                lastComposed.keepSoftEnvRef === true ||
+                lastComposed.generationContract?.objectiveClass === "action_primary" ||
+                /古装|汉服|殿|弯腰|休书/.test(String(literaryDesc ?? ""));
+              const probe = await probeIdentityPlateContamination({
+                imageBase64: identityPlates[0].base64,
+                urlOrRemark: String(references?.[0] ?? ""),
+                periodCostumeExpected: periodExpected,
+              });
+              (lastComposed as { identityContamProbe?: typeof probe }).identityContamProbe = probe;
+              if (probe.contaminated) {
+                (lastComposed as { identityContaminated?: boolean }).identityContaminated = true;
+                (lastComposed as { identityContamReason?: string }).identityContamReason = probe.reason;
+                lastPipeline = {
+                  ...lastPipeline,
+                  autoHealed: [
+                    ...(lastPipeline.autoHealed ?? []),
+                    `identity_contam:${probe.reason}`,
+                  ],
+                };
+                // Prefer next char plate if available; else keep but mark debt (vendor still runs with honesty)
+                if (identityPlates.length > 1) {
+                  const swapped = identityPlates.splice(1, 1)[0];
+                  if (swapped) identityPlates[0] = swapped;
+                }
+              }
+            } catch {
+              /* optional */
+            }
+          }
           // Salvage SCENE when URL classify missed (OSS without keywords)
           if (softEnv && !softEnvB64) {
             const salvaged = await salvageSoftEnvFromFeRefs({
@@ -1060,6 +1210,11 @@ export async function runGenerateFlowImageCore(
             const continuity =
               (lastComposed as { softEnvContinuity?: "must" | "optional" | "none" }).softEnvContinuity ??
               (lastComposed.keepSoftEnvRef ? "must" : "none");
+            const forceThreeSlotProp =
+              continuity === "must" &&
+              (lastComposed.generationContract?.objectiveClass === "action_primary" ||
+                (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string } })
+                  ?.primaryIntentSeal?.poseOccupancy === "bend_pickup");
             const tagged: Array<{ type: "image"; base64: string; role?: "identity" | "propSoft" | "softEnv" }> = [];
             for (const p of identityPlates.slice(0, 1)) {
               tagged.push({ type: "image", base64: p.base64, role: "identity" });
@@ -1089,11 +1244,13 @@ export async function runGenerateFlowImageCore(
               maxSlots: 3,
               softEnvContinuity: continuity,
               allowPixelBake: false,
+              forceThreeSlotProp,
             });
             referenceList = budgeted.refs.map((r) => ({ type: "image" as const, base64: r.base64 }));
             propPlatePresent = budgeted.roles.includes("propSoft");
             softEnvPlatePresent = budgeted.roles.includes("softEnv") || budgeted.softEnvBakedIntoIdentity;
             if (eventObj && !propPlatePresent) propPlateMissing = true;
+            else if (propPlatePresent) propPlateMissing = false;
             (lastComposed as { refsRoles?: string[] }).refsRoles = budgeted.roles;
             (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = budgeted.droppedSoftEnv;
             (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity =
@@ -1257,11 +1414,16 @@ export async function runGenerateFlowImageCore(
             maxSlots: 3,
             softEnvContinuity: continuity,
             allowPixelBake: false,
+            forceThreeSlotProp:
+              continuity === "must" &&
+              (lastComposed.generationContract?.objectiveClass === "action_primary" ||
+                (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string } })
+                  ?.primaryIntentSeal?.poseOccupancy === "bend_pickup"),
           });
           if (budgeted.refs.length) {
             referenceList = budgeted.refs.map((r) => ({ type: "image" as const, base64: r.base64 }));
           }
-          propPlatePresent = budgeted.roles.includes("propSoft") || propPlatePresent;
+          propPlatePresent = budgeted.roles.includes("propSoft");
           softEnvPlatePresent = budgeted.roles.includes("softEnv") || budgeted.softEnvBakedIntoIdentity;
           if (eventObj && !propPlatePresent) propPlateMissing = true;
           else if (propPlatePresent) propPlateMissing = false;
@@ -1334,8 +1496,15 @@ export async function runGenerateFlowImageCore(
 
         // Structure whitelist: synthesize PROP soft plate when event objective lacks one
         // OR refs contract forces occupancy-keyed plate (FE display-card must not skip)
+        // SingleShotClosed: oral never synths paper plates
         let synthAttempted = false;
+        if (isOralMicroNotActionPrimary(literaryDesc)) {
+          (lastComposed as { synthesizedPropPlate?: boolean }).synthesizedPropPlate = false;
+          (lastComposed as { propSoftPreviewUrl?: string }).propSoftPreviewUrl = undefined;
+          (lastComposed as { propAssetId?: number }).propAssetId = undefined;
+        }
         const needsPropPlate = (() => {
+          if (isOralMicroNotActionPrimary(literaryDesc)) return false;
           try {
             const { objectiveNeedsPropPlate } = require("@/ruleEngine/compilers/eventPlateReadiness") as typeof import("@/ruleEngine/compilers/eventPlateReadiness");
             return objectiveNeedsPropPlate(lastComposed.generationContract?.objectiveClass);
@@ -1363,6 +1532,7 @@ export async function runGenerateFlowImageCore(
             (lastComposed as { stillRefsContract?: typeof c }).stillRefsContract = c;
             forceOccupancyProp = c.forcePropOccupancySynth;
           }
+          if (isOralMicroNotActionPrimary(literaryDesc)) forceOccupancyProp = false;
         } catch {
           forceOccupancyProp =
             /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? "")) ||
@@ -1406,8 +1576,9 @@ export async function runGenerateFlowImageCore(
                 poseOccupancy: occForPlate,
                 plateMode: label.plateMode,
               });
-              if (ladder.skipSynth && !forceOccupancyProp) {
+              if (ladder.skipSynth) {
                 // Honesty: skipSynth only when plate bytes actually hang into referenceList
+                // Asset-first: warehouse paper kept even under bend (forcePropOccupancySynth no longer overrides)
                 let hungBytes = false;
                 if (ladder.assetId && db) {
                   try {
@@ -1433,6 +1604,14 @@ export async function runGenerateFlowImageCore(
                           (lastComposed as { propPlateGrade?: string }).propPlateGrade = ladder.grade;
                           if (ladder.assetId) {
                             (lastComposed as { propAssetId?: number }).propAssetId = ladder.assetId;
+                          }
+                          if (fp) {
+                            try {
+                              (lastComposed as { propSoftPreviewUrl?: string }).propSoftPreviewUrl =
+                                await u.oss.getSmallImageUrl(fp);
+                            } catch {
+                              /* optional */
+                            }
                           }
                         }
                       }
@@ -1508,13 +1687,17 @@ export async function runGenerateFlowImageCore(
               const softTail = softEnvSeparate
                 ? referenceList.splice(referenceList.length - 1, 1)
                 : [];
-              // Replace FE display-card propSoft when forcing occupancy synth
+              // Always replace existing propSoft — never splice a second mid-slot (dual paper)
               const rolesNow = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
               const propIdx = rolesNow.indexOf("propSoft");
-              if (forceOccupancyProp && propIdx >= 0 && referenceList[propIdx]) {
+              if (propIdx >= 0 && referenceList[propIdx]) {
                 referenceList[propIdx] = { type: "image" as const, base64: synth.base64 };
               } else if (referenceList.length >= 1) {
                 referenceList.splice(1, 0, { type: "image" as const, base64: synth.base64 });
+                if (!rolesNow.includes("propSoft")) {
+                  rolesNow.splice(1, 0, "propSoft");
+                  (lastComposed as { refsRoles?: string[] }).refsRoles = rolesNow as typeof rolesNow;
+                }
               } else {
                 referenceList.push({ type: "image" as const, base64: synth.base64 });
               }
@@ -1554,6 +1737,14 @@ export async function runGenerateFlowImageCore(
                 if (persisted?.assetId) {
                   (lastComposed as { propSource?: string }).propSource = "synth_persisted";
                   (lastComposed as { propAssetId?: number }).propAssetId = persisted.assetId;
+                  if (persisted.filePath) {
+                    try {
+                      (lastComposed as { propSoftPreviewUrl?: string }).propSoftPreviewUrl =
+                        await u.oss.getSmallImageUrl(persisted.filePath);
+                    } catch {
+                      /* optional preview */
+                    }
+                  }
                 }
               } catch (persistErr) {
                 console.warn("[generateFlowImage] prop plate persist failed", u.error(persistErr).message);
@@ -2039,6 +2230,12 @@ export async function runGenerateFlowImageCore(
               maxSlots: 3,
               softEnvContinuity: dropLatch ? "none" : continuity,
               allowPixelBake: false,
+              forceThreeSlotProp:
+                !dropLatch &&
+                continuity === "must" &&
+                (lastComposed.generationContract?.objectiveClass === "action_primary" ||
+                  (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string } })
+                    ?.primaryIntentSeal?.poseOccupancy === "bend_pickup"),
             });
             referenceList = pick.refs.map((r) => ({ type: "image" as const, base64: r.base64 }));
             refsRolesEcho = pick.roles;
@@ -2070,10 +2267,14 @@ export async function runGenerateFlowImageCore(
                 (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = false;
               }
             }
-            propPlatePresent =
-              pick.roles.includes("propSoft") ||
-              propPlatePresent ||
-              (lastComposed as { fragmentPlateHung?: boolean }).fragmentPlateHung === true;
+            propPlatePresent = pick.roles.includes("propSoft");
+            if (eventObj && !propPlatePresent) {
+              propPlateMissing = true;
+              (lastComposed as { propPlateMissing?: boolean }).propPlateMissing = true;
+            } else if (propPlatePresent) {
+              propPlateMissing = false;
+              (lastComposed as { propPlateMissing?: boolean }).propPlateMissing = false;
+            }
             softEnvBaked = dropLatch ? false : pick.softEnvBakedIntoIdentity;
             (lastComposed as { refsRoles?: string[] }).refsRoles = refsRolesEcho;
             (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity = softEnvBaked;
@@ -2111,13 +2312,19 @@ export async function runGenerateFlowImageCore(
               vendorPrompt = `主场景软环境须可辨，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
             }
           }
-          // Anti-kneel lead when bend occupancy
+          // Anti-kneel / anti-squat lead + ground paper when bend occupancy
           if (
             sealBind?.poseOccupancy === "bend_pickup" ||
-            /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? ""))
+            /弯腰|捡起|捡拾|俯身|蹲身捡|蹲身拾/.test(String(literaryDesc ?? ""))
           ) {
-            if (!/站姿弯腰|禁止蹲跪/.test(vendorPrompt.slice(0, 80))) {
-              vendorPrompt = `占位：站姿弯腰捡拾，躯干前倾；禁止蹲跪盘坐替代弯腰。${String(vendorPrompt).trim()}`;
+            vendorPrompt = String(vendorPrompt)
+              .replace(/蹲身(拾起|捡起|捡拾|捡)/g, "弯腰$1")
+              .replace(/跪坐(持|捧|捡|拾)/g, "弯腰捡拾")
+              .replace(/盘坐(捡|拾|持)/g, "弯腰捡拾");
+            if (!/站姿弯腰|禁止蹲跪/.test(vendorPrompt.slice(0, 100))) {
+              vendorPrompt = `占位：站姿弯腰捡拾，躯干前倾，休书薄纸主手近地触地；禁止蹲跪盘坐替代弯腰，禁止胸前举卡。${String(vendorPrompt).trim()}`;
+            } else if (!/休书薄纸|近地触地|主手触地/.test(vendorPrompt.slice(0, 120))) {
+              vendorPrompt = `休书薄纸主手近地触地。${String(vendorPrompt).trim()}`;
             }
           }
           // Orphan --sref SCENE-* without independent softEnv slot confuses vendor
@@ -2637,6 +2844,9 @@ export async function runGenerateFlowImageCore(
           fragmentPlateHung: (lastComposed as { fragmentPlateHung?: boolean }).fragmentPlateHung,
           referenceList: (lastComposed as { lastReferenceList?: Array<{ type: "image"; base64: string; role?: string }> })
             .lastReferenceList,
+          identityContam: (lastComposed as {
+            identityContamProbe?: { modernAttireSuspected?: boolean; grayStudioSuspected?: boolean };
+          }).identityContamProbe,
         });
         (lastComposed as { literaryEffectsPersist?: Record<string, unknown> }).literaryEffectsPersist =
           literaryEffectsPersistSlice(lit);
@@ -2946,6 +3156,9 @@ async function finalizeSuccess(
       imageBase64: (input.composed as { lastImageBase64?: string }).lastImageBase64,
       videoMotionStartHint: (input.composed.generationContract as { videoMotionStartHint?: string } | undefined)
         ?.videoMotionStartHint,
+      identityContam: (input.composed as {
+        identityContamProbe?: { modernAttireSuspected?: boolean; grayStudioSuspected?: boolean };
+      }).identityContamProbe,
     });
     // Feed local pose into poseEvidence for untilClear / CTA
     if (litAfter.localPoseSignals.primaryPoseGuess) {
@@ -2982,6 +3195,10 @@ async function finalizeSuccess(
     if (litAfter.i2vCriticalFacts?.length && input.composed.generationContract) {
       (input.composed.generationContract as { i2vCriticalFacts?: string[] }).i2vCriticalFacts =
         litAfter.i2vCriticalFacts;
+    }
+    if (litAfter.realizationAdaptPack && input.composed.generationContract) {
+      (input.composed.generationContract as { realizationAdaptPack?: unknown }).realizationAdaptPack =
+        litAfter.realizationAdaptPack;
     }
   } catch {
     /* optional */
@@ -3179,14 +3396,24 @@ async function finalizeSuccess(
     try {
       const { stillQualityUserMessage: sqm } =
         require("@/ruleEngine/quality/practiceCompleteness") as typeof import("@/ruleEngine/quality/practiceCompleteness");
+      const shouldMiss = (litAfter.shouldMisses ?? [])
+        .map((m) => m.id)
+        .filter((id) => /action\.|occupancy\.|glyph/i.test(String(id)))
+        .slice(0, 2);
       return sqm({
         keyAbsent: true,
         literaryEffectsQualified: true,
-        sampleMustFulfilled: true,
+        sampleMustFulfilled: litAfter.sampleMustFulfilled !== false,
         weak: true,
+        realizationDegraded: litAfter.realization?.realizationDegraded === true,
+        realizationNote: litAfter.ctaLabel ?? litAfter.realization?.realizationNote,
+        softEnvMissingHonest: Boolean(
+          (lastComposed as { softEnvMissingHonest?: boolean }).softEnvMissingHonest,
+        ),
+        shouldMissIds: shouldMiss,
       });
     } catch {
-      return "设计意图必须元素已兑现；像素未测（Key 可选，非失败）；弱图不可自动作视频首帧，可人审放行或继续生成";
+      return "设计意图必须元素已兑现；像素未测（Key 可选，非失败）；弱图债·可烧视频（设计意图优先）";
     }
   })();
   const userMessage = hq
@@ -3788,6 +4015,26 @@ async function finalizeSuccess(
     stillQuality = hqMeta.stillQuality;
   }
 
+  // Resolve PROP soft preview for FE canvas hang (warehouse / prior synth)
+  try {
+    const composed = input.composed as {
+      propAssetId?: number;
+      propSoftPreviewUrl?: string;
+    };
+    if (!composed.propSoftPreviewUrl && composed.propAssetId) {
+      const row = await db("o_assets")
+        .leftJoin("o_image", "o_assets.imageId", "o_image.id")
+        .where("o_assets.id", composed.propAssetId)
+        .select("o_image.filePath")
+        .first();
+      if (row?.filePath) {
+        composed.propSoftPreviewUrl = await u.oss.getSmallImageUrl(String(row.filePath));
+      }
+    }
+  } catch {
+    /* optional */
+  }
+
   return {
     url: input.url,
     prompt: (() => {
@@ -3821,6 +4068,16 @@ async function finalizeSuccess(
     didSynthesize: input.composed.didSynthesize,
     healBudget: input.healBudget,
     resolvedQuality: input.resolvedQuality,
+    closedCompose: Boolean(
+      (input.composed as { closedCompose?: boolean }).closedCompose === true &&
+        contaminationClass === "none",
+    ),
+    boundShotIndex:
+      (input.composed as { boundShotIndex?: number | null }).boundShotIndex ??
+      null,
+    framingMode: (input.composed as { framingMode?: string }).framingMode ?? null,
+    closedAssertReasons: (input.composed as { closedAssertReasons?: string[] }).closedAssertReasons ?? [],
+    contaminationClass: contaminationClass !== "none" ? contaminationClass : null,
     warnings: [
       ...(input.composed.warnings ?? []),
       ...(input.sceneRefsDropped
@@ -3843,6 +4100,17 @@ async function finalizeSuccess(
     keepSoftEnvRef: input.composed.keepSoftEnvRef,
     propPlateMissing: Boolean((input.composed as { propPlateMissing?: boolean }).propPlateMissing),
     synthesizedPropPlate: Boolean((input.composed as { synthesizedPropPlate?: boolean }).synthesizedPropPlate),
+    propAssetId: (input.composed as { propAssetId?: number }).propAssetId,
+    propSoftPreviewUrl: (() => {
+      try {
+        const { isOralMicroNotActionPrimary } =
+          require("@/ruleEngine/compilers/singleShotClosedCompose") as typeof import("@/ruleEngine/compilers/singleShotClosedCompose");
+        if (isOralMicroNotActionPrimary(input.literaryDesc)) return undefined;
+      } catch {
+        /* optional */
+      }
+      return (input.composed as { propSoftPreviewUrl?: string }).propSoftPreviewUrl;
+    })(),
     refsRoles: (input.composed as { refsRoles?: string[] }).refsRoles,
     droppedSoftEnv: Boolean((input.composed as { droppedSoftEnv?: boolean }).droppedSoftEnv),
     vendorDroppedSoftEnv: Boolean(

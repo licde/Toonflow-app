@@ -587,6 +587,39 @@ export default router.post(
               checklist,
             });
             let vendorPrompt = pipeline.egressPrompt;
+            try {
+              const {
+                assertSingleShotClosedInputs,
+                stripForeignBeatAtomsFromEgress,
+                isClosedComposeTrue,
+              } = await import("@/ruleEngine/compilers/singleShotClosedCompose");
+              const closed = assertSingleShotClosedInputs({
+                storyboardId: item.id,
+                boundShotIndex: (composeCtx as { boundShotIndex?: number }).boundShotIndex,
+                bindOk: (composeCtx as { bindOk?: boolean }).bindOk !== false,
+                bindCode: (composeCtx as { bindCode?: string }).bindCode,
+                visualDescription: literaryDesc,
+                compiledImagePrompt: composeCtx.compiledImagePrompt,
+                purpose: "generate",
+                continuityInject: (composeCtx as { continuityInject?: string }).continuityInject,
+                shotSize: composeCtx.shotSize,
+                foreground: composeCtx.foreground,
+              });
+              (composedForPipe as { closedCompose?: boolean }).closedCompose = isClosedComposeTrue(
+                closed.closedCompose,
+              );
+              (composedForPipe as { framingMode?: string }).framingMode = closed.framingMode;
+              const scrubbed = stripForeignBeatAtomsFromEgress(vendorPrompt, literaryDesc);
+              vendorPrompt = scrubbed.text;
+              if (scrubbed.stripped.length) {
+                (composedForPipe as { sources?: string[] }).sources = [
+                  ...((composedForPipe as { sources?: string[] }).sources ?? []),
+                  ...scrubbed.stripped.map((s) => `closed.strip:${s}`),
+                ];
+              }
+            } catch {
+              /* optional closed parity */
+            }
             const pol = precheckContentPolicy(vendorPrompt);
             if (pol.hasSensitiveTerms) vendorPrompt = pol.softenedPrompt;
             const { resolvePropSoftCodes } = await import("@/ruleEngine/compilers/eventPlateReadiness");
@@ -747,8 +780,9 @@ export default router.post(
                     poseOccupancy: occForPlate,
                     plateMode: label.plateMode,
                   });
-                  if (ladder.skipSynth && !forceOccProp) {
+                  if (ladder.skipSynth) {
                     // Honesty: only skip when plate bytes hang; else force synth
+                    // Asset-first: warehouse paper kept under bend
                     let hung = false;
                     if (ladder.assetId) {
                       try {
@@ -824,7 +858,8 @@ export default router.post(
                   }
                   if (synth.base64) {
                     const softTail = softPresent && referenceList.length >= 2 ? referenceList.splice(-1, 1) : [];
-                    if (forceOccProp && propPresent && referenceList.length >= 2) {
+                    // Always replace existing propSoft — never splice second mid-slot
+                    if (propPresent && referenceList.length >= 2) {
                       referenceList[1] = { type: "image", base64: synth.base64 };
                     } else if (referenceList.length >= 1) {
                       referenceList.splice(1, 0, { type: "image", base64: synth.base64 });
@@ -990,12 +1025,21 @@ export default router.post(
                 maxSlots: 3,
                 softEnvContinuity: dropLatchBudget ? "none" : continuity,
                 allowPixelBake: false,
+                forceThreeSlotProp:
+                  !dropLatchBudget &&
+                  continuity === "must" &&
+                  (composedForPipe.generationContract?.objectiveClass === "action_primary" ||
+                    batchRefsContract?.poseOccupancy === "bend_pickup"),
               });
               if (chosen.droppedSoftEnv && continuity === "must" && !dropLatchBudget) {
                 vendorPrompt = `软环境为连贯性必须但槽位不足；禁止灰棚白棚。${vendorPrompt}`;
               }
               referenceList = chosen.refs.map((r) => ({ type: "image" as const, base64: r.base64 }));
               (composedForPipe as { refsRoles?: string[] }).refsRoles = chosen.roles;
+              const propPresentAfter = chosen.roles.includes("propSoft");
+              propPresent = propPresentAfter;
+              (composedForPipe as { propPlateMissing?: boolean }).propPlateMissing =
+                eventObj && !propPresentAfter;
               if (dropLatchBudget) {
                 const roles = ((composedForPipe as { refsRoles?: string[] }).refsRoles ?? chosen.roles ?? []).slice();
                 const nextRefs: typeof referenceList = [];
@@ -1658,6 +1702,12 @@ export default router.post(
                   softEnvMissingHonest: Boolean(
                     (composedForPipe as { softEnvMissingHonest?: boolean }).softEnvMissingHonest,
                   ),
+                  realizationDegraded: litAfter.realization?.realizationDegraded === true,
+                  realizationNote: litAfter.ctaLabel,
+                  shouldMissIds: (litAfter.shouldMisses ?? [])
+                    .map((m) => m.id)
+                    .filter((id) => /action\.|occupancy\.|glyph/i.test(String(id)))
+                    .slice(0, 2),
                   poseEvidenceOk: (() => {
                     const miss = litAfter.sampleMustMissIds ?? litAfter.missingEffects.map((m) => m.id);
                     if (!miss.some((id) => /action\.|occupancy\./.test(String(id)))) return true;
