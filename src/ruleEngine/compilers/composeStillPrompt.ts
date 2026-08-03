@@ -111,9 +111,16 @@ export interface ComposeStillContext {
   gatedHealInject?: string[] | null;
   /** Prior primaryIntentSeal — reseal when literaryHash drifts */
   priorPrimaryIntentSeal?: import("./primaryIntentSeal").PrimaryIntentCarrierSet | null;
-  /** Sibling / episode VDs for action lexicon harvest (declare-only on current shot) */
+  /** Sibling / episode VDs — diagnostic only; must NOT legislate hardConstraint/prop (SingleShotClosed) */
   episodeVisualDescriptions?: string[] | null;
   episodeShot?: Record<string, unknown> | null;
+  /** Package↔row bind (SingleShotClosedCompose) */
+  bindOk?: boolean;
+  bindCode?: string | null;
+  boundShotIndex?: number | null;
+  closedCompose?: boolean;
+  bgBlur?: boolean;
+  clientId?: string | null;
 }
 
 export interface ComposeStillOptions {
@@ -579,6 +586,34 @@ function layerShootableExtras(ctx: ComposeStillContext, parts: string[], sources
   if (shotZh) {
     parts.push(`景别：${shotZh}`);
     sources.push("shot.shotSize");
+  }
+  // Industry soft framing (headroom / looking-room) — non-destructive
+  try {
+    const { softGrammarHints } =
+      require("./cinematicShotGrammar") as typeof import("./cinematicShotGrammar");
+    const hints = softGrammarHints(["headroom", "lookingRoom", "axis", "axis180"]);
+    for (const h of hints) {
+      if (h && !parts.some((p) => p.includes(h))) {
+        parts.push(h);
+        sources.push("cinematic.softHints");
+      }
+    }
+      const { assessCompositionSoftNoKey, injectCompositionSoftHints } = require("./compositionSoftNoKey") as typeof import("./compositionSoftNoKey");
+    const softComp = assessCompositionSoftNoKey({
+      visualDescription: ctx.visualDescription,
+      promptUsed: parts.join("\n"),
+      shotSize: String(ctx.shotSize ?? ""),
+      spatialRelation: typeof ctx.spatialRelation === "string" ? ctx.spatialRelation : undefined,
+      faceBudget: String((ctx as { faceBudget?: string }).faceBudget ?? ""),
+    });
+    const nextParts = injectCompositionSoftHints(parts, softComp.findings);
+    if (nextParts.length !== parts.length) {
+      parts.length = 0;
+      parts.push(...nextParts);
+      sources.push("composition.softNoKey");
+    }
+  } catch {
+    /* optional */
   }
   if (ctx.spatialRelation) {
     let stripFullSecondary = false;
@@ -1048,11 +1083,17 @@ export function composeStillPrompt(
     const prev = stripStaleBindingFromPrevious(prevClean);
     let dropOffBeat = false;
     try {
-      const { previousBodyHasOffBeatContamination } =
-        require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
-      dropOffBeat = previousBodyHasOffBeatContamination(prev, ctx.visualDescription);
+      const { previousBodyHasBidirectionalOffBeatContamination } =
+        require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
+      dropOffBeat = previousBodyHasBidirectionalOffBeatContamination(prev, ctx.visualDescription);
     } catch {
-      /* optional */
+      try {
+        const { previousBodyHasOffBeatContamination } =
+          require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+        dropOffBeat = previousBodyHasOffBeatContamination(prev, ctx.visualDescription);
+      } catch {
+        /* optional */
+      }
     }
     if (
       prev &&
@@ -2069,7 +2110,15 @@ export function composeStillPrompt(
   let compositionContractApplied = false;
   let recipeTail = "";
   if (qualityMode === "hq_update") {
-    if (recipeAdapt.useNonFaceHqRecipe && !predPack.hasSeatingOrKneel) {
+    if (recipeAdapt.mode === "ecu_mouth") {
+      const { ECU_MOUTH_HQ_RECIPE, oralEcuMouthNegatives } =
+        require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
+      const { ECU_MOUTH_HQ_RECIPE: adaptEcu } =
+        require("./stillShotRecipeAdapt") as typeof import("./stillShotRecipeAdapt");
+      recipeTail = adaptEcu || ECU_MOUTH_HQ_RECIPE;
+      supportParts.push(oralEcuMouthNegatives());
+      sources.push("compositionContract.ecu_mouth", "closed.oralEcuNegatives");
+    } else if (recipeAdapt.useNonFaceHqRecipe && !predPack.hasSeatingOrKneel) {
       recipeTail =
         recipeAdapt.mode === "prop_cu" || recipeAdapt.mode === "empty"
           ? PROP_CU_HQ_RECIPE
@@ -2815,6 +2864,24 @@ export function composeStillPrompt(
     (generationContract as { keepSoftEnvRef?: boolean; softEnvContinuity?: string }).keepSoftEnvRef =
       keepSoftEnvSealed;
     (generationContract as { softEnvContinuity?: string }).softEnvContinuity = softEnvContinuitySealed;
+  }
+
+  // SingleShotClosed: final egress strip undeclared beat atoms
+  try {
+    const { stripForeignBeatAtomsFromEgress, oralEcuMouthNegatives, isOralMicroNotActionPrimary } =
+      require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
+    const vdFinal = String(primary?.text ?? ctx.visualDescription ?? "");
+    const scrubbedFinal = stripForeignBeatAtomsFromEgress(prompt, vdFinal);
+    if (scrubbedFinal.stripped.length) {
+      prompt = scrubbedFinal.text;
+      sources.push(...scrubbedFinal.stripped.map((s) => `closed.strip.final:${s}`));
+    }
+    if (isOralMicroNotActionPrimary(vdFinal) && !/禁止半身|禁止手持纸/.test(prompt)) {
+      prompt = `${prompt}。${oralEcuMouthNegatives()}`.replace(/。。+/g, "。");
+      sources.push("closed.oralEcuNegatives.final");
+    }
+  } catch {
+    /* optional */
   }
 
   return {

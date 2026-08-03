@@ -100,11 +100,37 @@ function mapShotSizeLabel(raw: string | null | undefined, force?: string | null)
 
 function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
   const policy = ctx.videoIntent.policy;
-  // Prefer design size when present; prop_cu force 特写
-  const shotSize =
+  const hasDialEarly = ctx.dialogueLines.length > 0;
+  const authorShotLabel = mapShotSizeLabel(ctx.shotSize);
+  // Prefer design size when present; prop_cu force 特写; speak_lip promotes to 近景 with author note
+  let shotSize =
     policy.forceShotSize && (!ctx.shotSize || /cu|特写|close/i.test(ctx.shotSize))
       ? policy.forceShotSize
-      : mapShotSizeLabel(ctx.shotSize) || (policy.forceShotSize ?? "近景");
+      : authorShotLabel || (policy.forceShotSize ?? "近景");
+  let shotSizeAuthorNote = "";
+  let adaptDiffShotSize = "";
+  const speakLike =
+    hasDialEarly &&
+    (policy.audioMode === "dialogue_lip" || ctx.videoIntent.intentClass === "speak_lip");
+  if (speakLike) {
+    try {
+      const { shotSizeWiderThanNear, grammarDefaultForIntent } =
+        require("./cinematicShotGrammar") as typeof import("./cinematicShotGrammar");
+      const industry = grammarDefaultForIntent("speak_lip");
+      // Realization-only near framing: never write back design shotSize SSOT
+      if (shotSizeWiderThanNear(shotSize) && industry?.shotSize) {
+        shotSizeAuthorNote = authorShotLabel || String(ctx.shotSize ?? "中景");
+        adaptDiffShotSize = `设计${shotSizeAuthorNote}↔实现${industry.shotSize}`;
+        shotSize = industry.shotSize;
+      }
+    } catch {
+      if (/中景|全景|远景|ms|ws/i.test(shotSize)) {
+        shotSizeAuthorNote = shotSize;
+        adaptDiffShotSize = `设计${shotSize}↔实现近景`;
+        shotSize = "近景";
+      }
+    }
+  }
 
   const dur = Math.max(1, Math.round(ctx.durationSec || 0));
   // Never invent 4-char「画面主体」thin shell — require VD or scene+size literary enough
@@ -138,10 +164,22 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
   const hasDial = ctx.dialogueLines.length > 0;
   let motion = policy.motionDefault;
   let motionFromContact = false;
+  let motionMultiPhase = false;
+  const adaptPack = ctx.realizationAdaptPack ?? null;
+  const adaptMotion =
+    adaptPack?.motionBody && (adaptPack.adapted || adaptPack.realizationDegraded)
+      ? adaptPack.motionBody
+      : null;
+
+  if (adaptMotion) {
+    motion = adaptMotion;
+    motionMultiPhase = adaptMotion.includes("\n");
+  }
   if (hasDial && (policy.audioMode === "dialogue_lip" || ctx.videoIntent.intentClass === "speak_lip")) {
-    motion = "静止持镜";
+    if (!adaptMotion) motion = "静止持镜";
   }
   // Contact-event: executable multi-phase beats (never collapse to 微表情呼吸 alone)
+  if (!adaptMotion) {
   try {
     const { buildContactEventMotionBeats, isContactEventVd } =
       require("./contactEventPolicy") as typeof import("./contactEventPolicy");
@@ -163,12 +201,31 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
   } catch {
     /* optional */
   }
-  // Enrich motion from VD action verbs (design-perf → Motion) — skip if contact beats already set
-  if (!motionFromContact) {
+  }
+  // Enrich motion from VD action verbs (design-perf → Motion) — skip if contact beats or adapt already set
+  if (!motionFromContact && !adaptMotion) {
     const m = ctx.visualDescription.match(
-      /[^。；;\n]{0,16}(?:划过|拂过|贴合|颊触|划|擦|甩|咬|颤|推|拉|跪|坐|渗|攥|握|摩挲|扳指)[^。；;\n]{0,16}/,
+      /[^。；;\n]{0,16}(?:弯腰|俯身|捡起|捡|拾起|捏紧|捏|划过|拂过|贴合|颊触|划|擦|甩|咬|颤|推|拉|跪|坐|渗|攥|握|摩挲|扳指)[^。；;\n]{0,16}/,
     );
     if (m?.[0]?.trim()) motion = m[0].trim().slice(0, 48);
+  }
+  // Non-contact CHAR-SCENE: timed phases from VD action chain (弯腰→触及→捏紧)
+  if (!motionFromContact && !adaptMotion && !/^\d/.test(motion) && /弯腰|俯身|捡|捏|触及|捡起/.test(ctx.visualDescription)) {
+    const d = Math.max(2, dur);
+    const a = Math.max(0.5, Math.round((d / 3) * 10) / 10);
+    const b = Math.max(a + 0.5, Math.round(((2 * d) / 3) * 10) / 10);
+    const phases: string[] = [];
+    if (/弯腰|俯身/.test(ctx.visualDescription)) phases.push(`0s-${a}s: 弯腰俯身`);
+    if (/捡|拾|触及/.test(ctx.visualDescription)) {
+      phases.push(`${phases.length ? a : 0}s-${b}s: 指尖触及物件`);
+    }
+    if (/捏|攥|握/.test(ctx.visualDescription)) {
+      phases.push(`${phases.length ? b : a}s-${d}s: 捏紧纸缘`);
+    }
+    if (phases.length >= 2) {
+      motion = phases.join("\n");
+      motionMultiPhase = true;
+    }
   }
   // Enrich motion from VD micro-verbs when prop_cu
   if (!motionFromContact && ctx.videoIntent.intentClass === "prop_cu" && /摩挲|扳|捻|握/.test(ctx.visualDescription)) {
@@ -186,12 +243,93 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
   if (fxPeak && peakLabel && !motionFromContact) {
     motion = `${motion}；事件拍点：${peakLabel}`;
   }
-  // microExpression → Motion cue (declare-only) — never sole body for contactEvent
-  if (ctx.microExpression && !motionFromContact) {
-    const micro = typeof ctx.microExpression === "string"
-      ? ctx.microExpression
-      : [ctx.microExpression.eyes, ctx.microExpression.mouthDetail].filter(Boolean).join("，");
-    if (micro && !hasDial) motion = `${motion}；微表情：${String(micro).slice(0, 24)}`;
+  // microExpression → Motion: eyes always when authored; mouth only when no dialogue (lip owns mouth)
+  if (ctx.microExpression) {
+    const eyes =
+      typeof ctx.microExpression === "string"
+        ? ""
+        : String(ctx.microExpression.eyes ?? "").trim();
+    const mouth =
+      typeof ctx.microExpression === "string"
+        ? ctx.microExpression
+        : String(ctx.microExpression.mouthDetail ?? "").trim();
+    if (hasDial && eyes) {
+      motion = `${motion}；微表情：眼神${eyes.slice(0, 16)}`;
+    } else if (!hasDial && !motionFromContact) {
+      const micro = typeof ctx.microExpression === "string"
+        ? ctx.microExpression
+        : [eyes, mouth].filter(Boolean).join("，");
+      if (micro) motion = `${motion}；微表情：${String(micro).slice(0, 24)}`;
+    }
+  }
+  if (adaptPack?.performanceBoost && !motion.includes(adaptPack.performanceBoost.slice(0, 4))) {
+    motion = `${motion}；${adaptPack.performanceBoost}`.trim();
+  }
+  // Industry AV beats from fixture softHints (realization Motion — design SSOT already has avBeats)
+  if (hasDial && !motionFromContact) {
+    try {
+      const { softGrammarHints } =
+        require("./cinematicShotGrammar") as typeof import("./cinematicShotGrammar");
+      const breath = softGrammarHints(["dialogueBreath"])[0] ?? "台词前微停";
+      if (!/微停|留白|呼吸/.test(motion)) {
+        motion = `${breath}；${motion}`.trim();
+      }
+    } catch {
+      if (!/微停|留白|呼吸/.test(motion)) {
+        motion = `台词前微停；${motion}`.trim();
+      }
+    }
+
+    // Wave-3 J/L-cut + axis180: design avBeats → realization Motion note (no shotSize rewrite)
+    {
+      try {
+        const { softGrammarHints } =
+          require("./cinematicShotGrammar") as typeof import("./cinematicShotGrammar");
+        const designBeats = Array.isArray(
+          (ctx.designShot as { narrative?: { avBeats?: string[] } } | null)?.narrative?.avBeats,
+        )
+          ? ((ctx.designShot as { narrative: { avBeats: string[] } }).narrative.avBeats)
+          : [];
+        const jCut = softGrammarHints(["jCut"])[0] ?? "下句声先入再切画";
+        const lCut = softGrammarHints(["lCut"])[0] ?? "本镜声延至下画";
+        const axis180 = softGrammarHints(["axis180"])[0] ?? "保持180度轴线，过肩对切不越轴";
+        const wantsJ = designBeats.some((b) => /J.?cut|下句声先入|声先入/i.test(b));
+        const wantsL = designBeats.some((b) => /L.?cut|声延至下|本镜声延/i.test(b));
+        const wantsAxis = designBeats.some((b) => /180|轴线|过肩对切|不越轴/.test(b));
+        if (wantsJ && !motion.includes(jCut.slice(0, 4))) motion = `${jCut}；${motion}`.trim();
+        if (wantsL && !motion.includes(lCut.slice(0, 4))) motion = `${lCut}；${motion}`.trim();
+        if (wantsAxis && !motion.includes("轴线") && !motion.includes("180")) {
+          motion = `${axis180}；${motion}`.trim();
+        }
+      } catch {
+        /* optional */
+      }
+    }
+    if (
+      (/弯腰|跪持|俯身|低头/.test(ctx.visualDescription) ||
+        adaptPack?.realizationOccupancy === "kneel_hold" ||
+        adaptPack?.realizationDegraded) &&
+      !/抬视线|面容可读|抬脸/.test(motion)
+    ) {
+      motion = `${motion}；末相抬视线面容可读口型`.trim();
+      motionMultiPhase = true;
+    }
+  }
+  // Plate-first motionStartHint + i2vCriticalFacts into Motion lead (dedupe)
+  {
+    const meta = (ctx.shotMeta ?? {}) as Record<string, unknown>;
+    const hint = String(
+      adaptPack?.motionStartHint ?? meta.videoMotionStartHint ?? "",
+    ).trim();
+    const facts = [
+      ...(adaptPack?.i2vCriticalFacts ?? []),
+      ...((meta.i2vCriticalFacts as string[] | undefined) ?? []),
+    ].filter(Boolean);
+    const leadBits = [...(hint ? [hint.slice(0, 40)] : []), ...facts.slice(0, 3).map((f) => String(f).slice(0, 16))];
+    const uniqLead = [...new Set(leadBits)].filter((b) => b && !motion.includes(b.slice(0, 6)));
+    if (uniqLead.length) {
+      motion = `${uniqLead.join("；")}；${motion}`.trim();
+    }
   }
 
   // Contact SFX hint into audio path later — stash on ctx via narrative bit
@@ -206,7 +344,10 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
   }
 
   // Design camera declare-only; dialogue forces static; CAM-SPEAK already clamped in hydrate
-  let camMotion = hasDial ? "静止" : String(ctx.cameraMotion ?? "").trim() || policy.cameraMotion;
+  let camMotion =
+    adaptPack?.cameraPolicy ??
+    (hasDial ? "静止" : String(ctx.cameraMotion ?? "").trim() || policy.cameraMotion);
+  if (speakLike) camMotion = "静止";
   // Viral mediate aggressive cams to vendor-legal (spine-time) — never strip contact Motion verbs
   try {
     const { mediateViralMotion } =
@@ -224,11 +365,26 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
   if (fxPeak && peakLabel) {
     visualBody = `${visual}。特效可见：${peakLabel}`;
   }
+  if (ctx.compositionForeground) {
+    visualBody = `${visualBody}。前景：${ctx.compositionForeground.slice(0, 24)}`;
+  }
+  if (ctx.compositionBackground) {
+    visualBody = `${visualBody}。背景：${ctx.compositionBackground.slice(0, 24)}`;
+  }
+  if (ctx.spatialRelation) {
+    visualBody = `${visualBody}。站位：${ctx.spatialRelation.slice(0, 40)}`;
+  }
+  if (ctx.bgBlur === false) {
+    visualBody = `${visualBody}。背景清晰不虚化`;
+  }
   if (ctx.promptAnchors?.length) {
     visualBody = `${visualBody}。锚点：${ctx.promptAnchors.slice(0, 3).join("/")}`;
   }
   if (ctx.continuityHint) {
     visualBody = `${visualBody}（承接：${ctx.continuityHint}）`;
+  }
+  if (adaptPack?.atmosphereBoost && !visualBody.includes(adaptPack.atmosphereBoost.slice(0, 4))) {
+    visualBody = `${visualBody}。${adaptPack.atmosphereBoost.slice(0, 24)}`;
   }
 
   let audioBody: string;
@@ -238,8 +394,16 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
     audioBody = audioBodyForMode({
       audioMode: policy.audioMode,
       dialogueLines: ctx.dialogueLines,
-      sfx: ctx.sfx || ctx.sfxIntent || ctx.audioCue || ctx.avCausality?.audioBeat || contactSfx || undefined,
-      ambient: ctx.audioPrompt?.slice(0, 80),
+      sfx:
+        ctx.sfx ||
+        ctx.sfxIntent ||
+        adaptPack?.sfxBeat ||
+        ctx.audioCue ||
+        ctx.avCausality?.audioBeat ||
+        contactSfx ||
+        undefined,
+      ambient: undefined,
+      voiceCharacter: ctx.audioPrompt?.slice(0, 80) || undefined,
     });
   } catch {
     const audioBits: string[] = [];
@@ -249,8 +413,10 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
     } else {
       audioBits.push("无对白。");
     }
-    const sfxLine = ctx.sfx || ctx.sfxIntent || ctx.audioCue || ctx.avCausality?.audioBeat || contactSfx;
+    const sfxLine =
+      ctx.sfx || ctx.sfxIntent || adaptPack?.sfxBeat || ctx.audioCue || ctx.avCausality?.audioBeat || contactSfx;
     if (sfxLine) audioBits.push(`音效：${sfxLine}`);
+    if (ctx.audioPrompt) audioBits.push(`声线：${ctx.audioPrompt.slice(0, 80)}`);
     if (!hasDial && !sfxLine) audioBits.push("仅环境音效。");
     audioBody = audioBits.join("\n");
   }
@@ -276,9 +442,58 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
     audioBody = `${audioBody}\n音效：${contactSfx}`.trim();
   }
 
+  // Wave-3 Audio J/L-cut notes from design avBeats (realization only)
+  {
+    const designBeats = Array.isArray(
+      (ctx.designShot as { narrative?: { avBeats?: string[] } } | null)?.narrative?.avBeats,
+    )
+      ? ((ctx.designShot as { narrative: { avBeats: string[] } }).narrative.avBeats)
+      : [];
+    try {
+      const { softGrammarHints } =
+        require("./cinematicShotGrammar") as typeof import("./cinematicShotGrammar");
+      const jCut = softGrammarHints(["jCut"])[0] ?? "下句声先入再切画";
+      const lCut = softGrammarHints(["lCut"])[0] ?? "本镜声延至下画";
+      if (designBeats.some((b) => /J.?cut|下句声先入|声先入/i.test(b)) && !audioBody.includes("声先入")) {
+        audioBody = `${audioBody}\n转场声画：${jCut}`.trim();
+      }
+      if (designBeats.some((b) => /L.?cut|声延至下|本镜声延/i.test(b)) && !audioBody.includes("声延")) {
+        audioBody = `${audioBody}\n转场声画：${lCut}`.trim();
+      }
+    } catch {
+      /* optional */
+    }
+  }
+
   const narrativeBits = [
     ctx.debutBeat ? `本镜节拍：${ctx.debutBeat.slice(0, 80)}` : "",
     ctx.beatDurationSec != null ? `beatDuration:${ctx.beatDurationSec}s` : "",
+    ctx.emotionIntensity != null ? `情绪强度:${ctx.emotionIntensity}` : "",
+    ctx.emotionIntensity != null && ctx.emotionIntensity >= 6
+      ? adaptPack?.performanceBoost || "表演：隐忍决绝"
+      : "",
+    shotSizeAuthorNote ? `作者景别注记:${shotSizeAuthorNote}→制作近景` : "",
+    adaptDiffShotSize ? `adaptDiff:${adaptDiffShotSize}` : "",
+    (() => {
+      const beats = Array.isArray(
+        (ctx.designShot as { narrative?: { avBeats?: string[] } } | null)?.narrative?.avBeats,
+      )
+        ? ((ctx.designShot as { narrative: { avBeats: string[] } }).narrative.avBeats)
+        : [];
+      if (!beats.length) return "";
+      const jl = beats.filter((b) => /J.?cut|L.?cut|声先入|声延|180|轴线/i.test(b));
+      if (!jl.length) return `avBeats:${beats.slice(0, 3).join("|")}`;
+      return `avBeats:${jl.slice(0, 4).join("|")} adaptDiff:designAvBeats→realize`;
+    })(),
+    (() => {
+      const narr = (ctx.designShot as { narrative?: { transitionType?: string; rhythmZone?: string } } | null)
+        ?.narrative;
+      const tr = String(narr?.transitionType ?? "").trim();
+      const rz = String(narr?.rhythmZone ?? "").trim();
+      return [tr ? `转场:${tr}` : "", rz ? `节奏区:${rz}` : ""].filter(Boolean).join(" ");
+    })(),
+    adaptPack?.narrativeFootnote ? `实现注记：${adaptPack.narrativeFootnote}` : "",
+    adaptPack?.adapted ? "motionFrom:realizationAdapt" : "",
     "锁定脸型身份，禁止夸张改面容身份。",
     `intent:${ctx.videoIntent.intentClass}`,
     motionFromContact ? "motionFrom:contactEvent" : "",
@@ -286,7 +501,7 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
     ctx.continuityHint ? `continuity:${ctx.continuityHint}` : "",
   ].filter(Boolean);
 
-  const motionBlock = motionFromContact && motion.includes("\n")
+  const motionBlock = (motionFromContact || motionMultiPhase) && motion.includes("\n")
     ? motion
     : `0s-${dur}s: ${motion}。`;
 

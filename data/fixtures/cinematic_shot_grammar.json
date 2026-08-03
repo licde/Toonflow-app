@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "layers": [
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "L5",
+    "L6"
+  ],
+  "intentDefaults": {
+    "speak_lip": {
+      "shotSize": "近景",
+      "cameraMotion": "静止",
+      "faceBudget": "must",
+      "forbidFullBowSpeak": true
+    },
+    "action_primary": {
+      "shotSize": "中景",
+      "cameraMotion": "轻微运镜",
+      "faceBudget": "optional"
+    },
+    "prop_cu": {
+      "shotSize": "特写",
+      "cameraMotion": "微动作跟随",
+      "faceBudget": "none"
+    },
+    "react_silent": {
+      "shotSize": "近景",
+      "cameraMotion": "静止",
+      "faceBudget": "must"
+    },
+    "ots": {
+      "shotSize": "近景",
+      "cameraMotion": "静止",
+      "faceBudget": "must"
+    },
+    "reaction": {
+      "shotSize": "近景",
+      "cameraMotion": "静止",
+      "faceBudget": "must"
+    },
+    "insert_prop": {
+      "shotSize": "特写",
+      "cameraMotion": "微动作跟随",
+      "faceBudget": "none"
+    }
+  },
+  "softHints": {
+    "headroom": "保留头上空间",
+    "lookingRoom": "视线前方留白",
+    "axis": "保持站位轴线连续",
+    "dialogueBreath": "台词前微停",
+    "staticOnSpeak": "对白镜静止持镜",
+    "jCut": "下句声先入再切画",
+    "lCut": "本镜声延至下画",
+    "axis180": "保持180度轴线，过肩对切不越轴"
+  },
+  "conflict": {
+    "actionBowPlusSpeak": {
+      "when": [
+        "bend_or_kneel",
+        "dialogue_native"
+      ],
+      "authorShotWiderThan": "近景",
+      "primaryAction": "confirm_split",
+      "splitHint": "action_then_dialogue_mcu",
+      "fallback": "face_budget_unreachable"
+    }
+  },
+  "deferred": {
+    "note": "Wave-2 stubs only — full J/L-cut timeline + true 180 solver not in this wave",
+    "jCut": "softHint",
+    "lCut": "softHint",
+    "axis180": "softHint"
+  }
+}

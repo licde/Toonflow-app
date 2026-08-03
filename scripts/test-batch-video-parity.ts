@@ -28,15 +28,15 @@ ok("batch assertStillFirstFrameContract or detect", /assertStillFirstFrameContra
 ok("batch audioGateDeferred", /audioGateDeferred/.test(batch));
 ok("single has identity", /gateIdentityForShot/.test(single));
 ok("single has bridge", /bridgeShotToVendor/.test(single));
-ok("single audio L0 → 400", /AUD-LIT-L0/.test(single));
+ok("single audio L0 soft-absorb", /assertAudioLiteraryFidelity/.test(single) && /音轨债已标|audioAssert/.test(single));
 ok("single voice bind", /assertAudioVoiceBindGate|AUD-VOICE-BIND/.test(single));
 ok("single detect passes stillQuality", /stillQuality/.test(single) && /assertStillDetectForBurn/.test(single));
 ok("single outer 500", /GENERATE_VIDEO/.test(single) && /catch \(e\)/.test(single));
-ok("batch refuses TRACK_PROMPT_NOT_BURN_READY / 需完善", /TRACK_PROMPT_NOT_BURN_READY|需完善/.test(batch));
-ok("batch soft_defer writeback patchVideoTrackReason", /patchVideoTrackReason/.test(batch) && /需完善/.test(batch));
-ok("single refuses TRACK_PROMPT_NOT_BURN_READY / 需完善", /TRACK_PROMPT_NOT_BURN_READY|需完善/.test(single));
-ok("batch refuses LIP_CONFIRM_REQUIRED on burn", /LIP_CONFIRM_REQUIRED/.test(batch) && /lipConfirmRequired/.test(batch));
-ok("single refuses LIP_CONFIRM_REQUIRED on burn", /LIP_CONFIRM_REQUIRED/.test(single) && /lipConfirmRequired/.test(single));
+ok("batch heal_then_burn 需完善 (absorb, not skip)", /healThenBurn|契约债已智能吸收/.test(batch));
+ok("batch soft_defer writeback patchVideoTrackReason", /patchVideoTrackReason/.test(batch));
+ok("single heal_then_burn 需完善/仓债", /healThenBurnNotes/.test(single) && /实现已降级/.test(single));
+ok("batch absorbs warehouse debt (no hard 400 WAREHOUSE)", /healThenBurnAbsorbed/.test(batch) && !/code: "WAREHOUSE_DEBT_SOFT_DEFER"/.test(batch));
+ok("single absorbs lipConfirm (no LIP_CONFIRM 400)", /仓债已吸收/.test(single) && !/code: "LIP_CONFIRM_REQUIRED"/.test(single));
 ok(
   "single vendorPrompt mutable (spine path reassign)",
   /let vendorPrompt/.test(single) && !/const vendorPrompt\s*=/.test(single),
@@ -59,6 +59,16 @@ ok("batch stamps burnDurationSec on track", /burnDurationSec:\s*vendorDuration/.
 ok("checkVideoStateList qcSoftDeliver", /mapVideoStateForFe|qcSoftDeliver/.test(fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/checkVideoStateList.ts"), "utf-8")));
 const checkVideoSrc = fs.readFileSync(path.join(process.cwd(), "src/routes/production/workbench/checkVideoStateList.ts"), "utf-8");
 ok("checkVideoStateList scorecard + track fidelity", /skippedDims/.test(checkVideoSrc) && /scorecard/.test(checkVideoSrc) && /trackFidelityFromReason/.test(checkVideoSrc));
+ok("batch mouth uses resolveLipSyncPolicyFromShot", /resolveLipSyncPolicyFromShot/.test(batch));
+ok("single soft-absorbs or hard-blocks I2V (both paths present)", /STILL-I2V-NOT-READY/.test(single) && /首帧债已吸收|弱图首帧已吸收/.test(single));
+ok("single soft-absorbs contact handoff", /接触交接债已吸收|assertStillContactVideoHandoff/.test(single));
+ok("single LANG-01 packed gate", /VID-LANG-01|checkLangVid01/.test(single));
+ok("single fidelity videoPass gate", /fidelityMissesBlockAbsorb/.test(single));
+ok(
+  "FE debt mount wires both bars",
+  /VideoIntentDebtBar/.test(fs.readFileSync(path.join(process.cwd(), "docs/toonflow-web/components/ShotWorkbenchDebtMount.vue"), "utf-8")) &&
+    /LitDetailDebtBar/.test(fs.readFileSync(path.join(process.cwd(), "docs/toonflow-web/components/ShotWorkbenchDebtMount.vue"), "utf-8")),
+);
 
 if (failed) process.exit(1);
 console.log("\n=== test:batch-video-parity OK ===");

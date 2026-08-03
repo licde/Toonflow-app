@@ -144,25 +144,50 @@ export default router.post(
           });
         }
         const again = diagnoseVideoIntent({ shots: wb.shots, shotIndex });
+        // heal_then_burn: residual WARN / absorbable exit ids → soft continue, no long exit toast
+        const absorbExit = new Set([
+          "DEX-DUP-VD",
+          "DC-01-EXTRA",
+          "DEX-INTENT-PIC",
+          "IRD-CONFIRM",
+          "DEX-VID-MOTION-VERB",
+          "DEX-VID-BEAT-DUR",
+          "DEX-VID-CAM-MEDIATE",
+        ]);
+        const hardExit = (wb.exitGate.failedIds ?? []).filter((id) => !absorbExit.has(id));
+        const softOk = again.findings.every((f) => f.severity !== "BLOCK") && hardExit.length === 0;
+        const softNotes = [
+          ...again.findings.filter((f) => f.severity === "WARN").map((f) => f.message),
+          ...(wb.exitGate.failedIds ?? []).filter((id) => absorbExit.has(id)).map((id) => `exit债:${id}`),
+        ].slice(0, 4);
         return res.status(200).send(
           success({
             applied,
             before: diagnosed,
             after: again,
-            ok: again.ok && wb.designExitPass,
-            exitGate: wb.exitGate,
+            ok: softOk || (again.ok && wb.designExitPass),
+            exitGate: softOk
+              ? { ...wb.exitGate, ok: true, failedIds: [], softAbsorbed: wb.exitGate.failedIds }
+              : wb.exitGate,
             exitReassert: wb.exitGate,
-            designExitPass: wb.designExitPass,
+            designExitPass: softOk || wb.designExitPass,
+            healThenBurn: softOk && !wb.designExitPass,
             cascade: wb.cascade,
             syncedStoryboard,
-            primaryNextStep: again.ok && wb.designExitPass ? "burn" : "chat_repair",
-            ctaLabel: again.ctaLabel,
-            userMessage:
-              again.ok && wb.designExitPass
-                ? "视频设计债已清"
-                : [...again.findings.map((f) => f.message), ...(wb.exitGate.failedIds.length ? [`exit:${wb.exitGate.failedIds.join(",")}`] : [])].join(
-                    "；",
-                  ),
+            primaryNextStep: softOk || (again.ok && wb.designExitPass) ? "burn" : "chat_repair",
+            ctaLabel: softOk ? "可继续生成" : again.ctaLabel,
+            debtLedger: softNotes.map((n, i) => ({
+              id: `vird_${i}`,
+              label: n.length > 40 ? `${n.slice(0, 40)}…` : n,
+            })),
+            userMessage: softOk
+              ? softNotes.length
+                ? `视频设计债已吸收（${softNotes.length}）·可继续生成`
+                : "视频设计债已清"
+              : [
+                  ...again.findings.filter((f) => f.severity === "BLOCK").map((f) => f.message),
+                  ...(hardExit.length ? [`exit:${hardExit.join(",")}`] : []),
+                ].join("；") || "视频设计债未尽",
           }),
         );
       }

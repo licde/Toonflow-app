@@ -296,6 +296,27 @@ const sampleMustOk = computed(() => {
   );
 });
 
+const realizationDegraded = computed(() => {
+  const m = props.stillMeta as {
+    realizationDegraded?: boolean;
+    realization?: { realizationDegraded?: boolean; realizationNote?: string };
+    ctaLabel?: string;
+  } | null;
+  return (
+    m?.realizationDegraded === true ||
+    m?.realization?.realizationDegraded === true
+  );
+});
+
+const shouldMissSurface = computed(() => {
+  const m = props.stillMeta as {
+    sampleFulfillment?: { shouldMissIds?: string[] };
+    shouldMissIds?: string[];
+  } | null;
+  const ids = m?.sampleFulfillment?.shouldMissIds ?? m?.shouldMissIds ?? [];
+  return ids.filter((id) => /action\.|occupancy\.|glyph/i.test(String(id))).slice(0, 2);
+});
+
 const resolvedTitle = computed(() => {
   if (sampleMustMiss.value) {
     const ids = props.stillMeta?.sampleFulfillment?.mustMissIds ?? [];
@@ -303,13 +324,24 @@ const resolvedTitle = computed(() => {
       ? `样本未兑现：${ids.slice(0, 3).join("、")}`
       : "设计意图样本未兑现";
   }
+  const shouldTail = shouldMissSurface.value.length
+    ? `；细节待增强：${shouldMissSurface.value.join("、")}`
+    : "";
+  if (realizationDegraded.value && sampleMustOk.value) {
+    const note =
+      (props.stillMeta as { realization?: { realizationNote?: string }; ctaLabel?: string } | null)
+        ?.realization?.realizationNote ||
+      (props.stillMeta as { ctaLabel?: string } | null)?.ctaLabel ||
+      "姿态债：弯腰像素未尽·可烧视频（设计意图优先）";
+    return `${note}${shouldTail}；主干可烧；像素未测`;
+  }
   if (sampleMustOk.value && (props.stillMeta?.keyOptional || props.stillMeta?.pixelDimStatus === "unmeasured")) {
-    return "必须元素已兑现；像素未测";
+    return `必须元素已兑现${shouldTail}；像素未测；弱图债·可烧视频（设计意图优先）`;
   }
   if (sampleMustOk.value) {
     return props.title && !/须补描写|文学细节未过/.test(props.title)
       ? props.title
-      : "主效果已齐，细节可增强";
+      : `主效果已齐，细节可增强${shouldTail}`;
   }
   return props.title;
 });
@@ -522,6 +554,13 @@ const handEditLabel = computed(() =>
 
 
 const explainText = computed(() => {
+
+  if (props.stillMeta?.closedCompose === false) {
+    const reasons = (props.stillMeta.closedAssertReasons ?? []).slice(0, 3).join("、");
+    return reasons
+      ? `单镜封闭未达成（${reasons}）；禁止假绿燃片/视频继承。请清异镜参考并按本镜描写重出。`
+      : "单镜封闭未达成；禁止假绿燃片/视频继承。请清异镜参考并按本镜描写重出。";
+  }
 
   if (sampleMustMiss.value) {
     return (

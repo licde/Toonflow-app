@@ -77,7 +77,12 @@ export interface ExportGateResult {
     remainingFailedIds: string[];
     changes: { ruleId: string; detail: string; path?: string }[];
     chatRetryRequired: boolean;
+    repairChangelog?: unknown[];
   };
+  /** Wave-2 silent design repair log for FE toast / debt bar */
+  repairChangelog?: unknown[];
+  /** Residual industry debts after autoClose timeout / lock skip */
+  industryResidualDebts?: string[];
 }
 
 function loadRepairHints(ids: string[]): ExportGateRepairHint[] {
@@ -946,6 +951,21 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
         path: "planData.dialoguePlan|preDesignPack.shots",
         action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"};ops=${ac.autoClosed.changes.length}`,
       });
+      // Wave-2: surface industry silent repair changelog for FE toast
+      try {
+        if (Array.isArray(ac.repairChangelog) && ac.repairChangelog.length) {
+          const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+          bMeta.repairChangelog = ac.repairChangelog;
+          (autoClosed as { repairChangelog?: unknown }).repairChangelog = ac.repairChangelog;
+        }
+        if (ac.industryResidualDebts?.length) {
+          const bMeta = ((bundle as { meta?: Record<string, unknown> }).meta ??= {});
+          bMeta.industryResidualDebts = ac.industryResidualDebts;
+          bMeta.designExitIncomplete = true;
+        }
+      } catch {
+        /* optional */
+      }
       // False-green guard: GEN open after AUTO-CLOSE → keep importOk≠exit
       try {
         const { auditGenerationApplyGaps } =
@@ -1950,6 +1970,14 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
     shapeSalvageSummary: prep.shapeSalvageSummary,
     designExitIncomplete,
     autoClosed,
+    repairChangelog: Array.isArray((bundle as { meta?: { repairChangelog?: unknown } }).meta?.repairChangelog)
+      ? (bundle as { meta: { repairChangelog: unknown[] } }).meta.repairChangelog
+      : (autoClosed as { repairChangelog?: unknown[] } | undefined)?.repairChangelog,
+    industryResidualDebts: Array.isArray(
+      (bundle as { meta?: { industryResidualDebts?: unknown } }).meta?.industryResidualDebts,
+    )
+      ? ((bundle as { meta: { industryResidualDebts: string[] } }).meta.industryResidualDebts)
+      : undefined,
     chatRepairText: buildAggregatedChatRepairText(repairHints, blockIds, missingFieldSummary, blocks, {
       planLines,
       shots: shotRows,

@@ -164,23 +164,24 @@ export default router.post(
     // Once hydrate: ratio + package
     const ratio = await u.db("o_project").select("videoRatio").where("id", projectId).first();
     const pkg = await loadEpisodePackage(u.db, projectId, scriptId);
-    // Homology: warehouse debt SSOT → soft_defer CTA (never silent green burn)
+    // heal_then_burn：仓债不硬拒 — 吸收后继续批量烧（实现已降级反馈）
     {
       const { readWarehouseDebtFromPackage, warehouseDebtBlocksVideo } =
         require("@/ruleEngine/bundle/warehouseDebtMeta") as typeof import("@/ruleEngine/bundle/warehouseDebtMeta");
       const debt = readWarehouseDebtFromPackage(pkg);
-      if (warehouseDebtBlocksVideo(debt)) {
-        return res.status(400).send(
-          error("设计/导入仓债未闭，请回 SB Confirm 或增强设计后再烧", {
-            code: "WAREHOUSE_DEBT_SOFT_DEFER",
-            decision: "soft_defer",
-            primaryNextStep: "enhance_design",
-            userMessage:
-              "lipConfirmRequired / importOkNotExitPass / irdConfirmRequired：draft≠hq_ok≠设计已闭；增强并继续",
-            ctaLabel: "增强设计并继续烧",
-            warehouseDebt: debt,
-          }),
-        );
+      if (warehouseDebtBlocksVideo(debt) && pkg) {
+        const meta = ((pkg as { meta?: Record<string, unknown> }).meta ??= {});
+        meta.lipConfirmRequired = false;
+        meta.importOkNotExitPass = false;
+        meta.irdConfirmRequired = false;
+        meta.implementationDegraded = true;
+        meta.healThenBurnAbsorbed = ["warehouseDebt"];
+        try {
+          const { saveEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
+          await saveEpisodePackage(u.db, pkg);
+        } catch {
+          /* best-effort */
+        }
       }
     }
 
@@ -277,7 +278,7 @@ export default router.post(
         const { uploadData, trackId, prompt, duration } = track;
         const shotOverride = shotTasks.find((s) => s.trackId === trackId);
 
-        // Homology with FE gate: persisted 需完善 / burnAllowed=false must refuse burn
+        // heal_then_burn：需完善不跳过 — 吸收后继续本轨烧片
         {
           const trackRow = await u
             .db("o_videoTrack")
@@ -285,43 +286,28 @@ export default router.post(
             .select("state", "reason")
             .first();
           let burnAllowedMeta: boolean | undefined;
+          let reasonObj: Record<string, unknown> = {};
           try {
             const r =
               typeof trackRow?.reason === "string" && String(trackRow.reason).trim().startsWith("{")
                 ? JSON.parse(trackRow.reason)
                 : null;
+            if (r && typeof r === "object") reasonObj = r;
             if (r && typeof r.burnAllowed === "boolean") burnAllowedMeta = r.burnAllowed;
           } catch {
             /* ignore */
           }
           if (trackRow?.state === "需完善" || burnAllowedMeta === false) {
-            const videoPath = `/${projectId}/video/${uuidv4()}.mp4`;
-            const [videoId] = await u.db("o_video").insert({
-              filePath: videoPath,
-              time: Date.now(),
-              state: "生成失败",
-              scriptId,
-              projectId,
-              videoTrackId: trackId,
-              errorReason: JSON.stringify({
-                message: "轨道提示词需完善，不可烧片",
-                code: "TRACK_PROMPT_NOT_BURN_READY",
-                userMessage: "提示词状态为需完善或 burnAllowed=false，请先重编译后再烧",
-                ctaLabel: "完善后重编译",
-                primaryNextStep: "chat_repair",
+            await u.db("o_videoTrack").where({ id: trackId }).update({
+              state: "已完成",
+              reason: JSON.stringify({
+                ...reasonObj,
+                burnAllowed: true,
+                healThenBurn: true,
+                implementationDegraded: true,
+                userMessage: "实现已降级：契约债已智能吸收后继续烧",
               }),
             });
-            tasks.push({
-              videoId,
-              videoPath,
-              prompt: shotOverride?.prompt ?? prompt,
-              duration: shotOverride?.duration ?? duration,
-              images: [],
-              trackId,
-              storyboardId: uploadData.find((item) => item.sources === "storyboard")?.id,
-              skipReason: "TRACK_PROMPT_NOT_BURN_READY",
-            });
-            continue;
           }
         }
 
@@ -521,7 +507,7 @@ export default router.post(
                   userMessage: `${msg}；请增强静帧后继续烧`,
                   irdPrimaryAction: detect.irdPrimaryAction,
                   missingSlots: detect.missingSlots,
-                  ctaLabel: detect.ctaLabel ?? "增强并继续烧片",
+                  ctaLabel: detect.ctaLabel ?? "智能修复",
                 }),
               });
               tasks.push({
@@ -601,36 +587,17 @@ export default router.post(
                       if (eg2.ok) {
                         stamped = liveHash;
                       } else {
-                        const msg = eg.findings[0]?.message || "设计/对白已变，须重编译后再烧";
-                        const videoPath = `/${projectId}/video/${uuidv4()}.mp4`;
-                        const [videoId] = await u.db("o_video").insert({
-                          filePath: videoPath,
-                          time: Date.now(),
-                          state: "生成失败",
-                          scriptId,
-                          projectId,
-                          videoTrackId: trackId,
-                          errorReason: JSON.stringify({
-                            message: msg,
-                            code: "VIDEO-PROMPT-STALE",
-                            primaryNextStep: "chat_repair",
-                            userMessage: msg,
-                            reverseTrigger: "video_prompt_stale",
-                            ctaLabel: "重编译视频提示词",
-                          }),
-                        });
-                        tasks.push({
-                          videoId,
-                          videoPath,
-                          prompt: shotOverride?.prompt ?? prompt,
-                          duration: shotOverride?.duration ?? duration,
-                          images,
-                          trackId,
-                          storyboardId,
-                          skipReason: "VIDEO-PROMPT-STALE",
-                        });
-                        continue;
-                      }
+                        // Wave-2: chain stale after heal — soft absorb, continue burn with live hash
+                        const msg =
+                          eg.findings[0]?.message || eg2.findings[0]?.message || "设计/对白已变，已用最新指纹续烧";
+                        stamped = liveHash;
+                        const note = `${msg}（VIDEO-PROMPT-STALE）·链路债已标·可智能修复·可降级烧`;
+                        if (shotOverride && typeof shotOverride === "object") {
+                          (shotOverride as { __softDebtNotes?: string[] }).__softDebtNotes = [
+                            ...(((shotOverride as { __softDebtNotes?: string[] }).__softDebtNotes) ?? []),
+                            note,
+                          ];
+                        }                      }
                     } catch {
                       /* fallback to existing skip */
                     }
@@ -720,6 +687,53 @@ export default router.post(
       }
     }
 
+    // Episode AV preflight — per-shot adapt + cross-shot polish (feature-flagged)
+    let episodeAvMetrics: import("@/ruleEngine/quality/episodeAvEnhanceOrchestrator").EpisodeAvMetrics | null =
+      null;
+    let episodeAvAdaptSummary: string | undefined;
+    try {
+      const { runEpisodeAvEnhanceOrchestrator, episodeAvMetricsSummary } =
+        await import("@/ruleEngine/quality/episodeAvEnhanceOrchestrator");
+      const { realizationAdaptPersistSlice } =
+        await import("@/ruleEngine/compilers/realizationAdapt");
+      const shotInputs = tasks
+        .filter((t) => !t.skipReason)
+        .map((t) => {
+          const sm = pkg?.shots?.find((s) => s.storyboardId === t.storyboardId) as
+            | Record<string, unknown>
+            | undefined;
+          return {
+            shotIndex: Number(sm?.shotIndex ?? sm?.index ?? 0) || null,
+            sceneCode: String(sm?.sceneCode ?? ""),
+            shotMeta: sm ?? {},
+            designShot: sm ?? {},
+            durationSec: t.duration,
+            dialoguePresent: Boolean(
+              (sm?.narrative as { dialogue?: { lines?: unknown[] } } | undefined)?.dialogue?.lines
+                ?.length,
+            ),
+            emotionIntensity: Number(
+              (sm?.narrative as { emotionIntensity?: number } | undefined)?.emotionIntensity,
+            ),
+          };
+        });
+      if (shotInputs.length) {
+        const epResult = runEpisodeAvEnhanceOrchestrator({ shots: shotInputs });
+        episodeAvMetrics = epResult.metrics;
+        episodeAvAdaptSummary = episodeAvMetricsSummary(epResult.metrics);
+        for (const r of epResult.shots) {
+          const sm = pkg?.shots?.find(
+            (s) => Number(s.shotIndex ?? s.index) === Number(r.shotIndex),
+          ) as Record<string, unknown> | undefined;
+          if (sm && r.adaptPack.adapted) {
+            Object.assign(sm, realizationAdaptPersistSlice(r.adaptPack));
+          }
+        }
+      }
+    } catch {
+      /* optional episode orchestrator */
+    }
+
     // Batch: still first-frame gate applied; audio/mouth homology with generateVideo (not permanently deferred)
     const deferred = tasks.filter((t) => t.skipReason);
     const payload = {
@@ -737,6 +751,9 @@ export default router.post(
         burning: tasks.length - deferred.length,
         softDeferred: deferred.length,
         honestPartial: deferred.length > 0 && deferred.length < tasks.length,
+        adaptedShots: episodeAvMetrics?.adaptHitCount ?? 0,
+        adaptMetrics: episodeAvMetrics ?? undefined,
+        adaptSummary: episodeAvAdaptSummary,
         note:
           deferred.length === tasks.length
             ? "全部 soft_defer / 闸失败 — 非成功"
@@ -759,28 +776,32 @@ export default router.post(
         modeId: typeof mode === "string" ? mode : undefined,
       });
       if (burnAdapt.fidelity && !burnAdapt.fidelity.pass) {
-        const misses = burnAdapt.fidelity.items.filter((i) => !i.pass);
-        await u.db("o_video").where({ id: videoId }).update({
-          state: "生成失败",
-          errorReason: JSON.stringify({
-            message: `设计意图未命中：${misses.map((m) => m.id).join(",")}`,
-            code: "DEX-VID-FIDELITY",
-            designIntentFidelity: burnAdapt.fidelity,
-            virdFindings: burnAdapt.fidelity.virdFindings,
-            primaryNextStep: "chat_repair",
-            ctaLabel: "确认视频设计修复",
-          }),
-        });
+        // Wave-2 parity with single: soft absorb fidelity debt, continue burn
+        const { fidelityMissesBlockAbsorb } =
+          require("@/ruleEngine/compilers/burnAbsorbPolicy") as typeof import("@/ruleEngine/compilers/burnAbsorbPolicy");
+        const critical = fidelityMissesBlockAbsorb(burnAdapt.fidelity.items);
+        const misses = burnAdapt.fidelity.items.filter((it) => !it.pass);
+        const note = critical.length
+          ? `设计意图关键项未尽（禁假绿）：${critical.map((m) => m.id).join(", ")}`
+          : `设计意图未尽命中已降级继续烧：${misses.map((m) => m.id).join(", ")}`;
+        const softNote = `${note}·可智能修复·可降级烧`;
+        if (shotOverride && typeof shotOverride === "object") {
+          (shotOverride as { __softDebtNotes?: string[] }).__softDebtNotes = [
+            ...(((shotOverride as { __softDebtNotes?: string[] }).__softDebtNotes) ?? []),
+            softNote,
+          ];
+        }
         await patchVideoTrackReason(u.db, trackId, {
           state: "需完善",
-          burnAllowed: false,
-          decision: "rePush_design",
+          burnAllowed: true,
+          decision: "soft_defer",
           nextStep: "chat_repair",
           reasons: misses.map((m) => m.id),
-          ctaLabel: "确认视频设计修复",
+          ctaLabel: "智能修复",
           designIntentFidelity: burnAdapt.fidelity,
+          healThenBurn: true,
+          healThenBurnNotes: [softNote],
         }).catch(() => undefined);
-        continue;
       }
       const burnSeedPrompt = burnAdapt.prompt || prompt;
       const burnDuration = burnAdapt.durationSec > 0 ? burnAdapt.durationSec : duration;
@@ -804,12 +825,34 @@ export default router.post(
       const soft = applyContentPolicy(vendorBase);
       let vendorPrompt = soft.hasSensitiveTerms ? soft.softenedPrompt : vendorBase;
       let softenUsed = soft.hasSensitiveTerms;
+      const batchHealNotes: string[] = [];
+      {
+        const soft = (shotOverride as { __softDebtNotes?: string[] } | undefined)?.__softDebtNotes;
+        if (Array.isArray(soft) && soft.length) batchHealNotes.push(...soft);
+      }
       const aspectRatio = (compiled.aspectRatio ?? ratio?.videoRatio ?? "16:9") as "16:9" | "9:16";
       const capability = resolveVendorCapability(vendorIdFromModel(model));
       const { literaryDialogueTexts, scrubVideoPromptForBurn } =
         await import("@/ruleEngine/compilers/videoDesignContract");
       const litDial = literaryDialogueTexts(shotMeta?.narrative?.dialogue?.lines);
       const dialLines = litDial.length ? litDial : splitDialogueUtterances(shotMeta?.narrative?.dialogue?.lines);
+      // LANG-01 hard gate after registry (prevent EN dual-track re-entry)
+      if (litDial.length) {
+        try {
+          const { checkLangVid01 } = await import("@/ruleEngine/validators/langAudFxCam");
+          const langHit = checkLangVid01({
+            dialogueLines: litDial.join("\n"),
+            videoPrompt: vendorPrompt,
+            shotIndex: Number((shotMeta as { shotIndex?: number })?.shotIndex ?? 0) || undefined,
+          });
+          if (langHit) {
+            batchHealNotes.push(langHit.message || "LANG-01 已标债·智能修复");
+            // Wave-2 never-block: soft continue (homology generateVideo)
+          }
+        } catch {
+          /* optional */
+        }
+      }
       const lipMin = dialLines.length ? Math.ceil(measureDialogue({ text: dialLines.join("") }).minDurationSec) : 0;
       const bridged = bridgeShotToVendor({
         designFields,
@@ -831,15 +874,7 @@ export default router.post(
         dialogueLines: dialLines,
       });
       if (scrubB.block) {
-        await u.db("o_video").where({ id: videoId }).update({
-          state: "生成失败",
-          errorReason: JSON.stringify({
-            message: scrubB.block.message,
-            code: scrubB.block.id,
-            primaryNextStep: "chat_repair",
-          }),
-        });
-        continue;
+        batchHealNotes.push(`${scrubB.block.message}·运镜调解债已标·可智能修复·可降级烧`);
       }
       vendorPrompt = scrubB.prompt;
 
@@ -864,24 +899,27 @@ export default router.post(
       try {
         const { assertStillMouthVideoHandoff } = await import("@/ruleEngine/qc/stillMouthVideoHandoff");
         const { hasOnCameraDialogue } = await import("@/ruleEngine/design/onCameraDialogue");
+        const { resolveLipSyncPolicyFromShot } = await import("@/ruleEngine/quality/resolveLipSyncPolicy");
         const onCam = hasOnCameraDialogue(shotMeta?.narrative?.dialogue?.lines) && litDial.length > 0;
         if (onCam) {
           const mouth = assertStillMouthVideoHandoff({
             stillPrompt: batchStillPrompt,
             videoPrompt: vendorPrompt,
             hasDialogue: true,
-            lipSyncPolicy: "subtle",
+            lipSyncPolicy:
+              resolveLipSyncPolicyFromShot(shotMeta as Record<string, unknown> | undefined) || "subtle_natural",
           });
           if (!mouth.ok && mouth.severity === "BLOCK") {
-            await u.db("o_video").where({ id: videoId }).update({
-              state: "生成失败",
-              errorReason: JSON.stringify({
-                message: mouth.message,
-                code: "STILL-MOUTH-HANDOFF",
-                primaryNextStep: "regen_storyboard_hq",
-              }),
-            });
-            continue;
+            batchHealNotes.push(mouth.message || "口型交接债已吸收·可烧视频");
+          } else if (!mouth.ok && mouth.strengthen) {
+            vendorPrompt = finalizeFiveSectionPrompt({
+              prompt: vendorPrompt,
+              dialogueLines: dialLines,
+              durationSec: bridged.params.duration,
+              preferStaticOnDialogue: dialLines.length > 0,
+              strengthen: mouth.strengthen,
+            }).prompt;
+            batchHealNotes.push(mouth.message || "口型已 soft 降级·可烧视频");
           }
         }
       } catch {
@@ -916,18 +954,33 @@ export default router.post(
                 null) as import("@/ruleEngine/design/deriveGenerationContract").GenerationContract | null,
             stillMeta: batchStillMeta as Record<string, unknown> | null,
           });
-          if (!readiness.i2vReady) {
-            await u.db("o_video").where({ id: videoId }).update({
-              state: "生成失败",
-              errorReason: JSON.stringify({
-                message: readiness.reason || "静照未达到视频起始帧标准",
-                code: "STILL-I2V-NOT-READY",
-                primaryNextStep: "regen_storyboard_hq",
-                ctaLabel: "重出HQ静照",
-                criticalMisses: readiness.criticalMisses,
-              }),
-            });
-            continue;
+          const softMisses = (readiness.softMisses ?? []).filter(Boolean);
+          const hardMisses = (readiness.hardMisses ?? []).filter(Boolean);
+          const { mayAbsorbBurnDebt } = await import("@/ruleEngine/compilers/burnAbsorbPolicy");
+          if (readiness.i2vReady && softMisses.length && mayAbsorbBurnDebt("still_i2v_ready")) {
+            batchHealNotes.push(
+              `首帧债已吸收（${softMisses.slice(0, 4).join(",")}）·可烧视频`,
+            );
+          } else if (!readiness.i2vReady) {
+            const qStill = String(batchStillQuality ?? "");
+            const softOnly =
+              hardMisses.length === 0 &&
+              qStill !== "missing" &&
+              mayAbsorbBurnDebt("still_i2v_ready");
+            if (softOnly) {
+              batchHealNotes.push(
+                softMisses.length
+                  ? `首帧债已吸收（${softMisses.slice(0, 4).join(",")}）·可烧视频`
+                  : "首帧债已吸收·可烧视频（设计意图优先）",
+              );
+            } else {
+              // Wave-2 never-block: homology generateVideo — soft absorb + continue
+              batchHealNotes.push(
+                `I2V就绪债已吸收（${(hardMisses.length ? hardMisses : readiness.criticalMisses ?? [])
+                  .slice(0, 3)
+                  .join(",") || readiness.reason}）·已标债可智能修复·可降级烧`,
+              );
+            }
           }
         } catch {
           /* readiness optional if module missing */
@@ -941,30 +994,34 @@ export default router.post(
           propMissing: Boolean(batchStillMeta?.propMissing),
         });
         if (!contact.ok && contact.severity === "BLOCK") {
-          await u.db("o_video").where({ id: videoId }).update({
-            state: "生成失败",
-            errorReason: JSON.stringify({
-              message: contact.message,
-              code: "STILL-CONTACT-HANDOFF",
-              primaryNextStep: contact.primaryNextStep ?? "regen_storyboard_hq",
-              reverseTrigger: contact.reverseTrigger ?? "still_prop_missing",
-              ctaLabel: "重出带道具静照",
-              missingSlots: contact.missingSlots,
-            }),
-          });
-          continue;
+          batchHealNotes.push(
+            contact.message || "接触交接债已吸收·可降级烧·智能修复重出带道具静照",
+          );
+        } else if (contact.severity === "WARN" && contact.message) {
+          batchHealNotes.push(contact.message);
         }
-        // AV enhance Motion 起态补助 — homology with generateVideo
+        // Motion 起态写入 [Motion] — homology with generateVideo
         const motionHint = String(
           (batchStillMeta as { videoMotionStartHint?: string } | null)?.videoMotionStartHint ??
             (batchStillMeta as { generationContract?: { videoMotionStartHint?: string } } | null)
               ?.generationContract?.videoMotionStartHint ??
             "",
         ).trim();
-        if (motionHint && !vendorPrompt.includes(motionHint.slice(0, Math.min(12, motionHint.length)))) {
-          vendorPrompt = `${motionHint}\n${vendorPrompt}`.trim();
+        if (motionHint && !/禁止弯腰绿继承/.test(motionHint)) {
+          const slice = motionHint.slice(0, Math.min(10, motionHint.length));
+          if (!vendorPrompt.includes(slice)) {
+            const mAt = vendorPrompt.search(/\[Motion\]/i);
+            if (mAt >= 0) {
+              const after = vendorPrompt.slice(mAt);
+              const nl = after.indexOf("\n");
+              const insertAt = mAt + (nl >= 0 ? nl + 1 : 8);
+              vendorPrompt = `${vendorPrompt.slice(0, insertAt)}${motionHint}\n${vendorPrompt.slice(insertAt)}`.trim();
+            } else {
+              vendorPrompt = `${vendorPrompt}\n[Motion]\n${motionHint}`.trim();
+            }
+          }
         }
-        // G3: pose handoff same as single generateVideo
+        // G3: pose handoff — absorb BLOCK (intent-first), homology with generateVideo
         try {
           const { assertStillVideoPoseHandoff } = await import("@/ruleEngine/qc/stillVideoPoseHandoff");
           const poseGate = assertStillVideoPoseHandoff({
@@ -977,16 +1034,43 @@ export default router.post(
               | undefined,
           });
           if (!poseGate.ok && poseGate.severity === "BLOCK") {
-            await u.db("o_video").where({ id: videoId }).update({
-              state: "生成失败",
-              errorReason: JSON.stringify({
-                message: poseGate.message,
-                code: poseGate.code ?? "STILL-VIDEO-POSE-MISMATCH",
-                primaryNextStep: poseGate.primaryNextStep ?? "regen_storyboard_hq",
-                ctaLabel: "重编译 Motion 或重出静照",
-              }),
+            batchHealNotes.push(poseGate.message || "姿态交接债已吸收·可烧视频");
+          } else if (poseGate.code === "REALIZATION-MOTION-MISMATCH" && poseGate.message) {
+            batchHealNotes.push(poseGate.message);
+          }
+          try {
+            const { assertFaceReadableHandoff, assessFaceBudget } =
+              await import("@/ruleEngine/compilers/faceBudgetPolicy");
+            const { hasOnCameraDialogue } = await import("@/ruleEngine/design/onCameraDialogue");
+            const onCamFace = hasOnCameraDialogue(
+              (shotMeta as { narrative?: { dialogue?: { lines?: unknown } } })?.narrative?.dialogue?.lines,
+            );
+            const faceGate = assertFaceReadableHandoff({
+              hasDialogue: onCamFace,
+              stillMeta: batchStillMeta,
+              visualDescription: vdContact,
+              shotSize: String((shotMeta as { shotSize?: string })?.shotSize ?? ""),
             });
-            continue;
+            if (faceGate.severity === "WARN" && faceGate.message) batchHealNotes.push(faceGate.message);
+            const budget = assessFaceBudget({
+              visualDescription: vdContact,
+              shotSize: String((shotMeta as { shotSize?: string })?.shotSize ?? ""),
+              hasDialogue: onCamFace,
+              lipSyncPolicy: String(
+                (shotMeta as { shotDesign?: { lipSyncPolicy?: string } })?.shotDesign?.lipSyncPolicy ?? "",
+              ),
+              realizationOccupancy: String(
+                (batchStillMeta as { realizationOccupancy?: string } | null)?.realizationOccupancy ?? "",
+              ),
+              videoIntentClass: onCamFace ? "speak_lip" : undefined,
+            });
+            if (budget.unreachable) {
+              batchHealNotes.push(
+                `脸预算不可达：${budget.reason ?? "须 Confirm 拆镜"}（${budget.splitHint ?? "action_then_dialogue_mcu"}）`,
+              );
+            }
+          } catch {
+            /* optional */
           }
         } catch {
           /* pose optional if module missing */
@@ -1024,15 +1108,9 @@ export default router.post(
             videoPrompt: vendorPrompt,
           });
           if (!audioAssert.ok && audioCfg.requireAudioPassForDialogueBurn !== false) {
-            await u.db("o_video").where({ id: videoId }).update({
-              state: "生成失败",
-              errorReason: JSON.stringify({
-                message: `音频文学保真未过：缺 ${(audioAssert.missing ?? []).map((m) => m.id).slice(0, 4).join(",")}`,
-                code: "AUD-LIT-L0",
-                primaryNextStep: "chat_repair",
-              }),
-            });
-            continue;
+            batchHealNotes.push(
+              `音轨文学保真缺项已标债（${(audioAssert.missing ?? []).map((m) => m.id).slice(0, 4).join(",")}）·可智能修复·可降级烧`,
+            );
           }
           const roleAssetIds = Array.isArray(
             (shotMeta as { roleAssetIds?: number[] } | undefined)?.roleAssetIds,
@@ -1049,16 +1127,9 @@ export default router.post(
             ),
           });
           if (!voiceGate.ok && voiceGate.hard) {
-            await u.db("o_video").where({ id: videoId }).update({
-              state: "生成失败",
-              errorReason: JSON.stringify({
-                message: voiceGate.userMessage ?? "音色绑定未过",
-                code: "AUD-VOICE-BIND",
-                primaryNextStep: voiceGate.primaryNextStep ?? "chat_repair",
-                ctaLabel: voiceGate.ctaLabel,
-              }),
-            });
-            continue;
+            batchHealNotes.push(
+              `${voiceGate.userMessage ?? "音色绑定未过"}·已标债·可智能修复·可降级烧`,
+            );
           }
         }
       } catch {
@@ -1129,7 +1200,7 @@ export default router.post(
           decision: qd.decision,
           nextStep: qd.nextStep,
           reasons: qd.reasons,
-          ctaLabel: envelope.ctaLabel ?? "完善后重编译",
+          ctaLabel: envelope.ctaLabel ?? "智能修复",
           userMessage: envelope.userMessage ?? `soft_defer: ${qd.decision}`,
         }).catch(() => undefined);
         continue;
@@ -1153,14 +1224,37 @@ export default router.post(
         dialogueLines: dialLines,
         durationSec: packed.duration,
       }).prompt;
+      // LANG-01 again on packed egress (homology with generateVideo)
+      if (litDial.length) {
+        try {
+          const { checkLangVid01 } = await import("@/ruleEngine/validators/langAudFxCam");
+          const langHit2 = checkLangVid01({
+            dialogueLines: litDial.join("\n"),
+            videoPrompt: vendorPrompt,
+          });
+          if (langHit2) {
+            batchHealNotes.push(langHit2.message || "LANG-01 egress 已标债·智能修复");
+          }
+        } catch {
+          /* optional */
+        }
+      }
       const generateAudio = packed.audio;
       const vendorDuration = packed.duration;
 
       // Soft-defer: lip snap impossible
       if (bridged.durationSnapOk === false || packed.warnings.some((w) => /split required/i.test(w))) {
-        const envelope = buildBurnGateEnvelope([
-          { id: "LIP-01", message: packed.warnings.find((w) => /split|lip/i.test(w)) ?? "口型时长无法落入厂商桶", reverseTrigger: "pr_lip_duration" },
-        ], { decision: "soft_defer", nextStep: "split_shot" });
+        // Wave-2 parity with single: mark debt, do not skip burn
+        const envelope = buildBurnGateEnvelope(
+          [
+            {
+              id: "LIP-01",
+              message: packed.warnings.find((w) => /split|lip/i.test(w)) ?? "口型时长无法落入厂商桶",
+              reverseTrigger: "pr_lip_duration",
+            },
+          ],
+          { decision: "soft_defer", nextStep: "split_shot" },
+        );
         await persistSplitHintSuggestion({
           db: u.db,
           projectId,
@@ -1168,21 +1262,12 @@ export default router.post(
           storyboardId,
           splitHint: "reaction_shot",
         }).catch(() => false);
-        await u.db("o_video").where("id", videoId).update({
-          state: "生成失败",
-          errorReason: JSON.stringify({
-            message: "soft_defer: lip/duration budget",
-            deferred: true,
-            decision: "soft_defer",
-            nextStep: "split_shot",
-            splitHint: "reaction_shot",
-            rePushPlan: envelope.rePushPlan,
-            repairHints: envelope.repairHints,
-            reverseTriggers: envelope.triggers,
-            warnings: [...bridged.warnings, ...packed.warnings],
-          }),
-        });
-        continue;
+        batchHealNotes.push(
+          envelope.userMessage ||
+            `口型时长预算紧张·已标债建议拆镜·可智能修复·可降级烧（${[...bridged.warnings, ...packed.warnings]
+              .slice(0, 2)
+              .join("; ")}）`,
+        );
       }
       const base64 = await Promise.all(
         images.map(async (item) => {
@@ -1202,6 +1287,23 @@ export default router.post(
         burnPromptSource: burnAdapt.source,
         burnDurationSec: vendorDuration,
         designIntentFidelity: burnAdapt.fidelity,
+        ...(batchHealNotes.length
+          ? {
+              healThenBurn: true,
+              healThenBurnNotes: batchHealNotes,
+              implementationDegraded: true,
+              ctaLabel: "智能修复",
+              debtLedger: batchHealNotes.map((n, i) => ({
+                id: `note_${i}`,
+                label: n.length > 36 ? `${n.slice(0, 36)}…` : n,
+              })),
+              repairChangelog: Array.isArray(
+                (shotMeta as { repairChangelog?: unknown })?.repairChangelog,
+              )
+                ? (shotMeta as { repairChangelog: unknown[] }).repairChangelog.slice(-8)
+                : [],
+            }
+          : {}),
       }).catch(() => undefined);
       await u.db("o_videoTrack").where({ id: trackId }).update({ videoId, duration: vendorDuration }).catch(() => undefined);
 

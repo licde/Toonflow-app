@@ -3,6 +3,9 @@
   <section v-if="show" class="vid-debt" role="region" aria-labelledby="vid-debt-title">
     <h4 id="vid-debt-title" class="vid-debt__title">{{ title }}</h4>
     <p class="vid-debt__explain">{{ explainText }}</p>
+    <div v-if="adaptDebtLines.length" class="vid-debt__adapt" aria-label="首帧同源适配">
+      <p v-for="(line, i) in adaptDebtLines" :key="i" class="vid-debt__adapt-line">{{ line }}</p>
+    </div>
     <div v-if="slots.length" class="vid-debt__slots" aria-label="视频缺槽">
       <t-tag v-for="s in slots" :key="s" size="small" theme="warning" variant="light">{{ s }}</t-tag>
     </div>
@@ -19,6 +22,23 @@
         重出带道具静照
       </t-button>
       <t-button
+        v-if="showRegenFaceStill && !showRegenPropStill"
+        size="small"
+        theme="warning"
+        @click="$emit('regen-prop-still')"
+      >
+        重出抬脸近景静照
+      </t-button>
+      <t-button
+        v-if="showConfirmSplitFace && !showRegenFaceStill"
+        size="small"
+        theme="warning"
+        variant="outline"
+        @click="$emit('confirm-apply')"
+      >
+        智能修复（动作→对白近景）
+      </t-button>
+      <t-button
         v-if="showRecompileBeats"
         size="small"
         theme="primary"
@@ -28,7 +48,7 @@
         重编译接触分相 Motion
       </t-button>
       <t-button
-        v-if="canForceApply && !showRegenPropStill"
+        v-if="canForceApply && !showRegenPropStill && !showRegenFaceStill"
         size="small"
         theme="primary"
         :loading="applying"
@@ -94,9 +114,22 @@ const props = withDefaults(
     motionPassAt?: string | null;
     /** generation.videoPrompt — thin stub / spineReady gate (G8) */
     videoPrompt?: string | null;
+    /** realization adapt debt — design / plate / adapted motion */
+    realizationAdaptPack?: {
+      adapted?: boolean;
+      narrativeFootnote?: string;
+      motionStartHint?: string;
+      mappingKey?: string;
+    } | null;
+    intentOccupancy?: string | null;
+    realizationOccupancy?: string | null;
+    realizationDegraded?: boolean | null;
+    /** durable silent-repair changelog */
+    repairChangelog?: Array<{ slot?: string; before?: string; after?: string; reason?: string }> | null;
+    adaptDiff?: string | null;
   }>(),
   {
-    title: "视频设计债 · 须 Confirm",
+    title: "视频设计债 · 智能修复",
     findings: () => [],
     diagnosing: false,
     applying: false,
@@ -113,6 +146,27 @@ defineEmits<{
 }>();
 
 const slots = computed(() => (props.missingSlots ?? []).filter(Boolean));
+
+const adaptDebtLines = computed((): string[] => {
+  const lines: string[] = [];
+  const intent = String(props.intentOccupancy ?? "");
+  const real = String(props.realizationOccupancy ?? intent);
+  const pack = props.realizationAdaptPack;
+  if (props.adaptDiff) lines.push(`差异：${props.adaptDiff}`);
+  if (props.realizationDegraded || pack?.adapted || intent) {
+    if (intent) lines.push(`设计意图：${intent === "bend_pickup" ? "弯腰捡拾" : intent}`);
+    if (real) lines.push(`首帧实现：${real === "kneel_hold" ? "跪持" : real === "stand_hold" ? "站姿持纸" : real}`);
+    if (pack?.motionStartHint || pack?.adapted) {
+      lines.push(`已适配动效：${pack?.motionStartHint?.slice(0, 32) ?? "plate-first Motion"}`);
+    } else if (pack?.narrativeFootnote) {
+      lines.push(`已适配：${pack.narrativeFootnote}`);
+    }
+  }
+  for (const e of (props.repairChangelog ?? []).slice(-3)) {
+    lines.push(`静默修复：${e.slot} ${e.before ?? ""}→${e.after ?? ""} (${e.reason ?? ""})`);
+  }
+  return lines;
+});
 
 const fidelityFindings = computed((): VideoIrdFinding[] => {
   if (!isDesignIntentFidelityDebt(props.designIntentFidelity)) return [];
@@ -160,12 +214,33 @@ const showRegenPropStill = computed(
     mergedFindings.value.some((f) => /PROP-IN-FRAME|CONTACT-HANDOFF|propInFrame/i.test(f.id)),
 );
 
+const showRegenFaceStill = computed(
+  () =>
+    props.code === "REALIZATION-FACE-READABILITY" ||
+    props.reverseTrigger === "face_unreadability" ||
+    (props.primaryNextStep === "regen_storyboard_hq" &&
+      /face|面容|抬脸/i.test(String(props.code ?? "") + String(props.reverseTrigger ?? ""))) ||
+    mergedFindings.value.some((f) => /FACE-READ|face_unread|FACE-BUDGET/i.test(f.id)),
+);
+
+const showConfirmSplitFace = computed(
+  () =>
+    props.reverseTrigger === "face_budget_unreachable" ||
+    (props.primaryNextStep === "split_shot" &&
+      /face_budget|dialogue_shot_too_wide|vis_multi/i.test(
+        String(props.reverseTrigger ?? "") + String(props.code ?? ""),
+      )) ||
+    mergedFindings.value.some((f) => /FACE-BUDGET|face_budget/i.test(f.id)),
+);
+
 const showRecompileBeats = computed(
   () =>
     props.reverseTrigger === "vid_contact_beats" ||
+    props.code === "REALIZATION-MOTION-MISMATCH" ||
+    props.realizationAdaptPack?.adapted === true ||
     slots.value.includes("contactBeats") ||
     slots.value.includes("executableBeats") ||
-    mergedFindings.value.some((f) => /contact_phases|CONTACT-BEATS|vid_contact/i.test(f.id)),
+    mergedFindings.value.some((f) => /contact_phases|CONTACT-BEATS|vid_contact|REALIZATION-MOTION/i.test(f.id)),
 );
 
 const explainText = computed(() => {
@@ -268,6 +343,17 @@ const showVideoHumanRejudge = computed(() =>
   margin: 6px 0 0;
   font-size: 11px;
   color: var(--td-warning-color, #e37318);
+}
+.vid-debt__adapt-line {
+  margin: 2px 0;
+  font-size: 11px;
+  color: var(--td-text-color-secondary, #666);
+}
+.vid-debt__adapt {
+  margin: 4px 0 6px;
+  padding: 4px 6px;
+  background: rgba(0, 82, 217, 0.06);
+  border-radius: 4px;
 }
 .vid-debt__slots,
 .vid-debt__actions {

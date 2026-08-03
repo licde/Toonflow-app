@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "mappings": {
+    "bend_pickup:bend_pickup": {
+      "useVdPhases": true,
+      "motionStartHint": "起态：弯腰捡拾触地，主手前伸近地；禁止跪坐捧持举卡开场",
+      "forbiddenMotionTokens": ["跪坐替代", "举卡开场"],
+      "cameraPolicy": "静止",
+      "i2vCriticalFacts": ["弯腰捡拾", "主手触地", "起态与静帧一致"]
+    },
+    "bend_pickup:kneel_hold": {
+      "phases": [
+        "0s-{t1}s: 跪持已触地持纸，起态与静帧一致",
+        "{t1}s-{t2}s: 指节收紧捏紧纸缘",
+        "{t2}s-{dur}s: 微抬视线，口型对白"
+      ],
+      "motionStartHint": "起态与静帧一致：跪持近地持纸；禁止弯腰俯身开场",
+      "forbiddenMotionTokens": ["弯腰俯身", "弯腰捡拾", "俯身捡", "进入贴合", "自.*侧进入"],
+      "cameraPolicy": "静止",
+      "atmosphereBoost": "暖光烛火可辨，背景清晰不虚化",
+      "sfxBeat": "纸张摩擦",
+      "performanceBoost": "隐忍决绝",
+      "narrativeFootnote": "设计意图仍为弯腰捡拾",
+      "i2vCriticalFacts": ["跪持近地持纸", "起态与静帧一致", "禁止弯腰俯身"]
+    },
+    "bend_pickup:stand_hold": {
+      "phases": [
+        "0s-{t1}s: 站姿持纸，起态与静帧一致",
+        "{t1}s-{t2}s: 指节收紧捏紧纸缘",
+        "{t2}s-{dur}s: 眼神微动，口型对白"
+      ],
+      "motionStartHint": "起态与静帧一致：站姿持纸；禁止弯腰俯身开场",
+      "forbiddenMotionTokens": ["弯腰俯身", "弯腰捡拾", "俯身捡", "跪坐"],
+      "cameraPolicy": "静止",
+      "atmosphereBoost": "暖光烛火可辨",
+      "sfxBeat": "纸张摩擦",
+      "performanceBoost": "隐忍决绝",
+      "narrativeFootnote": "设计意图仍为弯腰捡拾",
+      "i2vCriticalFacts": ["站姿持纸", "起态与静帧一致", "禁止弯腰俯身"]
+    }
+  },
+  "emotionWords": {
+    "6": "隐忍决绝",
+    "7": "决绝而克制",
+    "8": "情绪翻涌"
+  }
+}

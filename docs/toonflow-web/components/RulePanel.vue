@@ -7,6 +7,7 @@ import type {
   RepairHint,
   RePushPlanItem,
   SmartDesignProposal,
+  RepairChangelogEntry,
 } from "@/types/closure";
 import { CLOSURE_DIMENSION_LABELS, forkLabel as forkLabelText } from "@/types/closure";
 
@@ -25,6 +26,9 @@ const props = defineProps<{
   healLog?: { at: string; ruleId: string; action: string; detail?: string }[];
   /** IC-02 / W93 smart proposals awaiting Confirm */
   smartDesignProposals?: SmartDesignProposal[] | null;
+  /** Wave-2 silent design repair log for toast / debt board */
+  repairChangelog?: RepairChangelogEntry[] | null;
+  industryResidualDebts?: string[] | null;
 }>();
 
 const emit = defineEmits<{
@@ -161,6 +165,35 @@ function forkLabel(fork: RePushPlanItem["presentationFork"]): string {
   return forkLabelText(fork);
 }
 
+const changelogLines = computed(() => {
+  const fromProp = props.repairChangelog ?? [];
+  const fromResult = ((props.result as InspectBundleResult & {
+    repairChangelog?: RepairChangelogEntry[];
+    exportGate?: { repairChangelog?: RepairChangelogEntry[] };
+  } | null)?.repairChangelog ??
+    (props.result as InspectBundleResult & {
+      exportGate?: { repairChangelog?: RepairChangelogEntry[] };
+    } | null)?.exportGate?.repairChangelog ??
+    []) as RepairChangelogEntry[];
+  const list = fromProp.length ? fromProp : fromResult;
+  return list.slice(-6).map((e) => {
+    const slot = e.slot || "?";
+    const reason = e.reason || "";
+    return `${slot}: ${e.before || "(empty)"} → ${e.after || ""}${reason ? " · " + reason : ""}`;
+  });
+});
+
+const residualDebtLine = computed(() => {
+  const debts =
+    props.industryResidualDebts ??
+    (props.result as InspectBundleResult & { industryResidualDebts?: string[] } | null)
+      ?.industryResidualDebts ??
+    [];
+  return debts.length
+    ? `残留行业债：${debts.slice(0, 6).join(", ")}${debts.length > 6 ? "…" : ""}`
+    : "";
+});
+
 function onCopy(h: RepairHint) {
   if (h.chatTemplate) emit("copyChat", h.chatTemplate);
 }
@@ -270,6 +303,14 @@ function onCopyFullBrief() {
           <li v-for="(e, i) in healLog" :key="i">{{ e.ruleId }} · {{ e.action }}{{ e.detail ? ` · ${e.detail}` : "" }}</li>
         </ul>
       </details>
+    </section>
+
+        <section v-if="changelogLines.length || residualDebtLine" class="rule-panel__section rule-panel__section--changelog">
+      <h4>静默智能修复变更</h4>
+      <p v-if="residualDebtLine" class="rule-panel__residual">{{ residualDebtLine }}</p>
+      <ul v-if="changelogLines.length">
+        <li v-for="(line, i) in changelogLines" :key="i">{{ line }}</li>
+      </ul>
     </section>
 
     <section v-if="result.closureReport?.missing?.length" class="rule-panel__section">

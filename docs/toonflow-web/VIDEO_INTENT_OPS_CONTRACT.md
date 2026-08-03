@@ -2,44 +2,74 @@
 
 Mirror of `POST /api/scriptAgent/videoIntentOps` + `docs/toonflow-web/types/videoIntentOps.ts`.
 
-## Hard rules
+## Hard rules (Wave-2)
 
-1. **Confirm over silent regen** — BLOCK findings require `forceApply` or `patchIds`; never treat WARN demote as ready.
-2. **`designExitPass ≠ videoPromptReady`** — exit green does not authorize burn when VIRD still BLOCK.
-3. **Pseudo dialogue** — keys like `：：：：…Ns` strip via homology heal; must not lip-sync.
-4. **beatDuration vs vendor** — author 1–2s event windows must not silent-pad to 4/6 without lip/FX basis.
-5. **Viral cam** — retention intent mediates via `viral_motion_mediate.json` per vendor; unmappable → Confirm. Contact Motion verbs/phases must not be mapped away.
-6. **Still pose → Motion** — `stillPoseAnchor` / `contactStartState=at_locus` 时 Motion 禁「自…侧进入」；闸 `STILL-VIDEO-POSE-MISMATCH`（`assertStillVideoPoseHandoff`）。
-7. **Key optional** — 无 VLM Key ⇒ `pixelDimStatus=unmeasured`；人审可交付；禁硬「必须配置 Key」挡路。
-8. **可播 ≠ videoPass** — `playable`/`qcSoftDeliver` 可预览下载，但未 `videoPass`/`motionPassAt` 前 FE 禁绿标交付。
+1. **永不硬阻断** — 质量债不 400 死路、不灰烧按钮；漏网 → 降级/最优实现 + 标差异 + CTA「智能修复」。仅真不可拍（缺媒体文件 / 厂商宕机）可失败引导。
+2. **设计优先满足** — 行业规范在设计阶段就要满足；不满足 → **静默智能修复写设计**（与 `designAutoClose` / `RepairAsDesign` 同源）。**不是**视频回流改意图。
+3. **视频强化实现、不改意图** — Motion/Camera/SFX 时序可强化；禁止把升近景写回 `shotSize` SSOT；实现≠设计时必写 `adaptDiff`。
+4. **`designExitPass ≠ videoPromptReady ≠ videoPass`** — 出站先 autoClose；残留横幅+智能修复，不拦试拍；可播 ≠ 通过。
+5. **Pseudo dialogue** — keys like `：：：：…Ns` strip via homology heal; must not lip-sync.
+6. **beatDuration vs vendor** — author 1–2s event windows must not silent-pad to 4/6 without lip/FX basis.
+7. **Viral cam** — retention intent mediates via `viral_motion_mediate.json`；接触 Motion 禁映射丢动词。
+8. **Still pose → Motion** — `STILL-VIDEO-POSE-MISMATCH`；可软吸收标债，不硬死路。
+9. **Realization adapt** — plate-first；禁 VD「弯腰」毒化 I2V。优先级：`trunk > pose/contact > adapt > episode polish`。
+10. **集级 AV** — episode polish **只做实现强化**；设计缺省由设计静默补。
+11. **Key optional** — 无 VLM Key ⇒ `pixelDimStatus=unmeasured`；禁硬挡路。
+12. **LANG-01 / 中文壳** — Audio `说话人："台词"`；混写标债+智能修复（软路径）。
+13. **脸预算 / 对白近景** — 低头+对白+过宽 → 设计侧静默拆 `action_then_dialogue_mcu`；漏网可降级出片并标 diff。
+14. **Confirm 仅歧义** — 文学双读 / `presentation_fork`；强契约行业项 `apply_auto`。
+
+## Soft-absorb burn debts (Wave-2)
+
+Never HTTP 400 for these; mark debt + CTA 「智能修复」+ continue (single ≡ batch):
+
+- burn-stage `qualityGate` / LANG / cam mediate scrub
+- `VID-DUR-LIP` / lip duration snap / `NO-LIP-DIALOGUE`
+- `CHAIN-EGRESS` / `VIDEO-PROMPT-STALE` (live hash continue)
+- `VP-THIN-SHELL` design thin shell
+- contact / mouth / pose handoff WARN·BLOCK soft path
+- fidelity miss (`DEX-VID-FIDELITY`) — note critical vs non-critical; still continue burn
+- warehouse / track 需完善 / still contamination absorb
+
+**Still hard-fail (true unshootable):** missing still file, voice-bind file missing on dialogue, identity cref missing, empty episode, vendor/preflight infra down, first-frame gate exception.
+
+**Undo:** `selfHeal` `undoIndustryRepair` restores last changelog `before` (split expands = manual).
+
+**Deferred (full engines):** J/L-cut NLE timeline, true 180° geometry solver, pixel headroom without Key.
+## Wave-3 J/L-cut & axis180 (minimal)
+
+- Design: adjacent on-camera dialogue → silent `ensureAdjacentJlCutAvBeats` stamps L-cut / J-cut into `narrative.avBeats`.
+- Eyeline heal stamps `axis180` softHint into `avBeats` (not a full 180° geometry solver).
+- Episode: consecutive dialogue → polishNotes jl_cut:l_cut / jl_cut:j_cut + realization footnote (design SSOT untouched).
+- Still: softHints include xis180; OTS grammar defaults stamp axis180 into avBeats.
+- Spine: reads design `avBeats` → Motion / Audio「转场声画」+ Narrative `adaptDiff:designAvBeats→realize` (never rewrite `shotSize`).
+- Still deferred: full J/L-cut NLE timeline engine; true 180° geometric solve; pixel headroom without Key.
+
 
 ## Actions
 
 | action | meaning |
 |--------|---------|
 | `diagnose` / `dryRun` | findings + primaryAction + ctaLabel |
-| `apply` | apply patches; re-diagnose until-clear；须 cascade forwardStale |
+| `apply` | apply patches; cascade forwardStale |
 
 ## FE CTA
 
-Use `videoIrdCtaLabel` — prefer enhance / hand_edit_vd / voice / beat / cam mediate.
+主 CTA 一律经 `buildPrimaryBlock` → **「智能修复」**（DebtBar / VIRD / generate 包络同源）。persona 文案仅副标题。
 
-Post-burn `primaryNextStep=human_review` → CTA「SVQ 未测维 · 人审」或「未测·人审（非失败）」（`isSvqHumanReviewStep`）；禁止当 videoPass.
+债条三行：设计意图 / 当前实现 / 已适配或差异（`adaptDiff` / `repairChangelog`）。
 
-**成片人审** — `POST …/humanRejudgeFidelity` `modality=video` 写 `motionPassAt`/`videoPass`；静帧人审通过后 cascade `videoStale` 强制重编译。
+**人审归层** — 景别/脸 → 设计智能修复；motion/情绪/sfx → 实现 adapt；禁止只改 `cameraPolicy` 假装设计已近景。
 
-**接触事件** — `still_prop_missing` / `STILL-CONTACT-HANDOFF` → CTA「重出带道具静照」；`vid_contact_beats` →「重编译接触分相 Motion」；pose mismatch → 重编译 at_locus 模板；`missingSlots` 可含 `propInFrame` / `contactBeats`。
+**M7 stale** — `VIDEO-PROMPT-STALE` → 重编译提示词（智能修复梯子）。
 
-**M7 `VIDEO-PROMPT-STALE` / `video_prompt_stale`** → CTA「重编译视频提示词」（`isVideoPromptStaleSignal`）；禁 IRD forceApply 顶替；禁旧 prompt 幽灵烧片。
+**Batch** — `summary.softDeferred` / `honestPartial` / `repairChangelog`；部分成功 ≠ 整批绿标。
 
-**Post-burn soft deliver (`qcWeak`)** — vendor 已出片 + SVQ/IRD 软债 → 可预览，债条仍展示（`VideoIntentDebtBar` softDeliverHint）；仅真 vendor 失败保持 `生成失败`。
+Wire: `ShotWorkbenchDebtMount.vue`；类型 `types/videoIntentOps.ts` + `VideoIntentDebtBar.vue`。
 
-**Batch soft_defer** — 批烧响应 `summary.softDeferred` / `honestPartial`；部分成功 ≠ 整批绿标。
+## Wave-4 screenSide & no-Key composition
 
-Wire: `ShotSpecDrawer` → `POST /api/scriptAgent/videoIntentOps`；UI `VideoIntentDebtBar`（对称 LitDetailDebtBar，含成片人审 CTA）。
-
-`VIDEO-PROMPT-STALE` 债条主按钮 → `recompile-prompt` → workbench `genText`；禁止用 IRD forceApply 顶替。
-
-`fillModeMatrix` 不得用更长脏 seed 覆盖已编译 `generateVideoPrompt` 结果。
-
-类型：`types/videoIntentOps.ts` + `components/VideoIntentDebtBar.vue`
+- `narrative.screenSide` SSOT from spatial keywords (`left|right|center`).
+- Adjacent reverse/OTS same-side → `axis180_same_side` continuity finding; silent repair may flip spatial (soft).
+- No Key: `assessCompositionSoftNoKey` emits headroom/looking-room/axis180 undeclared debts; `pixelDimStatus=unmeasured`; never invents visualPass.
+- Still deferred: full NLE J/L-cut timeline; true CV 180° solver; measured pixel headroom with Key.

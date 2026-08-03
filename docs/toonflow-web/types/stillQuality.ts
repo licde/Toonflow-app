@@ -517,6 +517,13 @@ export function resolveStillPrimaryCtaLabel(meta: StillMeta | null | undefined):
   if (meta.stillQuality === "hq_ok" && meta.visualPass === true) {
     return { kind: "burn_ready", label: "可烧视频", blocksGenerate: false };
   }
+  // Intent-first: pose realization debt does not block burn CTA
+  if (
+    meta.realizationDegraded === true ||
+    (meta as { realization?: { realizationDegraded?: boolean } }).realization?.realizationDegraded === true
+  ) {
+    return { kind: "burn_ready", label: "可烧视频（姿态债）", blocksGenerate: false };
+  }
   const step = String(meta.primaryNextStep ?? "");
   const ird = String(meta.irdPrimaryAction ?? "");
   if (ird === "confirm_split" || step === "split_shot") {
@@ -617,10 +624,16 @@ export function deriveTrackBurnAllowed(opts: {
   softDeliver?: boolean | null;
   stillMeta?: StillMeta | null;
 }): boolean {
-  if (opts.state === "需完善") return false;
-  if (opts.burnAllowed === false) return false;
-  if (opts.qcWeak === true || opts.softDeliver === true) return false;
-  return deriveBurnReady(opts.stillMeta ?? null);
+  // Wave-2 never-block: quality「需完善」/ soft debt still allow try-burn; debt bar shows diffs
+  if (opts.state === "需完善") return true;
+  if (opts.burnAllowed === false) {
+    // softDeliver / qcWeak / implementationDegraded → still allow
+    if (opts.qcWeak === true || opts.softDeliver === true) return true;
+    if ((opts.stillMeta as { implementationDegraded?: boolean } | null)?.implementationDegraded) return true;
+    return true; // never gray burn for quality debt
+  }
+  if (opts.qcWeak === true || opts.softDeliver === true) return true;
+  return deriveBurnReady(opts.stillMeta ?? null) || true;
 }
 
 /** IMPORT_OK_NOT_EXIT must surface in DebtBar — not treated as design exit pass */

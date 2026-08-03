@@ -37,6 +37,8 @@ export async function dryRunImport(
       preImport?: InspectBundleResult;
       exportGate?: ExportGateSummary;
       chatRepairText?: string;
+      repairChangelog?: ExportGateSummary["repairChangelog"];
+      industryResidualDebts?: string[];
     }
   >(res);
   const exportGate = data.exportGate;
@@ -44,6 +46,15 @@ export async function dryRunImport(
     exportGate?.chatRepairText ?? data.chatRepairText ?? data.preImport?.chatRepairText;
   const previewStatusLine =
     exportGate?.previewStatusLine ?? (data as { previewStatusLine?: string }).previewStatusLine;
+  const repairChangelog =
+    exportGate?.repairChangelog ??
+    data.repairChangelog ??
+    (data as { meta?: { repairChangelog?: ExportGateSummary["repairChangelog"] } }).meta
+      ?.repairChangelog;
+  const industryResidualDebts =
+    exportGate?.industryResidualDebts ??
+    data.industryResidualDebts ??
+    (data as { meta?: { industryResidualDebts?: string[] } }).meta?.industryResidualDebts;
   return {
     ...data.preImport,
     ...data,
@@ -51,6 +62,8 @@ export async function dryRunImport(
     exportGate,
     chatRepairText,
     previewStatusLine,
+    repairChangelog,
+    industryResidualDebts,
   };
 }
 
@@ -70,5 +83,17 @@ export async function importScript(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bundle, ...opts }),
   });
-  return unwrapApi<ImportScriptResult>(res);
+  const data = await unwrapApi<ImportScriptResult>(res);
+  const exportGate = data.exportGate;
+  const repairChangelog =
+    exportGate?.repairChangelog ?? data.repairChangelog ?? data.dryRun?.repairChangelog;
+  const industryResidualDebts =
+    exportGate?.industryResidualDebts ??
+    data.industryResidualDebts ??
+    data.dryRun?.industryResidualDebts;
+  return {
+    ...data,
+    repairChangelog,
+    industryResidualDebts,
+  };
 }

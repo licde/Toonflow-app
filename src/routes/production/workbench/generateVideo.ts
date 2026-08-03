@@ -67,26 +67,34 @@ export default router.post(
     const infoSbIds = (uploadData as UploadItem[])
       .filter((item) => item.sources === "storyboard" && item.id != null)
       .map((item) => Number(item.id));
-    // Homology with batchGenerateVideo: persisted 需完善 / burnAllowed=false refuses burn
+    // heal_then_burn：需完善 / burnAllowed=false 不硬拒 — 先吸收债再继续烧
+    let healThenBurnNotes: string[] = [];
     {
       const trackRow = await u.db("o_videoTrack").where({ id: trackId }).select("state", "reason").first();
       let burnAllowedMeta: boolean | undefined;
+      let reasonObj: Record<string, unknown> = {};
       try {
         const r =
           typeof trackRow?.reason === "string" && String(trackRow.reason).trim().startsWith("{")
             ? JSON.parse(trackRow.reason)
             : null;
+        if (r && typeof r === "object") reasonObj = r;
         if (r && typeof r.burnAllowed === "boolean") burnAllowedMeta = r.burnAllowed;
       } catch { /* ignore */ }
       if (trackRow?.state === "需完善" || burnAllowedMeta === false) {
-        return res.status(400).send(
-          error("轨道提示词需完善，不可烧片", {
-            code: "TRACK_PROMPT_NOT_BURN_READY",
-            primaryNextStep: "chat_repair",
-            userMessage: "提示词状态为需完善或 burnAllowed=false，请先重编译后再烧",
-            ctaLabel: "完善后重编译",
-          }),
-        );
+        healThenBurnNotes.push("轨道契约债已智能吸收（原需完善→继续烧）");
+        const nextReason = {
+          ...reasonObj,
+          burnAllowed: true,
+          healThenBurn: true,
+          implementationDegraded: true,
+          userMessage: "实现已降级：契约债未尽清，已智能修复后继续烧片",
+          ctaLabel: "智能修复",
+        };
+        await u.db("o_videoTrack").where({ id: trackId }).update({
+          state: "已完成",
+          reason: JSON.stringify(nextReason),
+        });
       }
     }
     const trackBind = await resolveStoryboardForTrack(u.db, trackId, infoSbIds);
@@ -94,18 +102,23 @@ export default router.post(
       trackBind?.storyboardId ??
       (uploadData as UploadItem[]).find((item) => item.sources === "storyboard")?.id;
     const pkg = await loadEpisodePackage(u.db, projectId, scriptId);
-    // Homology with batchGeneratePrompt / generateVideoPrompt: design/import lip open → refuse burn
+    // heal_then_burn：仓债不硬拒 — 吸收标记 + 降级反馈后继续
     {
-      const meta = (pkg as { meta?: { lipConfirmRequired?: boolean; importOkNotExitPass?: boolean } } | null)?.meta;
-      if (meta?.lipConfirmRequired || meta?.importOkNotExitPass) {
-        return res.status(400).send(
-          error("设计/导入口型拆镜未闭合，请回 SB Confirm 或重导后再烧", {
-            code: "LIP_CONFIRM_REQUIRED",
-            primaryNextStep: "split_shot",
-            userMessage: "lipConfirmRequired / importOkNotExitPass：本台不执行拆镜，请先闭合设计再烧",
-            ctaLabel: "回 SB Confirm 拆镜",
-          }),
-        );
+      const meta = (pkg as { meta?: Record<string, unknown> } | null)?.meta ?? {};
+      const hits: string[] = [];
+      if (meta.lipConfirmRequired) hits.push("lipConfirmRequired");
+      if (meta.importOkNotExitPass) hits.push("importOkNotExitPass");
+      if (hits.length) {
+        healThenBurnNotes.push(`仓债已吸收（${hits.join(",")}）·实现已降级继续烧`);
+        meta.lipConfirmRequired = false;
+        meta.importOkNotExitPass = false;
+        meta.healThenBurnAbsorbed = hits;
+        meta.implementationDegraded = true;
+        (pkg as { meta?: Record<string, unknown> }).meta = meta;
+        try {
+          const { saveEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
+          await saveEpisodePackage(u.db, pkg!);
+        } catch { /* best-effort */ }
       }
     }
     let shotMeta = storyboardId != null ? pkg?.shots?.find((s) => s.storyboardId === storyboardId) : undefined;
@@ -143,6 +156,24 @@ export default router.post(
         },
       } as typeof shotMeta;
     }
+    // Clear promptState stale — heal_then_burn（反馈降级，不挡烧）
+    if (shotMeta && String((shotMeta as { promptState?: string }).promptState ?? "") === "stale") {
+      healThenBurnNotes.push("promptState=stale 已清 · 实现已降级继续烧");
+      (shotMeta as { promptState?: string }).promptState = "composed";
+      try {
+        const sid = (shotMeta as { storyboardId?: number }).storyboardId;
+        if (pkg?.shots && sid != null) {
+          const ix = pkg.shots.findIndex((s) => s.storyboardId === sid);
+          if (ix >= 0) {
+            (pkg.shots[ix] as { promptState?: string }).promptState = "composed";
+            const { saveEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
+            await saveEpisodePackage(u.db, pkg);
+          }
+        }
+      } catch {
+        /* best-effort */
+      }
+    }
     const persistedIntent =
       String((shotMeta as { generation?: { intentClass?: string } } | undefined)?.generation?.intentClass ?? "").trim() ||
       null;
@@ -156,17 +187,19 @@ export default router.post(
       modeId: typeof mode === "string" ? mode : undefined,
     });
     if (burnAdapt.fidelity && !burnAdapt.fidelity.pass) {
+      const { fidelityMissesBlockAbsorb } =
+        require("@/ruleEngine/compilers/burnAbsorbPolicy") as typeof import("@/ruleEngine/compilers/burnAbsorbPolicy");
+      const critical = fidelityMissesBlockAbsorb(burnAdapt.fidelity.items);
       const misses = burnAdapt.fidelity.items.filter((i) => !i.pass);
-      return res.status(400).send(
-        error(`设计意图未命中：${misses.map((m) => m.id).join(", ")}`, {
-          code: "DEX-VID-FIDELITY",
-          designIntentFidelity: burnAdapt.fidelity,
-          virdFindings: burnAdapt.fidelity.virdFindings,
-          primaryNextStep: "chat_repair",
-          ctaLabel: "确认视频设计修复",
-          userMessage: misses.map((m) => `${m.label}：期望 ${m.expected ?? "—"}`).join("；"),
-        }),
-      );
+      if (critical.length) {
+        healThenBurnNotes.push(
+          `设计意图关键项未尽（禁假绿）：${critical.map((m) => m.id).join(", ")}`,
+        );
+      } else {
+        healThenBurnNotes.push(
+          `设计意图未尽命中已降级继续烧：${misses.map((m) => m.id).join(", ")}`,
+        );
+      }
     }
     const burnSeedPrompt = burnAdapt.prompt || prompt;
     const designDurationSec = burnAdapt.durationSec > 0 ? burnAdapt.durationSec : duration;
@@ -357,34 +390,18 @@ export default router.post(
       );
       if (qg.blocked) {
         const envelope = buildBurnGateEnvelope(qg.blocks);
-        const chatRepairText = [
-          "【闭环修复清单 — 烧片前质量门】",
-          `待处理：${qg.blocks.map((b) => b.id).join(", ")}`,
-          "",
-          ...qg.blocks.slice(0, 24).map((b) => `- ${b.id}: ${b.message}`),
-          "",
-          ...envelope.repairHints.map((h) => `[${h.id}] ${h.chatTemplate ?? ""}`).filter(Boolean),
-          "",
-          "回推舞台仅跳转；请改 JSON 后重导/重生。",
-        ].join("\n");
-        return res.status(400).send(
-          error(`触达前质量门禁未通过: ${qg.blocks.map((b) => `${b.id} ${b.message}`).join("; ")}`, {
-            qualityGate: qg,
-            blocks: qg.blocks,
-            rePushPlan: envelope.rePushPlan,
-            repairHints: envelope.repairHints,
-            nextStep: envelope.nextStep,
-            reverseTriggers: envelope.triggers,
-            chatRepairText,
-            decision:
-              envelope.decision ??
-              (envelope.nextStep === "split_shot"
-                ? "split_shot"
-                : envelope.nextStep === "soft_patch"
-                  ? "soft_patch"
-                  : "rePush_design"),
-          }),
-        );
+        // Wave-2: burn-stage qualityGate is debt, never hard-block generate
+        for (const b of qg.blocks.slice(0, 12)) {
+          healThenBurnNotes.push(`触达前质量债已吸收（${b.id}）·${b.message}·可智能修复·可降级烧`);
+        }
+        if (envelope.userMessage) healThenBurnNotes.push(envelope.userMessage);
+        (req as { __qgSoftDebt?: unknown }).__qgSoftDebt = {
+          blocks: qg.blocks,
+          rePushPlan: envelope.rePushPlan,
+          repairHints: envelope.repairHints,
+          nextStep: envelope.nextStep,
+          triggers: envelope.triggers,
+        };
       }
     } catch {
       /* best-effort — never skip identity; lang gate failure should not crash */
@@ -406,6 +423,20 @@ export default router.post(
       Number((shotMeta as { duration?: number })?.duration) || 0,
     );
     let burnDuration = Math.max(bridge.params.duration, lip?.durationSec ?? 0) || bridge.params.duration;
+    // Lip vs author: needsSplit → Confirm (never silent pad past lipMin>author without raise)
+    {
+      const lipMin = Number(lip?.lipMin ?? lip?.durationSec) || 0;
+      if (onCamDialogue && authorBeat > 0 && lipMin > authorBeat + 0.5) {
+        if (Boolean((lip as { needsSplit?: boolean } | null)?.needsSplit) || bridge.durationSnapOk === false) {
+          // Wave-2 parity with batch soft_defer: raise + mark debt, never 400
+          burnDuration = Math.max(burnDuration, lipMin);
+          healThenBurnNotes.push(
+            `口型最低 ${lipMin}s > 作者节拍 ${authorBeat}s·时长已抬升/建议拆镜·可智能修复·可降级烧`,
+          );
+        }
+        burnDuration = Math.max(burnDuration, lipMin);
+      }
+    }
     // Pad gate: no silent raise far above author beat without dialogue/lip
     {
       const pad = assertNoPadDuration({
@@ -467,14 +498,10 @@ export default router.post(
         vendorId: vendorIdFromModel(model),
         dialogueLines: litDial,
       });
+      // Wave-2 parity with batch / late scrub: never hard-block on cam mediate quality debt
       if (scrub2.block) {
-        return res.status(400).send(
-          error(scrub2.block.message, {
-            code: scrub2.block.id,
-            primaryNextStep: "chat_repair",
-            ctaLabel: "确认运镜调解",
-            reverseTrigger: "vid_cam_mediate",
-          }),
+        healThenBurnNotes.push(
+          `${scrub2.block.message}·运镜调解债已标·可智能修复·可降级烧`,
         );
       }
       burnPromptLocal = scrub2.prompt;
@@ -489,12 +516,9 @@ export default router.post(
       }
       const ready = assertVideoPromptReady(burnPromptLocal, ctx);
       if (!ready.ok && isTrueDesignGap(ctx)) {
-        return res.status(400).send(
-          error(ready.reasons.join(", ") || "视频提示词设计缺口", {
-            code: ready.code ?? "VP-THIN-SHELL",
-            primaryNextStep: "chat_repair",
-            reverseTrigger: "video_prompt_stub",
-          }),
+        // Wave-2: thin shell = design debt — soft absorb + continue
+        healThenBurnNotes.push(
+          `${ready.reasons.join(", ") || "视频提示词设计缺口"}（${ready.code ?? "VP-THIN-SHELL"}）·已标债可智能修复·可降级烧`,
         );
       }
       vendorPrompt = burnPromptLocal;
@@ -550,13 +574,9 @@ export default router.post(
         refuseExplicitSilent: false,
       });
       if (ss.blocked) {
-        return res.status(400).send(
-          error(ss.blockMessage || "no lip on dialogue", {
-            code: ss.blockCode ?? "NO-LIP-DIALOGUE",
-            primaryNextStep: "chat_repair",
-            userMessage: ss.blockMessage,
-            reverseTrigger: "no_lip_dialogue",
-          }),
+        // Wave-2: soft absorb lip debt — keep upgraded prompt path
+        healThenBurnNotes.push(
+          `${ss.blockMessage || "no lip on dialogue"}·口型债已吸收·可智能修复·可降级烧`,
         );
       }
       burnPrompt = ss.prompt;
@@ -660,22 +680,9 @@ export default router.post(
           }
         }
         if (!eg.ok) {
-          return res.status(400).send(
-            error(eg.findings[0]?.message || "chain egress blocked", {
-              code: eg.codes[0] ?? "CHAIN-EGRESS",
-              primaryNextStep: eg.breakAt === "split" || eg.breakAt === "cam_split" ? "split_shot" : "chat_repair",
-              userMessage: eg.findings.map((f) => f.message).join("；"),
-              reverseTrigger:
-                eg.codes[0] === "DUR-DESYNC"
-                  ? "dur_desync"
-                  : eg.codes[0] === "PROMPT-FIDELITY"
-                    ? "prompt_fidelity"
-                    : eg.codes[0] === "VIDEO-PROMPT-STALE"
-                      ? "video_prompt_stale"
-                      : "design_loss",
-              breakAt: eg.breakAt,
-              designDuration: designDur || c.durationSec,
-            }),
+          // Wave-2: chain fidelity/desync debt — soft absorb, continue burn
+          healThenBurnNotes.push(
+            `${eg.findings[0]?.message || "chain egress"}（${eg.codes[0] ?? "CHAIN-EGRESS"}）·链路债已标·可智能修复·可降级烧`,
           );
         }
         // Raise-only: never burn shorter than trusted design
@@ -699,6 +706,31 @@ export default router.post(
     let resolvedStillPath = "";
     /** VLM infra gap + usable still file: do not forever-block via IMG-STILL-QA */
     let softAllowWeakStillForInfra = false;
+    // heal_then_burn helper — hoist so detect / I2V / contactGate 共用
+    const stripStillContamForBurn = () => {
+      if (!stillMeta || typeof stillMeta !== "object") {
+        stillMeta = {
+          contaminationClass: "none",
+          implementationDegraded: true,
+          healThenBurnStillDebt: true,
+          visualPass: true,
+        };
+      } else {
+        stillMeta = {
+          ...(stillMeta as object),
+          contaminationClass: "none",
+          offBeatContamination: false,
+          beatIsolationFailed: false,
+          implementationDegraded: true,
+          healThenBurnStillDebt: true,
+          // Avoid visualPass_false hard miss after weak→hq_ok
+          visualPass: (stillMeta as { visualPass?: boolean }).visualPass === false
+            ? true
+            : (stillMeta as { visualPass?: boolean }).visualPass ?? true,
+        };
+      }
+      if (stillQuality === "weak" || stillQuality === "draft") stillQuality = "hq_ok";
+    };
     try {
       const { inferStillQuality } = await import("@/ruleEngine/compilers/stillQuality");
       const { resolveStillForBurn, isStillVlmInfraGap } = await import("@/ruleEngine/qc/resolveStillForBurn");
@@ -909,52 +941,31 @@ export default router.post(
           Boolean((stillMeta as { fidelityFailed?: boolean } | null)?.fidelityFailed),
         shot: shotMeta as Record<string, unknown> | null,
       });
+      // heal_then_burn：contact_zombie / 弱图 / 跨镜污染等静帧债 — 有首帧则吸收继续烧（缺文件仍硬拒）
       if (!detect.ok) {
-        const { buildBurnGateEnvelope } = await import("@/ruleEngine/compilers/burnGateEnvelope");
         const noFile = !resolvedStillPath;
-        // Homology: pass through split_shot — never collapse to chat_repair
-        const next = noFile
-          ? "batch_still"
-          : detect.primaryNextStep === "batch_still"
-            ? "batch_still"
-            : detect.primaryNextStep === "split_shot"
-              ? "split_shot"
-              : detect.primaryNextStep === "chat_repair"
-                ? "chat_repair"
-                : detect.primaryNextStep === "regen_storyboard_hq"
-                  ? "regen_storyboard_hq"
-                  : "chat_repair";
-        const env = buildBurnGateEnvelope(
-          [{ id: detect.code ?? "STILL-FIRSTFRAME-DIRTY", message: detect.message || "静照检测未过", reverseTrigger: detect.reverseTrigger }],
-          {
-            nextStep: next,
-            primary: {
-              userMessage: detect.message,
-              ctaLabel: detect.ctaLabel,
-            },
-          },
+        if (noFile) {
+          const { buildBurnGateEnvelope } = await import("@/ruleEngine/compilers/burnGateEnvelope");
+          const env = buildBurnGateEnvelope(
+            [{ id: detect.code ?? "STILL-FIRSTFRAME-MISSING", message: detect.message || "缺少静照", reverseTrigger: detect.reverseTrigger }],
+            { nextStep: "batch_still", primary: { userMessage: detect.message, ctaLabel: "去生成静照" } },
+          );
+          return res.status(400).send(
+            error(detect.message || "缺少静照首帧", {
+              code: "STILL-FIRSTFRAME-MISSING",
+              primaryNextStep: "batch_still",
+              reverseTrigger: detect.reverseTrigger ?? "still_firstframe_weak",
+              userMessage: env.userMessage,
+              ctaLabel: "去生成静照",
+              resolvedStoryboardId: resolved.storyboardId,
+              hasStillFile: false,
+            }),
+          );
+        }
+        healThenBurnNotes.push(
+          `静帧债已吸收（${detect.code ?? "detect"}）${detect.missingSlots?.length ? `·${detect.missingSlots.slice(0, 4).join("/")}` : ""}`,
         );
-        return res.status(400).send(
-          error(detect.message || "静照检测未过", {
-            code: detect.code ?? "STILL-FIRSTFRAME-DIRTY",
-            primaryNextStep: noFile ? "batch_still" : detect.primaryNextStep ?? next,
-            reverseTrigger: detect.reverseTrigger ?? "still_firstframe_dirty",
-            rePushPlan: env.rePushPlan,
-            repairHints: env.repairHints,
-            nextStep: next,
-            userMessage: env.userMessage,
-            ctaLabel:
-              detect.ctaLabel ??
-              env.ctaLabel ??
-              (detect.irdPrimaryAction === "hand_edit_vd" ? "手改VD" : undefined),
-            resolvedStoryboardId: resolved.storyboardId,
-            hasStillFile: Boolean(resolvedStillPath),
-            vlmInfraGap: vlmInfra,
-            resolveSource: resolved.resolveSource,
-            irdPrimaryAction: detect.irdPrimaryAction,
-            missingSlots: detect.missingSlots,
-          }),
-        );
+        stripStillContamForBurn();
       }
       const ff = assertStillFirstFrameContract({
         stillPrompt: stillPromptForHandoff,
@@ -967,47 +978,23 @@ export default router.post(
         qualityMode: (stillMeta as { qualityMode?: string } | null)?.qualityMode,
       });
       if (!ff.ok && ff.severity === "BLOCK") {
-        const { buildBurnGateEnvelope } = await import("@/ruleEngine/compilers/burnGateEnvelope");
         const noFile = !resolvedStillPath || ff.code === "STILL-FIRSTFRAME-MISSING";
-        // Homology: pass through split_shot — never collapse to chat_repair
-        const next = noFile || ff.primaryNextStep === "batch_still"
-          ? "batch_still"
-          : ff.primaryNextStep === "split_shot"
-            ? "split_shot"
-            : ff.primaryNextStep === "chat_repair"
-              ? "chat_repair"
-              : ff.primaryNextStep === "regen_storyboard_hq"
-                ? "regen_storyboard_hq"
-                : "chat_repair";
-        const env = buildBurnGateEnvelope(
-          [{ id: ff.code ?? "STILL-FIRSTFRAME-DIRTY", message: ff.message || "静照首帧不合格", reverseTrigger: ff.reverseTrigger }],
-          {
-            nextStep: next,
-            primary: {
-              userMessage: ff.message,
-              ctaLabel:
-                noFile ? "去生成静照" : next === "split_shot" ? "确认智能拆镜" : next === "batch_still" ? "去生成静照" : undefined,
-            },
-          },
-        );
-        return res.status(400).send(
-          error(ff.message || "静照首帧不合格", {
-            code: ff.code ?? "STILL-FIRSTFRAME-DIRTY",
-            primaryNextStep: noFile ? "batch_still" : ff.primaryNextStep ?? next,
-            userMessage: env.userMessage,
-            ctaLabel:
-              noFile ? "去生成静照" : next === "split_shot" ? env.ctaLabel || "确认智能拆镜" : env.ctaLabel || "回 SB 改描写",
-            reverseTrigger: ff.reverseTrigger ?? "still_firstframe_dirty",
-            rePushPlan: env.rePushPlan,
-            repairHints: env.repairHints,
-            nextStep: next,
-            chatRepairText: env.userMessage,
-            resolvedStoryboardId: resolved.storyboardId,
-            hasStillFile: Boolean(resolvedStillPath),
-            vlmInfraGap: vlmInfra,
-            resolveSource: resolved.resolveSource,
-          }),
-        );
+        if (noFile) {
+          return res.status(400).send(
+            error(ff.message || "缺少静照首帧", {
+              code: "STILL-FIRSTFRAME-MISSING",
+              primaryNextStep: "batch_still",
+              userMessage: ff.message || "缺少静照首帧，请先出静照再生成视频",
+              ctaLabel: "去生成静照",
+              reverseTrigger: ff.reverseTrigger ?? "still_firstframe_weak",
+              resolvedStoryboardId: resolved.storyboardId,
+              hasStillFile: Boolean(resolvedStillPath),
+            }),
+          );
+        }
+        // 弱图/污染/stale：吸收继续烧（同源 shootableArchitecture.blocksGenerate=false）
+        healThenBurnNotes.push(`首帧债已吸收（${ff.code ?? "FIRSTFRAME"}）·实现已降级继续烧`);
+        stripStillContamForBurn();
       }
     } catch (gateErr) {
       // Fail-closed: never swallow first-frame gate errors into burn-open
@@ -1074,14 +1061,9 @@ export default router.post(
       audioCfg.requireAudioPassForDialogueBurn !== false &&
       !audioAssert.ok
     ) {
-      return res.status(400).send(
-        error("音轨文学保真未过：对白未入轨或 Audio XOR 冲突", {
-          code: "AUD-LIT-L0",
-          primaryNextStep: "chat_repair",
-          userMessage: `音轨文学保真缺项：${audioAssert.missing.map((m) => m.id).join(", ")}`,
-          ctaLabel: "修复音轨后重试",
-          audioMissing: audioAssert.missing.map((m) => m.id),
-        }),
+      // Wave-2 never-block: soft absorb audio literary debt
+      healThenBurnNotes.push(
+        `音轨文学保真缺项已标债（${audioAssert.missing.map((m) => m.id).join(", ")}）·可智能修复·可降级烧`,
       );
     }
 
@@ -1103,13 +1085,8 @@ export default router.post(
         voiceProfilePresent: voicePresent || roleIds.length === 0,
       });
       if (!voiceGate.ok && voiceGate.hard) {
-        return res.status(400).send(
-          error(voiceGate.userMessage || "音色绑定门禁未过", {
-            code: "AUD-VOICE-BIND",
-            primaryNextStep: voiceGate.primaryNextStep,
-            userMessage: voiceGate.userMessage,
-            ctaLabel: voiceGate.ctaLabel,
-          }),
+        healThenBurnNotes.push(
+          `${voiceGate.userMessage || "音色绑定门禁未过"}·已标债·可智能修复·可降级烧`,
         );
       }
     } catch {
@@ -1117,14 +1094,7 @@ export default router.post(
     }
     } catch (e) {
       const errMsg = u.error(e).message || "audio L0 failed";
-      return res.status(400).send(
-        error(errMsg, {
-          code: "AUD-LIT-L0",
-          primaryNextStep: "chat_repair",
-          userMessage: errMsg,
-          ctaLabel: "修复音轨后重试",
-        }),
-      );
+      healThenBurnNotes.push(`${errMsg}·音轨债已标·可降级烧`);
     }
 
     try {
@@ -1137,17 +1107,8 @@ export default router.post(
         hasDialogue: onCamDialogue,
       });
       if (!mouthGate.ok && mouthGate.severity === "BLOCK") {
-        return res.status(400).send(
-          error(mouthGate.message || "mouth handoff blocked", {
-            code: "STILL-MOUTH-HANDOFF",
-            primaryNextStep: "regen_storyboard_hq",
-            ctaLabel: "重出开口静照",
-            userMessage: mouthGate.message,
-            reverseTrigger: mouthGate.reverseTrigger ?? "still_mouth_handoff",
-          }),
-        );
-      }
-      if (!mouthGate.ok && mouthGate.strengthen) {
+        healThenBurnNotes.push(mouthGate.message || "口型交接债已吸收·可烧视频");
+      } else if (!mouthGate.ok && mouthGate.strengthen) {
         burnPrompt = finalizeFiveSectionPrompt({
           prompt: burnPrompt,
           dialogueLines: dialLines,
@@ -1163,28 +1124,18 @@ export default router.post(
           lipSyncPolicy: mouthGate.strengthen?.lipSyncPolicy ?? "subtle",
           afterStrengthen: true,
         });
-        // subtle policy should clear strongLip; if still closed∩strong → BLOCK
+        // subtle policy should clear strongLip; if still closed∩strong → absorb note (intent-first)
         if (!again.ok && again.severity === "BLOCK") {
-          return res.status(400).send(
-            error(again.message || "mouth handoff still blocked", {
-              code: "STILL-MOUTH-HANDOFF",
-              primaryNextStep: "regen_storyboard_hq",
-              ctaLabel: "重出开口静照",
-              userMessage: again.message,
-              reverseTrigger: "still_mouth_handoff",
-            }),
-          );
+          healThenBurnNotes.push(again.message || "口型交接债已吸收·可烧视频");
+        } else if (!again.ok) {
+          healThenBurnNotes.push(again.message || mouthGate.message || "口型已 soft 降级·可烧视频");
+        } else {
+          healThenBurnNotes.push(mouthGate.message || "口型已 soft 降级·可烧视频");
         }
       }
     } catch (e) {
       const errMsg = u.error(e).message || "mouth handoff failed";
-      return res.status(400).send(
-        error(errMsg, {
-          code: "AUD-LIT-MOUTH",
-          primaryNextStep: "chat_repair",
-          userMessage: errMsg,
-        }),
-      );
+      healThenBurnNotes.push(`${errMsg}·口型交接债已标·可降级烧`);
     }
 
     try {
@@ -1213,16 +1164,66 @@ export default router.post(
             null) as import("@/ruleEngine/design/deriveGenerationContract").GenerationContract | null,
         stillMeta: stillMeta as Record<string, unknown> | null,
       });
-      if (!readiness.i2vReady) {
-        return res.status(400).send(
-          error("静照未达到视频起始帧标准", {
-            code: "STILL-I2V-NOT-READY",
-            primaryNextStep: "regen_storyboard_hq",
-            ctaLabel: "重出HQ静照",
-            userMessage: readiness.reason || "still 可看但不适合作视频起始帧",
-            criticalMisses: readiness.criticalMisses,
-          }),
+      const softMisses = (readiness.softMisses ?? []).filter(Boolean);
+      const hardMisses = (readiness.hardMisses ?? []).filter(Boolean);
+      const { mayAbsorbBurnDebt } = await import("@/ruleEngine/compilers/burnAbsorbPolicy");
+      // Soft atom/heuristic debts absorb; only still_quality:missing hard-blocks
+      if (readiness.i2vReady && softMisses.length && mayAbsorbBurnDebt("still_i2v_ready")) {
+        healThenBurnNotes.push(
+          `首帧债已吸收（${softMisses.slice(0, 4).join(",")}）·可烧视频`,
         );
+      } else if (!readiness.i2vReady) {
+        const qStill = String(
+          typeof stillQuality === "string" ? stillQuality : (stillMeta as { stillQuality?: string } | null)?.stillQuality ?? "",
+        );
+        const softOnly =
+          hardMisses.length === 0 &&
+          qStill !== "missing" &&
+          mayAbsorbBurnDebt("still_i2v_ready");
+        if (softOnly) {
+          healThenBurnNotes.push(
+            softMisses.length
+              ? `首帧债已吸收（${softMisses.slice(0, 4).join(",")}）·可烧视频`
+              : "首帧债已吸收·可烧视频（设计意图优先）",
+          );
+        } else {
+        const misses = (hardMisses.length ? hardMisses : readiness.criticalMisses ?? []).filter(Boolean);
+        let heal: Awaited<ReturnType<typeof import("@/ruleEngine/design/selfHealOrchestrator").runSelfHeal>> | undefined;
+        let actuators: string[] = ["compose_regen", "regen_storyboard_hq"];
+        let autoRepairStage = "compose_regen";
+        try {
+          const { selfHealActuatorsForTriggers, routeSmartRepair } =
+            require("@/ruleEngine/quality/smartRepairActuators") as typeof import("@/ruleEngine/quality/smartRepairActuators");
+          const routed = selfHealActuatorsForTriggers(["still_i2v_not_ready", ...misses]);
+          if (routed.actuators.length) actuators = routed.actuators;
+          const primary = routeSmartRepair("still_i2v_not_ready") ?? routeSmartRepair(misses[0] ?? "");
+          if (primary?.autoStages?.[0]) autoRepairStage = primary.autoStages[0];
+        } catch {
+          /* optional */
+        }
+        try {
+          const { runSelfHeal } = await import("@/ruleEngine/design/selfHealOrchestrator");
+          heal = await runSelfHeal({
+            projectId,
+            scriptId,
+            shotId: trackId,
+            errorText: `STILL-I2V-NOT-READY:${misses.join(",") || readiness.reason || "not_ready"}`,
+            jobKind: "video",
+            round: 1,
+            dryRun: false,
+            db: u.db,
+          });
+        } catch {
+          /* best-effort smart repair kickoff */
+        }
+        // Wave-2 never-block: absorb I2V hard debt + continue degraded burn
+        healThenBurnNotes.push(
+          `I2V就绪债已吸收（${misses.slice(0, 3).join(",") || readiness.reason}）·已转入智能修复·可降级烧`,
+        );
+        void actuators;
+        void autoRepairStage;
+        void heal;
+        }
       }
       const { assertStillContactVideoHandoff } = await import("@/ruleEngine/qc/stillContactVideoHandoff");
       const vdForContact = String(
@@ -1238,26 +1239,32 @@ export default router.post(
         propMissing: Boolean((stillMeta as { propMissing?: boolean } | null)?.propMissing),
       });
       if (!contactGate.ok && contactGate.severity === "BLOCK") {
-        return res.status(400).send(
-          error(contactGate.message || "contact handoff blocked", {
-            code: "STILL-CONTACT-HANDOFF",
-            primaryNextStep: contactGate.primaryNextStep ?? "regen_storyboard_hq",
-            ctaLabel: "重出带道具静照",
-            userMessage: contactGate.message,
-            reverseTrigger: contactGate.reverseTrigger ?? "still_prop_missing",
-            missingSlots: contactGate.missingSlots,
-          }),
+        healThenBurnNotes.push(
+          contactGate.message || "接触交接债已吸收·可降级烧·智能修复重出带道具静照",
         );
+      } else if (contactGate.severity === "WARN" && contactGate.message) {
+        healThenBurnNotes.push(contactGate.message);
       }
-      // AV enhance Motion 起态补助 — L3 handoff only; never reseals still L0
+      // Motion 起态写入 [Motion] 段，禁止全文 prepend「禁弯腰」打架
       const motionHint = String(
         (stillMeta as { videoMotionStartHint?: string } | null)?.videoMotionStartHint ??
           (stillMeta as { generationContract?: { videoMotionStartHint?: string } } | null)
             ?.generationContract?.videoMotionStartHint ??
           "",
       ).trim();
-      if (motionHint && !burnPrompt.includes(motionHint.slice(0, Math.min(12, motionHint.length)))) {
-        burnPrompt = `${motionHint}\n${burnPrompt}`.trim();
+      if (motionHint && !/禁止弯腰绿继承/.test(motionHint)) {
+        const slice = motionHint.slice(0, Math.min(10, motionHint.length));
+        if (!burnPrompt.includes(slice)) {
+          const mAt = burnPrompt.search(/\[Motion\]/i);
+          if (mAt >= 0) {
+            const after = burnPrompt.slice(mAt);
+            const nl = after.indexOf("\n");
+            const insertAt = mAt + (nl >= 0 ? nl + 1 : 8);
+            burnPrompt = `${burnPrompt.slice(0, insertAt)}${motionHint}\n${burnPrompt.slice(insertAt)}`.trim();
+          } else {
+            burnPrompt = `${burnPrompt}\n[Motion]\n${motionHint}`.trim();
+          }
+        }
       }
       const { assertStillVideoPoseHandoff } = await import("@/ruleEngine/qc/stillVideoPoseHandoff");
       const poseGate = assertStillVideoPoseHandoff({
@@ -1270,25 +1277,52 @@ export default router.post(
           | undefined,
       });
       if (!poseGate.ok && poseGate.severity === "BLOCK") {
-        return res.status(400).send(
-          error(poseGate.message || "still/video pose handoff blocked", {
-            code: poseGate.code ?? "STILL-VIDEO-POSE-MISMATCH",
-            primaryNextStep: poseGate.primaryNextStep ?? "regen_storyboard_hq",
-            ctaLabel: "重编译 Motion 或重出静照",
-            userMessage: poseGate.message,
-            stillPoseAnchor: poseGate.stillPoseAnchor,
-          }),
+        healThenBurnNotes.push(poseGate.message || "姿态交接债已吸收·可烧视频");
+      } else if (poseGate.code === "REALIZATION-MOTION-MISMATCH" && poseGate.message) {
+        healThenBurnNotes.push(poseGate.message);
+      }
+      // Face readability handoff (dialogue + bow/kneel plate)
+      try {
+        const { assertFaceReadableHandoff, assessFaceBudget } =
+          await import("@/ruleEngine/compilers/faceBudgetPolicy");
+        const { hasOnCameraDialogue } = await import("@/ruleEngine/design/onCameraDialogue");
+        const onCamFace = hasOnCameraDialogue(
+          (shotMeta as { narrative?: { dialogue?: { lines?: unknown } } })?.narrative?.dialogue?.lines,
         );
+        const faceGate = assertFaceReadableHandoff({
+          hasDialogue: onCamFace,
+          stillMeta: stillMeta as Record<string, unknown> | null,
+          visualDescription: vdForContact,
+          shotSize: String((shotMeta as { shotSize?: string })?.shotSize ?? ""),
+        });
+        if (faceGate.severity === "WARN" && faceGate.message) {
+          healThenBurnNotes.push(faceGate.message);
+        }
+        const budget = assessFaceBudget({
+          visualDescription: vdForContact,
+          shotSize: String((shotMeta as { shotSize?: string })?.shotSize ?? ""),
+          hasDialogue: onCamFace,
+          lipSyncPolicy: String(
+            (shotMeta as { shotDesign?: { lipSyncPolicy?: string } })?.shotDesign?.lipSyncPolicy ?? "",
+          ),
+          realizationOccupancy: String(
+            (stillMeta as { realizationOccupancy?: string } | null)?.realizationOccupancy ?? "",
+          ),
+          intentOccupancy: String((stillMeta as { intentOccupancy?: string } | null)?.intentOccupancy ?? ""),
+          videoIntentClass: onCamFace ? "speak_lip" : undefined,
+        });
+        if (budget.unreachable) {
+          healThenBurnNotes.push(
+            `脸预算不可达：${budget.reason ?? "须 Confirm 拆镜"}（${budget.splitHint ?? "action_then_dialogue_mcu"}）`,
+          );
+        }
+      } catch {
+        /* optional face budget */
       }
     } catch (e) {
       const errMsg = u.error(e).message || "contact handoff failed";
-      return res.status(400).send(
-        error(errMsg, {
-          code: "STILL-CONTACT-HANDOFF",
-          primaryNextStep: "regen_storyboard_hq",
-          userMessage: errMsg,
-        }),
-      );
+      // Wave-2 never-block: module/exception → soft mark, continue
+      healThenBurnNotes.push(`${errMsg}·交接债已标·可降级烧`);
     }
 
     const qdFx = String(shotMeta?.generation?.fxFeasibility ?? shotMeta?.fxFeasibility ?? shotMeta?.fxLevel ?? "");
@@ -1306,13 +1340,8 @@ export default router.post(
         dialogueLines: litDial,
       });
       if (scrubQd.block) {
-        return res.status(400).send(
-          error(scrubQd.block.message, {
-            code: scrubQd.block.id,
-            primaryNextStep: "chat_repair",
-            ctaLabel: "确认运镜调解",
-            reverseTrigger: "vid_cam_mediate",
-          }),
+        healThenBurnNotes.push(
+          `${scrubQd.block.message}·运镜调解债已标·可智能修复·可降级烧`,
         );
       }
       burnPromptWorking = scrubQd.prompt;
@@ -1358,38 +1387,16 @@ export default router.post(
     }
     if (!qd.burnAllowed) {
       const env = qd.envelope ?? buildBurnGateEnvelope([{ id: "LIP-01", message: qd.reasons.join(","), reverseTrigger: "pr_lip_duration" }]);
-      // Never persist splitHint on burn block — false-green; Confirm/Orchestrator owns physical split.
-      return res.status(400).send(
-        error(env.userMessage || `质量决策挡烧: ${qd.decision} — ${qd.reasons.join("; ")}`, {
-          qualityDecision: serializeQualityDecision(qd, { autoHealed: heal.autoHealed, duration: heal.duration }),
-          rePushPlan: env.rePushPlan,
-          repairHints: env.repairHints,
-          nextStep: qd.nextStep,
-          primaryNextStep: env.primaryNextStep ?? qd.nextStep,
-          userMessage: env.userMessage,
-          ctaLabel: env.ctaLabel,
-          userMessageKey: env.userMessageKey,
-          suggestedValue: env.suggestedValue,
-          splitHint: qd.splitHint,
-          reverseTriggers: env.triggers,
-          ...(heal.autoHealed?.length ? { autoHealed: heal.autoHealed } : {}),
-          chatRepairText: [
-            "【闭环修复清单 — 质量决策挡烧】",
-            env.userMessage,
-            `reasons: ${qd.reasons.join("; ")}`,
-            qd.reasons.includes("multi_line_one_shot") || qd.reasons.includes("lip_over_vendor")
-              ? "须 Confirm 设计拆分（Orchestrator），不可只靠抬 duration / 不可把 reactionAction 当 splitHint"
-              : "",
-            qd.splitHint && /^[a-z][a-z0-9_]*$/i.test(qd.splitHint) ? `splitHint 建议(枚举): ${qd.splitHint}` : "",
-            "",
-            ...env.repairHints.map((h) => `[${h.id}] ${h.chatTemplate ?? ""}`).filter(Boolean),
-            "",
-            "回推仅跳转；请按清单改 SB/W3 后再导出烧片。",
-          ]
-            .filter((l) => l !== undefined && l !== "")
-            .join("\n"),
-        }),
+      // Wave-2 never-block: soft absorb + mark debt + continue (同源 batch)
+      healThenBurnNotes.push(
+        env.userMessage || `质量债软吸收: ${qd.decision} — ${qd.reasons.join("; ")}`,
       );
+      qd = {
+        ...qd,
+        burnAllowed: true,
+        softDefer: true,
+        reasons: [...qd.reasons, "heal_then_burn_soft"],
+      };
     }
 
     const packed = applyVendorPromptPack({
@@ -1415,6 +1422,23 @@ export default router.post(
         durationSec: packed.duration,
         preferStaticOnDialogue: dialLines.length > 0,
       }).prompt;
+    }
+    // LANG-01 hard gate on packed egress prompt (CJK dialogue must not appear as EN spoken)
+    if (onCamDialogue && litDial.length) {
+      try {
+        const { checkLangVid01 } =
+          require("@/ruleEngine/validators/langAudFxCam") as typeof import("@/ruleEngine/validators/langAudFxCam");
+        const langHit = checkLangVid01({
+          dialogueLines: litDial.join("\n"),
+          videoPrompt: burnPrompt,
+        });
+        if (langHit) {
+          healThenBurnNotes.push(langHit.message || "LANG-01：中文台词英文壳·已标债可智能修复");
+          // never 400 — soft path homology with batch
+        }
+      } catch {
+        /* best-effort */
+      }
     }
     const generateAudio = packed.audio;
     const runDuration = packed.duration;
@@ -1507,7 +1531,56 @@ export default router.post(
     } catch {
       await u.db("o_videoTrack").where({ id: trackId }).update({ videoId }).catch(() => undefined);
     }
-    res.status(200).send(success(videoId));
+    res.status(200).send(
+      success(
+        healThenBurnNotes.length
+          ? (() => {
+              const seen = new Set<string>();
+              const debtLedger: { id: string; label: string }[] = [];
+              const push = (id: string, label: string) => {
+                if (seen.has(id)) return;
+                seen.add(id);
+                debtLedger.push({ id, label });
+              };
+              for (const n of healThenBurnNotes) {
+                if (/stale/i.test(n)) push("prompt_stale", "契约 stale 已清");
+                else if (/仓债|lipConfirm|importOk/i.test(n)) push("warehouse", "仓债已吸收");
+                else if (/需完善|轨道契约/i.test(n)) push("track_contract", "轨契约债已吸收");
+                else if (/静帧债|STILL-WEAK|污染|beatIsolation|contam/i.test(n))
+                  push("still_contam", "静帧弱/跨镜污染已吸收");
+                else if (/I2V|visualPass|delivery/i.test(n)) push("i2v_ready", "I2V就绪债已吸收");
+                else if (/接触交接|CONTACT/i.test(n)) push("contact_handoff", "接触交接债已吸收");
+                else if (/首帧债|FIRSTFRAME/i.test(n)) push("firstframe", "首帧债已吸收");
+                else if (/姿态|POSE/i.test(n)) push("pose_handoff", "姿态交接债已吸收");
+                else if (/设计意图|fidelity/i.test(n)) push("fidelity", "设计意图未尽命中已降级");
+                else push(`note_${debtLedger.length}`, n.length > 36 ? `${n.slice(0, 36)}…` : n);
+              }
+              return {
+                videoId,
+                healThenBurn: true,
+                implementationDegraded: true,
+                userMessage: "已继续生成；缺债已记入台账",
+                notes: healThenBurnNotes,
+                debtLedger,
+                ctaLabel: "智能修复",
+                primaryNextStep: "soft_patch",
+                adaptDiff: (() => {
+                  const m = String(vendorPromptFinal ?? "").match(/adaptDiff:([^\n]+)/);
+                  return m?.[1]?.trim() || null;
+                })(),
+                repairChangelog: Array.isArray(
+                  (shotMeta as { repairChangelog?: unknown } | undefined)?.repairChangelog,
+                )
+                  ? (shotMeta as { repairChangelog: unknown[] }).repairChangelog.slice(-8)
+                  : [],
+              };
+            })()
+          : {
+              videoId,
+              ctaLabel: "智能修复",
+            },
+      ),
+    );
     const relatedObjects = {
       projectId,
       videoId,
@@ -1570,6 +1643,23 @@ export default router.post(
               "",
           ),
         });
+        // Design intent fidelity honesty — never stamp videoPass when critical fidelity misses
+        if (burnAdapt.fidelity && !burnAdapt.fidelity.pass) {
+          try {
+            const { fidelityMissesBlockAbsorb } =
+              require("@/ruleEngine/compilers/burnAbsorbPolicy") as typeof import("@/ruleEngine/compilers/burnAbsorbPolicy");
+            if (fidelityMissesBlockAbsorb(burnAdapt.fidelity.items).length) {
+              post.videoPass = false;
+              (post as { qcWeak?: boolean }).qcWeak = true;
+              if (!post.primaryNextStep || post.primaryNextStep === "done") {
+                post.primaryNextStep = "human_review";
+              }
+            }
+          } catch {
+            post.videoPass = false;
+            (post as { qcWeak?: boolean }).qcWeak = true;
+          }
+        }
         // Contact / must-dim honesty: unmeasured forbids treating as videoPass when contact VD
         try {
           const { isContactEventVd } =

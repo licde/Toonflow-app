@@ -202,6 +202,22 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
           path: "planData.shotDesignIntent|assetCrefPlan|dialoguePlan",
           action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"}`,
         });
+        // Wave-2: surface silent industry repair changelog on import
+        if (Array.isArray(ac.repairChangelog) && ac.repairChangelog.length) {
+          const bMeta = ((working as { meta?: Record<string, unknown> }).meta ??= {});
+          bMeta.repairChangelog = ac.repairChangelog;
+          healLog.push({
+            at: now(),
+            ruleId: "INDUSTRY-AV-SILENT",
+            action: "repair_changelog",
+            detail: `entries=${ac.repairChangelog.length}`,
+          });
+        }
+        if (ac.industryResidualDebts?.length) {
+          const bMeta = ((working as { meta?: Record<string, unknown> }).meta ??= {});
+          bMeta.industryResidualDebts = ac.industryResidualDebts;
+          bMeta.designExitIncomplete = true;
+        }
       }
       // False-green: re-audit GEN after AUTO-CLOSE — keep importOk≠exit if GEN open
       try {
@@ -622,7 +638,16 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
       blocks: exportGateFull.blocks,
       warns: exportGateFull.warns,
       repairHints: exportGateFull.repairHints,
+      repairChangelog:
+        (exportGateFull as { repairChangelog?: unknown }).repairChangelog ??
+        (working as { meta?: { repairChangelog?: unknown } }).meta?.repairChangelog,
+      industryResidualDebts:
+        (exportGateFull as { industryResidualDebts?: string[] }).industryResidualDebts ??
+        (working as { meta?: { industryResidualDebts?: string[] } }).meta?.industryResidualDebts,
     },
+    repairChangelog: (working as { meta?: { repairChangelog?: unknown } }).meta?.repairChangelog,
+    industryResidualDebts: (working as { meta?: { industryResidualDebts?: string[] } }).meta
+      ?.industryResidualDebts,
     inspected: exportGateFull.inspected,
     serverFixedIds: [...new Set(serverFixedIds)],
     chatMustFixIds,

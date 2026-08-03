@@ -79,6 +79,17 @@ export interface MergeReport {
   mergeStrategy?: string;
 }
 
+export interface RepairChangelogEntry {
+  slot: string;
+  before: string;
+  after: string;
+  reason: string;
+  trigger?: string;
+  at?: string;
+  packageVersion?: number;
+  kind?: string;
+}
+
 export interface ExportGateSummary {
   exportAllowed: boolean;
   chatRepairText?: string;
@@ -93,6 +104,10 @@ export interface ExportGateSummary {
   missingFieldSummary?: string;
   missingFieldReport?: unknown[];
   rePushPlan?: RePushPlanItem[];
+  /** Wave-2 industry silent repair log (design-first apply) */
+  repairChangelog?: RepairChangelogEntry[];
+  /** Residual industry debts after autoClose timeout / lock skip */
+  industryResidualDebts?: string[];
 }
 
 export interface InspectBundleResult {
@@ -150,6 +165,8 @@ export interface DryRunImportResponse {
   chatRepairText?: string;
   tier?: ClosureTier;
   previewStatusLine?: string;
+  repairChangelog?: RepairChangelogEntry[];
+  industryResidualDebts?: string[];
 }
 
 export interface ImportScriptResult {
@@ -165,6 +182,8 @@ export interface ImportScriptResult {
   dryRun?: DryRunImportResponse;
   exportGate?: ExportGateSummary;
   chatRepairText?: string;
+  repairChangelog?: RepairChangelogEntry[];
+  industryResidualDebts?: string[];
 }
 
 export type ClosureDimension = "dc" | "pc" | "gc" | "ic";
