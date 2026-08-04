@@ -173,6 +173,18 @@ try {
   ok("test-g-sample-shot1-atoms", false, String(e));
 }
 
+try {
+  const homology = spawnSync("yarn", ["tsx", "scripts/test-g-chat-heal-homology.ts"], {
+    cwd: root,
+    encoding: "utf8",
+    shell: true,
+  });
+  ok("test-g-chat-heal-homology", homology.status === 0, homology.stderr?.slice(0, 400) ?? homology.stdout?.slice(-400) ?? "");
+  if (homology.stdout) process.stdout.write(homology.stdout.slice(0, 1200));
+} catch (e) {
+  ok("test-g-chat-heal-homology", false, String(e));
+}
+
 if (failed) {
   console.error(`\n${failed} audit:v5-contract-ci FAILED`);
   process.exit(1);

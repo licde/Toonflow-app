@@ -4,228 +4,430 @@
   "rows": [
     {
       "ruleId": "NAR-14",
-      "stages": ["W3", "SB", "export"],
-      "severity": { "W3": "WARN", "SB": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "auto",
+      "stages": [
+        "W3",
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "W3": "WARN",
+        "SB": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "nar14_split",
-      "depth": { "viral": "BLOCK", "light": "WARN" }
+      "depth": {
+        "viral": "BLOCK",
+        "light": "WARN"
+      }
     },
     {
       "ruleId": "NAR-15",
-      "stages": ["W3", "SB", "export"],
-      "severity": { "W3": "BLOCK", "SB": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "SB": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "nar15_reaction",
-      "depth": { "viral": "BLOCK", "light": "WARN" }
+      "depth": {
+        "viral": "BLOCK",
+        "light": "WARN"
+      }
     },
     {
       "ruleId": "DEX-LIP-SPLIT",
-      "stages": ["W3", "SB"],
-      "severity": { "W3": "BLOCK", "SB": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "SB"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "SB": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "nar14_split"
     },
     {
       "ruleId": "DC-01",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "dialogue_hash_mismatch"
     },
     {
       "ruleId": "DC-01-EXTRA",
-      "stages": ["W3", "SB", "export"],
-      "severity": { "W3": "BLOCK", "SB": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "SB": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "dialogue_hash_mismatch",
       "note": "W3 with zero shots skips extras in designExitGate"
     },
     {
       "ruleId": "DC-13",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "WARN", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "WARN",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "dialogue_hash_mismatch"
     },
     {
       "ruleId": "DC-16",
-      "stages": ["SB", "CD", "export"],
-      "severity": { "SB": "WARN", "CD": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "CD",
+        "export"
+      ],
+      "severity": {
+        "SB": "WARN",
+        "CD": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "CD",
       "reverseTrigger": "dc16_cast"
     },
     {
       "ruleId": "DG-CD-COVERAGE",
-      "stages": ["CD", "export"],
-      "severity": { "CD": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "CD",
+        "export"
+      ],
+      "severity": {
+        "CD": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "CD",
       "reverseTrigger": "dc16_cast"
     },
     {
       "ruleId": "DEX-SPEAKER-BARE",
-      "stages": ["W3", "SB", "CD", "export"],
-      "severity": { "W3": "WARN", "SB": "BLOCK", "CD": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "SB",
+        "CD",
+        "export"
+      ],
+      "severity": {
+        "W3": "WARN",
+        "SB": "BLOCK",
+        "CD": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "speaker_bare"
     },
     {
       "ruleId": "DEX-DC-ALIGN",
-      "stages": ["W3", "SB"],
-      "severity": { "W3": "WARN", "SB": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "SB"
+      ],
+      "severity": {
+        "W3": "WARN",
+        "SB": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "dialogue_hash_mismatch"
     },
     {
       "ruleId": "DG-NAR-SELFCHECK",
-      "stages": ["W3", "export"],
-      "severity": { "W3": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "export"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "W3",
       "reverseTrigger": "self_report_mismatch"
     },
     {
       "ruleId": "SPATIAL-STR",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "WARN", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "WARN",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB"
     },
     {
       "ruleId": "LANG-01",
-      "stages": ["export"],
-      "severity": { "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "export"
+      ],
+      "severity": {
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "EN",
       "reverseTrigger": "lang_vid_mismatch"
     },
     {
       "ruleId": "FX-GRADE-01",
-      "stages": ["W3", "export"],
-      "severity": { "W3": "WARN", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "export"
+      ],
+      "severity": {
+        "W3": "WARN",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "W3",
       "reverseTrigger": "fx_infeasible"
     },
     {
       "ruleId": "CAM-SPEAK",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "WARN", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "WARN",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "cam_speak"
     },
     {
       "ruleId": "DFW-DURATION",
-      "stages": ["export"],
-      "severity": { "export": "WARN" },
-      "dualTrack": "silent",
+      "stages": [
+        "export"
+      ],
+      "severity": {
+        "export": "WARN"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB"
     },
     {
       "ruleId": "DEX-CAST-ON-DESC",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "cast_on_desc_missing"
     },
     {
       "ruleId": "DEX-EMPTY-SHOT-CONSISTENCY",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
       "dualTrack": "must",
       "reverseTarget": "SB",
       "reverseTrigger": "empty_shot_conflict"
     },
     {
       "ruleId": "DEX-EXPR-SPEAK",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "WARN" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "WARN"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "expr_speak_missing"
     },
     {
       "ruleId": "DEX-ASSET-CREF",
-      "stages": ["AS", "SB"],
-      "severity": { "AS": "BLOCK", "SB": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "AS",
+        "SB"
+      ],
+      "severity": {
+        "AS": "BLOCK",
+        "SB": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "AS",
       "reverseTrigger": "asset_cref"
     },
     {
       "ruleId": "DEX-SHOT-INTENT",
-      "stages": ["W3", "designBrief", "SB"],
-      "severity": { "W3": "BLOCK", "designBrief": "BLOCK", "SB": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "designBrief",
+        "SB"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "designBrief": "BLOCK",
+        "SB": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "W3",
       "reverseTrigger": "shot_intent_decay"
     },
     {
       "ruleId": "NO-LIP-DIALOGUE",
-      "stages": ["EN", "export"],
-      "severity": { "EN": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "EN",
+        "export"
+      ],
+      "severity": {
+        "EN": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "EN",
       "reverseTrigger": "no_lip_dialogue"
     },
     {
       "ruleId": "SFX-UNBACKED",
-      "stages": ["EN", "export", "SB"],
-      "severity": { "SB": "WARN", "EN": "WARN", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "EN",
+        "export",
+        "SB"
+      ],
+      "severity": {
+        "SB": "WARN",
+        "EN": "WARN",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "sfx_unbacked",
       "note": "设计出口 BLOCK 升债（declare audioCue）；烧片 EN 仍 WARN 防无 adapter 假拦"
     },
     {
       "ruleId": "DEX-CUT-01",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "WARN", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "WARN",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "cut01_adjacent"
     },
     {
       "ruleId": "DEX-CAM-XSHOT",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "WARN", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "WARN",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "cam_xshot"
     },
     {
       "ruleId": "DEX-QP-02",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
       "dualTrack": "must",
       "reverseTarget": "SB",
       "reverseTrigger": "qp02_visual_short"
     },
     {
       "ruleId": "DEX-STILL-ONEBEAT",
-      "stages": ["W3", "SB", "designBrief", "export"],
-      "severity": { "W3": "BLOCK", "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "still_onebeat_multi",
       "note": "import demoteAfterHeal；importOk≠designExitPass"
     },
     {
       "ruleId": "DEX-STILL-CU-CAST",
-      "stages": ["W3", "SB", "designBrief", "export"],
-      "severity": { "W3": "WARN", "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "W3": "WARN",
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "still_cu_cast",
       "rollout": "enforce",
@@ -233,133 +435,255 @@
     },
     {
       "ruleId": "DEX-STILL-OS-NAME",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "still_firstframe_dirty",
       "note": "导入 soft demote"
     },
     {
       "ruleId": "DEX-STILL-FILLER",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "still_firstframe_dirty",
       "note": "导入 soft demote"
     },
     {
       "ruleId": "DEX-LIT-CONTACT-XOR",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "lit_detail_contact_xor",
       "note": "颊触≠口含；互斥或拆；导入 demote；命名隔离≠audio_xor；禁发明 VD"
     },
     {
       "ruleId": "DEX-LIT-CONTACT",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "lit_detail_contact",
       "note": "结构槽接触落点；导入 demoteAfterHeal；禁发明 VD"
     },
     {
       "ruleId": "DEX-LIT-ANCHOR",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "lit_detail_anchor",
       "note": "空间/握持锚；导入 demote；禁只 regen"
     },
     {
       "ruleId": "DEX-LIT-EXPR",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "WARN", "designBrief": "WARN", "export": "WARN" },
-      "dualTrack": "should",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "WARN",
+        "designBrief": "WARN",
+        "export": "WARN"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "lit_detail_expr"
     },
     {
       "ruleId": "DEX-PROP-CONT",
-      "stages": ["SB", "designBrief", "export"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "prop_continuity",
       "note": "邻镜道具连续；CUT-01 只管场景色温；导入 demote；禁自动改 VD"
     },
     {
       "ruleId": "DEX-PROP-IN-FRAME",
-      "stages": ["SB", "designBrief", "export", "MD-IMG"],
-      "severity": { "SB": "BLOCK", "designBrief": "BLOCK", "export": "BLOCK", "MD-IMG": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "designBrief",
+        "export",
+        "MD-IMG"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "designBrief": "BLOCK",
+        "export": "BLOCK",
+        "MD-IMG": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "MD-IMG",
       "reverseTrigger": "still_prop_missing",
       "note": "contactEvent propInFrame+contactGeom；浅痕≠道具；import soft_fill≠pass；禁 hq_ok 无道具"
     },
     {
       "ruleId": "DEX-VID-PSEUDO-LINE",
-      "stages": ["SB", "W3", "export"],
-      "severity": { "SB": "BLOCK", "W3": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "W3",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "W3": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "vid_pseudo_line",
-      "depth": { "viral": "BLOCK", "light": "BLOCK" },
+      "depth": {
+        "viral": "BLOCK",
+        "light": "BLOCK"
+      },
       "untilClear": true
     },
     {
       "ruleId": "DEX-VID-VOICE-MODE",
-      "stages": ["SB", "W3", "export"],
-      "severity": { "SB": "BLOCK", "W3": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "W3",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "W3": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "vid_voice_mode",
       "untilClear": true
     },
     {
       "ruleId": "DEX-VID-BEAT-DUR",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "vid_beat_duration",
       "untilClear": true
     },
     {
       "ruleId": "DEX-VID-MOTION-VERB",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "BLOCK", "export": "WARN" },
-      "dualTrack": "should",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "export": "WARN"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "vid_motion_verb"
     },
     {
       "ruleId": "DEX-VID-INTENT-MAP",
-      "stages": ["SB", "export"],
-      "severity": { "SB": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "SB",
       "reverseTrigger": "vid_intent_map"
     },
     {
       "ruleId": "DEX-VID-CAM-MEDIATE",
-      "stages": ["SB", "EN", "export"],
-      "severity": { "SB": "BLOCK", "EN": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "SB",
+        "EN",
+        "export"
+      ],
+      "severity": {
+        "SB": "BLOCK",
+        "EN": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "EN",
       "reverseTrigger": "vid_cam_mediate",
-      "depth": { "viral": "BLOCK", "light": "WARN" }
+      "depth": {
+        "viral": "BLOCK",
+        "light": "WARN"
+      }
     },
     {
       "ruleId": "STILL-CONTACT-HANDOFF",
-      "stages": ["EN", "MD-VID", "export"],
-      "severity": { "EN": "BLOCK", "MD-VID": "BLOCK", "export": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "EN",
+        "MD-VID",
+        "export"
+      ],
+      "severity": {
+        "EN": "BLOCK",
+        "MD-VID": "BLOCK",
+        "export": "BLOCK"
+      },
+      "dualTrack": "other",
       "reverseTarget": "MD-IMG",
       "reverseTrigger": "still_prop_missing",
       "untilClear": true,
@@ -367,9 +691,19 @@
     },
     {
       "ruleId": "VID-CONTACT-BEATS",
-      "stages": ["EN", "MD-VID", "SB", "W3"],
-      "severity": { "EN": "BLOCK", "MD-VID": "BLOCK", "SB": "WARN", "W3": "WARN" },
-      "dualTrack": "must",
+      "stages": [
+        "EN",
+        "MD-VID",
+        "SB",
+        "W3"
+      ],
+      "severity": {
+        "EN": "BLOCK",
+        "MD-VID": "BLOCK",
+        "SB": "WARN",
+        "W3": "WARN"
+      },
+      "dualTrack": "other",
       "reverseTarget": "EN",
       "reverseTrigger": "vid_contact_beats",
       "untilClear": true,
@@ -377,8 +711,16 @@
     },
     {
       "ruleId": "DESIGN-LOSS",
-      "stages": ["W3", "SB", "designBrief"],
-      "severity": { "W3": "BLOCK", "SB": "BLOCK", "designBrief": "BLOCK" },
+      "stages": [
+        "W3",
+        "SB",
+        "designBrief"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "SB": "BLOCK",
+        "designBrief": "BLOCK"
+      },
       "dualTrack": "must",
       "reverseTarget": "SB",
       "reverseTrigger": "design_loss",
@@ -387,8 +729,16 @@
     },
     {
       "ruleId": "CHAIN-BEAT",
-      "stages": ["W3", "SB", "designBrief"],
-      "severity": { "W3": "BLOCK", "SB": "BLOCK", "designBrief": "BLOCK" },
+      "stages": [
+        "W3",
+        "SB",
+        "designBrief"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "SB": "BLOCK",
+        "designBrief": "BLOCK"
+      },
       "dualTrack": "must",
       "reverseTarget": "SB",
       "reverseTrigger": "chain_beat",
@@ -396,25 +746,49 @@
     },
     {
       "ruleId": "DEX-CAM-FIT",
-      "stages": ["W3", "SB", "designBrief"],
-      "severity": { "W3": "WARN", "SB": "BLOCK", "designBrief": "BLOCK" },
-      "dualTrack": "should",
+      "stages": [
+        "W3",
+        "SB",
+        "designBrief"
+      ],
+      "severity": {
+        "W3": "WARN",
+        "SB": "BLOCK",
+        "designBrief": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "cam_fit"
     },
     {
       "ruleId": "DEX-INTENT-PIC",
-      "stages": ["W3", "SB", "designBrief"],
-      "severity": { "W3": "WARN", "SB": "BLOCK", "designBrief": "BLOCK" },
-      "dualTrack": "should",
+      "stages": [
+        "W3",
+        "SB",
+        "designBrief"
+      ],
+      "severity": {
+        "W3": "WARN",
+        "SB": "BLOCK",
+        "designBrief": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "intent_pic"
     },
     {
       "ruleId": "IRD-CONFIRM",
-      "stages": ["W3", "SB", "designBrief"],
-      "severity": { "W3": "BLOCK", "SB": "BLOCK", "designBrief": "BLOCK" },
-      "dualTrack": "must",
+      "stages": [
+        "W3",
+        "SB",
+        "designBrief"
+      ],
+      "severity": {
+        "W3": "BLOCK",
+        "SB": "BLOCK",
+        "designBrief": "BLOCK"
+      },
+      "dualTrack": "auto",
       "reverseTarget": "SB",
       "reverseTrigger": "ird_confirm",
       "untilClear": true,

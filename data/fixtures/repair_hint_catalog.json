@@ -247,7 +247,7 @@
       "checkIds": ["DEX-STILL-CU-CAST", "still_cu_cast"],
       "symptom": "特写/近景与出镜≥2人同镜冲突",
       "action": "智能拆：反应特写+场面中景；或改景别；Confirm；禁止 silent 洗绿/只 regen",
-      "chatTemplate": "【CU×人数·DEX-STILL-CU-CAST】特写不能硬塞多人同框。①文学已是单人特写→按意图降出场人数（绑定主角定妆，不拆镜）；②真多人同框意图→确认智能拆（反应特写+场面镜）或改中景。导入不硬拦；设计期须过绿。深链：toonflow://stage/SB?trigger=still_cu_cast"
+      "chatTemplate": "【CU×人数·DEX-STILL-CU-CAST】特写不能硬塞多人同框。服务端 untilClear：高置信智能拆/降出场；低置信→Confirm（IRD）。导入不硬拦；勿手改 JSON 自报。深链：toonflow://stage/SB?trigger=still_cu_cast"
     },
     {
       "id": "RH-STILL-STALE",
@@ -561,7 +561,7 @@
       "checkIds": ["DC-01-EXTRA", "H3"],
       "symptom": "shots 台词乱入（不在 script∪plan）",
       "action": "同核清零：噪点剥离 + 文学 EXTRA 镜像 dialoguePlan 至检测 PASS；不可愈→正推重设计。禁 WARN/demote 顶债。",
-      "chatTemplate": "【DC-01-EXTRA】分镜台词不在 script∪plan。①时长/冒号汤→删伪台词。②文学句→服务端同核 absorb 进 dialoguePlan 至 EXTRA=0。③不能自动愈→SB 重设计。禁止用软 WARN 顶过检。reverseTarget=SB。"
+      "chatTemplate": "【DC-01-EXTRA】分镜台词不在 script∪plan。①时长/冒号汤→删伪台词。②文学句→服务端同核 absorb 进 dialoguePlan 至 EXTRA=0（设计≡智能愈）。③不能自动愈→SB Confirm。禁止用软 WARN 顶过检。reverseTarget=SB。"
     },
     {
       "id": "RH-VID-INHERIT-COMPOSITION",
@@ -941,16 +941,16 @@
       "ruleId": "DEX-DIRTY-STILL-PROMPT",
       "checkIds": ["DEX-DIRTY-STILL-PROMPT", "DEX-DUP-VD", "DEX-HAND-LIP", "VID-INHERIT-DIRTY-STILL"],
       "symptom": "手+眼同帧 / 连续同文 VD（有对白也算） / 文学体裸 cref·sref / 手镜口型 / 脏静帧烧视频；或配方未按镜型适配硬加正脸/全员必须出现",
-      "action": "回 SB 改一镜一画面（景别/运镜/intent.picture）；真手+脸→VisBeat Confirm 拆（禁同文脸镜）；手镜 lip=none；配方层智能适配≠改设计 VD；超 vendor→Confirm 语义拆或改短",
-      "chatTemplate": "【一镜一画面·脏静帧】真手+脸同写=Chat 不过绿，须 SB 改 VD 或 Confirm 拆手/脸（禁同文脸镜、禁导入静默拆）。手 CU 配方不得硬注正脸/权力位正脸/脸型微表情/全员必须出现。配方适配≠回写 visualDescription。importOk≠designExitPass。深链：toonflow://stage/SB?trigger=dirty_still_prompt"
+      "action": "服务端 dirty strip / hand lip→none / DUP diversify untilClear；真手+脸低置信→Confirm；配方适配≠改设计 VD",
+      "chatTemplate": "【一镜一画面·脏静帧】服务端将愈：裸 cref/sref strip、手镜 lip=none、同文 diversify。真手+脸低置信→Confirm 拆；勿只改 audit。importOk≠designExitPass。深链：toonflow://stage/SB?trigger=dirty_still_prompt"
     },
     {
       "id": "RH-DUP-VD",
       "ruleId": "DEX-DUP-VD",
       "checkIds": ["DEX-DUP-VD"],
       "symptom": "连续≥3镜 visualDescription 归一化相同",
-      "action": "为每镜写可区分画面/景别/运镜；或 Confirm 语义拆；禁止 clone 父镜同文",
-      "chatTemplate": "【DEX-DUP-VD】同文连镜不是设计。请改 VD/景别/运镜或 VisBeat Confirm 语义拆；导入不会替你编造画面。深链：toonflow://stage/SB?trigger=dirty_still_prompt&rule=DEX-DUP-VD"
+      "action": "服务端 diversify（景别+台词节拍）/ 空克隆折叠；精品可回 SB 手改",
+      "chatTemplate": "【DEX-DUP-VD】同文连镜由设计/智能修复同源 diversify（景别+台词节拍锚）；空克隆自动折叠。精品可回 SB 手改 VD。深链：toonflow://stage/SB?trigger=dirty_still_prompt&rule=DEX-DUP-VD"
     },
     {
       "id": "RH-NO-LIP-DIALOGUE",
@@ -973,8 +973,8 @@
       "ruleId": "DEX-VID-VOICE-MODE",
       "checkIds": ["DEX-VID-VOICE-MODE"],
       "symptom": "无出镜对白却 lip/口型开",
-      "action": "voiceIntent=none；剥「口型同步开启」；或补文学台词",
-      "chatTemplate": "【视频·声口模态】无对白禁止口型。请 videoIntentOps 确认关闭口型或补台词。深链：toonflow://stage/SB?trigger=vid_voice_mode"
+      "action": "服务端 softHealVideoHomology：voiceIntent/lip=none；或补文学台词",
+      "chatTemplate": "【视频·声口模态】无对白禁止口型。设计≡智能修复已自动关口型；精品可回 SB Confirm。深链：toonflow://stage/SB?trigger=vid_voice_mode"
     },
     {
       "id": "RH-VID-BEAT-DUR",

@@ -83,6 +83,24 @@ export interface ExportGateResult {
   repairChangelog?: unknown[];
   /** Residual industry debts after autoClose timeout / lock skip */
   industryResidualDebts?: string[];
+  /** 车道可观测：must/auto + 执行器/cleared/residual（勿靠 toast 猜层） */
+  laneDiagnostics?: {
+    mustIds: string[];
+    autoIds: string[];
+    actuatorsRan: string[];
+    cleared: string[];
+    residual: string[];
+  };
+  /** Wave-10 Z110 NLE handoff stubs (EDL/FCPXML text; exportReady false) */
+  z110Handoff?: {
+    timeline?: { transitions?: unknown[] };
+    edlStub?: string;
+    fcpXmlStub?: string;
+    premiereXmlStub?: string;
+    exportReady: false;
+    nleFormat?: string;
+    note?: string;
+  };
 }
 
 function loadRepairHints(ids: string[]): ExportGateRepairHint[] {
@@ -147,19 +165,14 @@ const CHAT_REPAIR_BLOCK_CAP = 24;
 
 const DEFAULT_MUST_EDIT = new Set([
   "DEX-LITERARY-STALE",
-  "NAR-15",
-  "DC-16",
-  "DG-CD-COVERAGE",
-  "DG-FALSE-GREEN-FX",
-  "DG-NAR-SELFCHECK",
-  "DG-FX-DUAL-TRACK",
-  "DG-SCENE-ORPHAN-FX",
-  "DG-CHAT-SHAPE-VE",
   "DEX-VIS-SPLIT",
-  "DEX-LIP-SPLIT",
-  "LIP-01",
-  "QP-02",
+  "DEX-EMPTY-SHOT-CONSISTENCY",
   "DEX-QP-02",
+  "QP-02",
+  "DESIGN-LOSS",
+  "PROMPT-FIDELITY",
+  "VIDEO-PROMPT-STALE",
+  "CHAIN-BEAT",
   "CHAT-SB-01",
 ]);
 
@@ -181,10 +194,35 @@ const DEFAULT_AUTO_ADAPT = new Set([
   "FX-GRADE-01",
   "DEX-EXPR-SPEAK",
   "CHAT-AUD-01",
-  "PROMPT-FIDELITY",
-  "PROMPT_FIDELITY",
-  // NAR-14 / DEX-VIS-SPLIT are NOT blanket auto — see classifyBlockId
+  "DEX-DUP-VD",
+  "DEX-VID-VOICE-MODE",
+  "DEX-VID-PSEUDO-LINE",
+  "DEX-VID-BEAT-DUR",
+  "DEX-VID-MOTION-VERB",
+  "DEX-DIRTY-STILL-PROMPT",
+  "DEX-HAND-LIP",
+  "DC-01-EXTRA",
+  "NAR-15",
+  "NO-LIP-DIALOGUE",
+  "DEX-STILL-CU-CAST",
+  "DEX-STILL-ONEBEAT",
+  "DEX-LIT-CONTACT",
+  "DEX-LIT-CONTACT-XOR",
+  "DEX-LIT-ANCHOR",
+  "VIS-MULTI-BEAT",
+  "IRD-CONFIRM",
+  "LIP-01",
+  // NAR-14 / DEX-VIS-SPLIT / PROMPT-FIDELITY confirm_only — see classifyBlockId
 ]);
+
+export type RepairLane = "must" | "auto" | "other";
+
+export type ClassifyBlockCtx = {
+  nar14Class?: "must" | "auto" | "none";
+  lipClass?: "must" | "auto" | "none";
+  lipMustPresent?: boolean;
+  lipRaiseOnly?: boolean;
+};
 
 function loadRepairLayerSets(): {
   mustEdit: Set<string>;
@@ -197,6 +235,7 @@ function loadRepairLayerSets(): {
       autoAdaptBlockIds?: string[];
       importSalvageRegistry?: { ruleId?: string; untilClear?: boolean; confirmOnly?: boolean }[];
     }>("semantic_gate_dual_track_matrix.json", {});
+    // untilClear && !confirmOnly → C lane (incl DEX-LIT-* / IRD-CONFIRM as server Confirm/auto, not 须手改)
     const untilClearAuto = new Set(
       (matrix.importSalvageRegistry ?? [])
         .filter(
@@ -204,22 +243,26 @@ function loadRepairLayerSets(): {
             e.untilClear === true &&
             e.confirmOnly !== true &&
             e.ruleId &&
-            e.ruleId !== "IRD-CONFIRM" &&
-            !String(e.ruleId).startsWith("DEX-LIT-") &&
-            e.ruleId !== "DEX-DUP-VD" &&
             e.ruleId !== "DEX-QP-02",
         )
         .map((e) => String(e.ruleId)),
     );
-    // Derived false-green honesty — clear by root heal / selfcheck overwrite, not hand JSON
     untilClearAuto.add("FALSE_GREEN_SELFCHECK");
     untilClearAuto.add("DG-CAM-FIT-FALSE-GREEN");
     untilClearAuto.add("DG-NAR-SELFCHECK");
+    untilClearAuto.add("DEX-VID-VOICE-MODE");
+    untilClearAuto.add("DEX-VID-PSEUDO-LINE");
+    untilClearAuto.add("DEX-VID-BEAT-DUR");
+    untilClearAuto.add("DEX-VID-MOTION-VERB");
+    untilClearAuto.add("DEX-DUP-VD");
+    const mustEdit = new Set([...(matrix.mustEditBlockIds ?? []), ...DEFAULT_MUST_EDIT]);
+    // Strip any untilClear id that leaked into mustEdit
+    for (const id of untilClearAuto) mustEdit.delete(id);
     return {
-      mustEdit: new Set([...(matrix.mustEditBlockIds ?? []), ...DEFAULT_MUST_EDIT]),
+      mustEdit,
       autoAdapt: new Set(
         [...(matrix.autoAdaptBlockIds ?? []), ...DEFAULT_AUTO_ADAPT, ...untilClearAuto].filter(
-          (id) => id !== "NAR-14" && id !== "DEX-VIS-SPLIT" && id !== "LIP-01",
+          (id) => id !== "NAR-14" && id !== "DEX-VIS-SPLIT",
         ),
       ),
       untilClearAuto,
@@ -229,40 +272,50 @@ function loadRepairLayerSets(): {
   }
 }
 
-function classifyBlockId(
+/** Lane classifier — untilClear/autoAdapt win over legacy mustEdit; LIP over-limit stays must via lipClass. */
+export function classifyBlockId(
   id: string,
   layers: { mustEdit: Set<string>; autoAdapt: Set<string>; untilClearAuto?: Set<string> },
-  ctx?: {
-    nar14Class?: "must" | "auto" | "none";
-    lipClass?: "must" | "auto" | "none";
-    /** Pack has mustConfirm lip shots — DFW-DURATION must not claim 导入可愈 for those. */
-    lipMustPresent?: boolean;
-    /** Only raiseable lip left — design should raise; Chat 主责 not 导入. */
-    lipRaiseOnly?: boolean;
-  },
-): "must" | "auto" | "other" {
+  ctx?: ClassifyBlockCtx,
+): RepairLane {
   if (id === "NAR-14" || id.startsWith("NAR-14")) {
     if (ctx?.nar14Class === "auto") return "auto";
-    return "must"; // residual or unknown → 须手改
+    return "must";
   }
+  // LIP: only over-limit / needsSplit → must；raise-only / lipClass=auto → auto
   if (id === "LIP-01" || id === "PR-09" || id === "DEX-LIP-SPLIT") {
-    if (ctx?.lipClass === "auto") return "auto"; // 仅残留可抬（兜底文案）；设计主路径应已抬净
-    return "must"; // needsSplit/lipOver → 须手改
+    if (ctx?.lipClass === "auto") return "auto";
+    if (ctx?.lipClass === "must" || ctx?.lipMustPresent) return "must";
+    // default: untilClear registry → auto (raise path); unknown → must conservatively when no ctx
+    if (layers.untilClearAuto?.has(id) || layers.autoAdapt.has(id)) return "auto";
+    return "must";
   }
   if (id === "DFW-DURATION") {
-    // 同镜/同包：超限 LIP 须手改时禁 DFW「导入可愈」互斥谎称；可抬残留归设计主责
-    if (ctx?.lipMustPresent || ctx?.lipRaiseOnly) return "must";
+    // 超限 LIP 同包时禁「导入可愈」互斥谎称；raise-only → auto（设计侧抬时）
+    if (ctx?.lipMustPresent) return "must";
     return "auto";
   }
-  if (id === "DEX-VIS-SPLIT" || id.startsWith("VIS-MULTI")) return "must";
+  if (id === "DEX-VIS-SPLIT") return "must"; // confirm_only redesign/Confirm split
+  // VIS-MULTI-BEAT：untilClear → auto（Confirm 残留走 IRD），勿硬编码 must
   if (id === "DEX-LITERARY-STALE") return "must";
-  if (id === "DEX-DUP-VD" || id === "DEX-QP-02" || id === "QP-02") return "must";
-  // Theme glue untilClear wins over mustEdit listing (mustEdit = chatBlock, ≠ 手改 JSON)
+  if (id === "DEX-QP-02" || id === "QP-02") return "must";
   if (layers.untilClearAuto?.has(id) || layers.autoAdapt.has(id)) return "auto";
-  if (layers.mustEdit.has(id) || id.startsWith("NAR-15") || id.startsWith("DC-16")) return "must";
+  if (layers.mustEdit.has(id)) return "must";
   if (id.startsWith("DFW-") || id.startsWith("MOD-")) return "auto";
   if (/^(DG-.*FALSE-GREEN|.*SELFCHECK)/i.test(id)) return "auto";
+  // unknown → autoPending（未登记·服务端诊），勿诱须手改
   return "other";
+}
+
+/** A-lane / over-limit LIP ids that must block exportAllowed & chatMustFix. */
+export function isAuthorMustFixId(id: string, ctx?: ClassifyBlockCtx): boolean {
+  const layers = loadRepairLayerSets();
+  return classifyBlockId(id, layers, ctx) === "must";
+}
+
+export function filterAuthorMustFixIds(ids: string[], ctx?: ClassifyBlockCtx): string[] {
+  const layers = loadRepairLayerSets();
+  return [...new Set(ids)].filter((id) => classifyBlockId(id, layers, ctx) === "must");
 }
 
 /**
@@ -311,8 +364,7 @@ export function buildAggregatedChatRepairText(
       lipRaiseOnly,
     });
     if (kind === "must") mustPending.push(id);
-    else if (kind === "auto") autoPending.push(id);
-    else mustPending.push(id); // other → still list as pending for visibility but RH says server path
+    else autoPending.push(id); // auto + other（未登记·服务端诊）— 勿诱须手改
   }
   const lines = [
     "【闭环修复清单 — 请按项修改 JSON 字段，勿只改 audit 自报 / modalityPromptAudit】",
@@ -601,7 +653,7 @@ export function buildAggregatedChatRepairText(
   if (visBlocks.length || blockIds.some((id) => /DEX-VIS|VIS-MULTI|VIS-BEAT|VIS-TAG/i.test(id))) {
     lines.push(
       "",
-      "【VisBeat · 须手改 Confirm】DEX-VIS-SPLIT / VIS-MULTI-BEAT 不进「可不手改」；须 Confirm 拆镜（confirmClusterSplit|VisBeatConfirmBar）或艺术 override，禁止只靠 suggestor 静默拆。",
+      "【VisBeat】DEX-VIS-SPLIT 须 Confirm 拆镜（confirmClusterSplit|VisBeatConfirmBar）；VIS-MULTI-BEAT 高置信由服务端 untilClear 扩，残留→IRD-CONFIRM，禁止只靠 suggestor 静默拆、亦勿一律「须手改重设计」。",
       "允许 visualBeatTags：reveal,prop_insert,reaction,face_cu,establish,action,speak,os_vo",
       "深链：toonflow://stage/SB?trigger=visual_multi_beat → EN；Suggestor 不得直接立法",
     );
@@ -1437,15 +1489,19 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
       id === "DEX-EXPR-SPEAK" ||
       id === "CHAT-AUD-01" ||
       id === "FX-GRADE-01" ||
-      id === "NO-LIP-DIALOGUE"
+      id === "NO-LIP-DIALOGUE" ||
+      id === "DEX-DUP-VD" ||
+      id === "DEX-VID-VOICE-MODE" ||
+      id === "DEX-VID-PSEUDO-LINE" ||
+      id === "DEX-VID-BEAT-DUR" ||
+      id === "DEX-VID-MOTION-VERB"
     ) {
       for (let i = blocks.length - 1; i >= 0; i--) {
         if (blocks[i]?.id === id) blocks.splice(i, 1);
       }
     }
   }
-  // DEX-DUP-VD: never belt-strip — designExit / registry confirm_only is SSOT（有对白同文须保持 BLOCK）
-  // (clearedIds may still include it after empty-only collapse; dialogue dups must stay)
+  // DEX-DUP-VD residual after diversify failure stays as autoPending (勿诱手改)
 
   // designExit 可能在 cam-untilClear 之后又加回 DEX-CAM-FIT：再折叠一次
   {
@@ -1820,7 +1876,21 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
   const warnIds = [...new Set(warns.map((w) => w.id))];
   const softPatchEligible = (matrix.entries ?? []).filter((e) => e.softPatch && blockIds.includes(e.id)).length;
 
-  const exportAllowed = blocks.length === 0 && !(tier === "T3" && inspected.blocked && blockIds.length > 0);
+  const lipDetailForGate = classifyLipForChatRepairDetailed({
+    shots: (bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[],
+    blockHasLip01: blockIds.some((id) => id === "LIP-01" || id === "PR-09" || id === "DEX-LIP-SPLIT"),
+  });
+  const gateLipCtx: ClassifyBlockCtx = {
+    lipClass: lipDetailForGate.pack,
+    lipMustPresent: lipDetailForGate.mustShotIndexes.length > 0,
+    lipRaiseOnly:
+      lipDetailForGate.raiseShotIndexes.length > 0 && lipDetailForGate.mustShotIndexes.length === 0,
+  };
+  const authorMustIds = filterAuthorMustFixIds(blockIds, gateLipCtx);
+  const autoResidualIds = blockIds.filter((id) => !authorMustIds.includes(id));
+  // C/B residual 不挡导入/dryRun；仅 A / 超限 LIP 挡 exportAllowed
+  const exportAllowed =
+    authorMustIds.length === 0 && !(tier === "T3" && inspected.blocked && authorMustIds.length > 0);
 
   let repairHints = aggregateRepairHints(inspected, designGates.findings, fieldWalkGaps);
   if (blocks.some((b) => b.id === "DG-CHAT-SHAPE-VE") && !repairHints.some((h) => h.id === "RH-MOD-01")) {
@@ -1978,6 +2048,43 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
     )
       ? ((bundle as { meta: { industryResidualDebts: string[] } }).meta.industryResidualDebts)
       : undefined,
+    laneDiagnostics: {
+      mustIds: authorMustIds,
+      autoIds: autoResidualIds,
+      actuatorsRan: [...new Set((autoClosed?.changes ?? []).map((c) => c.ruleId))],
+      cleared: autoClosed?.clearedIds ?? [],
+      residual: autoClosed?.remainingFailedIds ?? blockIds,
+    },
+    z110Handoff: (() => {
+      try {
+        const { buildZ110 } = require("./packager/zPackager") as typeof import("./packager/zPackager");
+        const shots =
+          (bundle as { shots?: unknown[] }).shots ??
+          (bundle as { planData?: { shots?: unknown[] } }).planData?.shots ??
+          [];
+        if (!Array.isArray(shots) || !shots.length) return undefined;
+        const z110 = buildZ110({
+          scriptId: Number((bundle as { scriptId?: number }).scriptId ?? 0),
+          shots: shots as never,
+          scriptMeta: (bundle as { scriptMeta?: unknown }).scriptMeta ?? {},
+        } as never);
+        return {
+          timeline: z110.timeline,
+          edlStub: z110.edlStub,
+          fcpXmlStub: (z110 as { fcpXmlStub?: string }).fcpXmlStub,
+          premiereXmlStub: (z110 as { premiereXmlStub?: string }).premiereXmlStub,
+          otioStub: (z110 as { otioStub?: string }).otioStub,
+          resolveXmlStub: (z110 as { resolveXmlStub?: string }).resolveXmlStub,
+          handoffManifest: (z110 as { handoffManifest?: string }).handoffManifest,
+          srtStub: (z110 as { srtStub?: string }).srtStub,
+          exportReady: false as const,
+          nleFormat: z110.nleFormat,
+          note: z110.note,
+        };
+      } catch {
+        return undefined;
+      }
+    })(),
     chatRepairText: buildAggregatedChatRepairText(repairHints, blockIds, missingFieldSummary, blocks, {
       planLines,
       shots: shotRows,

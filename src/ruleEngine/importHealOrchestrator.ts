@@ -111,13 +111,16 @@ function collectChatMustFixIds(
   exportGate: ReturnType<typeof runExportGate>,
   salvagedRuleIds: Set<string>,
 ): string[] {
+  const { filterAuthorMustFixIds } =
+    require("./exportGate") as typeof import("./exportGate");
   const ids = new Set<string>();
   for (const b of exportGate.blocks) ids.add(b.id);
   for (const id of exportGate.closureSnapshot.blockIds) ids.add(id);
   for (const id of [...ids]) {
     if (salvagedRuleIds.has(id)) ids.delete(id);
   }
-  return [...ids].filter(Boolean).sort();
+  // A lane / over-limit LIP only — C untilClear 勿进贴清单须手改
+  return filterAuthorMustFixIds([...ids].filter(Boolean)).sort();
 }
 
 export function runImportHeal(input: RunImportHealInput): ImportHealResult {
@@ -248,6 +251,18 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
         const { pruneIntentGraphOnBundle } =
           require("./design/intentGraphPrune") as typeof import("./design/intentGraphPrune");
         pruneIntentGraphOnBundle(working);
+      } catch {
+        /* optional */
+      }
+      // LGIA: re-ensure stillPhase after prune/import heal so phase survives
+      try {
+        const { ensureStillPhaseOnShot } =
+          require("./compilers/stillPhasePlan") as typeof import("./compilers/stillPhasePlan");
+        const pd = working.preDesignPack as { shots?: Record<string, unknown>[] } | undefined;
+        const shots = pd?.shots ?? [];
+        for (const s of shots) {
+          ensureStillPhaseOnShot(s);
+        }
       } catch {
         /* optional */
       }
@@ -541,6 +556,17 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
     primary = buildPrimaryBlock("split_shot", { stage: "import" });
   } else if (chatMustFixIds.length) {
     primary = buildPrimaryBlock("chat_repair", { stage: "import" });
+  } else if (
+    exportGateFull.laneDiagnostics?.autoIds?.length ||
+    (exportGateFull.designExitIncomplete && exportGateFull.exportAllowed)
+  ) {
+    // C/B residual：继续导入/自愈，勿主推 chat_repair
+    primary = buildPrimaryBlock("soft_patch", {
+      stage: "import",
+      userMessageOverride: exportGateFull.exportAllowed
+        ? `可导入（设计未完全闭合·服务端将愈 ${exportGateFull.laneDiagnostics?.autoIds?.length ?? 0} 项）`
+        : "设计债未尽·请 Confirm 或智能修复",
+    });
   } else if (serverFixedIds.length) {
     primary = buildPrimaryBlock("burn", {
       stage: "import",

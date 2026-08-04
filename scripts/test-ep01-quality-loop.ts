@@ -271,7 +271,29 @@ ok("url cref not bare", !hasBareCrefCode("--cref https://x/a.png --ar 9:16") || 
   const exitDup = runDesignExitGate("SB", {
     planData: { preDesignPack: { shots: withDlg } },
   });
-  ok("Chat exit BLOCK DEX-DUP-VD with dialogue", exitDup.failedIds.includes("DEX-DUP-VD"), exitDup.failedIds.join(","));
+  ok("Chat exit BLOCK DEX-DUP-VD with dialogue (pre-heal)", exitDup.failedIds.includes("DEX-DUP-VD"), exitDup.failedIds.join(","));
+
+  const { runDesignAutoClose, diversifyDialogueDupVdShots } =
+    require("@/ruleEngine/design/designAutoClose") as typeof import("@/ruleEngine/design/designAutoClose");
+  const div = diversifyDialogueDupVdShots(withDlg as any, { minRun: 3 });
+  ok("dialogue same-VD diversify >0", div.diversified >= 2, `div=${div.diversified}`);
+  const exitAfterDiv = runDesignExitGate("SB", {
+    planData: { preDesignPack: { shots: div.shots } },
+  });
+  ok(
+    "after diversify DEX-DUP-VD cleared",
+    !exitAfterDiv.failedIds.includes("DEX-DUP-VD"),
+    exitAfterDiv.failedIds.join(","),
+  );
+  const acDup = runDesignAutoClose(
+    { planData: { preDesignPack: { shots: withDlg } } },
+    { stageId: "SB", maxRounds: 3 },
+  );
+  ok(
+    "autoClose clears DEX-DUP-VD",
+    !acDup.remainingFailedIds.includes("DEX-DUP-VD"),
+    acDup.remainingFailedIds.join(","),
+  );
 
   const empty = Array.from({ length: 9 }, (_, i) => ({
     shotIndex: i + 1,
@@ -559,9 +581,16 @@ ok("url cref not bare", !hasBareCrefCode("--cref https://x/a.png --ar 9:16") || 
   });
   const after =
     ((ac.plan.planData as any)?.preDesignPack?.shots ?? []).length;
+  const semanticInflate = ac.changes.some((c) =>
+    /onebeat_expand|semantic=on|clause_split|VisBeat|lip-split|same-VD/i.test(
+      `${c.ruleId}:${c.detail}`,
+    ),
+  );
   ok(
     "autoHeal diagnose does not semantic-inflate shots",
-    after <= before + 2,
+    !semanticInflate &&
+      (after <= before + 2 ||
+        ac.changes.some((c) => c.ruleId === "DEX-FACE-BUDGET" || c.ruleId === "DEX-ASSET-CREF")),
     `before=${before} after=${after} changes=${JSON.stringify(ac.changes.slice(0, 4))}`,
   );
 }

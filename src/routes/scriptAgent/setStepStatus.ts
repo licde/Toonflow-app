@@ -148,6 +148,28 @@ export default router.post(
           }
         }
         if (!exitGate.ok) {
+          const { filterAuthorMustFixIds } =
+            require("@/ruleEngine/exportGate") as typeof import("@/ruleEngine/exportGate");
+          const mustFail = filterAuthorMustFixIds(exitGate.failedIds);
+          const confirmResidual = exitGate.failedIds.some(
+            (id) => id === "IRD-CONFIRM" || /CONFIRM/i.test(id),
+          );
+          // C-only residual：不 400，记台账继续写 step（设计≡智能愈）
+          if (mustFail.length === 0 && !confirmResidual) {
+            try {
+              const metaSoft =
+                ((plan.planData as { meta?: Record<string, unknown> } | undefined)?.meta ??
+                  (plan.meta as Record<string, unknown> | undefined) ??
+                  {}) as Record<string, unknown>;
+              metaSoft.designExitIncomplete = true;
+              metaSoft.laneSoftResidual = exitGate.failedIds;
+              if (plan.planData) (plan.planData as { meta?: unknown }).meta = metaSoft;
+              else plan.meta = metaSoft;
+            } catch {
+              /* optional */
+            }
+            // fall through to write stepStatus
+          } else {
           const meta =
             ((plan.planData as { meta?: Record<string, unknown> } | undefined)?.meta ??
               (plan.meta as Record<string, unknown> | undefined) ??
@@ -169,6 +191,7 @@ export default router.post(
           } catch {
             /* optional */
           }
+          const isAuthorMust = mustFail.length > 0;
           return res.status(400).send({
             code: 400,
             message: exitGate.userMessage,
@@ -191,15 +214,22 @@ export default router.post(
                 ? litCta
                 : isRedesignRequired(plan)
                   ? "请按新规范重设计至 W3 验收"
-                  : exitGate.failedIds.some((id) => /^DEX-LIT-|^DEX-PROP-CONT/.test(id))
-                    ? "文学细节债：请批准增强互斥句或智能拆镜后再 setStepStatus"
-                    : exitGate.userMessage
-                      ? "按失败清单同轮重写 JSON 后再 setStepStatus（禁止只改 passed）"
-                      : "本阶段优化",
+                  : !isAuthorMust && confirmResidual
+                    ? "请 Confirm 智能拆/增强后再 setStepStatus"
+                    : exitGate.failedIds.some((id) => /^DEX-LIT-|^DEX-PROP-CONT/.test(id))
+                      ? "文学细节债：请批准增强互斥句或智能拆镜后再 setStepStatus"
+                      : exitGate.userMessage
+                        ? "按失败清单同轮重写 JSON 后再 setStepStatus（禁止只改 passed）"
+                        : "本阶段优化",
               forbidProductionRework: true,
-              chatRetryRequired: true,
+              chatRetryRequired: isAuthorMust,
+              laneDiagnostics: {
+                mustIds: mustFail,
+                residual: exitGate.failedIds,
+              },
             },
           });
+          }
         }
         if (stageId === "W3" && exitGate.ok && !isLiteraryLocked(plan)) {
           setLiteraryLocked(plan, true);

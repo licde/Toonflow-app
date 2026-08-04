@@ -52,7 +52,8 @@ export type BundleAutoCloseResult = {
 
 /** untilClear rules need more than one diagnose→patch round (practice ladder). */
 function untilClearRoundBoost(failedIds: string[]): number {
-  const until = /DEX-LIT-|DEX-PROP-|DEX-STILL-ONEBEAT|CHAIN-BEAT|DESIGN-LOSS|IRD-CONFIRM|VID-CONTACT|NAR-14|NAR-15/;
+  const until =
+    /DEX-LIT-|DEX-PROP-|DEX-STILL-ONEBEAT|CHAIN-BEAT|DESIGN-LOSS|IRD-CONFIRM|VID-CONTACT|NAR-14|NAR-15|DEX-DUP-VD|DEX-VID-VOICE-MODE|DEX-VID-PSEUDO-LINE/;
   return failedIds.some((id) => until.test(id)) ? 5 : 1;
 }
 
@@ -332,6 +333,139 @@ function mergeDupVdShots(plan: Record<string, unknown>): AutoCloseChange[] {
   ];
 }
 
+const DUP_VD_FRAME_PREFIXES = ["近景", "中景", "特写", "过肩", "侧拍"] as const;
+
+/**
+ * Dialogue-bearing same-VD runs: diversify from existing dialogue/shotSize cues
+ * (设计≡智能愈同源；禁发明散文，仅景别前缀 + 台词节拍锚).
+ */
+export function diversifyDialogueDupVdShots(
+  shotsIn: Record<string, unknown>[],
+  opts?: { minRun?: number },
+): { shots: Record<string, unknown>[]; diversified: number } {
+  const { normalizeVdKey } = require("./dirtyStillPromptGate") as typeof import("./dirtyStillPromptGate");
+  const { asDialogueLineObjects } = require("./dialogueCoverage") as typeof import("./dialogueCoverage");
+  const minRun = opts?.minRun ?? 3;
+  const shots = shotsIn.map((s) => ({ ...s }));
+  let diversified = 0;
+  let i = 0;
+  while (i < shots.length) {
+    const key = normalizeVdKey(String(shots[i]?.visualDescription ?? ""));
+    let j = i + 1;
+    while (
+      j < shots.length &&
+      key &&
+      key.length >= 6 &&
+      normalizeVdKey(String(shots[j]?.visualDescription ?? "")) === key
+    ) {
+      j++;
+    }
+    const run = j - i;
+    if (run >= minRun) {
+      const base = String(shots[i]?.visualDescription ?? "").trim();
+      for (let k = i + 1; k < j; k++) {
+        const s = shots[k]!;
+        const narr0 = (s.narrative as Record<string, unknown> | undefined) ?? {};
+        const lines = asDialogueLineObjects(
+          (narr0.dialogue as { lines?: unknown } | undefined)?.lines ?? narr0.lines ?? s.lines,
+        );
+        const lineCue = lines
+          .map((l) => String(l.text ?? "").replace(/\s+/g, "").trim())
+          .find((t) => t.length >= 2)
+          ?.slice(0, 12);
+        const existingSize = String(
+          s.shotSize ?? (narr0 as { shotSize?: string }).shotSize ?? "",
+        ).trim();
+        const frame =
+          existingSize && existingSize.length >= 2
+            ? existingSize
+            : DUP_VD_FRAME_PREFIXES[(k - i) % DUP_VD_FRAME_PREFIXES.length]!;
+        let nextVd = base;
+        if (!normalizeVdKey(nextVd).includes(normalizeVdKey(frame))) {
+          nextVd = `${frame}，${base}`;
+        }
+        if (lineCue && !nextVd.includes(lineCue)) {
+          nextVd = `${nextVd}，口型节拍「${lineCue}」`;
+        } else if (!lineCue && normalizeVdKey(nextVd) === normalizeVdKey(base)) {
+          nextVd = `${nextVd}，镜位节拍${k - i + 1}`;
+        }
+        if (normalizeVdKey(nextVd) === normalizeVdKey(base)) continue;
+        s.visualDescription = nextVd;
+        const narr = { ...narr0 };
+        if (narr.visualDescription != null) narr.visualDescription = nextVd;
+        if (!narr.shotSize && frame) narr.shotSize = frame;
+        s.narrative = narr;
+        if (!s.shotSize) s.shotSize = frame;
+        diversified++;
+      }
+    }
+    i = j;
+  }
+  return { shots, diversified };
+}
+
+function diversifyDupVdShots(plan: Record<string, unknown>): AutoCloseChange[] {
+  const pd = asPd(plan);
+  const pack = (pd.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ?? { shots: [] };
+  const shots = pack.shots ?? [];
+  if (shots.length < 3) return [];
+  const { shots: next, diversified } = diversifyDialogueDupVdShots(shots, { minRun: 3 });
+  if (!diversified) return [];
+  pd.preDesignPack = { ...pack, shots: next };
+  plan.planData = pd;
+  if ((plan as { preDesignPack?: unknown }).preDesignPack) {
+    (plan as { preDesignPack: { shots?: unknown[] } }).preDesignPack = {
+      ...((plan as { preDesignPack: object }).preDesignPack as object),
+      shots: next,
+    };
+  }
+  return [
+    {
+      ruleId: "DEX-DUP-VD",
+      detail: `diversified ${diversified} dialogue same-VD shots via frame+lineCue`,
+      path: "preDesignPack.shots[].visualDescription",
+    },
+  ];
+}
+
+function softHealVideoHomologyOnPlan(
+  plan: Record<string, unknown>,
+  opts?: { vendorId?: string | null },
+): AutoCloseChange[] {
+  try {
+    const { softHealVideoHomologyOnShots } =
+      require("../heal/videoHomologyHeal") as typeof import("../heal/videoHomologyHeal");
+    const pd = asPd(plan);
+    const pack = (pd.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ?? { shots: [] };
+    const shots = pack.shots ?? [];
+    if (!shots.length) return [];
+    const vh = softHealVideoHomologyOnShots({ shots, vendorId: opts?.vendorId ?? null });
+    if (!vh.changed) return [];
+    pd.preDesignPack = { ...pack, shots: vh.shots };
+    plan.planData = pd;
+    if ((plan as { preDesignPack?: unknown }).preDesignPack) {
+      (plan as { preDesignPack: { shots?: unknown[] } }).preDesignPack = {
+        ...((plan as { preDesignPack: object }).preDesignPack as object),
+        shots: vh.shots,
+      };
+    }
+    const ruleId = vh.findings.some((f) => f.id === "DEX-VID-VOICE-MODE")
+      ? "DEX-VID-VOICE-MODE"
+      : vh.heals.some((h) => /voice|orphan_lip|set_voice/.test(h))
+        ? "DEX-VID-VOICE-MODE"
+        : "DEX-VID-PSEUDO-LINE";
+    return [
+      {
+        ruleId,
+        detail: `videoHomology heals=${vh.heals.slice(0, 8).join(",")};cleared=${vh.cleared}`,
+        path: "preDesignPack.shots",
+      },
+    ];
+  } catch {
+    return [];
+  }
+}
+
 /** Mutate ScriptBundle shots in place — import belt before sync. */
 export function collapseCloneVdOnBundle(bundle: {
   preDesignPack?: { shots?: Record<string, unknown>[] } | null;
@@ -521,6 +655,27 @@ export function runDesignAutoClose(
       if (merged.length) {
         touched = true;
         changes.push(...merged);
+      }
+      // 仅在 DUP 失败时 diversify（禁无故 SB 每轮改写 VD）
+      if (failed.has("DEX-DUP-VD")) {
+        const div = diversifyDupVdShots(plan);
+        if (div.length) {
+          touched = true;
+          changes.push(...div);
+        }
+      }
+    }
+    if (
+      failed.has("DEX-VID-VOICE-MODE") ||
+      failed.has("DEX-VID-PSEUDO-LINE") ||
+      failed.has("DEX-VID-BEAT-DUR") ||
+      failed.has("DEX-VID-MOTION-VERB") ||
+      failed.has("DEX-VID-INTENT-MAP")
+    ) {
+      const vh = softHealVideoHomologyOnPlan(plan, { vendorId: opts?.vendorId ?? null });
+      if (vh.length) {
+        touched = true;
+        changes.push(...vh);
       }
     }
     if (
@@ -854,7 +1009,101 @@ export function runDesignAutoClose(
       }
     }
 
-    // Industry AV Wave-2: silent design satisfy (face split / near / av atoms)
+    // DEX-STILL-CU-CAST untilClear：slice_cast + 高置信 expand；低置信 stamp IRD（禁 chatStrict 挡愈）
+    if (failed.has("DEX-STILL-CU-CAST") || failed.has("IRD-CONFIRM")) {
+      try {
+        const { expandStillCuCast } =
+          require("./expandStillCuCast") as typeof import("./expandStillCuCast");
+        const pd = (plan.planData ?? {}) as Record<string, unknown>;
+        const pack =
+          (pd.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+          (plan.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+          {};
+        const shots = [...(pack.shots ?? [])];
+        if (shots.length) {
+          const cu = expandStillCuCast(shots, { chatStrict: false, forceExpand: false });
+          if (cu.expandedCount > 0 || cu.slicedCount > 0) {
+            pack.shots = cu.shots;
+            if (pd.preDesignPack) (pd.preDesignPack as { shots: unknown }).shots = cu.shots;
+            else pd.preDesignPack = { shots: cu.shots };
+            plan.planData = pd;
+            if (plan.preDesignPack) (plan.preDesignPack as { shots: unknown }).shots = cu.shots;
+            touched = true;
+            changes.push({
+              ruleId: "DEX-STILL-CU-CAST",
+              detail: `cu_cast expand=${cu.expandedCount};slice=${cu.slicedCount};confirm=${cu.confirmRequired};${cu.log.slice(0, 4).join("|")}`,
+              path: "preDesignPack.shots",
+            });
+          } else if (cu.confirmRequired) {
+            changes.push({
+              ruleId: "IRD-CONFIRM",
+              detail: `cu_cast_confirm_residual refused=${cu.refused}`,
+              path: "preDesignPack.shots",
+            });
+          }
+        }
+      } catch {
+        /* optional */
+      }
+    }
+
+    // OS-NAME / FILLER untilClear strip（裸名 + 去无画面填料）
+    if (failed.has("DEX-STILL-OS-NAME") || failed.has("DEX-STILL-FILLER")) {
+      try {
+        const { peelOsFromVisual } =
+          require("./expandStillOneBeat") as typeof import("./expandStillOneBeat");
+        const { hasDesignFiller, hasOsInNameDisplay } =
+          require("../compilers/stillIdentitySsot") as typeof import("../compilers/stillIdentitySsot");
+        const pd = (plan.planData ?? {}) as Record<string, unknown>;
+        const pack =
+          (pd.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+          (plan.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+          {};
+        const shots = [...(pack.shots ?? [])];
+        let n = 0;
+        for (const s of shots) {
+          let vd = String(s.visualDescription ?? "");
+          const before = vd;
+          if (failed.has("DEX-STILL-OS-NAME") || hasOsInNameDisplay(vd)) {
+            const peeled = peelOsFromVisual(vd);
+            vd = peeled.visual.replace(/[（(]OS[）)]/g, "").replace(/\s{2,}/g, " ").trim();
+          }
+          if ((failed.has("DEX-STILL-FILLER") || hasDesignFiller(vd)) && hasDesignFiller(vd)) {
+            vd = vd
+              .replace(/对白瞬间[^，。；;\n]{0,24}/g, "")
+              .replace(/瞬间神态[^，。；;\n]{0,16}/g, "")
+              .replace(/内心独白[^，。；;\n]{0,20}/g, "")
+              .replace(/[，,]{2,}/g, "，")
+              .replace(/\s{2,}/g, " ")
+              .trim();
+          }
+          if (vd && vd !== before) {
+            s.visualDescription = vd;
+            const narr = { ...((s.narrative as object) ?? {}) } as Record<string, unknown>;
+            if (narr.visualDescription != null) narr.visualDescription = vd;
+            s.narrative = narr;
+            n++;
+          }
+        }
+        if (n) {
+          pack.shots = shots;
+          if (pd.preDesignPack) (pd.preDesignPack as { shots: unknown }).shots = shots;
+          else pd.preDesignPack = { shots };
+          plan.planData = pd;
+          touched = true;
+          changes.push({
+            ruleId: failed.has("DEX-STILL-FILLER") ? "DEX-STILL-FILLER" : "DEX-STILL-OS-NAME",
+            detail: `stripped_os_or_filler shots=${n}`,
+            path: "preDesignPack.shots[].visualDescription",
+          });
+        }
+      } catch {
+        /* optional */
+      }
+    }
+
+    // Industry AV Wave-2: only when FACE/CAM/CU debts open — 禁无债语义 inflate
+    if (failed.has("DEX-FACE-BUDGET") || failed.has("DEX-CAM-FIT") || failed.has("DEX-STILL-CU-CAST")) {
     try {
       const { runIndustryAvSilentRepair, collectRepairChangelog } =
         require("./industryAvSilentRepair") as typeof import("./industryAvSilentRepair");
@@ -865,8 +1114,17 @@ export function runDesignAutoClose(
         {};
       const shotsInd = [...(packInd.shots ?? [])];
       if (shotsInd.length) {
+        const beforeN = shotsInd.length;
         const ind = runIndustryAvSilentRepair(shotsInd, { maxMs: 6000 });
         if (ind.changed > 0 || ind.diffs.length) {
+          const afterN = (ind.shots ?? []).length;
+          if (afterN > beforeN + 2 && !failed.has("DEX-FACE-BUDGET") && !failed.has("DEX-CAM-FIT")) {
+            changes.push({
+              ruleId: "DEX-FACE-BUDGET",
+              detail: `industry_silent_skipped_inflate before=${beforeN} after=${afterN}`,
+              path: "preDesignPack.shots",
+            });
+          } else {
           packInd.shots = ind.shots;
           if (pdInd.preDesignPack) (pdInd.preDesignPack as { shots: unknown }).shots = ind.shots;
           else pdInd.preDesignPack = { shots: ind.shots };
@@ -875,17 +1133,51 @@ export function runDesignAutoClose(
           touched = true;
           changes.push({
             ruleId: "DEX-FACE-BUDGET",
-            detail: `industry_silent changed=${ind.changed};diffs=${ind.diffs.join(",") || "none"};residual=${ind.residualDebts.join(",") || "none"}`,
+            detail: `industry_silent changed=${ind.changed};diffs=${ind.diffs.join(",") || "none"};residual=${ind.residualDebts.join(",") || "none"};shots=${beforeN}->${afterN}`,
             path: "preDesignPack.shots",
           });
           (plan as { repairChangelog?: unknown }).repairChangelog = collectRepairChangelog(ind.shots);
           if (ind.residualDebts.length) {
             (plan as { industryResidualDebts?: string[] }).industryResidualDebts = ind.residualDebts;
           }
+          }
         }
       }
     } catch {
       /* optional industry pass */
+    }
+    }
+
+    // LGIA: always stamp stillPhase / IntentGraph (even when FACE/CAM closed) — import survive
+    try {
+      const { applyLiteraryIntentGraphToShot } =
+        require("../compilers/literaryIntentGraph") as typeof import("../compilers/literaryIntentGraph");
+      const pdLgia = (plan.planData ?? {}) as Record<string, unknown>;
+      const packLgia =
+        (pdLgia.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+        (plan.preDesignPack as { shots?: Record<string, unknown>[] } | undefined) ??
+        {};
+      const shotsLgia = [...(packLgia.shots ?? [])];
+      let lgiaChanged = 0;
+      for (const s of shotsLgia) {
+        const r = applyLiteraryIntentGraphToShot(s);
+        if (r.changed) lgiaChanged++;
+      }
+      if (lgiaChanged > 0) {
+        packLgia.shots = shotsLgia;
+        if (pdLgia.preDesignPack) (pdLgia.preDesignPack as { shots: unknown }).shots = shotsLgia;
+        else pdLgia.preDesignPack = { shots: shotsLgia };
+        plan.planData = pdLgia;
+        if (plan.preDesignPack) (plan.preDesignPack as { shots: unknown }).shots = shotsLgia;
+        touched = true;
+        changes.push({
+          ruleId: "LGIA-STILL-PHASE",
+          detail: `stillPhase_stamp shots=${lgiaChanged}`,
+          path: "preDesignPack.shots[].narrative.stillPhase",
+        });
+      }
+    } catch {
+      /* optional LGIA stamp */
     }
 
     // PROP-CONT: declare-only propState carry (never invent VD) — import/design homology
@@ -1018,7 +1310,15 @@ export function runDesignAutoClose(
     remainingFailedIds: exitGate.failedIds,
     plan,
     exitGate,
-    chatRetryRequired: !exitGate.ok,
+    chatRetryRequired: (() => {
+      try {
+        const { filterAuthorMustFixIds } =
+          require("../exportGate") as typeof import("../exportGate");
+        return filterAuthorMustFixIds(exitGate.failedIds).length > 0;
+      } catch {
+        return !exitGate.ok;
+      }
+    })(),
   };
 }
 

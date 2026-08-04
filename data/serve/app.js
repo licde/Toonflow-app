@@ -16226,14 +16226,14 @@ var require_object_inspect = __commonJS({
     var gPO = (typeof Reflect === "function" ? Reflect.getPrototypeOf : Object.getPrototypeOf) || ([].__proto__ === Array.prototype ? function(O) {
       return O.__proto__;
     } : null);
-    function addNumericSeparator(num, str) {
-      if (num === Infinity || num === -Infinity || num !== num || num && num > -1e3 && num < 1e3 || $test.call(/e/, str)) {
+    function addNumericSeparator(num2, str) {
+      if (num2 === Infinity || num2 === -Infinity || num2 !== num2 || num2 && num2 > -1e3 && num2 < 1e3 || $test.call(/e/, str)) {
         return str;
       }
       var sepRegex = /[0-9](?=(?:[0-9]{3})+(?![0-9]))/g;
-      if (typeof num === "number") {
-        var int3 = num < 0 ? -$floor(-num) : $floor(num);
-        if (int3 !== num) {
+      if (typeof num2 === "number") {
+        var int3 = num2 < 0 ? -$floor(-num2) : $floor(num2);
+        if (int3 !== num2) {
           var intStr = String(int3);
           var dec = $slice.call(str, intStr.length + 1);
           return $replace.call(intStr, sepRegex, "$&_") + "." + $replace.call($replace.call(dec, /([0-9]{3})/g, "$&_"), /_$/, "");
@@ -35424,26 +35424,26 @@ var require_permessage_deflate = __commonJS({
             value = value[0];
             if (key === "client_max_window_bits") {
               if (value !== true) {
-                const num = +value;
-                if (!Number.isInteger(num) || num < 8 || num > 15) {
+                const num2 = +value;
+                if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
                   throw new TypeError(
                     `Invalid value for parameter "${key}": ${value}`
                   );
                 }
-                value = num;
+                value = num2;
               } else if (!this._isServer) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
             } else if (key === "server_max_window_bits") {
-              const num = +value;
-              if (!Number.isInteger(num) || num < 8 || num > 15) {
+              const num2 = +value;
+              if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
-              value = num;
+              value = num2;
             } else if (key === "client_no_context_takeover" || key === "server_no_context_takeover") {
               if (value !== true) {
                 throw new TypeError(
@@ -36138,8 +36138,8 @@ var require_receiver = __commonJS({
           return;
         }
         const buf = this.consume(8);
-        const num = buf.readUInt32BE(0);
-        if (num > Math.pow(2, 53 - 32) - 1) {
+        const num2 = buf.readUInt32BE(0);
+        if (num2 > Math.pow(2, 53 - 32) - 1) {
           const error73 = this.createError(
             RangeError,
             "Unsupported WebSocket frame: payload length > 2^53 - 1",
@@ -36150,7 +36150,7 @@ var require_receiver = __commonJS({
           cb(error73);
           return;
         }
-        this._payloadLength = num * Math.pow(2, 32) + buf.readUInt32BE(4);
+        this._payloadLength = num2 * Math.pow(2, 32) + buf.readUInt32BE(4);
         this.haveLength(cb);
       }
       /**
@@ -43413,12 +43413,12 @@ var require_yeast = __commonJS({
     var seed = 0;
     var i = 0;
     var prev;
-    function encode6(num) {
+    function encode6(num2) {
       let encoded = "";
       do {
-        encoded = alphabet[num % length] + encoded;
-        num = Math.floor(num / length);
-      } while (num > 0);
+        encoded = alphabet[num2 % length] + encoded;
+        num2 = Math.floor(num2 / length);
+      } while (num2 > 0);
       return encoded;
     }
     function decode4(str) {
@@ -45889,26 +45889,26 @@ var require_permessage_deflate2 = __commonJS({
             value = value[0];
             if (key === "client_max_window_bits") {
               if (value !== true) {
-                const num = +value;
-                if (!Number.isInteger(num) || num < 8 || num > 15) {
+                const num2 = +value;
+                if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
                   throw new TypeError(
                     `Invalid value for parameter "${key}": ${value}`
                   );
                 }
-                value = num;
+                value = num2;
               } else if (!this._isServer) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
             } else if (key === "server_max_window_bits") {
-              const num = +value;
-              if (!Number.isInteger(num) || num < 8 || num > 15) {
+              const num2 = +value;
+              if (!Number.isInteger(num2) || num2 < 8 || num2 > 15) {
                 throw new TypeError(
                   `Invalid value for parameter "${key}": ${value}`
                 );
               }
-              value = num;
+              value = num2;
             } else if (key === "client_no_context_takeover" || key === "server_no_context_takeover") {
               if (value !== true) {
                 throw new TypeError(
@@ -46422,8 +46422,8 @@ var require_receiver2 = __commonJS({
           return;
         }
         const buf = this.consume(8);
-        const num = buf.readUInt32BE(0);
-        if (num > Math.pow(2, 53 - 32) - 1) {
+        const num2 = buf.readUInt32BE(0);
+        if (num2 > Math.pow(2, 53 - 32) - 1) {
           this._loop = false;
           return error73(
             RangeError,
@@ -46433,7 +46433,7 @@ var require_receiver2 = __commonJS({
             "WS_ERR_UNSUPPORTED_DATA_PAYLOAD_LENGTH"
           );
         }
-        this._payloadLength = num * Math.pow(2, 32) + buf.readUInt32BE(4);
+        this._payloadLength = num2 * Math.pow(2, 32) + buf.readUInt32BE(4);
         return this.haveLength();
       }
       /**
@@ -49731,7 +49731,7 @@ var require_morgan = __commonJS({
       var secs = dateTime.getUTCSeconds();
       var year = dateTime.getUTCFullYear();
       var month = CLF_MONTH[dateTime.getUTCMonth()];
-      return pad2(date6) + "/" + month + "/" + year + ":" + pad2(hour) + ":" + pad2(mins) + ":" + pad2(secs) + " +0000";
+      return pad22(date6) + "/" + month + "/" + year + ":" + pad22(hour) + ":" + pad22(mins) + ":" + pad22(secs) + " +0000";
     }
     function compile(format2) {
       if (typeof format2 !== "string") {
@@ -49778,8 +49778,8 @@ var require_morgan = __commonJS({
     function headersSent(res) {
       return typeof res.headersSent !== "boolean" ? Boolean(res._header) : res.headersSent;
     }
-    function pad2(num) {
-      var str = String(num);
+    function pad22(num2) {
+      var str = String(num2);
       return (str.length === 1 ? "0" : "") + str;
     }
     function recordStartTime() {
@@ -50094,12 +50094,12 @@ var require_glob_parent = __commonJS({
 var require_utils4 = __commonJS({
   "node_modules/braces/lib/utils.js"(exports2) {
     "use strict";
-    exports2.isInteger = (num) => {
-      if (typeof num === "number") {
-        return Number.isInteger(num);
+    exports2.isInteger = (num2) => {
+      if (typeof num2 === "number") {
+        return Number.isInteger(num2);
       }
-      if (typeof num === "string" && num.trim() !== "") {
-        return Number.isInteger(Number(num));
+      if (typeof num2 === "string" && num2.trim() !== "") {
+        return Number.isInteger(Number(num2));
       }
       return false;
     };
@@ -50207,12 +50207,12 @@ var require_stringify2 = __commonJS({
 var require_is_number = __commonJS({
   "node_modules/is-number/index.js"(exports2, module2) {
     "use strict";
-    module2.exports = function(num) {
-      if (typeof num === "number") {
-        return num - num === 0;
+    module2.exports = function(num2) {
+      if (typeof num2 === "number") {
+        return num2 - num2 === 0;
       }
-      if (typeof num === "string" && num.trim() !== "") {
-        return Number.isFinite ? Number.isFinite(+num) : isFinite(+num);
+      if (typeof num2 === "string" && num2.trim() !== "") {
+        return Number.isFinite ? Number.isFinite(+num2) : isFinite(+num2);
       }
       return false;
     };
@@ -50443,7 +50443,7 @@ var require_fill_range = __commonJS({
     var isValidValue = (value) => {
       return typeof value === "number" || typeof value === "string" && value !== "";
     };
-    var isNumber2 = (num) => Number.isInteger(+num);
+    var isNumber2 = (num2) => Number.isInteger(+num2);
     var zeros = (input) => {
       let value = `${input}`;
       let index = -1;
@@ -50458,7 +50458,7 @@ var require_fill_range = __commonJS({
       }
       return options.stringify === true;
     };
-    var pad = (input, maxLength, toNumber) => {
+    var pad4 = (input, maxLength, toNumber) => {
       if (maxLength > 0) {
         let dash = input[0] === "-" ? "-" : "";
         if (dash) input = input.slice(1);
@@ -50553,14 +50553,14 @@ var require_fill_range = __commonJS({
         return toRange(toMaxLen(start, maxLen), toMaxLen(end, maxLen), true, options);
       }
       let parts = { negatives: [], positives: [] };
-      let push = (num) => parts[num < 0 ? "negatives" : "positives"].push(Math.abs(num));
+      let push = (num2) => parts[num2 < 0 ? "negatives" : "positives"].push(Math.abs(num2));
       let range = [];
       let index = 0;
       while (descending ? a >= b : a <= b) {
         if (options.toRegex === true && step > 1) {
           push(a);
         } else {
-          range.push(pad(format(a, index), maxLen, toNumber));
+          range.push(pad4(format(a, index), maxLen, toNumber));
         }
         a = descending ? a - step : a + step;
         index++;
@@ -52071,9 +52071,9 @@ var require_parse3 = __commonJS({
       const peek = state.peek = (n = 1) => input[state.index + n];
       const advance = state.advance = () => input[++state.index] || "";
       const remaining = () => input.slice(state.index + 1);
-      const consume = (value2 = "", num = 0) => {
+      const consume = (value2 = "", num2 = 0) => {
         state.consumed += value2;
-        state.index += num;
+        state.index += num2;
       };
       const append2 = (token) => {
         state.output += token.output != null ? token.output : token.value;
@@ -52183,14 +52183,14 @@ var require_parse3 = __commonJS({
       };
       if (opts.fastpaths !== false && !/(^[*!]|[/()[\]{}"])/.test(input)) {
         let backslashes = false;
-        let output = input.replace(REGEX_SPECIAL_CHARS_BACKREF, (m, esc3, chars, first, rest, index) => {
+        let output = input.replace(REGEX_SPECIAL_CHARS_BACKREF, (m, esc6, chars, first, rest, index) => {
           if (first === "\\") {
             backslashes = true;
             return m;
           }
           if (first === "?") {
-            if (esc3) {
-              return esc3 + first + (rest ? QMARK.repeat(rest.length) : "");
+            if (esc6) {
+              return esc6 + first + (rest ? QMARK.repeat(rest.length) : "");
             }
             if (index === 0) {
               return qmarkNoDot + (rest ? QMARK.repeat(rest.length) : "");
@@ -52201,12 +52201,12 @@ var require_parse3 = __commonJS({
             return DOT_LITERAL.repeat(chars.length);
           }
           if (first === "*") {
-            if (esc3) {
-              return esc3 + first + (rest ? star : "");
+            if (esc6) {
+              return esc6 + first + (rest ? star : "");
             }
             return star;
           }
-          return esc3 ? m : `\\${m}`;
+          return esc6 ? m : `\\${m}`;
         });
         if (backslashes === true) {
           if (opts.unescape === true) {
@@ -74440,8 +74440,8 @@ var require_postgres = __commonJS({
       driverName: "pg",
       canCancelQuery: true,
       _escapeBinding: makeEscape({
-        escapeArray(val, esc3) {
-          return esc3(arrayString(val, esc3));
+        escapeArray(val, esc6) {
+          return esc6(arrayString(val, esc6));
         },
         escapeString(str) {
           let hasBackslash = false;
@@ -74478,7 +74478,7 @@ var require_postgres = __commonJS({
         }
       })
     });
-    function arrayString(arr, esc3) {
+    function arrayString(arr, esc6) {
       let result = "{";
       for (let i = 0; i < arr.length; i++) {
         if (i > 0) result += ",";
@@ -74486,11 +74486,11 @@ var require_postgres = __commonJS({
         if (val === null || typeof val === "undefined") {
           result += "NULL";
         } else if (Array.isArray(val)) {
-          result += arrayString(val, esc3);
+          result += arrayString(val, esc6);
         } else if (typeof val === "number") {
           result += val;
         } else {
-          result += JSON.stringify(typeof val === "string" ? val : esc3(val));
+          result += JSON.stringify(typeof val === "string" ? val : esc6(val));
         }
       }
       return result + "}";
@@ -82295,8 +82295,8 @@ var require_types = __commonJS({
       TokenType2[TokenType2["IS_POSTFIX"] = IS_POSTFIX] = "IS_POSTFIX";
       const IS_EXPRESSION_START = 1 << 9;
       TokenType2[TokenType2["IS_EXPRESSION_START"] = IS_EXPRESSION_START] = "IS_EXPRESSION_START";
-      const num = 512;
-      TokenType2[TokenType2["num"] = num] = "num";
+      const num2 = 512;
+      TokenType2[TokenType2["num"] = num2] = "num";
       const bigint5 = 1536;
       TokenType2[TokenType2["bigint"] = bigint5] = "bigint";
       const decimal = 2560;
@@ -94937,8 +94937,8 @@ var require_sourcemap_codec_umd = __commonJS({
         }
         return relative + value;
       }
-      function encodeInteger(builder, num, relative) {
-        let delta = num - relative;
+      function encodeInteger(builder, num2, relative) {
+        let delta = num2 - relative;
         delta = delta < 0 ? -delta << 1 | 1 : delta << 1;
         do {
           let clamped = delta & 31;
@@ -94946,7 +94946,7 @@ var require_sourcemap_codec_umd = __commonJS({
           if (delta > 0) clamped |= 32;
           builder.write(intToChar[clamped]);
         } while (delta > 0);
-        return num;
+        return num2;
       }
       function hasMoreVlq(reader, max) {
         if (reader.pos >= max) return false;
@@ -107759,10 +107759,115 @@ var init_matchDescNamesToCasting = __esm({
   }
 });
 
+// src/ruleEngine/compilers/cinematicShotGrammar.ts
+var cinematicShotGrammar_exports = {};
+__export(cinematicShotGrammar_exports, {
+  grammarDefaultForIntent: () => grammarDefaultForIntent,
+  loadCinematicShotGrammar: () => loadCinematicShotGrammar,
+  shotSizeWiderThanNear: () => shotSizeWiderThanNear,
+  softGrammarHints: () => softGrammarHints
+});
+function loadCinematicShotGrammar() {
+  if (cached4) return cached4;
+  cached4 = readFixtureJson("cinematic_shot_grammar.json", {
+    intentDefaults: {},
+    softHints: {}
+  });
+  return cached4;
+}
+function grammarDefaultForIntent(intent) {
+  const g = loadCinematicShotGrammar();
+  const key = String(intent ?? "").trim() || "speak_lip";
+  return g.intentDefaults?.[key] ?? g.intentDefaults?.speak_lip ?? null;
+}
+function shotSizeWiderThanNear(shotSize) {
+  const s = String(shotSize ?? "").trim();
+  if (!s) return false;
+  if (/近景|特写|大特|mcu|\bcu\b|ecu/i.test(s)) return false;
+  return /中景|全景|远景|ms|ws|wide|medium/i.test(s);
+}
+function softGrammarHints(kinds) {
+  const g = loadCinematicShotGrammar();
+  return kinds.map((k) => g.softHints?.[k]).filter(Boolean);
+}
+var cached4;
+var init_cinematicShotGrammar = __esm({
+  "src/ruleEngine/compilers/cinematicShotGrammar.ts"() {
+    "use strict";
+    init_fixturesPath();
+    cached4 = null;
+  }
+});
+
+// src/ruleEngine/compilers/faceBudgetPolicy.ts
+var faceBudgetPolicy_exports = {};
+__export(faceBudgetPolicy_exports, {
+  assertFaceReadableHandoff: () => assertFaceReadableHandoff,
+  assessFaceBudget: () => assessFaceBudget
+});
+function assessFaceBudget(input) {
+  const vd = String(input.visualDescription ?? "");
+  const hasDial = input.hasDialogue === true;
+  const lipNative = /dialogue_native|native/i.test(String(input.lipSyncPolicy ?? ""));
+  const speak = hasDial && (input.videoIntentClass === "speak_lip" || lipNative || /dialogue_native/i.test(String(input.lipSyncPolicy ?? "")));
+  const bowLike = /弯腰|俯身|低头|跪持|跪坐|捡起|捡拾/.test(vd) || input.intentOccupancy === "bend_pickup" || input.realizationOccupancy === "kneel_hold" || input.realizationOccupancy === "bend_pickup";
+  const wide = shotSizeWiderThanNear(input.shotSize);
+  const faceBudget = speak || input.videoIntentClass === "speak_lip" ? "must" : "optional";
+  if (!speak) {
+    return { ok: true, unreachable: false, primaryAction: "none", faceBudget };
+  }
+  if (speak && bowLike && wide) {
+    const conflict = loadCinematicShotGrammar().conflict?.actionBowPlusSpeak;
+    return {
+      ok: false,
+      unreachable: true,
+      primaryAction: "confirm_split",
+      splitHint: conflict?.splitHint ?? "action_then_dialogue_mcu",
+      reason: "face_budget_unreachable:action_bow_plus_speak_wide",
+      faceBudget
+    };
+  }
+  if (speak && bowLike && !wide) {
+    return {
+      ok: false,
+      unreachable: false,
+      primaryAction: "regen_storyboard_hq",
+      reason: "face_unreadability_risk:bow_speak_near",
+      faceBudget
+    };
+  }
+  return { ok: true, unreachable: false, primaryAction: "none", faceBudget };
+}
+function assertFaceReadableHandoff(input) {
+  if (!input.hasDialogue) return { ok: true, severity: "ok" };
+  const meta4 = input.stillMeta ?? {};
+  const vd = String(input.visualDescription ?? "");
+  const bow = /弯腰|俯身|低头|跪/.test(vd) || meta4.realizationOccupancy === "kneel_hold" || meta4.intentOccupancy === "bend_pickup";
+  const faceOk = meta4.faceReadable === true || meta4.faceReadable === "ok" || Array.isArray(meta4.i2vCriticalFacts) && meta4.i2vCriticalFacts.some((f) => /面容可读|抬视线|半身/.test(String(f)));
+  const wide = shotSizeWiderThanNear(input.shotSize ?? String(meta4.shotSize ?? ""));
+  if (bow && !faceOk) {
+    return {
+      ok: true,
+      severity: "WARN",
+      code: "REALIZATION-FACE-READABILITY",
+      message: wide ? "\u5BF9\u767D\u955C\u8138\u4E0D\u53EF\u8BFB\uFF1A\u4F4E\u5934\u52A8\u4F5C\u677F+\u8FC7\u5BBD\u666F\u522B\uFF1B\u5EFA\u8BAE\u62C6\u955C\u6216\u91CD\u51FA\u8FD1\u666F\u62AC\u8138\u9759\u7167" : "\u5BF9\u767D\u955C\u8138\u4E0D\u53EF\u8BFB\u98CE\u9669\uFF1A\u4F4E\u5934\u677F\u987B\u62AC\u89C6\u7EBF/\u534A\u8EAB\u8FD1\u666F\uFF1B\u53EF\u91CD\u51FA HQ \u9759\u7167",
+      primaryNextStep: wide ? "split_shot" : "regen_storyboard_hq"
+    };
+  }
+  return { ok: true, severity: "ok" };
+}
+var init_faceBudgetPolicy = __esm({
+  "src/ruleEngine/compilers/faceBudgetPolicy.ts"() {
+    "use strict";
+    init_cinematicShotGrammar();
+  }
+});
+
 // src/ruleEngine/design/shootableArchitecture.ts
 var shootableArchitecture_exports = {};
 __export(shootableArchitecture_exports, {
   VENDOR_CAPABILITY_MATRIX: () => VENDOR_CAPABILITY_MATRIX,
+  assessShootableFaceBudget: () => assessShootableFaceBudget,
   buildRepairAsDesignPlan: () => buildRepairAsDesignPlan,
   deliveryTierFromStill: () => deliveryTierFromStill,
   isTrulyUnshootable: () => isTrulyUnshootable,
@@ -107780,6 +107885,10 @@ function isTrulyUnshootable(input) {
   if (input.hasIdentityRef === false) return { unshootable: true, reason: "missing_identity" };
   if (input.vendorAvailable === false) return { unshootable: true, reason: "vendor_down" };
   return { unshootable: false };
+}
+function assessShootableFaceBudget(input) {
+  const { assessFaceBudget: assessFaceBudget2 } = (init_faceBudgetPolicy(), __toCommonJS(faceBudgetPolicy_exports));
+  return assessFaceBudget2(input);
 }
 function buildRepairAsDesignPlan(input) {
   return {
@@ -131137,29 +131246,29 @@ function estimateDataURLDecodedBytes(url4) {
         }
       }
     }
-    let pad = 0;
+    let pad4 = 0;
     let idx = len - 1;
     const tailIsPct3D = (j) => j >= 2 && body.charCodeAt(j - 2) === 37 && // '%'
     body.charCodeAt(j - 1) === 51 && // '3'
     (body.charCodeAt(j) === 68 || body.charCodeAt(j) === 100);
     if (idx >= 0) {
       if (body.charCodeAt(idx) === 61) {
-        pad++;
+        pad4++;
         idx--;
       } else if (tailIsPct3D(idx)) {
-        pad++;
+        pad4++;
         idx -= 3;
       }
     }
-    if (pad === 1 && idx >= 0) {
+    if (pad4 === 1 && idx >= 0) {
       if (body.charCodeAt(idx) === 61) {
-        pad++;
+        pad4++;
       } else if (tailIsPct3D(idx)) {
-        pad++;
+        pad4++;
       }
     }
     const groups = Math.floor(effectiveLen / 4);
-    const bytes = groups * 3 - (pad || 0);
+    const bytes = groups * 3 - (pad4 || 0);
     return bytes > 0 ? bytes : 0;
   }
   return Buffer.byteLength(body, "utf8");
@@ -133877,7 +133986,7 @@ __export(util_exports, {
   assignProp: () => assignProp,
   base64ToUint8Array: () => base64ToUint8Array,
   base64urlToUint8Array: () => base64urlToUint8Array,
-  cached: () => cached4,
+  cached: () => cached5,
   captureStackTrace: () => captureStackTrace,
   cleanEnum: () => cleanEnum,
   cleanRegex: () => cleanRegex,
@@ -133953,7 +134062,7 @@ function jsonStringifyReplacer(_, value) {
     return value.toString();
   return value;
 }
-function cached4(getter) {
+function cached5(getter) {
   const set3 = false;
   return {
     get value() {
@@ -134470,7 +134579,7 @@ var init_util = __esm({
     EVALUATING = /* @__PURE__ */ Symbol("evaluating");
     captureStackTrace = "captureStackTrace" in Error ? Error.captureStackTrace : (..._args) => {
     };
-    allowsEval = cached4(() => {
+    allowsEval = cached5(() => {
       if (typeof navigator !== "undefined" && navigator?.userAgent?.includes("Cloudflare")) {
         return false;
       }
@@ -136544,7 +136653,7 @@ var init_schemas = __esm({
           }
         });
       }
-      const _normalized = cached4(() => normalizeDef(def));
+      const _normalized = cached5(() => normalizeDef(def));
       defineLazy(inst._zod, "propValues", () => {
         const shape = def.shape;
         const propValues = {};
@@ -136595,7 +136704,7 @@ var init_schemas = __esm({
     $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) => {
       $ZodObject.init(inst, def);
       const superParse = inst._zod.parse;
-      const _normalized = cached4(() => normalizeDef(def));
+      const _normalized = cached5(() => normalizeDef(def));
       const generateFastpass = (shape) => {
         const doc = new Doc(["shape", "payload", "ctx"]);
         const normalized = _normalized.value;
@@ -136787,7 +136896,7 @@ var init_schemas = __esm({
         }
         return propValues;
       });
-      const disc = cached4(() => {
+      const disc = cached5(() => {
         const opts = def.options;
         const map3 = /* @__PURE__ */ new Map();
         for (const o of opts) {
@@ -152489,8 +152598,8 @@ function isIPv4(hostname4) {
   const parts = hostname4.split(".");
   if (parts.length !== 4) return false;
   return parts.every((part) => {
-    const num = Number(part);
-    return Number.isInteger(num) && num >= 0 && num <= 255 && String(num) === part;
+    const num2 = Number(part);
+    return Number.isInteger(num2) && num2 >= 0 && num2 <= 255 && String(num2) === part;
   });
 }
 function isPrivateIPv4(ip) {
@@ -163007,7 +163116,7 @@ function jsonStringifyReplacer2(_, value) {
     return value.toString();
   return value;
 }
-function cached5(getter) {
+function cached6(getter) {
   const set22 = false;
   return {
     get value() {
@@ -167389,7 +167498,7 @@ var init_dist11 = __esm({
       assignProp: () => assignProp2,
       base64ToUint8Array: () => base64ToUint8Array2,
       base64urlToUint8Array: () => base64urlToUint8Array2,
-      cached: () => cached5,
+      cached: () => cached6,
       captureStackTrace: () => captureStackTrace2,
       cleanEnum: () => cleanEnum2,
       cleanRegex: () => cleanRegex2,
@@ -167442,7 +167551,7 @@ var init_dist11 = __esm({
     EVALUATING2 = /* @__PURE__ */ Symbol("evaluating");
     captureStackTrace2 = "captureStackTrace" in Error ? Error.captureStackTrace : (..._args) => {
     };
-    allowsEval2 = cached5(() => {
+    allowsEval2 = cached6(() => {
       var _a37;
       if (typeof navigator !== "undefined" && ((_a37 = navigator == null ? void 0 : navigator.userAgent) == null ? void 0 : _a37.includes("Cloudflare"))) {
         return false;
@@ -168996,7 +169105,7 @@ var init_dist11 = __esm({
           }
         });
       }
-      const _normalized = cached5(() => normalizeDef2(def));
+      const _normalized = cached6(() => normalizeDef2(def));
       defineLazy2(inst._zod, "propValues", () => {
         var _a37;
         const shape = def.shape;
@@ -169048,7 +169157,7 @@ var init_dist11 = __esm({
     $ZodObjectJIT2 = /* @__PURE__ */ $constructor2("$ZodObjectJIT", (inst, def) => {
       $ZodObject2.init(inst, def);
       const superParse = inst._zod.parse;
-      const _normalized = cached5(() => normalizeDef2(def));
+      const _normalized = cached6(() => normalizeDef2(def));
       const generateFastpass = (shape) => {
         var _a37;
         const doc = new Doc2(["shape", "payload", "ctx"]);
@@ -169241,7 +169350,7 @@ var init_dist11 = __esm({
         }
         return propValues;
       });
-      const disc = cached5(() => {
+      const disc = cached6(() => {
         var _a37;
         const opts = def.options;
         const map22 = /* @__PURE__ */ new Map();
@@ -178187,7 +178296,7 @@ var require_util4 = __commonJS({
     exports2.getEnumValues = getEnumValues3;
     exports2.joinValues = joinValues3;
     exports2.jsonStringifyReplacer = jsonStringifyReplacer3;
-    exports2.cached = cached9;
+    exports2.cached = cached10;
     exports2.nullish = nullish4;
     exports2.cleanRegex = cleanRegex3;
     exports2.floatSafeRemainder = floatSafeRemainder4;
@@ -178199,7 +178308,7 @@ var require_util4 = __commonJS({
     exports2.getElementAtPath = getElementAtPath3;
     exports2.promiseAllObject = promiseAllObject3;
     exports2.randomString = randomString3;
-    exports2.esc = esc3;
+    exports2.esc = esc6;
     exports2.slugify = slugify3;
     exports2.isObject = isObject5;
     exports2.isPlainObject = isPlainObject4;
@@ -178259,7 +178368,7 @@ var require_util4 = __commonJS({
         return value.toString();
       return value;
     }
-    function cached9(getter) {
+    function cached10(getter) {
       const set3 = false;
       return {
         get value() {
@@ -178364,7 +178473,7 @@ var require_util4 = __commonJS({
       }
       return str;
     }
-    function esc3(str) {
+    function esc6(str) {
       return JSON.stringify(str);
     }
     function slugify3(input) {
@@ -178375,7 +178484,7 @@ var require_util4 = __commonJS({
     function isObject5(data) {
       return typeof data === "object" && data !== null && !Array.isArray(data);
     }
-    exports2.allowsEval = cached9(() => {
+    exports2.allowsEval = cached10(() => {
       if (typeof navigator !== "undefined" && navigator?.userAgent?.includes("Cloudflare")) {
         return false;
       }
@@ -198868,8 +198977,8 @@ var require_dist8 = __commonJS({
       const parts = hostname4.split(".");
       if (parts.length !== 4) return false;
       return parts.every((part) => {
-        const num = Number(part);
-        return Number.isInteger(num) && num >= 0 && num <= 255 && String(num) === part;
+        const num2 = Number(part);
+        return Number.isInteger(num2) && num2 >= 0 && num2 <= 255 && String(num2) === part;
       });
     }
     function isPrivateIPv42(ip) {
@@ -225052,9 +225161,9 @@ var require_semver = __commonJS({
         } else {
           this.prerelease = m[4].split(".").map((id) => {
             if (/^[0-9]+$/.test(id)) {
-              const num = +id;
-              if (num >= 0 && num < MAX_SAFE_INTEGER3) {
-                return num;
+              const num2 = +id;
+              if (num2 >= 0 && num2 < MAX_SAFE_INTEGER3) {
+                return num2;
               }
             }
             return id;
@@ -225768,9 +225877,9 @@ var require_range2 = __commonJS({
       parseRange(range) {
         const memoOpts = (this.options.includePrerelease && FLAG_INCLUDE_PRERELEASE) | (this.options.loose && FLAG_LOOSE);
         const memoKey = memoOpts + ":" + range;
-        const cached9 = cache2.get(memoKey);
-        if (cached9) {
-          return cached9;
+        const cached10 = cache2.get(memoKey);
+        if (cached10) {
+          return cached10;
         }
         const loose = this.options.loose;
         const hr = loose ? re2[t.HYPHENRANGELOOSE] : re2[t.HYPHENRANGE];
@@ -240265,14 +240374,14 @@ function preflightGenerationMedia(input) {
 function buildStoryboardItemXml(item) {
   const ids = Array.isArray(item.associateAssetsIds) ? JSON.stringify(item.associateAssetsIds) : item.associateAssetsIds != null ? String(item.associateAssetsIds) : "[]";
   const should = item.shouldGenerateImage === true || item.shouldGenerateImage === 1 || item.shouldGenerateImage === "true" ? "true" : item.shouldGenerateImage === false || item.shouldGenerateImage === 0 ? "false" : String(item.shouldGenerateImage ?? "");
-  const esc3 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/'/g, "&#39;");
+  const esc6 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/'/g, "&#39;");
   return `<storyboardItem
-  videoDesc='${esc3(item.videoDesc)}'
-  prompt='${esc3(item.prompt ?? "")}'
-  track='${esc3(item.track ?? "")}'
-  duration='${esc3(item.duration ?? "")}'
-  associateAssetsIds="${esc3(ids)}"
-  shouldGenerateImage="${esc3(should)}"
+  videoDesc='${esc6(item.videoDesc)}'
+  prompt='${esc6(item.prompt ?? "")}'
+  track='${esc6(item.track ?? "")}'
+  duration='${esc6(item.duration ?? "")}'
+  associateAssetsIds="${esc6(ids)}"
+  shouldGenerateImage="${esc6(should)}"
 ></storyboardItem>`;
 }
 var IMG, VID;
@@ -240355,8 +240464,8 @@ function normalizeAssetCode(raw) {
     const kind = dig[1].toUpperCase();
     const n = Number(dig[2]);
     if (!Number.isFinite(n) || n < 0) return null;
-    const pad = KIND_PAD[kind];
-    return `${kind}-${String(n).padStart(pad, "0")}`;
+    const pad4 = KIND_PAD[kind];
+    return `${kind}-${String(n).padStart(pad4, "0")}`;
   }
   const slug = token.match(SLUG_RE);
   if (slug) {
@@ -240690,23 +240799,28 @@ function compileFx(fx) {
 function compileDialogue(text2, speaker) {
   if (!text2?.trim()) return "";
   const line = text2.trim();
-  if (/^["「]|dialogue/i.test(line)) return speaker ? `${speaker}: ${line}` : line;
+  if (/^["「]|dialogue/i.test(line) || /[\u4e00-\u9fff]/.test(line)) {
+    const quoted2 = line.startsWith("\u300C") || line.startsWith('"') || line.startsWith("\u201C") ? line : `"${line.replace(/^["「]|["」]$/g, "")}"`;
+    return speaker ? `${speaker}\uFF1A${quoted2}` : quoted2;
+  }
   const quoted = line.includes('"') || line.includes("\u300C") ? line : `"${line}"`;
-  return speaker ? `${speaker} says ${quoted} (dialogue)` : `${quoted} (dialogue)`;
+  return speaker ? `${speaker}\uFF1A${quoted}` : quoted;
 }
-function compileLipSync(kind, hasDialogue2) {
-  if (!hasDialogue2 && !kind) return "";
+function compileLipSync(kind, hasDialogue3) {
+  if (!hasDialogue3 && !kind) return "";
   if (kind === "vo") return "\u753B\u5916\u97F3\uFF08VO\uFF09\uFF0C\u65E0\u53E3\u578B";
   if (kind === "os") return "\u5185\u5FC3\u72EC\u767D\uFF08OS\uFF09\uFF0C\u65E0\u53E3\u578B";
   if (kind === "silent") return "\u65E0\u53E3\u578B";
-  if (hasDialogue2 || kind === "active") return "\u53E3\u578B\u540C\u6B65\u5F00\u542F";
+  if (hasDialogue3 || kind === "active") return "\u53E3\u578B\u540C\u6B65\u5F00\u542F";
   return "";
 }
-function compileVoice(voice, hasDialogue2) {
-  if (!hasDialogue2 && !voice?.trim()) return "";
+function compileVoice(voice, hasDialogue3) {
+  if (!hasDialogue3 && !voice?.trim()) return "";
   const v = voice?.trim();
-  if (!v) return hasDialogue2 ? "voice:default character timbre" : "";
-  return /^voice:/i.test(v) ? v : `voice:${v}`;
+  if (!v) return hasDialogue3 ? "\u58F0\u7EBF\uFF1A\u89D2\u8272\u672C\u8272" : "";
+  if (/^voice:/i.test(v)) return `\u58F0\u7EBF\uFF1A${v.replace(/^voice:\s*/i, "")}`;
+  if (/^声线[：:]/.test(v)) return v;
+  return `\u58F0\u7EBF\uFF1A${v}`;
 }
 function compileSfx(sfx) {
   if (!sfx?.trim()) return "";
@@ -240818,24 +240932,24 @@ function extractDesignFields(ctx) {
   const narr2 = shot?.narrative;
   const sb = ctx.storyboard;
   const vd = parseVideoDescHints(sb?.videoDesc ?? void 0);
-  let dialogueText2 = null;
+  let dialogueText3 = null;
   let speaker = null;
   const lines = narr2?.dialogue?.lines;
   if (typeof lines === "string" && lines.trim()) {
-    dialogueText2 = lines.trim();
+    dialogueText3 = lines.trim();
   } else if (Array.isArray(lines) && lines.length) {
     const first = lines[0];
-    if (typeof first === "string") dialogueText2 = first;
+    if (typeof first === "string") dialogueText3 = first;
     else {
-      dialogueText2 = first?.text?.trim() || null;
+      dialogueText3 = first?.text?.trim() || null;
       speaker = first?.speaker ?? null;
     }
-    if (!dialogueText2) {
-      dialogueText2 = lines.map((l) => typeof l === "string" ? l : l?.text ?? "").filter(Boolean).join(" / ");
+    if (!dialogueText3) {
+      dialogueText3 = lines.map((l) => typeof l === "string" ? l : l?.text ?? "").filter(Boolean).join(" / ");
     }
   }
-  if (!dialogueText2 && sb?.audioPrompt?.trim() && /说|dialogue|"|「/i.test(sb.audioPrompt)) {
-    dialogueText2 = sb.audioPrompt.trim();
+  if (!dialogueText3 && sb?.audioPrompt?.trim() && /说|dialogue|"|「/i.test(sb.audioPrompt)) {
+    dialogueText3 = sb.audioPrompt.trim();
   }
   const hasChar = (ctx.charCodes ?? shot?.charCodes ?? []).some((c) => /^CHAR-/i.test(c));
   const mode = (ctx.mode ?? "").toLowerCase();
@@ -240845,7 +240959,7 @@ function extractDesignFields(ctx) {
   const lipSyncFromPolicy = mapLipSyncPolicy(
     narr2?.lipSyncPolicy ?? shot?.shotDesign?.lipSyncPolicy ?? null
   );
-  const lipSync = lipSyncFromPolicy ?? (dialogueText2 ? /OS|内心|voiceover|VO|画外/i.test(dialogueText2) ? /VO|画外|voiceover/i.test(dialogueText2) ? "vo" : "os" : "active" : null);
+  const lipSync = lipSyncFromPolicy ?? (dialogueText3 ? /OS|内心|voiceover|VO|画外/i.test(dialogueText3) ? /VO|画外|voiceover/i.test(dialogueText3) ? "vo" : "os" : "active" : null);
   const cameraFromVp = (() => {
     const vp = shot?.generation?.videoPrompt ?? sb?.videoDesc ?? "";
     if (/static/i.test(vp)) return "static";
@@ -240864,16 +240978,16 @@ function extractDesignFields(ctx) {
     shotSize: shot?.shotSize ?? narr2?.shotSize ?? shot?.shotDesign?.cameraAnchor?.shotSize ?? null,
     camera: ctx.camera ?? shot?.camera ?? cameraFromVp,
     fxPrompt: shot?.generation?.fxPrompt ?? sb?.fxPrompt ?? null,
-    dialogue: dialogueText2,
+    dialogue: dialogueText3,
     dialogueSpeaker: speaker,
     lipSync,
-    voice: dialogueText2 ? ctx.voice ?? shot?.voice ?? "voice:default character timbre" : ctx.voice ?? shot?.voice ?? null,
+    voice: dialogueText3 ? ctx.voice ?? shot?.voice ?? "voice:default character timbre" : ctx.voice ?? shot?.voice ?? null,
     sfx: narr2?.sound?.sfx ?? vd.sfx ?? null,
     exprGuard,
     debutBeat: ctx.debutBeat ?? narr2?.debutBeat ?? null,
     endHook: ctx.endHook ?? narr2?.endHook ?? null,
     negativeAV: isImage ? false : true,
-    forceAudioHint: Boolean(dialogueText2 || narr2?.sound?.dialogue),
+    forceAudioHint: Boolean(dialogueText3 || narr2?.sound?.dialogue),
     foreground: narr2?.composition?.foreground ?? shot?.shotDesign?.composition?.foreground ?? null,
     background: narr2?.composition?.background ?? shot?.shotDesign?.composition?.background ?? null,
     bgBlur: narr2?.cameraAnchor?.bgBlur ?? shot?.shotDesign?.cameraAnchor?.bgBlur ?? null,
@@ -240893,6 +241007,11 @@ function appendUnique(prompt, fragment) {
 function hasFiveSections(prompt) {
   return /\[Visual\]/i.test(prompt) || /\[Motion\]/i.test(prompt) || /\[Camera\]/i.test(prompt) || /\[Audio\]/i.test(prompt);
 }
+function audioAlreadyHasCjkDialogue(body, fragment) {
+  const cjk = fragment.match(/[\u4e00-\u9fff]{2,24}/g) ?? [];
+  if (!cjk.length) return /[\u4e00-\u9fff]/.test(body) && /["「]|口型同步/.test(body);
+  return cjk.some((tok) => body.includes(tok));
+}
 function injectIntoNamedSection(prompt, section, fragment) {
   const bit = fragment.trim();
   if (!bit) return prompt;
@@ -240904,7 +241023,13 @@ function injectIntoNamedSection(prompt, section, fragment) {
   if (re2.test(prompt)) {
     return prompt.replace(re2, (_m, body) => {
       let bodyTrim = String(body).trim();
-      if (/^audio$/i.test(section) && /says\s+|lip-sync\s*active|\(dialogue\)/i.test(bit)) {
+      if (/^audio$/i.test(section) && audioAlreadyHasCjkDialogue(bodyTrim, bit)) {
+        return `[${section}]
+${bodyTrim}
+
+`;
+      }
+      if (/^audio$/i.test(section) && /says\s+|lip-sync\s*active|\(dialogue\)|口型同步开启|[：:]\s*["「]/i.test(bit)) {
         if (/no\s*(spoken\s*)?dialogue|ambient\/?SFX\s*only|无对白|无台词/i.test(bodyTrim)) {
           bodyTrim = "";
         }
@@ -241293,16 +241418,16 @@ function assertAudioLiteraryFidelity(input) {
 ${section}`;
   const missing = [];
   const passed = [];
-  let hasDialogue2 = false;
+  let hasDialogue3 = false;
   for (const item of input.items) {
     if (item.kind === "dialogue_in_audio") {
-      hasDialogue2 = true;
+      hasDialogue3 = true;
       const ok2 = item.mustTokens.every((t) => combined.includes(t));
       (ok2 ? passed : missing).push(item);
       continue;
     }
     if (item.kind === "audio_xor") {
-      hasDialogue2 = true;
+      hasDialogue3 = true;
       const bad = SILENT_AUDIO_RE.test(combined) && !/dialogue|台词|对白/i.test(combined);
       (bad ? missing : passed).push(item);
       continue;
@@ -241324,7 +241449,7 @@ ${section}`;
     const ok = item.mustTokens.every((t) => !t || combined.includes(t));
     (ok ? passed : missing).push(item);
   }
-  return { ok: missing.length === 0, missing, passed, hasDialogue: hasDialogue2 };
+  return { ok: missing.length === 0, missing, passed, hasDialogue: hasDialogue3 };
 }
 function strengthenFromAudioMissing(missing) {
   const out = {};
@@ -243973,8 +244098,8 @@ function parseStoryboardTable(markdown, storyboardIds) {
 }
 function pipeRowToShot(cells, index, storyboardId) {
   const [col0, col1, col2, col3, col4, col5, col6, col7] = cells;
-  const num = parseInt(col0, 10);
-  const idx = Number.isFinite(num) ? num - 1 : index;
+  const num2 = parseInt(col0, 10);
+  const idx = Number.isFinite(num2) ? num2 - 1 : index;
   const typeRaw = cells.find((c) => SHOT_TYPES.some((t) => c.includes(t)));
   const wide = cells.length >= 7;
   const durationRaw = cells.find((c) => /^\d+(\.\d+)?s$/i.test(c)) ?? (wide ? col7 : void 0) ?? cells.filter((c) => /^\d+(\.\d+)?$/.test(c)).slice(-1)[0];
@@ -248065,8 +248190,8 @@ function dedupeRecipeLayerPrefixes(prompt, prefixes) {
   let next = String(prompt ?? "");
   let removed = 0;
   for (const prefix of prefs) {
-    const esc3 = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re2 = new RegExp(`${esc3}[^\u3002\uFF1B;\\n]*[\u3002\uFF1B;]?`, "g");
+    const esc6 = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re2 = new RegExp(`${esc6}[^\u3002\uFF1B;\\n]*[\u3002\uFF1B;]?`, "g");
     const matches = next.match(re2);
     if (!matches || matches.length < 2) continue;
     const keep = matches[matches.length - 1];
@@ -248313,6 +248438,555 @@ var init_stillShotRecipeAdapt = __esm({
     HAND_CU_IDENTITY_LOCK = "\u9501\u5B9A\u89D2\u8272\u5B9A\u5986\u624B\u90E8/\u8896\u53E3/\u914D\u9970\u7EB9\u7406\u53C2\u8003\uFF0C\u7981\u6B62\u91CD\u5851\u624B\u90E8\u8EAB\u4EFD\u7EC6\u8282\u3002";
     PROP_CU_HQ_RECIPE = "\u7AD6\u5C4F9:16\u5B89\u5168\u533A\u6784\u56FE\uFF0C\u9053\u5177\u4E3B\u4F53\u6E05\u6670\u4E0D\u88C1\u5207\uFF0C\u6D45\u666F\u6DF1\uFF0C\u9AD8\u7EC6\u8282\u89C6\u9891\u9996\u5E27\uFF1B\u672C\u955C\u4EE5\u7269\u4EF6\u4E3A\u4E3B\uFF0C\u7981\u6B62\u786C\u52A0\u4EBA\u50CF\u5934\u9762\u90E8\u62A2\u620F\u3002";
     ECU_MOUTH_HQ_RECIPE2 = "\u7AD6\u5C4F9:16\u5B89\u5168\u533A\uFF0C\u5507\u90E8/\u53E3\u9F3B\u5C40\u90E8\u7279\u5199\u5360\u753B\u5E45\u4E3B\u533A\uFF0C\u54AC\u5507\u6E17\u8840\u4E0E\u5FAE\u8868\u60C5\u53EF\u8BFB\uFF0C\u6D45\u666F\u6DF1\uFF1B\u7981\u6B62\u534A\u8EAB\u8170\u7EBF\u5165\u753B\uFF0C\u7981\u6B62\u624B\u6301\u7EB8\u7C7B\u6587\u4E66\u62A2\u620F\uFF0C\u7981\u6B62\u7070\u68DA\u767D\u68DA\u3002";
+  }
+});
+
+// src/ruleEngine/quality/practiceCompleteness.ts
+var practiceCompleteness_exports = {};
+__export(practiceCompleteness_exports, {
+  auditPracticeCompleteness: () => auditPracticeCompleteness,
+  isVlmKeyRequired: () => isVlmKeyRequired,
+  loadPracticeInventory: () => loadPracticeInventory,
+  loadQualityStateMatrix: () => loadQualityStateMatrix,
+  loadRepairConfidenceLadder: () => loadRepairConfidenceLadder,
+  mustDimAllowsVideoPass: () => mustDimAllowsVideoPass,
+  pixelDimStatus: () => pixelDimStatus,
+  repairActionForConfidence: () => repairActionForConfidence,
+  stillQualityUserMessage: () => stillQualityUserMessage
+});
+function loadPracticeInventory() {
+  return readFixtureJson("practice_completeness_inventory.json", {
+    ladder: LADDER_DEFAULT,
+    keyPolicy: { required: false },
+    classes: []
+  });
+}
+function loadQualityStateMatrix() {
+  return readFixtureJson("quality_state_matrix.json", {
+    forbidden: []
+  });
+}
+function isVlmKeyRequired() {
+  const inv = loadPracticeInventory();
+  return inv.keyPolicy?.required === true;
+}
+function pixelDimStatus(opts) {
+  if (!opts.keyOrAdapterPresent) return "unmeasured";
+  if (opts.observed == null) return "unmeasured";
+  return opts.observed ? "measured_pass" : "measured_fail";
+}
+function mustDimAllowsVideoPass(status) {
+  return status === "measured_pass";
+}
+function auditPracticeCompleteness(inv) {
+  const inventory = inv ?? loadPracticeInventory();
+  const out = [];
+  for (const c of inventory.classes ?? []) {
+    const missing = [];
+    if (!c.declare?.length) missing.push("declare");
+    if (!c.mount?.length) missing.push("mount");
+    if (!c.hard) missing.push("hard");
+    if (!c.untilClear) missing.push("untilClear");
+    if (!c.feBlock) missing.push("feBlock");
+    if (!c.noEscape?.trim()) missing.push("noEscape");
+    if (missing.length) out.push({ id: c.id, missing });
+  }
+  return out;
+}
+function stillQualityUserMessage(opts) {
+  const missIds = (opts.missingEffects ?? []).map((m) => typeof m === "string" ? m : String(m?.id ?? "")).filter(Boolean).slice(0, 4);
+  const shouldIds = (opts.shouldMissIds ?? []).map(String).filter(Boolean).slice(0, 2);
+  const shouldNote = shouldIds.length ? `\uFF1B\u7EC6\u8282\u5F85\u589E\u5F3A\uFF1A${shouldIds.join("\u3001")}` : "";
+  if (opts.softEnvMissingHonest === true) {
+    return "\u8F6F\u73AF\u5883\u677F\u672A\u6302\u5165\u5382\u5546\u53C2\u8003\uFF08keepSoft\u2260\u50CF\u7D20\u6BBF\uFF09\uFF1B\u573A\u666F Must \u672A\u5151\u73B0\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27\uFF1B\u8BF7\u7EE7\u7EED\u751F\u6210\u667A\u80FD\u4FEE";
+  }
+  const trunkMiss = opts.sampleMustFulfilled === false || opts.literaryEffectsQualified === false;
+  if (!trunkMiss && opts.realizationDegraded === true && (opts.literaryEffectsQualified === true || opts.sampleMustFulfilled === true)) {
+    const note = String(opts.realizationNote ?? "").trim() || "\u5B9E\u73B0\u5DF2\u964D\u7EA7\uFF1A\u5F2F\u8170\u2192\u6301\u7EB8\u7AD9\u59FF/\u8DEA\u6301\uFF1B\u8BBE\u8BA1\u610F\u56FE\u4ECD\u4E3A\u5F2F\u8170\u6361\u62FE";
+    return `${note}${shouldNote}\uFF1B\u4E3B\u5E72\u53EF\u70E7\uFF1B\u5F31\u56FE\u503A\xB7\u53EF\u70E7\u89C6\u9891`;
+  }
+  const sampleMiss = trunkMiss || missIds.length > 0 && opts.literaryEffectsQualified !== true;
+  if (sampleMiss) {
+    const sceneMiss = missIds.some(
+      (id) => /bg\.no_gray|bg\.scene|void|gray_studio|identity\.no_modern/i.test(id)
+    );
+    const label = sceneMiss ? `\u8F6F\u73AF\u5883\u5DF2\u6302\uFF0C\u573A\u666F\u50CF\u7D20\u672A\u8BC1\u5B9E\uFF1A${missIds.join("\u3001") || "bg"}` : missIds.length ? `\u8BBE\u8BA1\u610F\u56FE\u6837\u672C\u672A\u5151\u73B0\uFF1A${missIds.join("\u3001")}` : "\u8BBE\u8BA1\u610F\u56FE\u6837\u672C\u672A\u5151\u73B0";
+    const keyNote = opts.keyAbsent ? "\uFF1B\u50CF\u7D20\u672A\u6D4B\uFF08Key \u53EF\u9009\uFF0C\u975E\u5931\u8D25\uFF09" : "";
+    const hostileRefs = missIds.some((id) => /occupancy\.|prop\.locus|prop\.in_frame|bg\.|action\.|identity\./.test(id)) || opts.bendHostileRefsForced === true;
+    const actionMiss = missIds.some((id) => /action\.|occupancy\./.test(id));
+    const poseOk = opts.poseEvidenceOk === true;
+    const plateNote = hostileRefs ? opts.platesSwapped === true ? actionMiss && !poseOk ? "\uFF1B\u5DF2\u6362\u677F\u4F46\u59FF\u6001\u672A\u8FC7\uFF0C\u987B\u590D\u9A8C\u5F2F\u8170\u89E6\u5730" : poseOk || !actionMiss ? "\uFF1B\u5DF2\u6309\u53C2\u8003\u5951\u7EA6\u6362\u677F\u91CD\u51FA" : "\uFF1B\u5DF2\u6362\u677F\u4F46\u59FF\u6001\u672A\u8FC7\uFF0C\u987B\u590D\u9A8C\u5F2F\u8170\u89E6\u5730" : "\uFF1B\u987B\u6362\u677F\uFF08\u56DB\u89C6\u56FE/\u6574\u6BBF/\u5C55\u793A\u5361\u4ECD\u6302\uFF0C\u975E\u6CD5\u7EFF\u7ED3\u6848\uFF09" : "";
+    return `${label}${keyNote}${plateNote}\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27\uFF1B\u8BF7\u7EE7\u7EED\u751F\u6210\u667A\u80FD\u4FEE`;
+  }
+  if (opts.vendorPollFail) {
+    return "\u6210\u56FE\u8BCA\u65AD\u672A\u5B8C\u6210\uFF08\u8F6E\u8BE2\u5931\u8D25\uFF09\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27\uFF1B\u53EF\u7A0D\u540E\u91CD\u8BD5\u8BCA\u65AD";
+  }
+  if ((opts.sampleMustFulfilled === true || opts.literaryEffectsQualified === true) && opts.keyAbsent && opts.softEnvMissingHonest !== true && opts.realizationDegraded !== true) {
+    return `\u8BBE\u8BA1\u610F\u56FE\u5FC5\u987B\u5143\u7D20\u5DF2\u5151\u73B0${shouldNote}\uFF1B\u50CF\u7D20\u672A\u6D4B\uFF08Key \u53EF\u9009\uFF0C\u975E\u5931\u8D25\uFF09\uFF1B\u5F31\u56FE\u503A\xB7\u53EF\u70E7\u89C6\u9891\uFF08\u8BBE\u8BA1\u610F\u56FE\u4F18\u5148\uFF09`;
+  }
+  if (opts.keyAbsent) {
+    return "\u8BBE\u8BA1\u610F\u56FE\u5F85\u6838\uFF1B\u50CF\u7D20\u672A\u6D4B\uFF08Key \u53EF\u9009\uFF0C\u975E\u5931\u8D25\uFF09\uFF1B\u5F31\u56FE\u503A\xB7\u53EF\u70E7\u89C6\u9891\uFF0C\u53EF\u4EBA\u5BA1\u6216\u7EE7\u7EED\u751F\u6210";
+  }
+  if (opts.measuredFail) {
+    return "\u8BBE\u8BA1\u610F\u56FE\u50CF\u7D20\u590D\u6838\u672A\u8FC7\uFF1B\u8BF7\u6309\u503A\u6761\u4FEE\u590D\u540E\u91CD\u51FA\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27";
+  }
+  if (opts.weak) {
+    return "\u9759\u7167\u672A\u8FC7\u9AD8\u8D28\u91CF\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27";
+  }
+  return "\u9759\u7167\u8D28\u91CF\u672A\u5C31\u7EEA\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27";
+}
+function loadRepairConfidenceLadder() {
+  return readFixtureJson("repair_confidence_ladder.json", {
+    thresholds: { autoApplyMin: 0.85, forkMin: 0.55, confirmBelow: 0.55 },
+    autoApplyTriggers: [],
+    forkTriggers: [],
+    requireCascadeAfterApply: true,
+    requireReGateAfterApply: true
+  });
+}
+function repairActionForConfidence(trigger, confidence) {
+  const ladder = loadRepairConfidenceLadder();
+  const autoMin = ladder.thresholds?.autoApplyMin ?? 0.85;
+  const forkMin = ladder.thresholds?.forkMin ?? 0.55;
+  const autoSet = new Set(ladder.autoApplyTriggers ?? []);
+  const forkSet = new Set(ladder.forkTriggers ?? []);
+  if (autoSet.has(trigger) || confidence >= autoMin) return "apply_auto";
+  if (forkSet.has(trigger) || confidence >= forkMin) return "presentation_fork";
+  return "confirm_only";
+}
+var LADDER_DEFAULT;
+var init_practiceCompleteness = __esm({
+  "src/ruleEngine/quality/practiceCompleteness.ts"() {
+    "use strict";
+    init_fixturesPath();
+    LADDER_DEFAULT = [
+      "declare",
+      "mount",
+      "hard",
+      "untilClear",
+      "feBlock",
+      "noEscape"
+    ];
+  }
+});
+
+// src/ruleEngine/compilers/compositionSoftNoKey.ts
+function assessCompositionSoftNoKey(input) {
+  const vd = String(input.visualDescription ?? "");
+  const prompt = String(input.promptUsed ?? "");
+  const blob = `${vd}
+${prompt}
+${String(input.spatialRelation ?? "")}`;
+  const size = String(input.shotSize ?? "");
+  const faceish = /近景|特写|大特写|face|CU|ecu/i.test(size) || /must/i.test(String(input.faceBudget ?? "")) || /面容|抬视线|口型/.test(vd);
+  const findings = [];
+  const headroom = softGrammarHints(["headroom"])[0] ?? "\u4FDD\u7559\u5934\u4E0A\u7A7A\u95F4";
+  const looking = softGrammarHints(["lookingRoom"])[0] ?? "\u89C6\u7EBF\u524D\u65B9\u7559\u767D";
+  const axis180 = softGrammarHints(["axis180"])[0] ?? "\u4FDD\u6301180\u5EA6\u8F74\u7EBF\uFF0C\u8FC7\u80A9\u5BF9\u5207\u4E0D\u8D8A\u8F74";
+  if (faceish && !/头上空间|头顶留白|headroom|留头/i.test(blob)) {
+    findings.push({
+      id: "headroom_undeclared",
+      severity: "soft",
+      message: "\u8FD1\u666F/\u9762\u5BB9\u955C\u672A\u58F0\u660E\u5934\u4E0A\u7559\u767D\uFF08\u65E0 Key\uFF0C\u4EC5\u6784\u56FE\u503A\uFF09",
+      hint: headroom
+    });
+  }
+  if (faceish && /看向|视线|对视|望向/.test(vd) && !/视线前方|looking.?room|前方留白|视线留白/i.test(blob)) {
+    findings.push({
+      id: "looking_room_undeclared",
+      severity: "soft",
+      message: "\u6709\u89C6\u7EBF\u65B9\u5411\u4F46\u672A\u58F0\u660E\u524D\u65B9\u7559\u767D\uFF08\u65E0 Key\uFF0C\u4EC5\u6784\u56FE\u503A\uFF09",
+      hint: looking
+    });
+  }
+  if (/过肩|OTS|对切|正反打/.test(vd) && !/180|轴线|不越轴/.test(blob)) {
+    findings.push({
+      id: "axis180_undeclared",
+      severity: "soft",
+      message: "\u8FC7\u80A9/\u5BF9\u5207\u672A\u58F0\u660E\u8F74\u7EBF\u7EA6\u675F\uFF08\u65E0 Key\uFF0C\u4EC5\u6784\u56FE\u503A\uFF09",
+      hint: axis180
+    });
+  }
+  return { findings, pixelDimStatus: "unmeasured" };
+}
+function injectCompositionSoftHints(parts, findings) {
+  const out = [...parts];
+  for (const f of findings) {
+    if (f.hint && !out.some((p3) => p3.includes(f.hint.slice(0, 4)))) {
+      out.push(f.hint);
+    }
+  }
+  return out;
+}
+var init_compositionSoftNoKey = __esm({
+  "src/ruleEngine/compilers/compositionSoftNoKey.ts"() {
+    "use strict";
+    init_cinematicShotGrammar();
+  }
+});
+
+// src/ruleEngine/compilers/compositionAssess.ts
+var compositionAssess_exports = {};
+__export(compositionAssess_exports, {
+  assessComposition: () => assessComposition,
+  assessCompositionProvisionalSoft: () => assessCompositionProvisionalSoft,
+  assessCompositionSoftNoKey: () => assessCompositionSoftNoKey,
+  assessCompositionWithKey: () => assessCompositionWithKey,
+  injectCompositionSoftHints: () => injectCompositionSoftHints
+});
+function clamp01(n) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+function assessCompositionWithKey(input) {
+  const soft = assessCompositionSoftNoKey({
+    visualDescription: input.visualDescription,
+    promptUsed: input.promptUsed,
+    shotSize: input.shotSize,
+    faceBudget: input.faceBudget
+  });
+  const box = {
+    top: clamp01(input.faceBoxNorm.top),
+    bottom: clamp01(input.faceBoxNorm.bottom),
+    left: clamp01(input.faceBoxNorm.left),
+    right: clamp01(input.faceBoxNorm.right)
+  };
+  const headroom = box.top;
+  const findings = [];
+  const faceish = /近景|特写|大特写|face|CU|ecu/i.test(String(input.shotSize ?? "")) || /must/i.test(String(input.faceBudget ?? "")) || /面容|抬视线|口型/.test(String(input.visualDescription ?? ""));
+  let headroomOk = true;
+  let lookingOk = true;
+  if (faceish && headroom < HEADROOM_MIN) {
+    headroomOk = false;
+    findings.push({
+      id: "headroom_tight",
+      severity: "soft",
+      message: `\u5934\u4E0A\u7559\u767D\u504F\u7D27\uFF08\u6D4B\u5F97 ${(headroom * 100).toFixed(1)}% < ${HEADROOM_MIN * 100}%\uFF09`,
+      hint: softGrammarHints(["headroom"])[0] ?? "\u4FDD\u7559\u5934\u4E0A\u7A7A\u95F4"
+    });
+  }
+  const vd = String(input.visualDescription ?? "");
+  const gaze = input.gazeSide && input.gazeSide !== "unknown" ? input.gazeSide : /看向|望向|视线/.test(vd) ? /左/.test(vd) ? "left" : /右/.test(vd) ? "right" : "center" : "unknown";
+  if (faceish && gaze === "left") {
+    const room = box.left;
+    if (room < LOOKING_ROOM_MIN) {
+      lookingOk = false;
+      findings.push({
+        id: "looking_room_fail",
+        severity: "soft",
+        message: `\u5DE6\u4FA7\u89C6\u7EBF\u7559\u767D\u4E0D\u8DB3\uFF08\u6D4B\u5F97 ${(room * 100).toFixed(1)}%\uFF09`,
+        hint: softGrammarHints(["lookingRoom"])[0] ?? "\u89C6\u7EBF\u524D\u65B9\u7559\u767D"
+      });
+    }
+  } else if (faceish && gaze === "right") {
+    const room = 1 - box.right;
+    if (room < LOOKING_ROOM_MIN) {
+      lookingOk = false;
+      findings.push({
+        id: "looking_room_fail",
+        severity: "soft",
+        message: `\u53F3\u4FA7\u89C6\u7EBF\u7559\u767D\u4E0D\u8DB3\uFF08\u6D4B\u5F97 ${(room * 100).toFixed(1)}%\uFF09`,
+        hint: softGrammarHints(["lookingRoom"])[0] ?? "\u89C6\u7EBF\u524D\u65B9\u7559\u767D"
+      });
+    }
+  }
+  for (const f of soft.findings) {
+    if (f.id === "headroom_undeclared" && faceish) continue;
+    if (f.id === "looking_room_undeclared" && gaze !== "unknown") continue;
+    findings.push(f);
+  }
+  const observed = headroomOk && lookingOk;
+  const status = pixelDimStatus({ keyOrAdapterPresent: true, observed });
+  return {
+    findings,
+    pixelDimStatus: status,
+    measured: true,
+    visualPassClaim: false
+  };
+}
+function assessCompositionProvisionalSoft(input) {
+  const soft = assessCompositionSoftNoKey({
+    visualDescription: input.visualDescription,
+    promptUsed: input.promptUsed,
+    shotSize: input.shotSize,
+    spatialRelation: input.spatialRelation,
+    faceBudget: input.faceBudget
+  });
+  const box = {
+    top: clamp01(input.faceBoxNorm.top),
+    bottom: clamp01(input.faceBoxNorm.bottom),
+    left: clamp01(input.faceBoxNorm.left),
+    right: clamp01(input.faceBoxNorm.right)
+  };
+  const findings = [];
+  const faceish = /近景|特写|大特写|face|CU|ecu/i.test(String(input.shotSize ?? "")) || /must/i.test(String(input.faceBudget ?? "")) || /面容|抬视线|口型/.test(String(input.visualDescription ?? ""));
+  const vd = String(input.visualDescription ?? "");
+  const gaze = input.gazeSide && input.gazeSide !== "unknown" ? input.gazeSide : /看向|望向|视线/.test(vd) ? /左/.test(vd) ? "left" : /右/.test(vd) ? "right" : "center" : "unknown";
+  if (faceish && box.top < HEADROOM_MIN) {
+    findings.push({
+      id: "headroom_soft_provisional",
+      severity: "soft",
+      message: `\u4E34\u65F6\u8138\u6846\u793A\u610F\u5934\u4E0A\u7559\u767D\u504F\u7D27\uFF08${(box.top * 100).toFixed(1)}%\uFF0C\u975E\u5B9E\u6D4B\uFF09`,
+      hint: softGrammarHints(["headroom"])[0] ?? "\u4FDD\u7559\u5934\u4E0A\u7A7A\u95F4"
+    });
+  }
+  if (faceish && gaze === "left" && box.left < LOOKING_ROOM_MIN) {
+    findings.push({
+      id: "looking_room_soft_provisional",
+      severity: "soft",
+      message: `\u4E34\u65F6\u8138\u6846\u793A\u610F\u5DE6\u4FA7\u89C6\u7EBF\u7559\u767D\u4E0D\u8DB3\uFF08\u975E\u5B9E\u6D4B\uFF09`,
+      hint: softGrammarHints(["lookingRoom"])[0] ?? "\u89C6\u7EBF\u524D\u65B9\u7559\u767D"
+    });
+  } else if (faceish && gaze === "right" && 1 - box.right < LOOKING_ROOM_MIN) {
+    findings.push({
+      id: "looking_room_soft_provisional",
+      severity: "soft",
+      message: `\u4E34\u65F6\u8138\u6846\u793A\u610F\u53F3\u4FA7\u89C6\u7EBF\u7559\u767D\u4E0D\u8DB3\uFF08\u975E\u5B9E\u6D4B\uFF09`,
+      hint: softGrammarHints(["lookingRoom"])[0] ?? "\u89C6\u7EBF\u524D\u65B9\u7559\u767D"
+    });
+  }
+  for (const f of soft.findings) {
+    if (f.id === "headroom_undeclared" && findings.some((x) => x.id === "headroom_soft_provisional")) {
+      continue;
+    }
+    if (f.id === "looking_room_undeclared" && findings.some((x) => x.id === "looking_room_soft_provisional")) {
+      continue;
+    }
+    findings.push(f);
+  }
+  return {
+    findings,
+    pixelDimStatus: "unmeasured",
+    measured: false,
+    visualPassClaim: false,
+    provisionalSoft: true
+  };
+}
+function assessComposition(input) {
+  const key = Boolean(input.keyOrAdapterPresent);
+  if (key && input.faceBoxNorm) {
+    return assessCompositionWithKey({
+      faceBoxNorm: input.faceBoxNorm,
+      visualDescription: input.visualDescription,
+      promptUsed: input.promptUsed,
+      shotSize: input.shotSize,
+      faceBudget: input.faceBudget,
+      gazeSide: input.gazeSide
+    });
+  }
+  if (input.provisionalFaceBoxNorm) {
+    return assessCompositionProvisionalSoft({
+      faceBoxNorm: input.provisionalFaceBoxNorm,
+      visualDescription: input.visualDescription,
+      promptUsed: input.promptUsed,
+      shotSize: input.shotSize,
+      spatialRelation: input.spatialRelation,
+      faceBudget: input.faceBudget,
+      gazeSide: input.gazeSide
+    });
+  }
+  const soft = assessCompositionSoftNoKey({
+    visualDescription: input.visualDescription,
+    promptUsed: input.promptUsed,
+    shotSize: input.shotSize,
+    spatialRelation: input.spatialRelation,
+    faceBudget: input.faceBudget
+  });
+  return {
+    findings: soft.findings,
+    pixelDimStatus: "unmeasured",
+    measured: false,
+    visualPassClaim: false
+  };
+}
+var HEADROOM_MIN, LOOKING_ROOM_MIN;
+var init_compositionAssess = __esm({
+  "src/ruleEngine/compilers/compositionAssess.ts"() {
+    "use strict";
+    init_cinematicShotGrammar();
+    init_practiceCompleteness();
+    init_compositionSoftNoKey();
+    init_compositionSoftNoKey();
+    HEADROOM_MIN = 0.06;
+    LOOKING_ROOM_MIN = 0.08;
+  }
+});
+
+// src/ruleEngine/compilers/faceBoxNormFromMeta.ts
+var faceBoxNormFromMeta_exports = {};
+__export(faceBoxNormFromMeta_exports, {
+  keyOrAdapterPresentFromMeta: () => keyOrAdapterPresentFromMeta,
+  normalizeFaceBoxNorm: () => normalizeFaceBoxNorm,
+  readFaceBoxNormFromMeta: () => readFaceBoxNormFromMeta,
+  readProvisionalFaceBoxFromMeta: () => readProvisionalFaceBoxFromMeta
+});
+function num(v) {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function clamp012(n) {
+  return Math.max(0, Math.min(1, n));
+}
+function normalizeFaceBoxNorm(raw, imageSize) {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw;
+  const top = num(o.top ?? o.y0 ?? o.ymin);
+  const bottom = num(o.bottom ?? o.y1 ?? o.ymax);
+  const left = num(o.left ?? o.x0 ?? o.xmin);
+  const right = num(o.right ?? o.x1 ?? o.xmax);
+  if (top != null && bottom != null && left != null && right != null) {
+    const looksPx = Math.max(top, bottom, left, right) > 1.5;
+    if (looksPx) {
+      const w2 = num(imageSize?.w ?? o.imageWidth ?? o.frameW) ?? 0;
+      const h2 = num(imageSize?.h ?? o.imageHeight ?? o.frameH) ?? 0;
+      if (w2 > 0 && h2 > 0) {
+        return {
+          top: clamp012(top / h2),
+          bottom: clamp012(bottom / h2),
+          left: clamp012(left / w2),
+          right: clamp012(right / w2)
+        };
+      }
+      return null;
+    }
+    return {
+      top: clamp012(top),
+      bottom: clamp012(bottom),
+      left: clamp012(left),
+      right: clamp012(right)
+    };
+  }
+  const x = num(o.x ?? o.left);
+  const y = num(o.y ?? o.top);
+  const w = num(o.w ?? o.width);
+  const h = num(o.h ?? o.height);
+  if (x != null && y != null && w != null && h != null && w > 0 && h > 0) {
+    const looksPx = Math.max(x, y, w, h) > 1.5;
+    if (looksPx) {
+      const iw = num(imageSize?.w ?? o.imageWidth ?? o.frameW) ?? 0;
+      const ih = num(imageSize?.h ?? o.imageHeight ?? o.frameH) ?? 0;
+      if (iw > 0 && ih > 0) {
+        return {
+          left: clamp012(x / iw),
+          top: clamp012(y / ih),
+          right: clamp012((x + w) / iw),
+          bottom: clamp012((y + h) / ih)
+        };
+      }
+      return null;
+    }
+    return {
+      left: clamp012(x),
+      top: clamp012(y),
+      right: clamp012(x + w),
+      bottom: clamp012(y + h)
+    };
+  }
+  return null;
+}
+function readFaceBoxNormFromMeta(meta4) {
+  if (!meta4) return null;
+  const imageSize = {
+    w: num(meta4.imageWidth ?? meta4.frameW ?? meta4.imageSize?.w) ?? void 0,
+    h: num(meta4.imageHeight ?? meta4.frameH ?? meta4.imageSize?.h) ?? void 0
+  };
+  const candidates = [
+    meta4.faceBoxNorm,
+    meta4.compositionFaceBox,
+    meta4.vlmFaceBox,
+    meta4.faceBox,
+    meta4.poseEvidence?.faceBox,
+    meta4.vlm?.faceBox,
+    meta4.stillJudge?.faceBoxNorm
+  ];
+  for (const c of candidates) {
+    const box = normalizeFaceBoxNorm(c, imageSize);
+    if (box) return box;
+  }
+  return null;
+}
+function readProvisionalFaceBoxFromMeta(meta4) {
+  if (!meta4) return null;
+  const imageSize = {
+    w: num(meta4.imageWidth ?? meta4.frameW ?? meta4.imageSize?.w) ?? void 0,
+    h: num(meta4.imageHeight ?? meta4.frameH ?? meta4.imageSize?.h) ?? void 0
+  };
+  const candidates = [meta4.localSoftFaceBox, meta4.faceBoxNormProvisional];
+  for (const c of candidates) {
+    const box = normalizeFaceBoxNorm(c, imageSize);
+    if (box) return box;
+  }
+  return null;
+}
+function keyOrAdapterPresentFromMeta(meta4) {
+  if (!meta4) return false;
+  if (meta4.keyOptional === true) return false;
+  return Boolean(meta4.visualPassAt || meta4.vlmKeyPresent === true || meta4.keyOrAdapterPresent === true);
+}
+var init_faceBoxNormFromMeta = __esm({
+  "src/ruleEngine/compilers/faceBoxNormFromMeta.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/softFaceBoxHeuristic.ts
+var softFaceBoxHeuristic_exports = {};
+__export(softFaceBoxHeuristic_exports, {
+  resolveFaceBoxForCompose: () => resolveFaceBoxForCompose,
+  suggestSoftFaceBoxForFraming: () => suggestSoftFaceBoxForFraming
+});
+function suggestSoftFaceBoxForFraming(input) {
+  const size = String(input.shotSize ?? "");
+  const vd = String(input.visualDescription ?? "");
+  const faceish = /近景|特写|大特写|MCU|CU|ecu|face/i.test(size) || /must/i.test(String(input.faceBudget ?? "")) || /面容|抬视线|口型/.test(vd);
+  if (!faceish) return null;
+  const ecu = /大特写|ecu|ECU/i.test(size);
+  const cu = /特写|(^|[^近])景?特写|CU\b/i.test(size) && !ecu;
+  if (ecu) {
+    return {
+      top: 0.1,
+      bottom: 0.7,
+      left: 0.2,
+      right: 0.8,
+      provisional: true,
+      source: "soft_heuristic",
+      reason: "ecu_template"
+    };
+  }
+  if (cu || /特写/.test(size)) {
+    return {
+      top: 0.08,
+      bottom: 0.6,
+      left: 0.22,
+      right: 0.78,
+      provisional: true,
+      source: "soft_heuristic",
+      reason: "cu_template"
+    };
+  }
+  return {
+    top: 0.1,
+    bottom: 0.55,
+    left: 0.25,
+    right: 0.75,
+    provisional: true,
+    source: "soft_heuristic",
+    reason: "mcu_near_template"
+  };
+}
+function resolveFaceBoxForCompose(input) {
+  if (input.metaBox) return { box: input.metaBox, provisional: false };
+  if (input.localSoftBox) {
+    return { box: input.localSoftBox, provisional: true, reason: "local_soft_luma" };
+  }
+  const soft = suggestSoftFaceBoxForFraming(input);
+  if (!soft) return { box: null, provisional: false };
+  const { provisional: _p, source: _s, reason, ...box } = soft;
+  return { box, provisional: true, reason };
+}
+var init_softFaceBoxHeuristic = __esm({
+  "src/ruleEngine/compilers/softFaceBoxHeuristic.ts"() {
+    "use strict";
   }
 });
 
@@ -248882,10 +249556,10 @@ function buildKneelSwordChildren() {
     confidence: 1
   }));
 }
-function durationForRole(role, hasDialogue2) {
+function durationForRole(role, hasDialogue3) {
   const d = loadStillIdentityDoctrine();
   const tiers = d.oneBeat?.durationTiers ?? {};
-  if (hasDialogue2) return Number(tiers.withDialogue) || 4;
+  if (hasDialogue3) return Number(tiers.withDialogue) || 4;
   return Number(tiers[role]) || (role === "action" ? 3 : 2);
 }
 function maxExpandBudget() {
@@ -248950,15 +249624,15 @@ function splitClausesByBeat(text2) {
     const shotSize = role === "insert" ? "\u5927\u7279\u5199" : role === "reaction" ? "\u7279\u5199" : "\u8FD1\u666F";
     const tags = role === "insert" ? ["prop_insert", "reveal"] : role === "reaction" ? ["reaction", "face_cu"] : ["reveal"];
     const desc = /[。；;]$/.test(p3) ? p3 : `${p3}\u3002`;
-    const hasDialogue2 = i === use.length - 1 && peeled.dialogueLines.length > 0;
+    const hasDialogue3 = i === use.length - 1 && peeled.dialogueLines.length > 0;
     return {
       role,
       shotSize,
       tags,
       visualDescription: `${shotSize}\u3002${desc.replace(/^(大特写|特写|近景|中景)[。．.\s]*/, "")}`,
-      hasDialogue: hasDialogue2,
+      hasDialogue: hasDialogue3,
       osLines: i === 0 ? peeled.osLines : void 0,
-      duration: durationForRole(role, hasDialogue2),
+      duration: durationForRole(role, hasDialogue3),
       confidence
     };
   });
@@ -250820,14 +251494,14 @@ __export(litEnhanceRecipeCollision_exports, {
   resolveContactPropVsFaceIdentity: () => resolveContactPropVsFaceIdentity
 });
 function loadLitEnhanceRecipeCollisions() {
-  if (cached6) return cached6;
-  cached6 = readFixtureJson("lit_enhance_recipe_collision.json", {
+  if (cached7) return cached7;
+  cached7 = readFixtureJson("lit_enhance_recipe_collision.json", {
     collisions: []
   });
-  return cached6;
+  return cached7;
 }
 function resetLitEnhanceRecipeCollisionCache() {
-  cached6 = null;
+  cached7 = null;
 }
 function whenMatched(when, flags) {
   return when.every((w) => {
@@ -250901,12 +251575,12 @@ function resolveContactPropVsFaceIdentity(input) {
     sourceTag: "collision.contact_prop_vs_face_identity"
   };
 }
-var cached6;
+var cached7;
 var init_litEnhanceRecipeCollision = __esm({
   "src/ruleEngine/design/litEnhanceRecipeCollision.ts"() {
     "use strict";
     init_fixturesPath();
-    cached6 = null;
+    cached7 = null;
   }
 });
 
@@ -250929,7 +251603,15 @@ function doctrineAvEnhanceFallback(input) {
     lines.push("\u6C14\u6C1B\u4FDD\u7559\uFF1A\u6696\u5149\u70DB\u706B\u53EF\u8FA8");
   }
   let videoMotionHint;
-  if (input.seal?.poseOccupancy === "bend_pickup") {
+  const real = String(input.realizationOccupancy ?? input.seal?.poseOccupancy ?? "");
+  const degraded = input.realizationDegraded === true;
+  if (degraded && real === "kneel_hold") {
+    videoMotionHint = "Motion\u8D77\u6001\uFF1A\u8DEA\u6301\u8FD1\u5730\u6301\u7EB8\uFF0C\u8D77\u6001\u4E0E\u9759\u5E27\u4E00\u81F4\uFF1B\u7981\u6B62\u5F2F\u8170\u4FEF\u8EAB\u5F00\u573A";
+    sources.push("avEnhance.realization_kneel");
+  } else if (degraded && real === "stand_hold") {
+    videoMotionHint = "Motion\u8D77\u6001\uFF1A\u7AD9\u59FF\u6301\u7EB8\uFF0C\u8D77\u6001\u4E0E\u9759\u5E27\u4E00\u81F4\uFF1B\u7981\u6B62\u5F2F\u8170\u4FEF\u8EAB\u5F00\u573A";
+    sources.push("avEnhance.realization_stand");
+  } else if (input.seal?.poseOccupancy === "bend_pickup") {
     videoMotionHint = "Motion\u8D77\u6001\uFF1A\u5F2F\u8170\u6361\u62FE\u5DF2\u89E6\u5730\uFF0C\u7EB8\u5728\u4E3B\u624B\uFF0C\u7981\u6B62\u4ECE\u80F8\u524D\u4E3E\u5361\u8D77\u5E45";
   } else if (input.seal?.primaryObjective === "contact_geom") {
     videoMotionHint = "Motion\u8D77\u6001\uFF1A\u8D34\u5408\u843D\u70B9\u5DF2\u5230\u4F4D\uFF0C\u7981\u6B62\u300C\u8FDB\u5165\u8D34\u5408\u300D\u91CD\u6F14";
@@ -250978,7 +251660,9 @@ function enhanceStillAvAfterSeal(input) {
   const fb = doctrineAvEnhanceFallback({
     seal: input.seal,
     atmosphere: input.atmosphere,
-    hasSkirtFragment: input.hasSkirtFragment
+    hasSkirtFragment: input.hasSkirtFragment,
+    realizationOccupancy: input.realizationOccupancy,
+    realizationDegraded: input.realizationDegraded
   });
   return applyAvEnhanceUnderSeal({
     seal: input.seal,
@@ -251704,6 +252388,55 @@ function layerShootableExtras(ctx, parts, sources, mode) {
     parts.push(`\u666F\u522B\uFF1A${shotZh}`);
     sources.push("shot.shotSize");
   }
+  try {
+    const { softGrammarHints: softGrammarHints2 } = (init_cinematicShotGrammar(), __toCommonJS(cinematicShotGrammar_exports));
+    const hints = softGrammarHints2(["headroom", "lookingRoom", "axis", "axis180"]);
+    for (const h of hints) {
+      if (h && !parts.some((p3) => p3.includes(h))) {
+        parts.push(h);
+        sources.push("cinematic.softHints");
+      }
+    }
+    const { assessComposition: assessComposition2, injectCompositionSoftHints: injectCompositionSoftHints2 } = (init_compositionAssess(), __toCommonJS(compositionAssess_exports));
+    const { readFaceBoxNormFromMeta: readFaceBoxNormFromMeta2, keyOrAdapterPresentFromMeta: keyOrAdapterPresentFromMeta2 } = (init_faceBoxNormFromMeta(), __toCommonJS(faceBoxNormFromMeta_exports));
+    const { resolveFaceBoxForCompose: resolveFaceBoxForCompose2 } = (init_softFaceBoxHeuristic(), __toCommonJS(softFaceBoxHeuristic_exports));
+    const metaBag = ctx.shotMeta ?? ctx.stillMeta ?? ctx;
+    const metaBox = readFaceBoxNormFromMeta2(metaBag);
+    const { readProvisionalFaceBoxFromMeta: readProvisionalFaceBoxFromMeta2 } = (init_faceBoxNormFromMeta(), __toCommonJS(faceBoxNormFromMeta_exports));
+    const localSoft = readProvisionalFaceBoxFromMeta2(metaBag);
+    const resolved = resolveFaceBoxForCompose2({
+      metaBox,
+      localSoftBox: localSoft,
+      shotSize: String(ctx.shotSize ?? ""),
+      faceBudget: String(ctx.faceBudget ?? ""),
+      visualDescription: ctx.visualDescription
+    });
+    const softComp = assessComposition2({
+      keyOrAdapterPresent: keyOrAdapterPresentFromMeta2(metaBag) && !resolved.provisional && Boolean(metaBox),
+      faceBoxNorm: resolved.provisional ? null : resolved.box,
+      provisionalFaceBoxNorm: resolved.provisional ? resolved.box : null,
+      visualDescription: ctx.visualDescription,
+      promptUsed: parts.join("\n"),
+      shotSize: String(ctx.shotSize ?? ""),
+      spatialRelation: typeof ctx.spatialRelation === "string" ? ctx.spatialRelation : void 0,
+      faceBudget: String(ctx.faceBudget ?? "")
+    });
+    const nextParts = injectCompositionSoftHints2(parts, softComp.findings);
+    if (nextParts.length !== parts.length) {
+      parts.length = 0;
+      parts.push(...nextParts);
+      sources.push(
+        softComp.measured ? "composition.measured" : softComp.provisionalSoft ? "composition.provisionalSoft" : "composition.softNoKey"
+      );
+    }
+    if (resolved.provisional && resolved.reason) {
+      sources.push(`composition.softFaceBox:${resolved.reason}`);
+    }
+    if (softComp.pixelDimStatus) {
+      ctx.pixelDimStatus = softComp.pixelDimStatus;
+    }
+  } catch {
+  }
   if (ctx.spatialRelation) {
     let stripFullSecondary = false;
     try {
@@ -251988,8 +252721,8 @@ function stripStaleBindingFromPrevious(body) {
     "\u6743\u529B\u4F4D"
   ];
   for (const prefix of prefixes) {
-    const esc3 = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    next = next.replace(new RegExp(`${esc3}[^\u3002\uFF1B;\\n]*[\u3002\uFF1B;]?`, "g"), " ");
+    const esc6 = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    next = next.replace(new RegExp(`${esc6}[^\u3002\uFF1B;\\n]*[\u3002\uFF1B;]?`, "g"), " ");
   }
   try {
     const { stripIdentityNoiseFromBody: stripIdentityNoiseFromBody2, dedupeNarrativeClauses: dedupeNarrativeClauses2 } = (init_stillIdentitySsot(), __toCommonJS(stillIdentitySsot_exports));
@@ -254574,8 +255307,8 @@ async function synthesizePropSoftPlate(input) {
   <text x="256" y="280" text-anchor="middle" font-size="36" fill="#111">${escapeXml(label)}</text>
 </svg>`;
   }
-  const { default: sharp8 } = await import("sharp");
-  const buf = await sharp8(Buffer.from(svg)).jpeg({ quality: 88 }).toBuffer();
+  const { default: sharp9 } = await import("sharp");
+  const buf = await sharp9(Buffer.from(svg)).jpeg({ quality: 88 }).toBuffer();
   return {
     base64: buf.toString("base64"),
     kind: hint === "thin_sheets" ? "thin_sheets" : cls || hint || "generic",
@@ -254607,8 +255340,8 @@ async function synthesizeAtmospherePlate(input) {
   <ellipse cx="140" cy="360" rx="10" ry="18" fill="#fff6d0" opacity="0.85"/>
 </svg>`;
   try {
-    const { default: sharp8 } = await import("sharp");
-    const buf = await sharp8(Buffer.from(svg)).jpeg({ quality: 86 }).toBuffer();
+    const { default: sharp9 } = await import("sharp");
+    const buf = await sharp9(Buffer.from(svg)).jpeg({ quality: 86 }).toBuffer();
     return { base64: buf.toString("base64"), kind: `atm:${atm}` };
   } catch {
     return null;
@@ -255395,8 +256128,8 @@ __export(stillCompositionSpec_exports, {
   selectLayoutFamily: () => selectLayoutFamily
 });
 function loadStillCompositionSpec() {
-  if (cached7) return cached7;
-  cached7 = {
+  if (cached8) return cached8;
+  cached8 = {
     ...FALLBACK5,
     ...readFixtureJson("still_composition_spec.json", {}),
     families: {
@@ -255404,10 +256137,10 @@ function loadStillCompositionSpec() {
       ...readFixtureJson("still_composition_spec.json", {}).families
     }
   };
-  return cached7;
+  return cached8;
 }
 function resetStillCompositionSpecCache() {
-  cached7 = null;
+  cached8 = null;
 }
 function hitSignal(blob, patterns) {
   if (!patterns?.length) return false;
@@ -255619,7 +256352,7 @@ function resolveRepairAction(input) {
   if (raw === "swap" || raw === "preserve" || raw === "focus" || raw === "regen") return raw;
   return "focus";
 }
-var FALLBACK5, cached7;
+var FALLBACK5, cached8;
 var init_stillCompositionSpec = __esm({
   "src/ruleEngine/qc/stillCompositionSpec.ts"() {
     "use strict";
@@ -255651,7 +256384,7 @@ var init_stillCompositionSpec = __esm({
       castCardinalityLineTemplate: "\u51FA\u955C\u4EBA\u6570\uFF1A\u4EC5{N}\u4EBA\uFF08{NAMES}\uFF09\uFF1B\u7981\u6B62\u7B2C{Nplus1}\u4EBA\u3001\u8DEF\u4EBA\u3001\u7FA4\u50CF\u3001\u91CD\u590D\u5206\u8EAB\u3002",
       castCardinalityEmptyTemplate: "\u51FA\u955C\u4EBA\u6570\uFF1A0\u4EBA\uFF1B\u7981\u6B62\u4EBA\u7269\u4E3B\u4F53\u62A2\u620F\u3002"
     };
-    cached7 = null;
+    cached8 = null;
   }
 });
 
@@ -256534,12 +257267,12 @@ __export(stillLiteraryIntentSsot_exports, {
   stripCollidingRecipeLayers: () => stripCollidingRecipeLayers
 });
 function loadLiteraryIntentDoctrine() {
-  if (cached8) return cached8;
-  cached8 = { ...FALLBACK7, ...readFixtureJson("still_literary_intent_doctrine.json", {}) };
-  return cached8;
+  if (cached9) return cached9;
+  cached9 = { ...FALLBACK7, ...readFixtureJson("still_literary_intent_doctrine.json", {}) };
+  return cached9;
 }
 function resetLiteraryIntentDoctrineCache() {
-  cached8 = null;
+  cached9 = null;
 }
 function hasSeatingOrPowerSignals(text2, doctrine) {
   const d = doctrine ?? loadLiteraryIntentDoctrine();
@@ -256803,7 +257536,7 @@ function assertPromptSurvivesIntent(input) {
     characterNames: input.characterNames
   });
 }
-var NEVER_SEATING_SIGNAL, FALLBACK7, cached8;
+var NEVER_SEATING_SIGNAL, FALLBACK7, cached9;
 var init_stillLiteraryIntentSsot = __esm({
   "src/ruleEngine/compilers/stillLiteraryIntentSsot.ts"() {
     "use strict";
@@ -256870,7 +257603,7 @@ var init_stillLiteraryIntentSsot = __esm({
       picturePadsAtmosphereOnly: true,
       maxEditHints: 8
     };
-    cached8 = null;
+    cached9 = null;
   }
 });
 
@@ -257454,6 +258187,208 @@ var init_resolveTrackStoryboard = __esm({
   }
 });
 
+// src/ruleEngine/compilers/policyPrecedence.ts
+function mayApplyRealizationAdapt(input) {
+  if (input.trunkBlockers?.length) return false;
+  if (input.handoffBlock === true) return false;
+  if (input.poseMismatchBlock === true) return false;
+  return true;
+}
+function mayApplyEpisodePolish(input) {
+  if (!mayApplyRealizationAdapt(input)) return false;
+  return input.adaptApplied !== false;
+}
+var init_policyPrecedence = __esm({
+  "src/ruleEngine/compilers/policyPrecedence.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/realizationAdaptFlags.ts
+function isRealizationAdaptEnabled() {
+  const v = String(process.env.REALIZATION_ADAPT_ENABLE ?? "1").trim();
+  return v !== "0" && v.toLowerCase() !== "false";
+}
+function isEpisodeAvEnhanceEnabled() {
+  const v = String(process.env.EPISODE_AV_ENHANCE_ENABLE ?? "1").trim();
+  return v !== "0" && v.toLowerCase() !== "false";
+}
+function episodePreflightBudgetMs() {
+  const n = Number(process.env.EPISODE_AV_PREFLIGHT_BUDGET_MS ?? 8e3);
+  return Number.isFinite(n) && n > 0 ? n : 8e3;
+}
+var init_realizationAdaptFlags = __esm({
+  "src/ruleEngine/compilers/realizationAdaptFlags.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/realizationAdapt.ts
+var realizationAdapt_exports = {};
+__export(realizationAdapt_exports, {
+  buildRealizationAdaptPack: () => buildRealizationAdaptPack,
+  loadRealizationMotionAdaptFixture: () => loadRealizationMotionAdaptFixture,
+  motionContradictsRealization: () => motionContradictsRealization,
+  realizationAdaptPersistSlice: () => realizationAdaptPersistSlice,
+  shouldPersistRealizationAdapt: () => shouldPersistRealizationAdapt
+});
+function loadRealizationMotionAdaptFixture() {
+  return readFixtureJson("realization_motion_adapt.json", { mappings: {}, emotionWords: {} });
+}
+function mappingKey(intent, realization) {
+  return `${intent}:${realization}`;
+}
+function fillPhaseTemplate(tmpl, dur) {
+  const t1 = Math.max(0.5, Math.round(dur / 3 * 10) / 10);
+  const t2 = Math.max(t1 + 0.5, Math.round(2 * dur / 3 * 10) / 10);
+  return tmpl.replace(/\{t1\}/g, String(t1)).replace(/\{t2\}/g, String(t2)).replace(/\{dur\}/g, String(dur));
+}
+function vdBendPhases(vd, dur) {
+  const d = Math.max(2, dur);
+  const a = Math.max(0.5, Math.round(d / 3 * 10) / 10);
+  const b = Math.max(a + 0.5, Math.round(2 * d / 3 * 10) / 10);
+  const phases = [];
+  if (/弯腰|俯身/.test(vd)) phases.push(`0s-${a}s: \u5F2F\u8170\u4FEF\u8EAB`);
+  if (/捡|拾|触及/.test(vd)) phases.push(`${phases.length ? a : 0}s-${b}s: \u6307\u5C16\u89E6\u53CA\u7269\u4EF6`);
+  if (/捏|攥|握/.test(vd)) phases.push(`${phases.length ? b : a}s-${d}s: \u634F\u7D27\u7EB8\u7F18`);
+  return phases;
+}
+function emotionBoost(intensity, fixture) {
+  if (intensity == null || !Number.isFinite(intensity)) return void 0;
+  const key = String(Math.round(intensity));
+  return fixture.emotionWords?.[key];
+}
+function extractAtmosphere(vd, stillMeta) {
+  const softEnv = stillMeta?.refsRoles?.includes("softEnv");
+  if (/烛|侧光|暖光|雨|雾|月光/.test(vd)) {
+    const m = vd.match(/烛[^，,。；;]{0,6}|侧光[^，,。；;]{0,6}|暖光[^，,。；;]{0,6}/);
+    if (m?.[0]) return m[0].slice(0, 12);
+  }
+  if (softEnv) return "\u573A\u666F\u8F6F\u73AF\u5883\u8FDE\u7EED\uFF0C\u6696\u5149\u70DB\u706B\u53EF\u8FA8";
+  return void 0;
+}
+function buildRealizationAdaptPack(input) {
+  const vd = String(input.visualDescription ?? "").trim();
+  const dur = Math.max(1, Math.round(Number(input.durationSec) || 3));
+  const fixture = loadRealizationMotionAdaptFixture();
+  const sources = ["realizationAdapt.build"];
+  const realization = input.realization ?? resolveRealizationState({
+    intentOccupancy: input.intentOccupancy,
+    visualDescription: vd,
+    localSignals: input.localSignals,
+    localHeuristicOk: input.localHeuristicOk
+  });
+  const intent = realization.intentOccupancy;
+  const real = input.realizationOccupancy ?? realization.realizationOccupancy;
+  const degraded = input.realizationDegraded ?? realization.realizationDegraded;
+  const key = mappingKey(intent, real);
+  const mapping = fixture.mappings?.[key] ?? fixture.mappings?.[`${intent}:${intent}`];
+  const enabled = input.enable !== false && isRealizationAdaptEnabled() && mayApplyRealizationAdapt({ trunkBlockers: input.trunkBlockers });
+  if (!enabled || !mapping) {
+    const phases = vdBendPhases(vd, dur);
+    return {
+      intentOccupancy: intent,
+      realizationOccupancy: real,
+      realizationDegraded: degraded,
+      adapted: false,
+      mappingKey: key,
+      motionPhases: phases,
+      motionBody: phases.join("\n"),
+      motionStartHint: "",
+      cameraPolicy: input.dialoguePresent ? "\u9759\u6B62" : "\u8F7B\u5FAE\u8FD0\u955C",
+      i2vCriticalFacts: [],
+      forbiddenMotionTokens: [],
+      sources: [...sources, "realizationAdapt.disabled_or_no_mapping"]
+    };
+  }
+  let motionPhases = [];
+  if (mapping.useVdPhases) {
+    motionPhases = vdBendPhases(vd, dur);
+    sources.push("realizationAdapt.vd_phases");
+  } else if (mapping.phases?.length) {
+    motionPhases = mapping.phases.map((p3) => fillPhaseTemplate(p3, dur));
+    sources.push("realizationAdapt.fixture_phases");
+  }
+  const perf = mapping.performanceBoost ?? emotionBoost(input.emotionIntensity, fixture) ?? (typeof input.microExpression === "object" && input.microExpression?.eyes === "focused" ? "\u773C\u795Efocused" : void 0);
+  const atmosphere = mapping.atmosphereBoost ?? extractAtmosphere(vd, input.stillMeta) ?? void 0;
+  const sfx = input.sfxIntent ?? input.avCausality?.audioBeat ?? mapping.sfxBeat ?? (/纸|休书|捏/.test(vd) ? "\u7EB8\u5F20\u6469\u64E6" : void 0);
+  const footnote = degraded && intent === "bend_pickup" && real !== "bend_pickup" ? mapping.narrativeFootnote ?? realizationDegradedUserNote(realization) : void 0;
+  const motionStartHint = String(mapping.motionStartHint ?? "").trim();
+  const i2vFacts = [...mapping.i2vCriticalFacts ?? []];
+  if (degraded) i2vFacts.push("\u8D77\u6001\u4E0E\u9759\u5E27\u4E00\u81F4");
+  return {
+    intentOccupancy: intent,
+    realizationOccupancy: real,
+    realizationDegraded: degraded,
+    adapted: degraded || real !== intent,
+    mappingKey: key,
+    motionPhases,
+    motionBody: motionPhases.join("\n"),
+    motionStartHint,
+    cameraPolicy: input.dialoguePresent ? "\u9759\u6B62" : String(mapping.cameraPolicy ?? "\u9759\u6B62"),
+    atmosphereBoost: atmosphere,
+    sfxBeat: sfx ? String(sfx).slice(0, 24) : void 0,
+    performanceBoost: perf,
+    narrativeFootnote: footnote,
+    i2vCriticalFacts: [...new Set(i2vFacts)],
+    forbiddenMotionTokens: mapping.forbiddenMotionTokens ?? [],
+    sources
+  };
+}
+function motionContradictsRealization(input) {
+  if (!input.realizationDegraded && input.adaptPack?.adapted !== true) return false;
+  const real = input.realizationOccupancy ?? input.adaptPack?.realizationOccupancy;
+  const motion = String(input.motionBlob ?? "");
+  if (!motion || !real) return false;
+  const forbidden = input.adaptPack?.forbiddenMotionTokens ?? (real === "kneel_hold" || real === "stand_hold" ? ["\u5F2F\u8170\u4FEF\u8EAB", "\u5F2F\u8170\u6361\u62FE", "\u4FEF\u8EAB\u6361"] : []);
+  return forbidden.some((tok) => {
+    try {
+      return new RegExp(tok, "i").test(motion);
+    } catch {
+      return motion.includes(tok);
+    }
+  });
+}
+function realizationAdaptPersistSlice(pack2) {
+  return {
+    realizationAdaptPack: {
+      mappingKey: pack2.mappingKey,
+      adapted: pack2.adapted,
+      motionStartHint: pack2.motionStartHint,
+      motionPhases: pack2.motionPhases,
+      cameraPolicy: pack2.cameraPolicy,
+      atmosphereBoost: pack2.atmosphereBoost,
+      sfxBeat: pack2.sfxBeat,
+      performanceBoost: pack2.performanceBoost,
+      narrativeFootnote: pack2.narrativeFootnote,
+      jlCutTimeline: pack2.jlCutTimeline,
+      i2vCriticalFacts: pack2.i2vCriticalFacts,
+      sources: pack2.sources
+    },
+    intentOccupancy: pack2.intentOccupancy,
+    realizationOccupancy: pack2.realizationOccupancy,
+    realizationDegraded: pack2.realizationDegraded,
+    videoMotionStartHint: pack2.motionStartHint || void 0,
+    i2vCriticalFacts: pack2.i2vCriticalFacts.length ? pack2.i2vCriticalFacts : void 0,
+    jlCutTimeline: pack2.jlCutTimeline || void 0
+  };
+}
+function shouldPersistRealizationAdapt(pack2) {
+  if (pack2.adapted) return true;
+  if (String(pack2.narrativeFootnote ?? "").trim()) return true;
+  if (pack2.jlCutTimeline?.note) return true;
+  return false;
+}
+var init_realizationAdapt = __esm({
+  "src/ruleEngine/compilers/realizationAdapt.ts"() {
+    "use strict";
+    init_fixturesPath();
+    init_realizationLadder();
+    init_policyPrecedence();
+    init_realizationAdaptFlags();
+  }
+});
+
 // src/ruleEngine/design/mouthXorHeal.ts
 var mouthXorHeal_exports = {};
 __export(mouthXorHeal_exports, {
@@ -257665,6 +258600,30 @@ function extractImplBind(shot, shotMeta) {
   const promptAnchors = Array.isArray(anchorsRaw) ? anchorsRaw.map((a) => String(a).trim()).filter(Boolean).slice(0, 6) : typeof anchorsRaw === "string" && anchorsRaw.trim() ? [anchorsRaw.trim()] : null;
   return { sfxIntent, avCausality, promptAnchors };
 }
+function extractRealizationAdaptPack(shotMeta, input) {
+  const raw = shotMeta?.realizationAdaptPack;
+  if (raw?.motionBody || raw?.motionPhases?.length) return raw;
+  try {
+    const { buildRealizationAdaptPack: buildRealizationAdaptPack2 } = (init_realizationAdapt(), __toCommonJS(realizationAdapt_exports));
+    const meta4 = shotMeta ?? {};
+    const hasReal = meta4.realizationOccupancy || meta4.realizationDegraded === true || meta4.intentOccupancy || /弯腰|捡起/.test(String(input?.visualDescription ?? ""));
+    if (!hasReal && !input?.visualDescription) return raw ?? null;
+    return buildRealizationAdaptPack2({
+      visualDescription: input?.visualDescription,
+      durationSec: input?.durationSec,
+      dialoguePresent: input?.dialoguePresent,
+      intentOccupancy: meta4.intentOccupancy,
+      realizationOccupancy: meta4.realizationOccupancy,
+      realizationDegraded: meta4.realizationDegraded === true,
+      stillMeta: meta4,
+      emotionIntensity: input?.emotionIntensity,
+      sfxIntent: String(meta4.sfxIntent ?? "").trim() || null,
+      avCausality: meta4.avCausality
+    });
+  } catch {
+    return raw ?? null;
+  }
+}
 function extractCompositionSpatial(shot, shotMeta) {
   const sd = shot?.shotDesign ?? shotMeta?.shotDesign;
   const narr2 = shot?.narrative ?? shotMeta?.narrative;
@@ -257854,6 +258813,12 @@ function hydrateShotCompileContextSync(input) {
     missingDialogueWhenExpected: expectsDial && videoIntent.intentClass === "speak_lip" && dialogueLines3.length === 0
   };
   const canAuthorFromDesign = Boolean(visualDescription || dialogueLines3.length > 0);
+  const realizationAdaptPack = extractRealizationAdaptPack(meta4, {
+    visualDescription,
+    durationSec: durationSec > 0 ? durationSec : authorDurationSec || 3,
+    dialoguePresent: dialogueLines3.length > 0,
+    emotionIntensity
+  });
   return {
     projectId: input.projectId,
     shotIndex,
@@ -257893,7 +258858,9 @@ function hydrateShotCompileContextSync(input) {
     gaps,
     canAuthorFromDesign,
     vendorId: input.vendorId ?? null,
-    warnings
+    warnings,
+    shotMeta: meta4,
+    realizationAdaptPack
   };
 }
 async function hydrateShotCompileContext(db2, input) {
@@ -258132,6 +259099,64 @@ var init_staleSeedDetector = __esm({
   "src/ruleEngine/compilers/staleSeedDetector.ts"() {
     "use strict";
     init_dialogueCoverage();
+  }
+});
+
+// src/ruleEngine/compilers/jlCutTimeline.ts
+var jlCutTimeline_exports = {};
+__export(jlCutTimeline_exports, {
+  DEFAULT_J_CUT_AUDIO_LEAD_MS: () => DEFAULT_J_CUT_AUDIO_LEAD_MS,
+  DEFAULT_L_CUT_AUDIO_LAG_MS: () => DEFAULT_L_CUT_AUDIO_LAG_MS,
+  buildJlCutTimelineSlice: () => buildJlCutTimelineSlice,
+  detectJlCutFromAvBeats: () => detectJlCutFromAvBeats,
+  jlCutTimelineEgressNote: () => jlCutTimelineEgressNote,
+  mergeJlCutTimeline: () => mergeJlCutTimeline
+});
+function detectJlCutFromAvBeats(avBeats) {
+  const beats = Array.isArray(avBeats) ? avBeats : [];
+  return {
+    wantsJ: beats.some((b) => /J.?cut|下句声先入|声先入/i.test(String(b))),
+    wantsL: beats.some((b) => /L.?cut|声延至下|本镜声延/i.test(String(b)))
+  };
+}
+function buildJlCutTimelineSlice(input) {
+  const wantsJ = Boolean(input.wantsJ);
+  const wantsL = Boolean(input.wantsL);
+  if (!wantsJ && !wantsL) return null;
+  const jCutAudioLeadMs = wantsJ ? input.jLeadMs ?? DEFAULT_J_CUT_AUDIO_LEAD_MS : void 0;
+  const lCutAudioLagMs = wantsL ? input.lLagMs ?? DEFAULT_L_CUT_AUDIO_LAG_MS : void 0;
+  const bits = [];
+  if (jCutAudioLeadMs != null) bits.push(`J-cut\u58F0\u5148\u5165${jCutAudioLeadMs}ms`);
+  if (lCutAudioLagMs != null) bits.push(`L-cut\u58F0\u5EF6${lCutAudioLagMs}ms`);
+  return {
+    jCutAudioLeadMs,
+    lCutAudioLagMs,
+    note: bits.join("\uFF1B"),
+    source: input.source ?? "episode_polish"
+  };
+}
+function mergeJlCutTimeline(prev, next) {
+  if (!prev && !next) return null;
+  const j = next?.jCutAudioLeadMs ?? prev?.jCutAudioLeadMs;
+  const l = next?.lCutAudioLagMs ?? prev?.lCutAudioLagMs;
+  return buildJlCutTimelineSlice({
+    wantsJ: j != null,
+    wantsL: l != null,
+    jLeadMs: j,
+    lLagMs: l,
+    source: next?.source ?? prev?.source ?? "episode_polish"
+  });
+}
+function jlCutTimelineEgressNote(slice) {
+  if (!slice?.note) return "";
+  return `\u65F6\u95F4\u7EBF\u8F6C\u573A\uFF1A${slice.note}`;
+}
+var DEFAULT_J_CUT_AUDIO_LEAD_MS, DEFAULT_L_CUT_AUDIO_LAG_MS;
+var init_jlCutTimeline = __esm({
+  "src/ruleEngine/compilers/jlCutTimeline.ts"() {
+    "use strict";
+    DEFAULT_J_CUT_AUDIO_LEAD_MS = 400;
+    DEFAULT_L_CUT_AUDIO_LAG_MS = 400;
   }
 });
 
@@ -258508,7 +259533,7 @@ function diagnoseVideoIntent(input) {
   else if (slots.includes("beatDuration")) primaryAction = "confirm_beat_duration";
   else if (slots.includes("videoIntentClass")) primaryAction = "confirm_enhance";
   else if (blocks.length) primaryAction = "confirm_enhance";
-  const ctaLabel = slots.includes("contactBeats") || slots.includes("executableBeats") ? "\u91CD\u7F16\u8BD1\u63A5\u89E6\u5206\u76F8 Motion" : primaryAction === "confirm_voice_mode" ? "\u786E\u8BA4\u5173\u95ED\u53E3\u578B" : primaryAction === "confirm_beat_duration" ? "\u786E\u8BA4\u8282\u62CD\u65F6\u957F" : primaryAction === "hand_edit_vd" ? "\u624B\u6539VD/\u53F0\u8BCD" : primaryAction === "confirm_enhance" ? "\u786E\u8BA4\u89C6\u9891\u8BBE\u8BA1\u4FEE\u590D" : "";
+  const ctaLabel = "\u667A\u80FD\u4FEE\u590D";
   return {
     ok: blocks.length === 0,
     findings,
@@ -258551,7 +259576,9 @@ function applyVideoIntentPatches(input) {
       s.duration = sec;
       applied.push(p3.id);
     } else if (p3.op === "set_video_intent") {
-      s.videoIntentClass = p3.after;
+      const gen = { ...s.generation ?? {} };
+      gen.adaptDiff = `intentSuggest:${p3.after}`;
+      s.generation = gen;
       applied.push(p3.id);
     } else if (p3.op === "append_motion_verb") {
       const gen = { ...s.generation ?? {} };
@@ -258898,6 +259925,43 @@ function scoreVideoDesignIntentFidelity(ctx, prompt) {
       actual: visual.slice(0, 48)
     });
   }
+  if (ctx.compositionBackground) {
+    const bg = ctx.compositionBackground.slice(0, 4);
+    items.push({
+      id: "composition_bg",
+      label: "\u80CC\u666F\u6784\u56FE\u951A",
+      pass: visual.includes(bg) || visual.includes("\u80CC\u666F"),
+      expected: ctx.compositionBackground.slice(0, 24),
+      actual: visual.slice(0, 48)
+    });
+  }
+  if (ctx.emotionIntensity != null && ctx.emotionIntensity >= 6) {
+    items.push({
+      id: "emotion_projection",
+      label: "\u60C5\u7EEA\u5F3A\u5EA6\u6295\u5F71\u5230\u8868\u6F14\u8BCD",
+      pass: /隐忍|决绝|情绪|表演/.test(motion + narrative) || narrative.includes(`\u60C5\u7EEA\u5F3A\u5EA6:${ctx.emotionIntensity}`),
+      expected: "\u9690\u5FCD\u51B3\u7EDD/\u60C5\u7EEA\u5F3A\u5EA6",
+      actual: (motion + narrative).slice(0, 48)
+    });
+  }
+  if (/休书|纸|捏紧/.test(vd) && !sfx) {
+    items.push({
+      id: "sfx_paper_friction_hint",
+      label: "\u7EB8\u5F20\u6469\u64E6\u97F3\u6548\u5E94\u8FDB\u5165 Audio",
+      pass: /纸张摩擦|摩擦/.test(audio),
+      expected: "\u7EB8\u5F20\u6469\u64E6",
+      actual: audio.slice(0, 48)
+    });
+  }
+  if ((ctx.videoIntent.intentClass === "speak_lip" || ctx.dialogueLines.length > 0) && /中景|全景/.test(String(ctx.shotSize ?? ""))) {
+    items.push({
+      id: "dialogue_near_shot",
+      label: "\u5BF9\u767D\u955C\u5236\u4F5C\u8FD1\u666F",
+      pass: /近景|特写/.test(camera),
+      expected: "\u8FD1\u666F",
+      actual: camera.slice(0, 32)
+    });
+  }
   if (ctx.audioPrompt && ctx.audioPrompt.length >= 4) {
     items.push({
       id: "voice_character",
@@ -258908,11 +259972,13 @@ function scoreVideoDesignIntentFidelity(ctx, prompt) {
     });
   }
   if (/弯腰|捡|捏紧|俯身/.test(vd)) {
+    const plateOk = /跪持|站姿持|抬视线|面容可读|触及|捏紧|捡/.test(motion);
+    const bendOk = /弯腰|俯身|触及|捏紧|捡/.test(motion);
     items.push({
       id: "motion_action_verbs",
       label: "VD \u52A8\u4F5C\u94FE\u8FDB Motion",
-      pass: /弯腰|俯身|触及|捏紧|捡/.test(motion),
-      expected: "\u5F2F\u8170/\u89E6\u53CA/\u634F\u7D27",
+      pass: bendOk || plateOk,
+      expected: "\u5F2F\u8170/\u8DEA\u6301/\u634F\u7D27",
       actual: motion.slice(0, 64)
     });
   }
@@ -259558,7 +260624,29 @@ function mapShotSizeLabel(raw, force) {
 }
 function buildFiveSectionFromContext(ctx) {
   const policy = ctx.videoIntent.policy;
-  const shotSize = policy.forceShotSize && (!ctx.shotSize || /cu|特写|close/i.test(ctx.shotSize)) ? policy.forceShotSize : mapShotSizeLabel(ctx.shotSize) || (policy.forceShotSize ?? "\u8FD1\u666F");
+  const hasDialEarly = ctx.dialogueLines.length > 0;
+  const authorShotLabel = mapShotSizeLabel(ctx.shotSize);
+  let shotSize = policy.forceShotSize && (!ctx.shotSize || /cu|特写|close/i.test(ctx.shotSize)) ? policy.forceShotSize : authorShotLabel || (policy.forceShotSize ?? "\u8FD1\u666F");
+  let shotSizeAuthorNote = "";
+  let adaptDiffShotSize = "";
+  const speakLike = hasDialEarly && (policy.audioMode === "dialogue_lip" || ctx.videoIntent.intentClass === "speak_lip");
+  if (speakLike) {
+    try {
+      const { shotSizeWiderThanNear: shotSizeWiderThanNear2, grammarDefaultForIntent: grammarDefaultForIntent2 } = (init_cinematicShotGrammar(), __toCommonJS(cinematicShotGrammar_exports));
+      const industry = grammarDefaultForIntent2("speak_lip");
+      if (shotSizeWiderThanNear2(shotSize) && industry?.shotSize) {
+        shotSizeAuthorNote = authorShotLabel || String(ctx.shotSize ?? "\u4E2D\u666F");
+        adaptDiffShotSize = `\u8BBE\u8BA1${shotSizeAuthorNote}\u2194\u5B9E\u73B0${industry.shotSize}`;
+        shotSize = industry.shotSize;
+      }
+    } catch {
+      if (/中景|全景|远景|ms|ws/i.test(shotSize)) {
+        shotSizeAuthorNote = shotSize;
+        adaptDiffShotSize = `\u8BBE\u8BA1${shotSize}\u2194\u5B9E\u73B0\u8FD1\u666F`;
+        shotSize = "\u8FD1\u666F";
+      }
+    }
+  }
   const dur = Math.max(1, Math.round(ctx.durationSec || 0));
   const rawVd = String(ctx.visualDescription ?? "").trim();
   const peeledVd = peelLiteraryBody(rawVd);
@@ -259585,35 +260673,43 @@ function buildFiveSectionFromContext(ctx) {
   let motion = policy.motionDefault;
   let motionFromContact = false;
   let motionMultiPhase = false;
+  const adaptPack = ctx.realizationAdaptPack ?? null;
+  const adaptMotion = adaptPack?.motionBody && (adaptPack.adapted || adaptPack.realizationDegraded) ? adaptPack.motionBody : null;
+  if (adaptMotion) {
+    motion = adaptMotion;
+    motionMultiPhase = adaptMotion.includes("\n");
+  }
   if (hasDial && (policy.audioMode === "dialogue_lip" || ctx.videoIntent.intentClass === "speak_lip")) {
-    motion = "\u9759\u6B62\u6301\u955C";
+    if (!adaptMotion) motion = "\u9759\u6B62\u6301\u955C";
   }
-  try {
-    const { buildContactEventMotionBeats: buildContactEventMotionBeats2, isContactEventVd: isContactEventVd2 } = (init_contactEventPolicy(), __toCommonJS(contactEventPolicy_exports));
-    if (isContactEventVd2(ctx.visualDescription)) {
-      const stillMeta = ctx.shotMeta ?? ctx.designShot ?? {};
-      const beats = buildContactEventMotionBeats2({
-        visualDescription: ctx.visualDescription,
-        durationSec: dur,
-        woundVisible: /浅痕|渗血|血珠/.test(ctx.visualDescription),
-        stillPrompt: String(stillMeta.promptUsed ?? stillMeta.stillPrompt ?? ""),
-        stillPoseAnchor: stillMeta.stillPoseAnchor,
-        contactStartState: stillMeta.contactStartState
-      });
-      if (beats?.body) {
-        motion = beats.body;
-        motionFromContact = true;
+  if (!adaptMotion) {
+    try {
+      const { buildContactEventMotionBeats: buildContactEventMotionBeats2, isContactEventVd: isContactEventVd2 } = (init_contactEventPolicy(), __toCommonJS(contactEventPolicy_exports));
+      if (isContactEventVd2(ctx.visualDescription)) {
+        const stillMeta = ctx.shotMeta ?? ctx.designShot ?? {};
+        const beats = buildContactEventMotionBeats2({
+          visualDescription: ctx.visualDescription,
+          durationSec: dur,
+          woundVisible: /浅痕|渗血|血珠/.test(ctx.visualDescription),
+          stillPrompt: String(stillMeta.promptUsed ?? stillMeta.stillPrompt ?? ""),
+          stillPoseAnchor: stillMeta.stillPoseAnchor,
+          contactStartState: stillMeta.contactStartState
+        });
+        if (beats?.body) {
+          motion = beats.body;
+          motionFromContact = true;
+        }
       }
+    } catch {
     }
-  } catch {
   }
-  if (!motionFromContact) {
+  if (!motionFromContact && !adaptMotion) {
     const m = ctx.visualDescription.match(
       /[^。；;\n]{0,16}(?:弯腰|俯身|捡起|捡|拾起|捏紧|捏|划过|拂过|贴合|颊触|划|擦|甩|咬|颤|推|拉|跪|坐|渗|攥|握|摩挲|扳指)[^。；;\n]{0,16}/
     );
     if (m?.[0]?.trim()) motion = m[0].trim().slice(0, 48);
   }
-  if (!motionFromContact && !/^\d/.test(motion) && /弯腰|俯身|捡|捏|触及|捡起/.test(ctx.visualDescription)) {
+  if (!motionFromContact && !adaptMotion && !/^\d/.test(motion) && /弯腰|俯身|捡|捏|触及|捡起/.test(ctx.visualDescription)) {
     const d = Math.max(2, dur);
     const a = Math.max(0.5, Math.round(d / 3 * 10) / 10);
     const b = Math.max(a + 0.5, Math.round(2 * d / 3 * 10) / 10);
@@ -259651,6 +260747,83 @@ function buildFiveSectionFromContext(ctx) {
       if (micro) motion = `${motion}\uFF1B\u5FAE\u8868\u60C5\uFF1A${String(micro).slice(0, 24)}`;
     }
   }
+  if (adaptPack?.performanceBoost && !motion.includes(adaptPack.performanceBoost.slice(0, 4))) {
+    motion = `${motion}\uFF1B${adaptPack.performanceBoost}`.trim();
+  }
+  if (hasDial && !motionFromContact) {
+    try {
+      const { softGrammarHints: softGrammarHints2 } = (init_cinematicShotGrammar(), __toCommonJS(cinematicShotGrammar_exports));
+      const breath = softGrammarHints2(["dialogueBreath"])[0] ?? "\u53F0\u8BCD\u524D\u5FAE\u505C";
+      if (!/微停|留白|呼吸/.test(motion)) {
+        motion = `${breath}\uFF1B${motion}`.trim();
+      }
+    } catch {
+      if (!/微停|留白|呼吸/.test(motion)) {
+        motion = `\u53F0\u8BCD\u524D\u5FAE\u505C\uFF1B${motion}`.trim();
+      }
+    }
+    {
+      try {
+        const { softGrammarHints: softGrammarHints2 } = (init_cinematicShotGrammar(), __toCommonJS(cinematicShotGrammar_exports));
+        const designBeats = Array.isArray(
+          ctx.designShot?.narrative?.avBeats
+        ) ? ctx.designShot.narrative.avBeats : [];
+        const jCut = softGrammarHints2(["jCut"])[0] ?? "\u4E0B\u53E5\u58F0\u5148\u5165\u518D\u5207\u753B";
+        const lCut = softGrammarHints2(["lCut"])[0] ?? "\u672C\u955C\u58F0\u5EF6\u81F3\u4E0B\u753B";
+        const axis180 = softGrammarHints2(["axis180"])[0] ?? "\u4FDD\u6301180\u5EA6\u8F74\u7EBF\uFF0C\u8FC7\u80A9\u5BF9\u5207\u4E0D\u8D8A\u8F74";
+        const wantsJ = designBeats.some((b) => /J.?cut|下句声先入|声先入/i.test(b));
+        const wantsL = designBeats.some((b) => /L.?cut|声延至下|本镜声延/i.test(b));
+        const wantsAxis = designBeats.some((b) => /180|轴线|过肩对切|不越轴/.test(b));
+        if (wantsJ && !motion.includes(jCut.slice(0, 4))) motion = `${jCut}\uFF1B${motion}`.trim();
+        if (wantsL && !motion.includes(lCut.slice(0, 4))) motion = `${lCut}\uFF1B${motion}`.trim();
+        if (wantsAxis && !motion.includes("\u8F74\u7EBF") && !motion.includes("180")) {
+          motion = `${axis180}\uFF1B${motion}`.trim();
+        }
+        try {
+          const { buildJlCutTimelineSlice: buildJlCutTimelineSlice2, jlCutTimelineEgressNote: jlCutTimelineEgressNote2, detectJlCutFromAvBeats: detectJlCutFromAvBeats2 } = (init_jlCutTimeline(), __toCommonJS(jlCutTimeline_exports));
+          const fromBeats = detectJlCutFromAvBeats2(designBeats);
+          const metaTl = ctx.shotMeta?.jlCutTimeline;
+          const adaptTl = adaptPack?.jlCutTimeline;
+          const narrTl = ctx.designShot?.narrative?.transitionAudio;
+          const slice = adaptTl ?? metaTl ?? (narrTl?.note ? {
+            note: narrTl.note,
+            jCutAudioLeadMs: narrTl.jCutAudioLeadMs,
+            lCutAudioLagMs: narrTl.lCutAudioLagMs,
+            source: "design_avBeats"
+          } : null) ?? buildJlCutTimelineSlice2({
+            wantsJ: fromBeats.wantsJ,
+            wantsL: fromBeats.wantsL,
+            source: "design_avBeats"
+          });
+          const tlNote = jlCutTimelineEgressNote2(slice);
+          if (tlNote && !motion.includes("\u65F6\u95F4\u7EBF\u8F6C\u573A")) {
+            motion = `${tlNote}\uFF1B${motion}`.trim();
+          }
+        } catch {
+        }
+      } catch {
+      }
+    }
+    if ((/弯腰|跪持|俯身|低头/.test(ctx.visualDescription) || adaptPack?.realizationOccupancy === "kneel_hold" || adaptPack?.realizationDegraded) && !/抬视线|面容可读|抬脸/.test(motion)) {
+      motion = `${motion}\uFF1B\u672B\u76F8\u62AC\u89C6\u7EBF\u9762\u5BB9\u53EF\u8BFB\u53E3\u578B`.trim();
+      motionMultiPhase = true;
+    }
+  }
+  {
+    const meta4 = ctx.shotMeta ?? {};
+    const hint = String(
+      adaptPack?.motionStartHint ?? meta4.videoMotionStartHint ?? ""
+    ).trim();
+    const facts = [
+      ...adaptPack?.i2vCriticalFacts ?? [],
+      ...meta4.i2vCriticalFacts ?? []
+    ].filter(Boolean);
+    const leadBits = [...hint ? [hint.slice(0, 40)] : [], ...facts.slice(0, 3).map((f) => String(f).slice(0, 16))];
+    const uniqLead = [...new Set(leadBits)].filter((b) => b && !motion.includes(b.slice(0, 6)));
+    if (uniqLead.length) {
+      motion = `${uniqLead.join("\uFF1B")}\uFF1B${motion}`.trim();
+    }
+  }
   let contactSfx = null;
   try {
     const { matchContactEventVd: matchContactEventVd3, contactSfxHint: contactSfxHint2 } = (init_contactEventPolicy(), __toCommonJS(contactEventPolicy_exports));
@@ -259658,7 +260831,8 @@ function buildFiveSectionFromContext(ctx) {
     if (cm.isContactEvent) contactSfx = contactSfxHint2(cm);
   } catch {
   }
-  let camMotion = hasDial ? "\u9759\u6B62" : String(ctx.cameraMotion ?? "").trim() || policy.cameraMotion;
+  let camMotion = adaptPack?.cameraPolicy ?? (hasDial ? "\u9759\u6B62" : String(ctx.cameraMotion ?? "").trim() || policy.cameraMotion);
+  if (speakLike) camMotion = "\u9759\u6B62";
   try {
     const { mediateViralMotion: mediateViralMotion2 } = (init_viralMotionMediate(), __toCommonJS(viralMotionMediate_exports));
     const med = mediateViralMotion2({ text: camMotion, vendorId: ctx.vendorId });
@@ -259681,6 +260855,33 @@ function buildFiveSectionFromContext(ctx) {
   if (ctx.spatialRelation) {
     visualBody = `${visualBody}\u3002\u7AD9\u4F4D\uFF1A${ctx.spatialRelation.slice(0, 40)}`;
   }
+  {
+    const side = String(
+      ctx.designShot?.narrative?.screenSide ?? ""
+    ).toLowerCase();
+    if (side === "left" || side === "right" || side === "center") {
+      const label = side === "left" ? "\u504F\u5DE6" : side === "right" ? "\u504F\u53F3" : "\u5C45\u4E2D";
+      if (!visualBody.includes("\u753B\u9762\u4FA7")) {
+        visualBody = `${visualBody}\u3002\u753B\u9762\u4FA7\uFF1A${label}`;
+      }
+    }
+    const eye = String(
+      ctx.designShot?.narrative?.eyelineDir ?? ""
+    ).toLowerCase();
+    if (eye === "left" || eye === "right" || eye === "center") {
+      const elabel = eye === "left" ? "\u671D\u5DE6" : eye === "right" ? "\u671D\u53F3" : "\u5BF9\u955C\u5934";
+      if (!visualBody.includes("\u89C6\u7EBF\uFF1A")) {
+        visualBody = `${visualBody}\u3002\u89C6\u7EBF\uFF1A${elabel}`;
+      }
+    }
+    const narrFr = ctx.designShot?.narrative;
+    if (String(narrFr?.headroomStatus ?? "") === "tight" && !visualBody.includes("\u5934\u4E0A\u7A7A\u95F4")) {
+      visualBody = `${visualBody}\u3002\u4FDD\u7559\u5934\u4E0A\u7A7A\u95F4`;
+    }
+    if (String(narrFr?.lookingRoomStatus ?? "") === "tight" && !visualBody.includes("\u89C6\u7EBF\u524D\u65B9\u7559\u767D")) {
+      visualBody = `${visualBody}\u3002\u89C6\u7EBF\u524D\u65B9\u7559\u767D`;
+    }
+  }
   if (ctx.bgBlur === false) {
     visualBody = `${visualBody}\u3002\u80CC\u666F\u6E05\u6670\u4E0D\u865A\u5316`;
   }
@@ -259690,13 +260891,16 @@ function buildFiveSectionFromContext(ctx) {
   if (ctx.continuityHint) {
     visualBody = `${visualBody}\uFF08\u627F\u63A5\uFF1A${ctx.continuityHint}\uFF09`;
   }
+  if (adaptPack?.atmosphereBoost && !visualBody.includes(adaptPack.atmosphereBoost.slice(0, 4))) {
+    visualBody = `${visualBody}\u3002${adaptPack.atmosphereBoost.slice(0, 24)}`;
+  }
   let audioBody;
   try {
     const { audioBodyForMode: audioBodyForMode2 } = (init_videoDesignContract(), __toCommonJS(videoDesignContract_exports));
     audioBody = audioBodyForMode2({
       audioMode: policy.audioMode,
       dialogueLines: ctx.dialogueLines,
-      sfx: ctx.sfx || ctx.sfxIntent || ctx.audioCue || ctx.avCausality?.audioBeat || contactSfx || void 0,
+      sfx: ctx.sfx || ctx.sfxIntent || adaptPack?.sfxBeat || ctx.audioCue || ctx.avCausality?.audioBeat || contactSfx || void 0,
       ambient: void 0,
       voiceCharacter: ctx.audioPrompt?.slice(0, 80) || void 0
     });
@@ -259708,7 +260912,7 @@ function buildFiveSectionFromContext(ctx) {
     } else {
       audioBits.push("\u65E0\u5BF9\u767D\u3002");
     }
-    const sfxLine = ctx.sfx || ctx.sfxIntent || ctx.audioCue || ctx.avCausality?.audioBeat || contactSfx;
+    const sfxLine = ctx.sfx || ctx.sfxIntent || adaptPack?.sfxBeat || ctx.audioCue || ctx.avCausality?.audioBeat || contactSfx;
     if (sfxLine) audioBits.push(`\u97F3\u6548\uFF1A${sfxLine}`);
     if (ctx.audioPrompt) audioBits.push(`\u58F0\u7EBF\uFF1A${ctx.audioPrompt.slice(0, 80)}`);
     if (!hasDial && !sfxLine) audioBits.push("\u4EC5\u73AF\u5883\u97F3\u6548\u3002");
@@ -259738,10 +260942,64 @@ function buildFiveSectionFromContext(ctx) {
     audioBody = `${audioBody}
 \u97F3\u6548\uFF1A${contactSfx}`.trim();
   }
+  {
+    const designBeats = Array.isArray(
+      ctx.designShot?.narrative?.avBeats
+    ) ? ctx.designShot.narrative.avBeats : [];
+    try {
+      const { softGrammarHints: softGrammarHints2 } = (init_cinematicShotGrammar(), __toCommonJS(cinematicShotGrammar_exports));
+      const jCut = softGrammarHints2(["jCut"])[0] ?? "\u4E0B\u53E5\u58F0\u5148\u5165\u518D\u5207\u753B";
+      const lCut = softGrammarHints2(["lCut"])[0] ?? "\u672C\u955C\u58F0\u5EF6\u81F3\u4E0B\u753B";
+      if (designBeats.some((b) => /J.?cut|下句声先入|声先入/i.test(b)) && !audioBody.includes("\u58F0\u5148\u5165")) {
+        audioBody = `${audioBody}
+\u8F6C\u573A\u58F0\u753B\uFF1A${jCut}`.trim();
+      }
+      if (designBeats.some((b) => /L.?cut|声延至下|本镜声延/i.test(b)) && !audioBody.includes("\u58F0\u5EF6")) {
+        audioBody = `${audioBody}
+\u8F6C\u573A\u58F0\u753B\uFF1A${lCut}`.trim();
+      }
+      try {
+        const { jlCutTimelineEgressNote: jlCutTimelineEgressNote2, buildJlCutTimelineSlice: buildJlCutTimelineSlice2, detectJlCutFromAvBeats: detectJlCutFromAvBeats2 } = (init_jlCutTimeline(), __toCommonJS(jlCutTimeline_exports));
+        const fromBeats = detectJlCutFromAvBeats2(designBeats);
+        const slice = adaptPack?.jlCutTimeline ?? ctx.shotMeta?.jlCutTimeline ?? buildJlCutTimelineSlice2({
+          wantsJ: fromBeats.wantsJ,
+          wantsL: fromBeats.wantsL,
+          source: "design_avBeats"
+        });
+        const tl = jlCutTimelineEgressNote2(slice);
+        if (tl && !audioBody.includes("\u65F6\u95F4\u7EBF\u8F6C\u573A")) {
+          audioBody = `${audioBody}
+${tl}`.trim();
+        }
+      } catch {
+      }
+    } catch {
+    }
+  }
   const narrativeBits = [
     ctx.debutBeat ? `\u672C\u955C\u8282\u62CD\uFF1A${ctx.debutBeat.slice(0, 80)}` : "",
     ctx.beatDurationSec != null ? `beatDuration:${ctx.beatDurationSec}s` : "",
     ctx.emotionIntensity != null ? `\u60C5\u7EEA\u5F3A\u5EA6:${ctx.emotionIntensity}` : "",
+    ctx.emotionIntensity != null && ctx.emotionIntensity >= 6 ? adaptPack?.performanceBoost || "\u8868\u6F14\uFF1A\u9690\u5FCD\u51B3\u7EDD" : "",
+    shotSizeAuthorNote ? `\u4F5C\u8005\u666F\u522B\u6CE8\u8BB0:${shotSizeAuthorNote}\u2192\u5236\u4F5C\u8FD1\u666F` : "",
+    adaptDiffShotSize ? `adaptDiff:${adaptDiffShotSize}` : "",
+    (() => {
+      const beats = Array.isArray(
+        ctx.designShot?.narrative?.avBeats
+      ) ? ctx.designShot.narrative.avBeats : [];
+      if (!beats.length) return "";
+      const jl = beats.filter((b) => /J.?cut|L.?cut|声先入|声延|180|轴线/i.test(b));
+      if (!jl.length) return `avBeats:${beats.slice(0, 3).join("|")}`;
+      return `avBeats:${jl.slice(0, 4).join("|")} adaptDiff:designAvBeats\u2192realize`;
+    })(),
+    (() => {
+      const narr2 = ctx.designShot?.narrative;
+      const tr = String(narr2?.transitionType ?? "").trim();
+      const rz = String(narr2?.rhythmZone ?? "").trim();
+      return [tr ? `\u8F6C\u573A:${tr}` : "", rz ? `\u8282\u594F\u533A:${rz}` : ""].filter(Boolean).join(" ");
+    })(),
+    adaptPack?.narrativeFootnote ? `\u5B9E\u73B0\u6CE8\u8BB0\uFF1A${adaptPack.narrativeFootnote}` : "",
+    adaptPack?.adapted ? "motionFrom:realizationAdapt" : "",
     "\u9501\u5B9A\u8138\u578B\u8EAB\u4EFD\uFF0C\u7981\u6B62\u5938\u5F20\u6539\u9762\u5BB9\u8EAB\u4EFD\u3002",
     `intent:${ctx.videoIntent.intentClass}`,
     motionFromContact ? "motionFrom:contactEvent" : "",
@@ -260035,13 +261293,13 @@ function buildAudioIR(shot, config3) {
   const n = shot.narrative;
   const lines = n.dialogue?.lines ?? n.lines ?? "";
   const hasSfx = Boolean(n.sound?.sfx);
-  const hasDialogue2 = Boolean(lines);
+  const hasDialogue3 = Boolean(lines);
   const chatAudio = shot.generation.audioPrompt?.trim();
   const policy = loadVideoAudioPolicy();
-  const generateAudio = hasDialogue2 || hasSfx || Boolean(chatAudio);
+  const generateAudio = hasDialogue3 || hasSfx || Boolean(chatAudio);
   return {
     modality: "audio",
-    tags: hasDialogue2 ? [n.dialogue?.type ?? "dialogue"] : hasSfx ? ["sfx-native"] : ["ambient"],
+    tags: hasDialogue3 ? [n.dialogue?.type ?? "dialogue"] : hasSfx ? ["sfx-native"] : ["ambient"],
     narrative: chatAudio || (typeof lines === "string" ? lines : "") || n.sound?.sfx || n.sound?.env || "\u73AF\u5883\u97F3",
     constraints: [],
     apiParams: { generate_audio: generateAudio, speechSpeed: config3.speechSpeed, defaultPolicy: policy.defaultPolicy }
@@ -261551,7 +262809,7 @@ function auditGenerationApplyGaps(bundle, tier = "T3") {
     const emotion = shot.narrative?.emotionIntensity ?? shot.emotion ?? 0;
     const sd = shot.shotDesign;
     const gen = shot.generation;
-    const hasDialogue2 = (shot.narrative?.dialogue?.lines?.length ?? 0) > 0;
+    const hasDialogue3 = (shot.narrative?.dialogue?.lines?.length ?? 0) > 0;
     if (emotion >= 4 && !sd?.performance) {
       gaps.push({
         id: "GEN-01",
@@ -261605,7 +262863,7 @@ function auditGenerationApplyGaps(bundle, tier = "T3") {
     }
     const lipPolicy = sd?.lipSyncPolicy;
     const vid = gen?.videoPrompt?.toLowerCase() ?? "";
-    if (hasDialogue2 && lipPolicy === "subtle_natural" && vid && !/subtle|natural mouth/.test(vid)) {
+    if (hasDialogue3 && lipPolicy === "subtle_natural" && vid && !/subtle|natural mouth/.test(vid)) {
       gaps.push({
         id: "GEN-04",
         severity: "WARN",
@@ -261871,8 +263129,8 @@ function auditModalityChainGaps(bundle, tier = "T3") {
       });
     }
     if (av?.audioBeat && shot) {
-      const hasDialogue2 = (shot.narrative?.dialogue?.lines?.length ?? 0) > 0;
-      if (hasDialogue2 && !shot.generation?.audioPrompt?.trim()) {
+      const hasDialogue3 = (shot.narrative?.dialogue?.lines?.length ?? 0) > 0;
+      if (hasDialogue3 && !shot.generation?.audioPrompt?.trim()) {
         gaps.push({
           id: "MOD-03",
           severity: "BLOCK",
@@ -263523,13 +264781,13 @@ function defaultPerformanceFromEmotion(input) {
 }
 function ensureShotPerformanceDefaults(shot) {
   const lines = shot.narrative?.dialogue?.lines ?? [];
-  const hasDialogue2 = hasOnCameraDialogue(lines);
+  const hasDialogue3 = hasOnCameraDialogue(lines);
   const intensity = shot.emotionIntensity ?? shot.narrative?.emotionIntensity;
   const existingMicro = shot.shotDesign?.performance?.microExpression;
   const existingLip = shot.shotDesign?.lipSyncPolicy;
   const def = defaultPerformanceFromEmotion({
     emotionIntensity: intensity,
-    hasDialogue: hasDialogue2,
+    hasDialogue: hasDialogue3,
     existingMicro,
     existingLipSync: existingLip
   });
@@ -264297,12 +265555,12 @@ function healShotQuality(input) {
     };
     const runPerf = () => {
       const lines = shot.narrative?.dialogue?.lines ?? [];
-      const hasDialogue2 = hasOnCameraDialogue(lines);
+      const hasDialogue3 = hasOnCameraDialogue(lines);
       const intensity = Number(shot.emotionIntensity ?? shot.narrative?.emotionIntensity ?? 0);
       const thr = exprHighIntensityThreshold();
-      if (hasDialogue2 && intensity >= thr) {
+      if (hasDialogue3 && intensity >= thr) {
         const f = checkSpeakPerformance({
-          hasDialogue: hasDialogue2,
+          hasDialogue: hasDialogue3,
           emotionIntensity: intensity,
           microExpression: shot.shotDesign?.performance?.microExpression,
           lipSyncPolicy: shot.shotDesign?.lipSyncPolicy,
@@ -265053,7 +266311,7 @@ function healMinimalGenerationPrompts(shot, healLog) {
   const vd = String(shot.visualDescription ?? "").trim();
   const audioCue = String(shot.audioCue ?? "").trim();
   const lines = shot.narrative?.dialogue?.lines ?? [];
-  const dialogueText2 = flattenDialogueText(lines).trim();
+  const dialogueText3 = flattenDialogueText(lines).trim();
   shot.generation = shot.generation ?? {};
   const gen = shot.generation;
   if (!String(gen.imagePrompt ?? "").trim() && vd) {
@@ -265064,9 +266322,9 @@ function healMinimalGenerationPrompts(shot, healLog) {
       "from visualDescription"
     );
   }
-  if (!String(gen.audioPrompt ?? "").trim() && (audioCue || dialogueText2)) {
-    const summary = (audioCue || dialogueText2).slice(0, 80);
-    gen.audioPrompt = audioCue ? `\u97F3\u6548\u4E0E\u5BF9\u767D\uFF1A${summary}` : `\u53E3\u578B\u540C\u6B65\u5BF9\u767D\uFF1A${summary}${dialogueText2.length > 80 ? "\u2026" : ""}`;
+  if (!String(gen.audioPrompt ?? "").trim() && (audioCue || dialogueText3)) {
+    const summary = (audioCue || dialogueText3).slice(0, 80);
+    gen.audioPrompt = audioCue ? `\u97F3\u6548\u4E0E\u5BF9\u767D\uFF1A${summary}` : `\u53E3\u578B\u540C\u6B65\u5BF9\u767D\uFF1A${summary}${dialogueText3.length > 80 ? "\u2026" : ""}`;
     healLog?.push(
       "SH-AUD-SEED",
       `preDesignPack.shots[${shot.shotIndex ?? "?"}].generation.audioPrompt`,
@@ -265074,7 +266332,7 @@ function healMinimalGenerationPrompts(shot, healLog) {
     );
   }
   if (!String(gen.videoPrompt ?? "").trim() && vd) {
-    const lip = dialogueText2 ? ", speaking lip-sync" : "";
+    const lip = dialogueText3 ? ", speaking lip-sync" : "";
     gen.videoPrompt = `${vd}${lip}`;
     healLog?.push(
       "SH-VID-SEED",
@@ -268487,10 +269745,11 @@ function checkLangVid01(input) {
   if (!dialogue.trim() || !video.trim()) return null;
   if (!CJK.test(dialogue)) return null;
   const audioSection = video.match(/\[Audio\]([\s\S]*?)(?=\[Narrative\]|$)/i)?.[1] ?? video;
+  const wrapperHit = EN_DIALOGUE_WRAPPER.test(audioSection) || /\b(he said|she said)\b/i.test(audioSection);
   const spokenHit = EN_SPOKEN.test(audioSection) && !CJK.test(audioSection);
   const quoted = QUOTED_EN_DIALOGUE.exec(audioSection);
   const taggedEn = AUDIO_EN_BLOCK.test(audioSection);
-  if (spokenHit || quoted || taggedEn) {
+  if (spokenHit || quoted || taggedEn || wrapperHit) {
     const sample = (quoted?.[1] ?? audioSection.replace(/\s+/g, " ").trim()).slice(0, 60);
     return {
       ruleId: "LANG-01",
@@ -268498,7 +269757,7 @@ function checkLangVid01(input) {
       message: `\u955C ${input.shotIndex ?? "?"} \u4E2D\u6587\u53F0\u8BCD\u88AB\u5199\u6210\u82F1\u6587\u51FA\u73B0\u5728 videoPrompt\uFF08\u7981\u8BD1\u8FDB VID\uFF09`,
       shotIndex: input.shotIndex,
       reverseTrigger: "lang_vid_mismatch",
-      evidence: { sample, sourceHasCjk: true }
+      evidence: { sample, sourceHasCjk: true, mixedWrapper: wrapperHit }
     };
   }
   return null;
@@ -268601,11 +269860,12 @@ function runLangAudFxCamGates(shots) {
   if (variety) out.push(variety);
   return out;
 }
-var EN_SPOKEN, CJK, QUOTED_EN_DIALOGUE, AUDIO_EN_BLOCK;
+var EN_SPOKEN, EN_DIALOGUE_WRAPPER, CJK, QUOTED_EN_DIALOGUE, AUDIO_EN_BLOCK;
 var init_langAudFxCam = __esm({
   "src/ruleEngine/validators/langAudFxCam.ts"() {
     "use strict";
-    EN_SPOKEN = /\b(he said|she said|I am|I'm|you are|we're|hello|please|thank you|yes\.|no\.|what are you|I love you|don't|won't|can't)\b/i;
+    EN_SPOKEN = /\b(he said|she said|says\s+["“]|I am|I'm|you are|we're|hello|please|thank you|yes\.|no\.|what are you|I love you|don't|won't|can't)\b/i;
+    EN_DIALOGUE_WRAPPER = /\bsays\s+["“「]|["”」]\s*\(dialogue\)|\(dialogue\)/i;
     CJK = /[\u4e00-\u9fff]/;
     QUOTED_EN_DIALOGUE = /["「]([A-Za-z][^"」]{8,})["」]/;
     AUDIO_EN_BLOCK = /\b(monologue|voiceover|dialogue)\s*:\s*[A-Za-z]{8,}/i;
@@ -269021,9 +270281,9 @@ var init_camSpeak = __esm({
         for (const s of shots) {
           const idx = s.shotIndex;
           const dial = s.narrative?.dialogue?.lines ?? [];
-          const hasDialogue2 = dial.some((l) => (l.text ?? "").trim());
+          const hasDialogue3 = dial.some((l) => (l.text ?? "").trim());
           const video = String(s.videoPrompt ?? s.generation?.videoPrompt ?? "");
-          const hit = checkCamSpeak({ hasDialogue: hasDialogue2, videoPrompt: video, shotIndex: idx });
+          const hit = checkCamSpeak({ hasDialogue: hasDialogue3, videoPrompt: video, shotIndex: idx });
           if (hit) fails.push({ shotIndex: idx, message: hit.message });
         }
         const passed = fails.length === 0;
@@ -269048,8 +270308,8 @@ var init_camSpeak = __esm({
         for (const s of shots) {
           const idx = Math.max(0, Number(s.shotIndex ?? 0) - 1);
           const dial = s.narrative?.dialogue?.lines ?? [];
-          const hasDialogue2 = dial.some((l) => (l.text ?? "").trim());
-          if (!hasDialogue2) continue;
+          const hasDialogue3 = dial.some((l) => (l.text ?? "").trim());
+          if (!hasDialogue3) continue;
           const video = String(s.videoPrompt ?? s.generation?.videoPrompt ?? "");
           if (!checkCamSpeak({ hasDialogue: true, videoPrompt: video })) continue;
           const san = sanitizeVideoPrompt({
@@ -271976,6 +273236,11 @@ var init_expandVisualBeats = __esm({
 });
 
 // src/ruleEngine/design/expandStillCuCast.ts
+var expandStillCuCast_exports = {};
+__export(expandStillCuCast_exports, {
+  expandOneCuCastShot: () => expandOneCuCastShot,
+  expandStillCuCast: () => expandStillCuCast
+});
 function cloneShot2(s) {
   return JSON.parse(JSON.stringify(s));
 }
@@ -272193,6 +273458,82 @@ var init_visBeatLedgerRebind = __esm({
   }
 });
 
+// src/ruleEngine/compilers/splitChildContinuity.ts
+var splitChildContinuity_exports = {};
+__export(splitChildContinuity_exports, {
+  applySplitChildContinuity: () => applySplitChildContinuity,
+  auditSplitChildContinuity: () => auditSplitChildContinuity,
+  buildSplitChildContinuitySeed: () => buildSplitChildContinuitySeed
+});
+function buildSplitChildContinuitySeed(parent) {
+  const p3 = parent ?? {};
+  const narr2 = p3.narrative ?? {};
+  const codes = narr2.assetCodes ?? p3.charCodes ?? [];
+  return {
+    parentShotIndex: Number(p3.shotIndex ?? p3.index ?? 0) || null,
+    identityCodes: codes.filter((c) => /^CHAR-/i.test(String(c))),
+    spatialRelation: String(narr2.spatialRelation ?? p3.spatialRelation ?? "").trim() || null,
+    sceneCode: String(p3.sceneCode ?? "").trim() || null,
+    sceneName: String(p3.sceneName ?? "").trim() || null,
+    wardrobeHint: String(narr2.wardrobeContinuity ?? p3.wardrobeHint ?? "\u670D\u5316\u4E0E\u7236\u955C\u8FDE\u7EED").trim() || null,
+    lightHint: String(narr2.lightContinuity ?? p3.lightHint ?? "\u5149\u6BD4\u4E0E\u7236\u955C\u8FDE\u7EED").trim() || null,
+    continuityFrom: String(narr2.continuityFrom ?? `\u627F\u63A5\u7236\u955C${p3.shotIndex ?? ""}`).trim() || null,
+    splitHint: String(p3.splitHint ?? narr2.splitHint ?? "").trim() || null
+  };
+}
+function applySplitChildContinuity(child, seed) {
+  const narr2 = {
+    ...child.narrative ?? {}
+  };
+  if (seed.spatialRelation && !narr2.spatialRelation) narr2.spatialRelation = seed.spatialRelation;
+  if (seed.continuityFrom) narr2.continuityFrom = seed.continuityFrom;
+  if (seed.wardrobeHint) narr2.wardrobeContinuity = seed.wardrobeHint;
+  if (seed.lightHint) narr2.lightContinuity = seed.lightHint;
+  if (seed.splitHint) narr2.splitHint = seed.splitHint;
+  if (seed.identityCodes?.length) {
+    narr2.assetCodes = [.../* @__PURE__ */ new Set([...Array.isArray(narr2.assetCodes) ? narr2.assetCodes : [], ...seed.identityCodes])];
+  }
+  return {
+    ...child,
+    sceneCode: child.sceneCode ?? seed.sceneCode,
+    sceneName: child.sceneName ?? seed.sceneName,
+    charCodes: child.charCodes ?? seed.identityCodes,
+    narrative: narr2,
+    splitParentShotIndex: seed.parentShotIndex,
+    splitContinuityApplied: true
+  };
+}
+function auditSplitChildContinuity(input) {
+  const findings = [];
+  const parent = input.parent ?? {};
+  const child = input.child ?? {};
+  const pScene = String(parent.sceneCode ?? parent.sceneName ?? "");
+  const cScene = String(child.sceneCode ?? child.sceneName ?? "");
+  if (pScene && cScene && pScene !== cScene) findings.push("split_scene_drift");
+  const pCodes = new Set(
+    [
+      ...parent.charCodes ?? [],
+      ...parent.narrative?.assetCodes ?? []
+    ].map(String)
+  );
+  const cCodes = [
+    ...child.charCodes ?? [],
+    ...child.narrative?.assetCodes ?? []
+  ].map(String);
+  if (pCodes.size && cCodes.length && !cCodes.some((c) => pCodes.has(c))) {
+    findings.push("split_identity_drift");
+  }
+  if (!child.splitContinuityApplied && !child.narrative?.continuityFrom) {
+    findings.push("split_continuity_missing");
+  }
+  return { ok: findings.length === 0, findings };
+}
+var init_splitChildContinuity = __esm({
+  "src/ruleEngine/compilers/splitChildContinuity.ts"() {
+    "use strict";
+  }
+});
+
 // src/ruleEngine/design/sliceFieldsAfterIrdSplit.ts
 var sliceFieldsAfterIrdSplit_exports = {};
 __export(sliceFieldsAfterIrdSplit_exports, {
@@ -272230,6 +273571,14 @@ function sliceFieldsAfterIrdSplit(shots) {
     } else if (!ens.ok) {
       s.irdConfirmRequired = true;
       s._healInducedVd = true;
+    }
+    try {
+      const { buildSplitChildContinuitySeed: buildSplitChildContinuitySeed2, applySplitChildContinuity: applySplitChildContinuity2 } = (init_splitChildContinuity(), __toCommonJS(splitChildContinuity_exports));
+      if (parent) {
+        const seeded = applySplitChildContinuity2(s, buildSplitChildContinuitySeed2(parent));
+        Object.assign(s, seeded);
+      }
+    } catch {
     }
     const parentNarr = parent?.narrative ?? s.narrative;
     const parentLines = asDialogueLineObjects(parentNarr?.dialogue?.lines);
@@ -273539,135 +274888,6 @@ var init_splitOrchestrator = __esm({
     init_resolveRequiredDuration();
     init_dialogueMirrorSsot();
     init_dialogueMirrorSsot();
-  }
-});
-
-// src/ruleEngine/quality/practiceCompleteness.ts
-var practiceCompleteness_exports = {};
-__export(practiceCompleteness_exports, {
-  auditPracticeCompleteness: () => auditPracticeCompleteness,
-  isVlmKeyRequired: () => isVlmKeyRequired,
-  loadPracticeInventory: () => loadPracticeInventory,
-  loadQualityStateMatrix: () => loadQualityStateMatrix,
-  loadRepairConfidenceLadder: () => loadRepairConfidenceLadder,
-  mustDimAllowsVideoPass: () => mustDimAllowsVideoPass,
-  pixelDimStatus: () => pixelDimStatus,
-  repairActionForConfidence: () => repairActionForConfidence,
-  stillQualityUserMessage: () => stillQualityUserMessage
-});
-function loadPracticeInventory() {
-  return readFixtureJson("practice_completeness_inventory.json", {
-    ladder: LADDER_DEFAULT,
-    keyPolicy: { required: false },
-    classes: []
-  });
-}
-function loadQualityStateMatrix() {
-  return readFixtureJson("quality_state_matrix.json", {
-    forbidden: []
-  });
-}
-function isVlmKeyRequired() {
-  const inv = loadPracticeInventory();
-  return inv.keyPolicy?.required === true;
-}
-function pixelDimStatus(opts) {
-  if (!opts.keyOrAdapterPresent) return "unmeasured";
-  if (opts.observed == null) return "unmeasured";
-  return opts.observed ? "measured_pass" : "measured_fail";
-}
-function mustDimAllowsVideoPass(status) {
-  return status === "measured_pass";
-}
-function auditPracticeCompleteness(inv) {
-  const inventory = inv ?? loadPracticeInventory();
-  const out = [];
-  for (const c of inventory.classes ?? []) {
-    const missing = [];
-    if (!c.declare?.length) missing.push("declare");
-    if (!c.mount?.length) missing.push("mount");
-    if (!c.hard) missing.push("hard");
-    if (!c.untilClear) missing.push("untilClear");
-    if (!c.feBlock) missing.push("feBlock");
-    if (!c.noEscape?.trim()) missing.push("noEscape");
-    if (missing.length) out.push({ id: c.id, missing });
-  }
-  return out;
-}
-function stillQualityUserMessage(opts) {
-  const missIds = (opts.missingEffects ?? []).map((m) => typeof m === "string" ? m : String(m?.id ?? "")).filter(Boolean).slice(0, 4);
-  const shouldIds = (opts.shouldMissIds ?? []).map(String).filter(Boolean).slice(0, 2);
-  const shouldNote = shouldIds.length ? `\uFF1B\u7EC6\u8282\u5F85\u589E\u5F3A\uFF1A${shouldIds.join("\u3001")}` : "";
-  if (opts.softEnvMissingHonest === true) {
-    return "\u8F6F\u73AF\u5883\u677F\u672A\u6302\u5165\u5382\u5546\u53C2\u8003\uFF08keepSoft\u2260\u50CF\u7D20\u6BBF\uFF09\uFF1B\u573A\u666F Must \u672A\u5151\u73B0\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27\uFF1B\u8BF7\u7EE7\u7EED\u751F\u6210\u667A\u80FD\u4FEE";
-  }
-  const trunkMiss = opts.sampleMustFulfilled === false || opts.literaryEffectsQualified === false;
-  if (!trunkMiss && opts.realizationDegraded === true && (opts.literaryEffectsQualified === true || opts.sampleMustFulfilled === true)) {
-    const note = String(opts.realizationNote ?? "").trim() || "\u5B9E\u73B0\u5DF2\u964D\u7EA7\uFF1A\u5F2F\u8170\u2192\u6301\u7EB8\u7AD9\u59FF/\u8DEA\u6301\uFF1B\u8BBE\u8BA1\u610F\u56FE\u4ECD\u4E3A\u5F2F\u8170\u6361\u62FE";
-    return `${note}${shouldNote}\uFF1B\u4E3B\u5E72\u53EF\u70E7\uFF1B\u5F31\u56FE\u503A\xB7\u53EF\u70E7\u89C6\u9891`;
-  }
-  const sampleMiss = trunkMiss || missIds.length > 0 && opts.literaryEffectsQualified !== true;
-  if (sampleMiss) {
-    const sceneMiss = missIds.some(
-      (id) => /bg\.no_gray|bg\.scene|void|gray_studio|identity\.no_modern/i.test(id)
-    );
-    const label = sceneMiss ? `\u8F6F\u73AF\u5883\u5DF2\u6302\uFF0C\u573A\u666F\u50CF\u7D20\u672A\u8BC1\u5B9E\uFF1A${missIds.join("\u3001") || "bg"}` : missIds.length ? `\u8BBE\u8BA1\u610F\u56FE\u6837\u672C\u672A\u5151\u73B0\uFF1A${missIds.join("\u3001")}` : "\u8BBE\u8BA1\u610F\u56FE\u6837\u672C\u672A\u5151\u73B0";
-    const keyNote = opts.keyAbsent ? "\uFF1B\u50CF\u7D20\u672A\u6D4B\uFF08Key \u53EF\u9009\uFF0C\u975E\u5931\u8D25\uFF09" : "";
-    const hostileRefs = missIds.some((id) => /occupancy\.|prop\.locus|prop\.in_frame|bg\.|action\.|identity\./.test(id)) || opts.bendHostileRefsForced === true;
-    const actionMiss = missIds.some((id) => /action\.|occupancy\./.test(id));
-    const poseOk = opts.poseEvidenceOk === true;
-    const plateNote = hostileRefs ? opts.platesSwapped === true ? actionMiss && !poseOk ? "\uFF1B\u5DF2\u6362\u677F\u4F46\u59FF\u6001\u672A\u8FC7\uFF0C\u987B\u590D\u9A8C\u5F2F\u8170\u89E6\u5730" : poseOk || !actionMiss ? "\uFF1B\u5DF2\u6309\u53C2\u8003\u5951\u7EA6\u6362\u677F\u91CD\u51FA" : "\uFF1B\u5DF2\u6362\u677F\u4F46\u59FF\u6001\u672A\u8FC7\uFF0C\u987B\u590D\u9A8C\u5F2F\u8170\u89E6\u5730" : "\uFF1B\u987B\u6362\u677F\uFF08\u56DB\u89C6\u56FE/\u6574\u6BBF/\u5C55\u793A\u5361\u4ECD\u6302\uFF0C\u975E\u6CD5\u7EFF\u7ED3\u6848\uFF09" : "";
-    return `${label}${keyNote}${plateNote}\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27\uFF1B\u8BF7\u7EE7\u7EED\u751F\u6210\u667A\u80FD\u4FEE`;
-  }
-  if (opts.vendorPollFail) {
-    return "\u6210\u56FE\u8BCA\u65AD\u672A\u5B8C\u6210\uFF08\u8F6E\u8BE2\u5931\u8D25\uFF09\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27\uFF1B\u53EF\u7A0D\u540E\u91CD\u8BD5\u8BCA\u65AD";
-  }
-  if ((opts.sampleMustFulfilled === true || opts.literaryEffectsQualified === true) && opts.keyAbsent && opts.softEnvMissingHonest !== true && opts.realizationDegraded !== true) {
-    return `\u8BBE\u8BA1\u610F\u56FE\u5FC5\u987B\u5143\u7D20\u5DF2\u5151\u73B0${shouldNote}\uFF1B\u50CF\u7D20\u672A\u6D4B\uFF08Key \u53EF\u9009\uFF0C\u975E\u5931\u8D25\uFF09\uFF1B\u5F31\u56FE\u503A\xB7\u53EF\u70E7\u89C6\u9891\uFF08\u8BBE\u8BA1\u610F\u56FE\u4F18\u5148\uFF09`;
-  }
-  if (opts.keyAbsent) {
-    return "\u8BBE\u8BA1\u610F\u56FE\u5F85\u6838\uFF1B\u50CF\u7D20\u672A\u6D4B\uFF08Key \u53EF\u9009\uFF0C\u975E\u5931\u8D25\uFF09\uFF1B\u5F31\u56FE\u503A\xB7\u53EF\u70E7\u89C6\u9891\uFF0C\u53EF\u4EBA\u5BA1\u6216\u7EE7\u7EED\u751F\u6210";
-  }
-  if (opts.measuredFail) {
-    return "\u8BBE\u8BA1\u610F\u56FE\u50CF\u7D20\u590D\u6838\u672A\u8FC7\uFF1B\u8BF7\u6309\u503A\u6761\u4FEE\u590D\u540E\u91CD\u51FA\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27";
-  }
-  if (opts.weak) {
-    return "\u9759\u7167\u672A\u8FC7\u9AD8\u8D28\u91CF\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27";
-  }
-  return "\u9759\u7167\u8D28\u91CF\u672A\u5C31\u7EEA\uFF1B\u5F31\u56FE\u4E0D\u53EF\u4F5C\u89C6\u9891\u9996\u5E27";
-}
-function loadRepairConfidenceLadder() {
-  return readFixtureJson("repair_confidence_ladder.json", {
-    thresholds: { autoApplyMin: 0.85, forkMin: 0.55, confirmBelow: 0.55 },
-    autoApplyTriggers: [],
-    forkTriggers: [],
-    requireCascadeAfterApply: true,
-    requireReGateAfterApply: true
-  });
-}
-function repairActionForConfidence(trigger, confidence) {
-  const ladder = loadRepairConfidenceLadder();
-  const autoMin = ladder.thresholds?.autoApplyMin ?? 0.85;
-  const forkMin = ladder.thresholds?.forkMin ?? 0.55;
-  const autoSet = new Set(ladder.autoApplyTriggers ?? []);
-  const forkSet = new Set(ladder.forkTriggers ?? []);
-  if (autoSet.has(trigger) || confidence >= autoMin) return "apply_auto";
-  if (forkSet.has(trigger) || confidence >= forkMin) return "presentation_fork";
-  return "confirm_only";
-}
-var LADDER_DEFAULT;
-var init_practiceCompleteness = __esm({
-  "src/ruleEngine/quality/practiceCompleteness.ts"() {
-    "use strict";
-    init_fixturesPath();
-    LADDER_DEFAULT = [
-      "declare",
-      "mount",
-      "hard",
-      "untilClear",
-      "feBlock",
-      "noEscape"
-    ];
   }
 });
 
@@ -276562,10 +277782,10 @@ function runDesignExitGate(stageId, plan, opts) {
         let bad = false;
         for (const s of shots) {
           const lines2 = s.narrative?.dialogue?.lines ?? [];
-          const hasDialogue2 = hasOnCameraDialogue2(lines2);
+          const hasDialogue3 = hasOnCameraDialogue2(lines2);
           const sd = s.shotDesign;
           const f = checkSpeakPerformance2({
-            hasDialogue: hasDialogue2,
+            hasDialogue: hasDialogue3,
             emotionIntensity: s.emotionIntensity ?? s.narrative?.emotionIntensity,
             microExpression: sd?.performance?.microExpression,
             lipSyncPolicy: sd?.lipSyncPolicy,
@@ -276826,6 +278046,41 @@ function runDesignExitGate(stageId, plan, opts) {
       }
     }
   } catch {
+  }
+  if (stageId === "SB" || stageId === "W3") {
+    try {
+      const { assessFaceBudget: assessFaceBudget2 } = (init_faceBudgetPolicy(), __toCommonJS(faceBudgetPolicy_exports));
+      const { hasOnCameraDialogue: hasOnCameraDialogue2 } = (init_onCameraDialogue(), __toCommonJS(onCameraDialogue_exports));
+      for (const s of preDesignShots(pd)) {
+        const vd = String(s.visualDescription ?? "");
+        const onCam = hasOnCameraDialogue2(
+          s.narrative?.dialogue?.lines
+        );
+        if (!onCam) continue;
+        const budget = assessFaceBudget2({
+          visualDescription: vd,
+          shotSize: String(s.shotSize ?? ""),
+          hasDialogue: true,
+          lipSyncPolicy: String(
+            s.shotDesign?.lipSyncPolicy ?? "dialogue_native"
+          ),
+          videoIntentClass: "speak_lip"
+        });
+        if (budget.unreachable) {
+          warnings.push(
+            `DEX-FACE-BUDGET:shot${s.shotIndex ?? "?"}:\u5BF9\u767D+\u4F4E\u5934+\u8FC7\u5BBD\u2192Confirm\u62C6\u955C(${budget.splitHint ?? "action_then_dialogue_mcu"})`.slice(
+              0,
+              160
+            )
+          );
+        } else if (!budget.ok && budget.primaryAction === "regen_storyboard_hq") {
+          warnings.push(
+            `DEX-FACE-READ:shot${s.shotIndex ?? "?"}:\u5BF9\u767D\u4F4E\u5934\u8FD1\u666F\u8138\u98CE\u9669\xB7\u5EFA\u8BAE\u62AC\u8138\u9759\u7167`.slice(0, 160)
+          );
+        }
+      }
+    } catch {
+    }
   }
   const round = opts?.optimizeRound ?? 0;
   const maxR = checklist.maxOptimizeRoundsPerStage ?? 5;
@@ -277912,6 +279167,5887 @@ var init_planFromBundleForDesignExit = __esm({
   }
 });
 
+// src/ruleEngine/design/faceBoxAxisSoft.ts
+var faceBoxAxisSoft_exports = {};
+__export(faceBoxAxisSoft_exports, {
+  ensureEyelineFromFaceBoxLookingRoom: () => ensureEyelineFromFaceBoxLookingRoom,
+  ensureScreenSideFromFaceBox: () => ensureScreenSideFromFaceBox,
+  eyelineFromFaceBoxLookingRoom: () => eyelineFromFaceBoxLookingRoom,
+  readFaceBoxForAxisSoft: () => readFaceBoxForAxisSoft,
+  screenSideFromFaceBox: () => screenSideFromFaceBox
+});
+function screenSideFromFaceBox(box) {
+  if (!box) return "unknown";
+  const cx = (box.left + box.right) / 2;
+  if (cx < 0.5 - SIDE_MARGIN) return "left";
+  if (cx > 0.5 + SIDE_MARGIN) return "right";
+  return "center";
+}
+function eyelineFromFaceBoxLookingRoom(box) {
+  const side = screenSideFromFaceBox(box);
+  if (side === "left") return "right";
+  if (side === "right") return "left";
+  if (side === "center") return "center";
+  return "unknown";
+}
+function readFaceBoxForAxisSoft(shot) {
+  if (!shot) return null;
+  return readFaceBoxNormFromMeta(shot) ?? readProvisionalFaceBoxFromMeta(shot);
+}
+function ensureScreenSideFromFaceBox(shot, opts) {
+  const box = readFaceBoxForAxisSoft(shot);
+  const fromBox = screenSideFromFaceBox(box);
+  if (fromBox === "unknown") return { side: "unknown", changed: false };
+  const narr2 = { ...shot.narrative ?? {} };
+  const prev = String(narr2.screenSide ?? "");
+  if (!opts?.force && (prev === "left" || prev === "right" || prev === "center")) {
+    return { side: prev, changed: false };
+  }
+  if (prev === fromBox) return { side: fromBox, changed: false, source: "face_box" };
+  narr2.screenSide = fromBox;
+  narr2.screenSideSource = "face_box_soft";
+  shot.narrative = narr2;
+  return { side: fromBox, changed: true, source: "face_box" };
+}
+function ensureEyelineFromFaceBoxLookingRoom(shot, opts) {
+  const box = readFaceBoxForAxisSoft(shot);
+  const fromBox = eyelineFromFaceBoxLookingRoom(box);
+  if (fromBox === "unknown") return { dir: "unknown", changed: false };
+  const narr2 = { ...shot.narrative ?? {} };
+  const prev = String(narr2.eyelineDir ?? "");
+  if (!opts?.force && (prev === "left" || prev === "right" || prev === "center")) {
+    return { dir: prev, changed: false };
+  }
+  if (prev === fromBox) return { dir: fromBox, changed: false };
+  narr2.eyelineDir = fromBox;
+  narr2.eyelineDirSource = "face_box_looking_room";
+  shot.narrative = narr2;
+  return { dir: fromBox, changed: true };
+}
+var SIDE_MARGIN;
+var init_faceBoxAxisSoft = __esm({
+  "src/ruleEngine/design/faceBoxAxisSoft.ts"() {
+    "use strict";
+    init_faceBoxNormFromMeta();
+    SIDE_MARGIN = 0.08;
+  }
+});
+
+// src/ruleEngine/design/screenSideAxis.ts
+var screenSideAxis_exports = {};
+__export(screenSideAxis_exports, {
+  auditAxis180Chain: () => auditAxis180Chain,
+  auditAxis180Pair: () => auditAxis180Pair,
+  ensureEyelineDirOnShot: () => ensureEyelineDirOnShot,
+  ensureScreenSideOnShot: () => ensureScreenSideOnShot,
+  flipEyelineKeyword: () => flipEyelineKeyword,
+  flipSpatialSideKeyword: () => flipSpatialSideKeyword,
+  parseEyelineDir: () => parseEyelineDir,
+  parseScreenSide: () => parseScreenSide,
+  readShotEyeline: () => readShotEyeline,
+  readShotScreenSide: () => readShotScreenSide
+});
+function parseScreenSide(text2) {
+  const s = String(text2 ?? "");
+  if (!s.trim()) return "unknown";
+  const left = /左侧|画面左|左前景|左后方|左站|偏左|screenLeft|left[-\s]?side/i.test(s);
+  const right = /右侧|画面右|右前景|右后方|右站|偏右|screenRight|right[-\s]?side/i.test(s);
+  if (left && !right) return "left";
+  if (right && !left) return "right";
+  if (/居中|画面中|正中|center/i.test(s)) return "center";
+  if (left && right) return "center";
+  return "unknown";
+}
+function parseEyelineDir(text2) {
+  const s = String(text2 ?? "");
+  if (!s.trim()) return "unknown";
+  const left = /看向左|望向左|视线朝左|朝左看|gazeLeft|look(?:ing)?\s*left/i.test(s);
+  const right = /看向右|望向右|视线朝右|朝右看|gazeRight|look(?:ing)?\s*right/i.test(s);
+  if (left && !right) return "left";
+  if (right && !left) return "right";
+  if (/对视|互看|看向镜头|看镜头|直视/.test(s)) return "center";
+  const side = parseScreenSide(s);
+  if (side === "left" || side === "right" || side === "center") return side;
+  return "unknown";
+}
+function readShotEyeline(shot) {
+  if (!shot) return "unknown";
+  const narr2 = shot.narrative ?? {};
+  const declared = String(narr2.eyelineDir ?? shot.eyelineDir ?? "").toLowerCase();
+  if (declared === "left" || declared === "right" || declared === "center") return declared;
+  const spatial = String(narr2.spatialRelation ?? shot.spatialRelation ?? "");
+  const vd = String(shot.visualDescription ?? "");
+  return parseEyelineDir(`${spatial} ${vd}`);
+}
+function readShotScreenSide(shot) {
+  if (!shot) return "unknown";
+  const narr2 = shot.narrative ?? {};
+  const declared = String(narr2.screenSide ?? shot.screenSide ?? "").toLowerCase();
+  if (declared === "left" || declared === "right" || declared === "center") return declared;
+  const spatial = String(narr2.spatialRelation ?? shot.spatialRelation ?? "");
+  const vd = String(shot.visualDescription ?? "");
+  return parseScreenSide(`${spatial} ${vd}`);
+}
+function ensureScreenSideOnShot(shot) {
+  const narr2 = { ...shot.narrative ?? {} };
+  const prev = String(narr2.screenSide ?? "");
+  const side = readShotScreenSide(shot);
+  if (side === "unknown") return { side, changed: false };
+  if (prev === side) return { side, changed: false };
+  narr2.screenSide = side;
+  shot.narrative = narr2;
+  return { side, changed: true };
+}
+function ensureEyelineDirOnShot(shot) {
+  const narr2 = { ...shot.narrative ?? {} };
+  const prev = String(narr2.eyelineDir ?? "");
+  const dir = readShotEyeline(shot);
+  if (dir === "unknown") return { dir, changed: false };
+  if (prev === dir) return { dir, changed: false };
+  narr2.eyelineDir = dir;
+  shot.narrative = narr2;
+  return { dir, changed: true };
+}
+function auditAxis180Pair(prev, cur) {
+  let prevSide = readShotScreenSide(prev);
+  let curSide = readShotScreenSide(cur);
+  const prevEyeline = readShotEyeline(prev);
+  const curEyeline = readShotEyeline(cur);
+  let sideSource = "keyword";
+  try {
+    const { screenSideFromFaceBox: screenSideFromFaceBox2, readFaceBoxForAxisSoft: readFaceBoxForAxisSoft2 } = (init_faceBoxAxisSoft(), __toCommonJS(faceBoxAxisSoft_exports));
+    const pb = screenSideFromFaceBox2(readFaceBoxForAxisSoft2(prev));
+    const cb = screenSideFromFaceBox2(readFaceBoxForAxisSoft2(cur));
+    let usedBox = false;
+    if (prevSide === "unknown" && pb !== "unknown") {
+      prevSide = pb;
+      usedBox = true;
+    }
+    if (curSide === "unknown" && cb !== "unknown") {
+      curSide = cb;
+      usedBox = true;
+    }
+    if (usedBox) sideSource = prevSide !== readShotScreenSide(prev) || curSide !== readShotScreenSide(cur) ? "mixed" : "face_box_soft";
+    if (readShotScreenSide(prev) === "unknown" && readShotScreenSide(cur) === "unknown" && pb !== "unknown" && cb !== "unknown") {
+      sideSource = "face_box_soft";
+    }
+  } catch {
+  }
+  if (!prev || !cur) return { ok: true, prevSide, curSide, prevEyeline, curEyeline, sideSource };
+  const pScene = String(prev.sceneCode ?? prev.sceneName ?? "");
+  const cScene = String(cur.sceneCode ?? cur.sceneName ?? "");
+  if (pScene && cScene && pScene !== cScene) {
+    return { ok: true, prevSide, curSide, prevEyeline, curEyeline, sideSource };
+  }
+  const text2 = `${String(cur.visualDescription ?? "")} ${String(cur.narrative?.spatialRelation ?? "")}`;
+  const prevText = `${String(prev.visualDescription ?? "")} ${String(prev.narrative?.spatialRelation ?? "")}`;
+  const reverseLike = /过肩|OTS|对切|正反打|反打|对视/.test(text2) || /过肩|OTS|对切|正反打|反打|对视/.test(prevText);
+  if (!reverseLike && prevSide === "unknown" && curSide === "unknown") {
+    return { ok: true, prevSide, curSide, prevEyeline, curEyeline, sideSource };
+  }
+  if ((prevSide === "left" || prevSide === "right") && (curSide === "left" || curSide === "right") && prevSide === curSide && reverseLike) {
+    return {
+      ok: false,
+      finding: sideSource === "face_box_soft" ? "axis180_same_side_face_box" : "axis180_same_side",
+      prevSide,
+      curSide,
+      prevEyeline,
+      curEyeline,
+      sideSource
+    };
+  }
+  if (reverseLike && (prevEyeline === "left" || prevEyeline === "right") && (curEyeline === "left" || curEyeline === "right") && prevEyeline === curEyeline) {
+    return {
+      ok: false,
+      finding: "axis180_same_eyeline",
+      prevSide,
+      curSide,
+      prevEyeline,
+      curEyeline,
+      sideSource
+    };
+  }
+  return { ok: true, prevSide, curSide, prevEyeline, curEyeline, sideSource };
+}
+function auditAxis180Chain(shots) {
+  const pairFindings = [];
+  const sceneFailCounts = {};
+  for (let i = 0; i < shots.length - 1; i++) {
+    const a = shots[i];
+    const b = shots[i + 1];
+    if (!a || !b) continue;
+    const axis = auditAxis180Pair(a, b);
+    if (!axis.ok && axis.finding) {
+      pairFindings.push({
+        fromIndex: i,
+        toIndex: i + 1,
+        finding: axis.finding,
+        sideSource: axis.sideSource
+      });
+      if (axis.finding === "axis180_same_side" || axis.finding === "axis180_same_side_face_box") {
+        const scene = String(b.sceneCode ?? b.sceneName ?? a.sceneCode ?? a.sceneName ?? "_");
+        sceneFailCounts[scene] = (sceneFailCounts[scene] ?? 0) + 1;
+      }
+    }
+  }
+  let chainFinding;
+  for (const n of Object.values(sceneFailCounts)) {
+    if (n >= 2) {
+      chainFinding = "axis180_chain_same_side";
+      break;
+    }
+  }
+  return {
+    ok: pairFindings.length === 0,
+    pairFindings,
+    chainFinding,
+    sceneFailCounts
+  };
+}
+function flipSpatialSideKeyword(spatial) {
+  const s = String(spatial ?? "");
+  if (/左/.test(s) && !/右/.test(s)) return s.replace(/左/g, "\u53F3");
+  if (/右/.test(s) && !/左/.test(s)) return s.replace(/右/g, "\u5DE6");
+  if (/left/i.test(s) && !/right/i.test(s)) return s.replace(/left/gi, "right");
+  if (/right/i.test(s) && !/left/i.test(s)) return s.replace(/right/gi, "left");
+  return s;
+}
+function flipEyelineKeyword(text2) {
+  const s = String(text2 ?? "");
+  if (/看向左|望向左|朝左看/.test(s)) {
+    return s.replace(/看向左/g, "\u770B\u5411\u53F3").replace(/望向左/g, "\u671B\u5411\u53F3").replace(/朝左看/g, "\u671D\u53F3\u770B");
+  }
+  if (/看向右|望向右|朝右看/.test(s)) {
+    return s.replace(/看向右/g, "\u770B\u5411\u5DE6").replace(/望向右/g, "\u671B\u5411\u5DE6").replace(/朝右看/g, "\u671D\u5DE6\u770B");
+  }
+  return s;
+}
+var init_screenSideAxis = __esm({
+  "src/ruleEngine/design/screenSideAxis.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/design/repairAsDesign.ts
+var repairAsDesign_exports = {};
+__export(repairAsDesign_exports, {
+  applyRepairAsDesignToShot: () => applyRepairAsDesignToShot,
+  planIndustryAvRepair: () => planIndustryAvRepair,
+  planRepairFromFailureCluster: () => planRepairFromFailureCluster
+});
+function planRepairFromFailureCluster(input) {
+  const writes = [];
+  const kind = String(input.kind ?? "");
+  const vd = String(input.visualDescription ?? "");
+  if (kind === "contact_miss" || /paper_in_mouth|口含|纸入口/i.test(`${kind} ${input.hint ?? ""}`)) {
+    writes.push({
+      slot: "visualDescription",
+      value: /纸未入口|仅颊触/.test(vd) ? vd : `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}\u7EB8\u672A\u5165\u53E3\uFF1B\u4EC5\u988A\u89E6\u975E\u53E3\u542B\uFF1B\u8584\u7EB8\u89D2\u8D34\u5408\u9762\u988A\u5916\u4FA7\u3002`,
+      reason: "neg_repair_cheek"
+    });
+    writes.push({ slot: "propPose", value: "\u8584\u7EB8\u89D2\u8D34\u988A\u5212\u8FC7\uFF0C\u7981\u6B62\u53E3\u542B/\u624B\u6301\u5361\u7247", reason: "prop_pose" });
+    writes.push({ slot: "sfx", value: "\u7EB8\u9875\u6469\u64E6", reason: "contact_sfx" });
+  } else if (kind === "prompt_fidelity" || /PROMPT-FIDELITY|锚点未覆盖/i.test(`${kind} ${input.hint ?? ""}`)) {
+    const miss = String(input.hint ?? "\u7AEF\u5750\u3001\u592A\u5E08\u6905").replace(/提示词未覆盖设计锚点[^；]*/g, "").trim();
+    writes.push({
+      slot: "visualDescription",
+      value: `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}${miss || "\u7AEF\u5750\u592A\u5E08\u6905"}`,
+      reason: "prompt_fidelity_vd"
+    });
+  } else if (kind === "gray_studio" || kind === "missing_prop") {
+    writes.push({
+      slot: "visualDescription",
+      value: `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}\u4FDD\u7559\u5BA4\u5185\u8F6F\u73AF\u5883\u8F6E\u5ED3\uFF0C\u7981\u6B62\u7070\u68DA\u7A7A\u767D\u80CC\u666F\u3002`,
+      reason: "soft_env_repair"
+    });
+  } else if (kind === "prop_substitution") {
+    writes.push({
+      slot: "propPose",
+      value: "\u672C\u955C\u4E8B\u4EF6\u9053\u5177\u5165\u753B\u8D34\u5408\u89E6\u70B9\uFF0C\u7981\u6B62\u4EE5\u5916\u7C7B\u6301\u7269\u66FF\u4EE3",
+      reason: "prop_sub"
+    });
+  }
+  return buildRepairAsDesignPlan({
+    writes,
+    blocksBurn: false,
+    vendorConstraint: "seedream_multiref"
+  });
+}
+function planIndustryAvRepair(input) {
+  const writes = [];
+  const kind = String(input.kind ?? "");
+  const shot = input.shot ?? {};
+  const vd = String(shot.visualDescription ?? "");
+  if (/face_unread|FACE-READABILITY|face_unreadability/i.test(kind)) {
+    if (!/面容可读|抬视线/.test(vd)) {
+      writes.push({
+        slot: "visualDescription",
+        value: `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}\u8FD1\u666F\u9762\u5BB9\u53EF\u8BFB\uFF0C\u62AC\u89C6\u7EBF\u3002`,
+        reason: "face_readability"
+      });
+    }
+    writes.push({ slot: "microExpression", value: "\u62AC\u89C6\u7EBF\uFF0C\u53E3\u578B\u53EF\u8BFB", reason: "face_micro" });
+  }
+  if (/dialogue_shot_too_wide|near_promote|speak_lip_wide/i.test(kind)) {
+    writes.push({ slot: "shotSize", value: "\u8FD1\u666F", reason: "dialogue_near" });
+  }
+  if (/cam_speak|static_on_speak/i.test(kind)) {
+    writes.push({ slot: "shotDesign", value: "\u9759\u6B62", reason: "static_cam" });
+  }
+  if (/sfx|纸摩擦/i.test(kind + String(input.hint ?? ""))) {
+    writes.push({ slot: "sfx", value: "\u7EB8\u9875\u6469\u64E6", reason: "sfx_beat" });
+  }
+  if (/spatial|eyeline|站位|axis180|axis_180/i.test(kind)) {
+    writes.push({
+      slot: "visualDescription",
+      value: `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}\u4FDD\u6301\u7AD9\u4F4D\u8F74\u7EBF\u8FDE\u7EED\u3002`,
+      reason: "axis_hint"
+    });
+  }
+  if (/headroom|looking_room|composition_|构图/i.test(kind)) {
+    const hint = String(input.hint ?? "");
+    const add = /looking/i.test(kind) || /视线/.test(hint) ? "\u89C6\u7EBF\u524D\u65B9\u7559\u767D\u3002" : "\u4FDD\u7559\u5934\u4E0A\u7A7A\u95F4\u3002";
+    if (!vd.includes(add.slice(0, 4))) {
+      writes.push({
+        slot: "visualDescription",
+        value: `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}${add}`,
+        reason: "composition_soft"
+      });
+    }
+  }
+  if (/jl_cut|j_cut|l_cut|transition_audio|声先入|声延/i.test(kind)) {
+    writes.push({
+      slot: "narrative.avBeats",
+      value: /j_cut|声先入/i.test(kind) ? "\u4E0B\u53E5\u58F0\u5148\u5165\u518D\u5207\u753B" : "\u672C\u955C\u58F0\u5EF6\u81F3\u4E0B\u753B",
+      reason: "jl_cut_avbeat"
+    });
+  }
+  return buildRepairAsDesignPlan({ writes, blocksBurn: false, vendorConstraint: "seedream_multiref" });
+}
+function applyRepairAsDesignToShot(shot, plan) {
+  if (shot.designLock === true || shot.authorOverrideLock === true) return { applied: [] };
+  const applied = [];
+  const log = Array.isArray(shot.repairChangelog) ? [...shot.repairChangelog] : [];
+  for (const w of plan.writes) {
+    const field = SLOT_FIELD[w.slot] ?? w.slot;
+    const before = String(
+      field === "sfx" ? shot.sound?.sfx ?? "" : field === "shotDesign" ? shot.shotDesign?.cameraMotion ?? "" : shot[field] ?? ""
+    );
+    if (field === "sfx") {
+      const sound = { ...shot.sound ?? {}, sfx: w.value };
+      shot.sound = sound;
+      applied.push("sfx");
+    } else if (field === "avCausality") {
+      const narr2 = { ...shot.narrative ?? {} };
+      narr2.avCausality = typeof w.value === "string" ? { visualPeak: w.value } : w.value;
+      shot.narrative = narr2;
+      applied.push("avCausality");
+    } else if (field === "visualDescription") {
+      shot.visualDescription = w.value;
+      applied.push("visualDescription");
+    } else if (field === "shotDesign" || w.slot === "shotDesign") {
+      const sd = { ...shot.shotDesign ?? {} };
+      sd.cameraMotion = w.value;
+      shot.shotDesign = sd;
+      applied.push("shotDesign.cameraMotion");
+    } else if (w.slot === "narrative.avBeats" || field === "narrative.avBeats") {
+      const narr2 = { ...shot.narrative ?? {} };
+      const prev = Array.isArray(narr2.avBeats) ? [...narr2.avBeats] : [];
+      const beat = String(w.value ?? "");
+      if (beat && !prev.some((b) => b.includes(beat.slice(0, 4)))) prev.push(beat);
+      narr2.avBeats = prev.slice(0, 12);
+      shot.narrative = narr2;
+      applied.push("narrative.avBeats");
+    } else {
+      shot[field] = w.value;
+      applied.push(String(field));
+    }
+    log.push({
+      slot: String(field),
+      before,
+      after: String(w.value ?? ""),
+      reason: String(w.reason ?? "repair_as_design"),
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      packageVersion: Number(shot.packageVersion ?? 0) + 1
+    });
+  }
+  shot.repairChangelog = log.slice(-40);
+  shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
+  shot.promptState = "stale";
+  shot.videoStale = true;
+  shot.repairAsDesignAt = (/* @__PURE__ */ new Date()).toISOString();
+  return { applied };
+}
+var SLOT_FIELD;
+var init_repairAsDesign = __esm({
+  "src/ruleEngine/design/repairAsDesign.ts"() {
+    "use strict";
+    init_shootableArchitecture();
+    SLOT_FIELD = {
+      visualDescription: "visualDescription",
+      microExpression: "microExpression",
+      propPose: "propPose",
+      dialogueCoverage: "dialogue",
+      audioCue: "audioCue",
+      sfx: "sfx",
+      fxPrompt: "fxPrompt",
+      avCausality: "avCausality",
+      shotSize: "shotSize"
+    };
+  }
+});
+
+// src/ruleEngine/compilers/transitionAudioStamp.ts
+var transitionAudioStamp_exports = {};
+__export(transitionAudioStamp_exports, {
+  ensureTransitionAudioFromAvBeats: () => ensureTransitionAudioFromAvBeats,
+  mirrorJlCutTimelineToTransitionAudio: () => mirrorJlCutTimelineToTransitionAudio,
+  transitionAudioFromJlSlice: () => transitionAudioFromJlSlice
+});
+function transitionAudioFromJlSlice(slice, source = "silent_repair") {
+  if (!slice?.note) return null;
+  return {
+    jCutAudioLeadMs: slice.jCutAudioLeadMs,
+    lCutAudioLagMs: slice.lCutAudioLagMs,
+    note: slice.note,
+    source
+  };
+}
+function ensureTransitionAudioFromAvBeats(shot) {
+  const narr2 = { ...shot.narrative ?? {} };
+  const beats = Array.isArray(narr2.avBeats) ? narr2.avBeats : [];
+  const det = detectJlCutFromAvBeats(beats);
+  const slice = buildJlCutTimelineSlice({
+    wantsJ: det.wantsJ,
+    wantsL: det.wantsL,
+    source: "design_avBeats"
+  });
+  const stamp = transitionAudioFromJlSlice(slice, "silent_repair");
+  if (!stamp) return { changed: false, stamp: null };
+  const prev = narr2.transitionAudio;
+  const same = prev && prev.jCutAudioLeadMs === stamp.jCutAudioLeadMs && prev.lCutAudioLagMs === stamp.lCutAudioLagMs && prev.note === stamp.note;
+  if (same) return { changed: false, stamp };
+  narr2.transitionAudio = stamp;
+  shot.narrative = narr2;
+  return { changed: true, stamp };
+}
+function mirrorJlCutTimelineToTransitionAudio(shot, timeline) {
+  const stamp = transitionAudioFromJlSlice(timeline, "episode_polish");
+  if (!stamp) return false;
+  const narr2 = { ...shot.narrative ?? {} };
+  narr2.transitionAudio = stamp;
+  shot.narrative = narr2;
+  return true;
+}
+var init_transitionAudioStamp = __esm({
+  "src/ruleEngine/compilers/transitionAudioStamp.ts"() {
+    "use strict";
+    init_jlCutTimeline();
+  }
+});
+
+// src/ruleEngine/design/framingRoomSoft.ts
+var framingRoomSoft_exports = {};
+__export(framingRoomSoft_exports, {
+  ensureFramingRoomFromFaceBox: () => ensureFramingRoomFromFaceBox,
+  headroomStatusFromBox: () => headroomStatusFromBox,
+  lookingRoomStatusFromBox: () => lookingRoomStatusFromBox,
+  stampFramingRoomFromFindings: () => stampFramingRoomFromFindings
+});
+function clamp013(n) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+function headroomStatusFromBox(box) {
+  if (!box) return "unknown";
+  const top = clamp013(box.top);
+  if (top < HEADROOM_MIN2) return "tight";
+  return "ok";
+}
+function lookingRoomStatusFromBox(box, gaze) {
+  if (!box) return "unknown";
+  const g = gaze && gaze !== "unknown" ? gaze : "unknown";
+  if (g === "left") {
+    return clamp013(box.left) < LOOKING_ROOM_MIN2 ? "tight" : "ok";
+  }
+  if (g === "right") {
+    return 1 - clamp013(box.right) < LOOKING_ROOM_MIN2 ? "tight" : "ok";
+  }
+  return "undeclared";
+}
+function readGaze(shot) {
+  const narr2 = shot.narrative;
+  const d = String(narr2?.eyelineDir ?? "");
+  if (d === "left" || d === "right" || d === "center") return d;
+  const vd = String(shot.visualDescription ?? "");
+  if (/看向左|望向左|朝左看/.test(vd)) return "left";
+  if (/看向右|望向右|朝右看/.test(vd)) return "right";
+  return "unknown";
+}
+function ensureFramingRoomFromFaceBox(shot, opts) {
+  const box = readFaceBoxForAxisSoft(shot);
+  const headroomStatus = headroomStatusFromBox(box);
+  const lookingRoomStatus = lookingRoomStatusFromBox(box, readGaze(shot));
+  if (headroomStatus === "unknown" && lookingRoomStatus === "unknown") {
+    return { headroomStatus, lookingRoomStatus, changed: false };
+  }
+  const narr2 = { ...shot.narrative ?? {} };
+  let changed = false;
+  if (headroomStatus !== "unknown") {
+    const prev = String(narr2.headroomStatus ?? "");
+    if (opts?.force || !prev || prev === "unknown" || prev === "undeclared") {
+      if (prev !== headroomStatus) {
+        narr2.headroomStatus = headroomStatus;
+        narr2.headroomSource = "face_box_soft";
+        changed = true;
+      }
+    }
+  }
+  if (lookingRoomStatus !== "unknown") {
+    const prev = String(narr2.lookingRoomStatus ?? "");
+    if (opts?.force || !prev || prev === "unknown" || prev === "undeclared") {
+      if (prev !== lookingRoomStatus) {
+        narr2.lookingRoomStatus = lookingRoomStatus;
+        narr2.lookingRoomSource = "face_box_soft";
+        changed = true;
+      }
+    }
+  }
+  if (changed) shot.narrative = narr2;
+  return { headroomStatus, lookingRoomStatus, changed };
+}
+function stampFramingRoomFromFindings(shot, findingIds) {
+  const narr2 = { ...shot.narrative ?? {} };
+  let changed = false;
+  const ids = new Set(findingIds);
+  if (ids.has("headroom_tight") || ids.has("headroom_soft_provisional") || ids.has("headroom_undeclared")) {
+    const next = ids.has("headroom_undeclared") && !ids.has("headroom_tight") && !ids.has("headroom_soft_provisional") ? "undeclared" : "tight";
+    if (String(narr2.headroomStatus ?? "") !== next) {
+      narr2.headroomStatus = next;
+      narr2.headroomSource = ids.has("headroom_soft_provisional") ? "provisional_assess" : "composition_assess";
+      changed = true;
+    }
+  }
+  if (ids.has("looking_room_fail") || ids.has("looking_room_soft_provisional") || ids.has("looking_room_undeclared")) {
+    const next = ids.has("looking_room_undeclared") && !ids.has("looking_room_fail") && !ids.has("looking_room_soft_provisional") ? "undeclared" : "tight";
+    if (String(narr2.lookingRoomStatus ?? "") !== next) {
+      narr2.lookingRoomStatus = next;
+      narr2.lookingRoomSource = ids.has("looking_room_soft_provisional") ? "provisional_assess" : "composition_assess";
+      changed = true;
+    }
+  }
+  if (changed) shot.narrative = narr2;
+  return { changed };
+}
+var HEADROOM_MIN2, LOOKING_ROOM_MIN2;
+var init_framingRoomSoft = __esm({
+  "src/ruleEngine/design/framingRoomSoft.ts"() {
+    "use strict";
+    init_faceBoxAxisSoft();
+    HEADROOM_MIN2 = 0.06;
+    LOOKING_ROOM_MIN2 = 0.08;
+  }
+});
+
+// src/ruleEngine/design/industryAvSilentRepair.ts
+var industryAvSilentRepair_exports = {};
+__export(industryAvSilentRepair_exports, {
+  applyAvAtomsToShot: () => applyAvAtomsToShot,
+  applyGrammarDefaultsToShot: () => applyGrammarDefaultsToShot,
+  collectRepairChangelog: () => collectRepairChangelog,
+  ensureAdjacentJlCutAvBeats: () => ensureAdjacentJlCutAvBeats,
+  expandActionThenDialogueMcu: () => expandActionThenDialogueMcu,
+  expandRevealThenReaction: () => expandRevealThenReaction,
+  healEyelinePair: () => healEyelinePair,
+  runIndustryAvSilentRepair: () => runIndustryAvSilentRepair,
+  silentNearPromoteShot: () => silentNearPromoteShot,
+  undoLastIndustryRepairs: () => undoLastIndustryRepairs,
+  undoRepairChangelogEntry: () => undoRepairChangelogEntry
+});
+function isReactionShot(shot) {
+  const role = String(shot.visualSplitRole ?? shot.beatRole ?? "").toLowerCase();
+  if (/reaction|listen|react/.test(role)) return true;
+  const tags = Array.isArray(shot.visualTags) ? shot.visualTags.join(" ") : String(shot.visualTags ?? "");
+  if (/\breaction\b|face_cu/.test(tags) && /反应|微怔|听者/.test(String(shot.visualDescription ?? ""))) {
+    return true;
+  }
+  return /反应近景|听者微怔|反应特写/.test(String(shot.visualDescription ?? ""));
+}
+function isRevealOrPropInsert(shot) {
+  if (isReactionShot(shot)) return false;
+  const role = String(shot.visualSplitRole ?? shot.beatRole ?? "").toLowerCase();
+  if (/insert|reveal|prop/.test(role)) return true;
+  const vd = String(shot.visualDescription ?? "");
+  if (/贴颊|纸角|软环境|接触/.test(vd) && !/揭示|亮出|展开休书|甩出/.test(vd)) return false;
+  return /揭示|亮出|展开|插入|特写递|物件|纸页翻开|甩出|抛出|递出/.test(vd);
+}
+function nextHasSpeakOrEmotionCliff(next, reveal) {
+  if (next && speakIntent(next)) return true;
+  const lines = reveal.narrative?.dialogue?.lines ?? [];
+  if (lines.some((l) => (l.functions ?? []).includes("emotion_hit") || Boolean(String(l.reactionAction ?? "").trim()))) {
+    return true;
+  }
+  return /决绝|震惊|愣住|骤然|爆发/.test(String(reveal.visualDescription ?? ""));
+}
+function isDesignLocked(shot) {
+  return shot.designLock === true || shot.authorOverrideLock === true;
+}
+function speakIntent(shot) {
+  const onCam = hasOnCameraDialogue(
+    shot.narrative?.dialogue?.lines
+  );
+  const lip = String(
+    shot.shotDesign?.lipSyncPolicy ?? ""
+  );
+  return onCam || /dialogue_native|native/i.test(lip);
+}
+function appendChangelog(shot, entry) {
+  const full = {
+    ...entry,
+    at: entry.at ?? (/* @__PURE__ */ new Date()).toISOString(),
+    packageVersion: Number(shot.packageVersion ?? 0)
+  };
+  const prev = Array.isArray(shot.repairChangelog) ? shot.repairChangelog : [];
+  shot.repairChangelog = [...prev, full].slice(-40);
+  return full;
+}
+function silentNearPromoteShot(shot) {
+  if (isDesignLocked(shot) || !speakIntent(shot)) return null;
+  if (shot._industryNearPromoted === true) return null;
+  const size = String(shot.shotSize ?? shot.narrative?.shotSize ?? "");
+  if (!shotSizeWiderThanNear(size) && /近景|特写/.test(size)) return null;
+  if (!shotSizeWiderThanNear(size) && size) return null;
+  const before = size || "(empty)";
+  const def = grammarDefaultForIntent("speak_lip");
+  const nextSize = def?.shotSize ?? "\u8FD1\u666F";
+  if (String(shot.shotSize ?? "") === nextSize) {
+    shot._industryNearPromoted = true;
+    return null;
+  }
+  shot.shotSize = nextSize;
+  const narr2 = { ...shot.narrative ?? {} };
+  narr2.shotSize = nextSize;
+  shot.narrative = narr2;
+  let vd = String(shot.visualDescription ?? "");
+  if (vd && !/面容可读|抬视线/.test(vd)) {
+    vd = `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}\u9762\u5BB9\u53EF\u8BFB\uFF0C\u62AC\u89C6\u7EBF\u3002`;
+    shot.visualDescription = vd;
+  }
+  const sd = { ...shot.shotDesign ?? {} };
+  if (!sd.cameraMotion) sd.cameraMotion = def?.cameraMotion ?? "\u9759\u6B62";
+  if (!sd.lipSyncPolicy) sd.lipSyncPolicy = "dialogue_native";
+  if (!sd.faceBudget) sd.faceBudget = def?.faceBudget ?? "must";
+  shot.shotDesign = sd;
+  shot.promptState = "stale";
+  shot.videoStale = true;
+  shot._industryNearPromoted = true;
+  shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
+  return appendChangelog(shot, {
+    slot: "shotSize",
+    before,
+    after: nextSize,
+    reason: "silent_near_promote",
+    trigger: "dialogue_shot_too_wide"
+  });
+}
+function applyGrammarDefaultsToShot(shot) {
+  if (isDesignLocked(shot)) return [];
+  const out = [];
+  const vdIntent = String(shot.visualDescription ?? "");
+  const intent = speakIntent(shot) ? "speak_lip" : /过肩|OTS|过肩镜头/i.test(vdIntent) ? "ots" : /特写|道具|纸角/.test(vdIntent) ? "prop_cu" : "action_primary";
+  const def = grammarDefaultForIntent(intent);
+  if (!def) return out;
+  if (!String(shot.shotSize ?? "").trim() && def.shotSize) {
+    const before = String(shot.shotSize ?? "");
+    shot.shotSize = def.shotSize;
+    out.push(
+      appendChangelog(shot, {
+        slot: "shotSize",
+        before: before || "(empty)",
+        after: def.shotSize,
+        reason: "grammar_default",
+        trigger: "design_satisfy_defaults"
+      })
+    );
+  }
+  const sd = { ...shot.shotDesign ?? {} };
+  let sdChanged = false;
+  if (!sd.cameraMotion && def.cameraMotion) {
+    sd.cameraMotion = def.cameraMotion;
+    sdChanged = true;
+  }
+  if (speakIntent(shot) && !sd.lipSyncPolicy) {
+    sd.lipSyncPolicy = "dialogue_native";
+    sdChanged = true;
+  }
+  if (!sd.faceBudget && def.faceBudget) {
+    sd.faceBudget = def.faceBudget;
+    sdChanged = true;
+  }
+  if (sdChanged) {
+    shot.shotDesign = sd;
+    out.push(
+      appendChangelog(shot, {
+        slot: "shotDesign",
+        before: "",
+        after: JSON.stringify({ cameraMotion: sd.cameraMotion, lipSyncPolicy: sd.lipSyncPolicy }),
+        reason: "grammar_default",
+        trigger: "design_satisfy_defaults"
+      })
+    );
+  }
+  if (intent === "ots") {
+    const axisHint = softGrammarHints(["axis180"])[0] ?? "\u4FDD\u6301180\u5EA6\u8F74\u7EBF\uFF0C\u8FC7\u80A9\u5BF9\u5207\u4E0D\u8D8A\u8F74";
+    const narr2 = { ...shot.narrative ?? {} };
+    const beats = Array.isArray(narr2.avBeats) ? [...narr2.avBeats] : [];
+    if (!beats.includes(axisHint)) {
+      const before = beats.join("|");
+      beats.push(axisHint);
+      narr2.avBeats = beats;
+      shot.narrative = narr2;
+      out.push(
+        appendChangelog(shot, {
+          slot: "narrative.avBeats",
+          before: before || "(empty)",
+          after: beats.join("|"),
+          reason: "ots_axis180_default",
+          trigger: "eyeline_axis"
+        })
+      );
+    }
+  }
+  if (out.length) {
+    shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
+    shot.promptState = "stale";
+  }
+  return out;
+}
+function applyAvAtomsToShot(shot) {
+  if (isDesignLocked(shot) || !speakIntent(shot)) return [];
+  if (shot._industryAvAtoms === true) return [];
+  const out = [];
+  const hints = softGrammarHints(["dialogueBreath", "staticOnSpeak", "axis", "jCut", "lCut", "axis180"]);
+  const narr2 = { ...shot.narrative ?? {} };
+  const beats = Array.isArray(narr2.avBeats) ? [...narr2.avBeats] : [];
+  for (const h of hints) {
+    if (h && !beats.includes(h)) beats.push(h);
+  }
+  if (beats.length) {
+    narr2.avBeats = beats;
+    shot.narrative = narr2;
+    out.push(
+      appendChangelog(shot, {
+        slot: "narrative.avBeats",
+        before: "",
+        after: beats.join("|"),
+        reason: "av_atoms_design_time",
+        trigger: "cam_speak"
+      })
+    );
+  }
+  const sd = { ...shot.shotDesign ?? {} };
+  if (speakIntent(shot) && sd.cameraMotion !== "\u9759\u6B62") {
+    const before = String(sd.cameraMotion ?? "");
+    sd.cameraMotion = "\u9759\u6B62";
+    shot.shotDesign = sd;
+    out.push(
+      appendChangelog(shot, {
+        slot: "shotDesign.cameraMotion",
+        before,
+        after: "\u9759\u6B62",
+        reason: "static_on_speak",
+        trigger: "cam_speak"
+      })
+    );
+  }
+  if (!String(shot.microExpression ?? "").trim() && speakIntent(shot)) {
+    shot.microExpression = "\u62AC\u89C6\u7EBF\uFF0C\u53E3\u578B\u53EF\u8BFB";
+    out.push(
+      appendChangelog(shot, {
+        slot: "microExpression",
+        before: "",
+        after: "\u62AC\u89C6\u7EBF\uFF0C\u53E3\u578B\u53EF\u8BFB",
+        reason: "face_read_default",
+        trigger: "face_unreadability"
+      })
+    );
+  }
+  shot._industryAvAtoms = true;
+  if (out.length) {
+    shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
+    shot.promptState = "stale";
+    shot.videoStale = true;
+  }
+  return out;
+}
+function healEyelinePair(prev, shot) {
+  if (!prev || isDesignLocked(shot)) return {};
+  const pScene = String(prev.sceneCode ?? prev.sceneName ?? "");
+  const cScene = String(shot.sceneCode ?? shot.sceneName ?? "");
+  if (pScene && cScene && pScene !== cScene) return {};
+  const pSp = String(
+    prev.narrative?.spatialRelation ?? prev.spatialRelation ?? ""
+  );
+  const cSp = String(
+    shot.narrative?.spatialRelation ?? shot.spatialRelation ?? ""
+  );
+  const pLeft = /左/.test(pSp);
+  const pRight = /右/.test(pSp);
+  const cLeft = /左/.test(cSp);
+  const cRight = /右/.test(cSp);
+  if (pLeft && cLeft && pRight === false && cRight === false || pRight && cRight && !pLeft && !cLeft) {
+    if (/对切|正反打|过肩/.test(String(shot.visualDescription ?? "") + cSp)) {
+      return { debt: "eyeline_axis_ambiguous" };
+    }
+    const narr2 = { ...shot.narrative ?? {} };
+    const before = cSp;
+    const fixed = pLeft ? cSp.replace(/左/g, "\u53F3") : cSp.replace(/右/g, "\u5DE6");
+    if (fixed !== cSp && cSp) {
+      const axisHint = softGrammarHints(["axis180"])[0] ?? "\u4FDD\u6301180\u5EA6\u8F74\u7EBF\uFF0C\u8FC7\u80A9\u5BF9\u5207\u4E0D\u8D8A\u8F74";
+      const beats = Array.isArray(narr2.avBeats) ? [...narr2.avBeats] : [];
+      if (!beats.includes(axisHint)) beats.push(axisHint);
+      narr2.spatialRelation = fixed;
+      narr2.avBeats = beats;
+      shot.narrative = narr2;
+      shot.promptState = "stale";
+      ensureScreenSideOnShot(shot);
+      return {
+        entry: appendChangelog(shot, {
+          slot: "spatialRelation",
+          before,
+          after: fixed,
+          reason: "eyeline_axis_heal",
+          trigger: "eyeline_axis"
+        })
+      };
+    }
+    return { debt: "eyeline_axis_unresolved" };
+  }
+  return {};
+}
+function expandRevealThenReaction(shots) {
+  const out = [];
+  let expanded = 0;
+  const changelog = [];
+  const reactDef = grammarDefaultForIntent("reaction");
+  for (let i = 0; i < shots.length; i++) {
+    const s = shots[i];
+    const next = shots[i + 1];
+    if (isDesignLocked(s) || s._industryReactionExpanded === true || s._faceBudgetSplitId || s.burnParentForbidden || !isRevealOrPropInsert(s)) {
+      out.push(s);
+      continue;
+    }
+    if (next && isReactionShot(next)) {
+      out.push(s);
+      continue;
+    }
+    if (!nextHasSpeakOrEmotionCliff(next, s)) {
+      out.push(s);
+      continue;
+    }
+    const splitId = `react-${s.clientId ?? s.shotIndex ?? out.length}-${Date.now()}`;
+    const parent = {
+      ...s,
+      _industryReactionExpanded: true,
+      _visualSplitId: String(s._visualSplitId ?? splitId)
+    };
+    const seed = buildSplitChildContinuitySeed(parent);
+    const ra = String(
+      (s.narrative?.dialogue?.lines ?? []).find((l) => String(l.reactionAction ?? "").trim())?.reactionAction ?? ""
+    ).trim() || "\u542C\u8005\u5FAE\u6014";
+    const size = reactDef?.shotSize ?? "\u8FD1\u666F";
+    const reactionChild = applySplitChildContinuity(
+      {
+        ...s,
+        clientId: `${s.clientId ?? s.shotIndex}-reaction`,
+        shotIndex: Number(s.shotIndex ?? 0) + 0.05,
+        visualSplitRole: "reaction",
+        beatRole: "reaction",
+        _visualSplitId: splitId,
+        _industryReactionExpanded: true,
+        shotSize: size,
+        visualDescription: `${size}\u3002${ra}\uFF0C\u9762\u5BB9\u53EF\u8BFB\u3002`,
+        narrative: {
+          ...s.narrative ?? {},
+          shotSize: size,
+          dialogue: { lines: [] }
+        },
+        shotDesign: {
+          ...s.shotDesign ?? {},
+          lipSyncPolicy: "silent",
+          cameraMotion: reactDef?.cameraMotion ?? "\u9759\u6B62",
+          faceBudget: reactDef?.faceBudget ?? "must"
+        },
+        visualTags: ["reaction", "face_cu"],
+        promptState: "stale",
+        videoStale: true,
+        filePath: void 0,
+        packageVersion: Number(s.packageVersion ?? 0) + 1
+      },
+      seed
+    );
+    changelog.push(
+      appendChangelog(parent, {
+        slot: "split",
+        before: "reveal_only",
+        after: "reveal_then_reaction",
+        reason: "missing_reaction_after_reveal",
+        trigger: "reveal_then_reaction"
+      })
+    );
+    parent.promptState = "stale";
+    parent.videoStale = true;
+    parent.packageVersion = Number(parent.packageVersion ?? 0) + 1;
+    out.push(parent, reactionChild);
+    expanded += 1;
+  }
+  return { shots: out, expanded, changelog };
+}
+function expandActionThenDialogueMcu(shots) {
+  const out = [];
+  let expanded = 0;
+  const changelog = [];
+  for (const s of shots) {
+    if (isDesignLocked(s) || s._faceBudgetSplitId || s._stillBeatSplitId || s._visualSplitId) {
+      out.push(s);
+      continue;
+    }
+    const vd = String(s.visualDescription ?? "");
+    const onCam = speakIntent(s);
+    const budget = assessFaceBudget({
+      visualDescription: vd,
+      shotSize: String(s.shotSize ?? ""),
+      hasDialogue: onCam,
+      lipSyncPolicy: String(s.shotDesign?.lipSyncPolicy ?? ""),
+      videoIntentClass: onCam ? "speak_lip" : void 0,
+      realizationOccupancy: String(s.realizationOccupancy ?? ""),
+      intentOccupancy: String(s.intentOccupancy ?? "")
+    });
+    if (!budget.unreachable) {
+      out.push(s);
+      continue;
+    }
+    const splitId = `facebud-${s.clientId ?? s.shotIndex ?? out.length}-${Date.now()}`;
+    const parent = { ...s, burnParentForbidden: true, _faceBudgetSplitId: splitId, irdConfirmRequired: false };
+    const seed = buildSplitChildContinuitySeed(parent);
+    const actionChild = applySplitChildContinuity(
+      {
+        ...s,
+        clientId: `${s.clientId ?? s.shotIndex}-action`,
+        shotIndex: Number(s.shotIndex ?? 0),
+        visualSplitRole: "action",
+        beatRole: "action",
+        _visualSplitId: splitId,
+        _faceBudgetSplitId: splitId,
+        shotSize: grammarDefaultForIntent("action_primary")?.shotSize ?? "\u4E2D\u666F",
+        visualDescription: vd.replace(/[，,]?\s*[^。]*说[^。]*/g, "").trim() || vd,
+        narrative: {
+          ...s.narrative ?? {},
+          dialogue: { lines: [] }
+        },
+        shotDesign: {
+          ...s.shotDesign ?? {},
+          lipSyncPolicy: "silent",
+          faceBudget: "optional"
+        },
+        promptState: "stale",
+        videoStale: true
+      },
+      seed
+    );
+    const speakDef = grammarDefaultForIntent("speak_lip");
+    const speakChild = applySplitChildContinuity(
+      {
+        ...s,
+        clientId: `${s.clientId ?? s.shotIndex}-speak`,
+        shotIndex: Number(s.shotIndex ?? 0) + 0.1,
+        visualSplitRole: "speak",
+        beatRole: "speak",
+        _visualSplitId: splitId,
+        _faceBudgetSplitId: splitId,
+        shotSize: speakDef?.shotSize ?? "\u8FD1\u666F",
+        visualDescription: /面容可读|抬视线/.test(vd) ? vd : `${vd.replace(/弯腰|俯身|低头|跪持/g, "\u62AC\u89C6\u7EBF").slice(0, 180)}${vd.endsWith("\u3002") ? "" : "\u3002"}\u8FD1\u666F\u9762\u5BB9\u53EF\u8BFB\uFF0C\u62AC\u89C6\u7EBF\u53E3\u578B\u3002`,
+        shotDesign: {
+          ...s.shotDesign ?? {},
+          lipSyncPolicy: "dialogue_native",
+          cameraMotion: "\u9759\u6B62",
+          faceBudget: "must"
+        },
+        promptState: "stale",
+        videoStale: true,
+        _industryNearPromoted: true
+      },
+      seed
+    );
+    parent.promptState = "stale";
+    changelog.push(
+      appendChangelog(parent, {
+        slot: "split",
+        before: "single_bow_speak",
+        after: "action_then_dialogue_mcu",
+        reason: "face_budget_unreachable",
+        trigger: "face_budget_unreachable"
+      })
+    );
+    out.push(parent, actionChild, speakChild);
+    expanded += 1;
+  }
+  return { shots: out, expanded, changelog };
+}
+function ensureAdjacentJlCutAvBeats(shots) {
+  const changelog = [];
+  let changed = 0;
+  const jCut = softGrammarHints(["jCut"])[0] ?? "\u4E0B\u53E5\u58F0\u5148\u5165\u518D\u5207\u753B";
+  const lCut = softGrammarHints(["lCut"])[0] ?? "\u672C\u955C\u58F0\u5EF6\u81F3\u4E0B\u753B";
+  for (let i = 0; i < shots.length - 1; i++) {
+    const a = shots[i];
+    const b = shots[i + 1];
+    if (isDesignLocked(a) || isDesignLocked(b)) continue;
+    if (!speakIntent(a) || !speakIntent(b)) continue;
+    const sceneA = String(a.sceneCode ?? a.sceneName ?? "");
+    const sceneB = String(b.sceneCode ?? b.sceneName ?? "");
+    if (sceneA && sceneB && sceneA !== sceneB) continue;
+    const stamp = (shot, hint, reason) => {
+      const narr2 = { ...shot.narrative ?? {} };
+      const beats = Array.isArray(narr2.avBeats) ? [...narr2.avBeats] : [];
+      if (beats.includes(hint) || beats.some((x) => x.includes(hint.slice(0, 4)))) return false;
+      const before = beats.join("|");
+      beats.push(hint);
+      narr2.avBeats = beats;
+      shot.narrative = narr2;
+      shot.promptState = "stale";
+      shot.videoStale = true;
+      shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
+      changelog.push(
+        appendChangelog(shot, {
+          slot: "narrative.avBeats",
+          before: before || "(empty)",
+          after: beats.join("|"),
+          reason,
+          trigger: "jl_cut_adjacent"
+        })
+      );
+      return true;
+    };
+    if (stamp(a, lCut, "silent_l_cut_adjacent")) changed += 1;
+    if (stamp(b, jCut, "silent_j_cut_adjacent")) changed += 1;
+  }
+  return { changed, changelog };
+}
+function runIndustryAvSilentRepair(shotsIn, opts) {
+  const t0 = Date.now();
+  const maxMs = opts?.maxMs ?? 8e3;
+  let shots = shotsIn.map((s) => ({ ...s }));
+  const changelog = [];
+  const diffs = [];
+  const residualDebts = [];
+  if (!opts?.skipSplit) {
+    const ex = expandActionThenDialogueMcu(shots);
+    shots = ex.shots;
+    changelog.push(...ex.changelog);
+    if (ex.expanded) diffs.push(`face_split\xD7${ex.expanded}`);
+  }
+  if (Date.now() - t0 > maxMs) {
+    residualDebts.push("industry_repair_timeout");
+    return { shots, changed: changelog.length, changelog, diffs, residualDebts };
+  }
+  {
+    const rx = expandRevealThenReaction(shots);
+    shots = rx.shots;
+    changelog.push(...rx.changelog);
+    if (rx.expanded) diffs.push(`reaction_expand\xD7${rx.expanded}`);
+  }
+  {
+    const jl = ensureAdjacentJlCutAvBeats(shots);
+    changelog.push(...jl.changelog);
+    if (jl.changed) diffs.push(`jl_cut\xD7${jl.changed}`);
+  }
+  {
+    for (const sh of shots) {
+      ensureScreenSideOnShot(sh);
+      ensureEyelineDirOnShot(sh);
+      try {
+        const { ensureScreenSideFromFaceBox: ensureScreenSideFromFaceBox2, ensureEyelineFromFaceBoxLookingRoom: ensureEyelineFromFaceBoxLookingRoom2 } = (init_faceBoxAxisSoft(), __toCommonJS(faceBoxAxisSoft_exports));
+        const s = ensureScreenSideFromFaceBox2(sh);
+        if (s.changed) {
+          changelog.push(
+            appendChangelog(sh, {
+              slot: "narrative.screenSide",
+              before: "(empty)",
+              after: s.side,
+              reason: "screenSide_from_face_box",
+              trigger: "face_box_soft"
+            })
+          );
+          diffs.push(`screenSideBox:${sh.clientId ?? sh.shotIndex}`);
+        }
+        const e = ensureEyelineFromFaceBoxLookingRoom2(sh);
+        if (e.changed) {
+          changelog.push(
+            appendChangelog(sh, {
+              slot: "narrative.eyelineDir",
+              before: "(empty)",
+              after: e.dir,
+              reason: "eyeline_from_face_box_looking_room",
+              trigger: "face_box_soft"
+            })
+          );
+          diffs.push(`eyelineBox:${sh.clientId ?? sh.shotIndex}`);
+        }
+      } catch {
+      }
+    }
+    for (let i = 1; i < shots.length; i++) {
+      const prev2 = shots[i - 1];
+      const cur = shots[i];
+      if (isDesignLocked(cur)) continue;
+      const axis = auditAxis180Pair(prev2, cur);
+      if (axis.ok) continue;
+      if (axis.finding === "axis180_same_side" || axis.finding === "axis180_same_side_face_box") {
+        const narr2 = { ...cur.narrative ?? {} };
+        const before = String(narr2.spatialRelation ?? "");
+        const fixed = flipSpatialSideKeyword(before);
+        if (!fixed || fixed === before) {
+          residualDebts.push(axis.finding);
+          continue;
+        }
+        narr2.spatialRelation = fixed;
+        cur.narrative = narr2;
+        ensureScreenSideOnShot(cur);
+        cur.promptState = "stale";
+        cur.videoStale = true;
+        changelog.push(
+          appendChangelog(cur, {
+            slot: "spatialRelation",
+            before: before || "(empty)",
+            after: fixed,
+            reason: axis.finding === "axis180_same_side_face_box" ? "axis180_face_box_heal" : "axis180_pair_heal",
+            trigger: "eyeline_axis"
+          })
+        );
+        diffs.push(`axis180:${cur.clientId ?? cur.shotIndex}`);
+        continue;
+      }
+      if (axis.finding === "axis180_same_eyeline") {
+        const { flipEyelineKeyword: flipEyelineKeyword2 } = (init_screenSideAxis(), __toCommonJS(screenSideAxis_exports));
+        const before = String(cur.visualDescription ?? "");
+        const fixed = flipEyelineKeyword2(before);
+        if (!fixed || fixed === before) {
+          residualDebts.push("axis180_same_eyeline");
+          continue;
+        }
+        cur.visualDescription = fixed;
+        ensureEyelineDirOnShot(cur);
+        cur.promptState = "stale";
+        cur.videoStale = true;
+        changelog.push(
+          appendChangelog(cur, {
+            slot: "visualDescription",
+            before: before || "(empty)",
+            after: fixed,
+            reason: "axis180_eyeline_heal",
+            trigger: "eyeline_axis"
+          })
+        );
+        const narrE = { ...cur.narrative ?? {} };
+        const eyeBefore = String(narrE.eyelineDir ?? "(empty)");
+        ensureEyelineDirOnShot(cur);
+        const eyeAfter = String(
+          (cur.narrative?.eyelineDir ?? "") || "(empty)"
+        );
+        if (eyeBefore !== eyeAfter) {
+          changelog.push(
+            appendChangelog(cur, {
+              slot: "narrative.eyelineDir",
+              before: eyeBefore,
+              after: eyeAfter,
+              reason: "eyelineDir_stamp",
+              trigger: "eyeline_axis"
+            })
+          );
+        }
+        diffs.push(`axis180_eyeline:${cur.clientId ?? cur.shotIndex}`);
+      }
+    }
+    try {
+      const chain = auditAxis180Chain(shots);
+      for (const p3 of chain.pairFindings) {
+        if (!residualDebts.includes(p3.finding)) residualDebts.push(p3.finding);
+      }
+      if (chain.chainFinding) {
+        residualDebts.push(chain.chainFinding);
+        diffs.push(`axis180_chain:${chain.chainFinding}`);
+        const axisHint = softGrammarHints(["axis180"])[0] ?? "\u4FDD\u6301180\u5EA6\u8F74\u7EBF\uFF0C\u8FC7\u80A9\u5BF9\u5207\u4E0D\u8D8A\u8F74";
+        const riskScenes = new Set(
+          Object.entries(chain.sceneFailCounts).filter(([, n]) => n >= 2).map(([sc]) => sc)
+        );
+        for (const sh of shots) {
+          if (isDesignLocked(sh)) continue;
+          const scene = String(sh.sceneCode ?? sh.sceneName ?? "_");
+          if (!riskScenes.has(scene) && !riskScenes.has("_")) continue;
+          const blob = `${String(sh.visualDescription ?? "")} ${String(
+            sh.narrative?.spatialRelation ?? ""
+          )}`;
+          if (!/过肩|OTS|对切|正反打|反打|对视/.test(blob)) continue;
+          const narr2 = { ...sh.narrative ?? {} };
+          const beats = Array.isArray(narr2.avBeats) ? [...narr2.avBeats] : [];
+          if (beats.some((b) => /180|轴线|不越轴/.test(String(b)))) continue;
+          beats.push(axisHint);
+          narr2.avBeats = beats;
+          narr2.axisChainNote = chain.chainFinding;
+          sh.narrative = narr2;
+          sh.promptState = "stale";
+          sh.videoStale = true;
+          changelog.push(
+            appendChangelog(sh, {
+              slot: "narrative.avBeats",
+              before: "(empty)",
+              after: axisHint.slice(0, 40),
+              reason: "axis180_chain_soft_note",
+              trigger: "axis180_chain"
+            })
+          );
+          diffs.push(`axisChainNote:${sh.clientId ?? sh.shotIndex}`);
+        }
+      }
+    } catch {
+    }
+  }
+  {
+    try {
+      const { assessComposition: assessComposition2 } = (init_compositionAssess(), __toCommonJS(compositionAssess_exports));
+      const {
+        readFaceBoxNormFromMeta: readFaceBoxNormFromMeta2,
+        readProvisionalFaceBoxFromMeta: readProvisionalFaceBoxFromMeta2,
+        keyOrAdapterPresentFromMeta: keyOrAdapterPresentFromMeta2
+      } = (init_faceBoxNormFromMeta(), __toCommonJS(faceBoxNormFromMeta_exports));
+      const { ensureTransitionAudioFromAvBeats: ensureTransitionAudioFromAvBeats2 } = (init_transitionAudioStamp(), __toCommonJS(transitionAudioStamp_exports));
+      const HEAL_COMP = /* @__PURE__ */ new Set([
+        "headroom_soft_provisional",
+        "looking_room_soft_provisional",
+        "headroom_tight",
+        "looking_room_fail",
+        "headroom_undeclared",
+        "looking_room_undeclared"
+      ]);
+      for (const sh of shots) {
+        const meta4 = sh;
+        const keyPresent = keyOrAdapterPresentFromMeta2(meta4);
+        const faceBox = readFaceBoxNormFromMeta2(meta4);
+        const provisional = faceBox ? null : readProvisionalFaceBoxFromMeta2(meta4);
+        if (faceBox && !meta4.faceBoxNorm) meta4.faceBoxNorm = faceBox;
+        const r = assessComposition2({
+          keyOrAdapterPresent: keyPresent,
+          faceBoxNorm: faceBox,
+          provisionalFaceBoxNorm: provisional,
+          visualDescription: String(sh.visualDescription ?? ""),
+          shotSize: String(sh.shotSize ?? sh.narrative?.shotSize ?? ""),
+          spatialRelation: String(
+            sh.narrative?.spatialRelation ?? ""
+          ),
+          faceBudget: String(sh.faceBudget ?? "")
+        });
+        for (const f of r.findings) residualDebts.push(f.id);
+        if (r.pixelDimStatus === "unmeasured" && r.findings.length) {
+          residualDebts.push("composition_unmeasured");
+        }
+        if (r.pixelDimStatus === "measured_fail") residualDebts.push("composition_measured_fail");
+        sh.pixelDimStatus = r.pixelDimStatus;
+        if (!isDesignLocked(sh)) {
+          try {
+            const { ensureFramingRoomFromFaceBox: ensureFramingRoomFromFaceBox2, stampFramingRoomFromFindings: stampFramingRoomFromFindings2 } = (init_framingRoomSoft(), __toCommonJS(framingRoomSoft_exports));
+            const fr = ensureFramingRoomFromFaceBox2(sh);
+            const st = stampFramingRoomFromFindings2(
+              sh,
+              r.findings.map((f) => f.id)
+            );
+            if (fr.changed || st.changed) {
+              changelog.push(
+                appendChangelog(sh, {
+                  slot: "narrative.headroomStatus",
+                  before: "(empty)",
+                  after: `${String(sh.narrative?.headroomStatus ?? "")}/${String(sh.narrative?.lookingRoomStatus ?? "")}`,
+                  reason: "framing_room_soft",
+                  trigger: "composition_framing"
+                })
+              );
+              diffs.push(`framingRoom:${sh.clientId ?? sh.shotIndex}`);
+            }
+            const hr = String(sh.narrative?.headroomStatus ?? "");
+            const lr = String(sh.narrative?.lookingRoomStatus ?? "");
+            if (hr === "tight") residualDebts.push("framing_headroom_tight");
+            if (lr === "tight") residualDebts.push("framing_looking_room_tight");
+          } catch {
+          }
+          for (const f of r.findings) {
+            if (!HEAL_COMP.has(f.id)) continue;
+            const plan = planIndustryAvRepair({ kind: f.id, shot: sh, hint: f.hint ?? f.message });
+            if (!plan.writes.length) continue;
+            const before = String(sh.visualDescription ?? "");
+            const applied = applyRepairAsDesignToShot(sh, plan);
+            if (applied.applied.length) {
+              changelog.push(
+                appendChangelog(sh, {
+                  slot: "visualDescription",
+                  before: before || "(empty)",
+                  after: String(sh.visualDescription ?? "").slice(0, 120),
+                  reason: `composition_heal:${f.id}`,
+                  trigger: r.provisionalSoft ? "composition_provisional" : "composition_soft"
+                })
+              );
+              diffs.push(`compHeal:${f.id}:${sh.clientId ?? sh.shotIndex}`);
+            }
+          }
+        }
+        const ta = ensureTransitionAudioFromAvBeats2(sh);
+        if (ta.changed) {
+          changelog.push(
+            appendChangelog(sh, {
+              slot: "narrative.transitionAudio",
+              before: "(empty)",
+              after: ta.stamp?.note ?? "",
+              reason: "transition_audio_from_avBeats",
+              trigger: "jl_cut"
+            })
+          );
+          diffs.push(`transitionAudio:${sh.clientId ?? sh.shotIndex}`);
+        }
+      }
+    } catch {
+    }
+  }
+  if (Date.now() - t0 > maxMs) {
+    residualDebts.push("industry_repair_timeout");
+    return { shots, changed: changelog.length, changelog, diffs, residualDebts };
+  }
+  let prev = null;
+  for (const s of shots) {
+    if (s.burnParentForbidden && s._faceBudgetSplitId && !s._visualSplitId) {
+      prev = s;
+      continue;
+    }
+    for (const step of PRIORITY3) {
+      if (Date.now() - t0 > maxMs) {
+        residualDebts.push("industry_repair_timeout");
+        break;
+      }
+      if (step === "face_split" || step === "reaction_expand") continue;
+      if (step === "grammar_defaults") {
+        changelog.push(...applyGrammarDefaultsToShot(s));
+      } else if (step === "near_promote") {
+        if (String(s.visualSplitRole ?? "") === "action") continue;
+        const e = silentNearPromoteShot(s);
+        if (e) {
+          changelog.push(e);
+          diffs.push(`near:${s.clientId ?? s.shotIndex}`);
+        }
+      } else if (step === "av_atoms") {
+        changelog.push(...applyAvAtomsToShot(s));
+      } else if (step === "eyeline") {
+        const h = healEyelinePair(prev, s);
+        if (h.entry) changelog.push(h.entry);
+        if (h.debt) residualDebts.push(h.debt);
+      }
+    }
+    if (speakIntent(s) && /面容|抬脸|低头/.test(String(s.visualDescription ?? ""))) {
+      const plan = planIndustryAvRepair({ kind: "face_unreadability", shot: s });
+      if (plan.writes.length && !isDesignLocked(s)) {
+        applyRepairAsDesignToShot(s, plan);
+      }
+    }
+    prev = s;
+  }
+  loadCinematicShotGrammar();
+  return {
+    shots,
+    changed: changelog.length,
+    changelog,
+    diffs: [...new Set(diffs)],
+    residualDebts: [...new Set(residualDebts)]
+  };
+}
+function collectRepairChangelog(shots) {
+  const all3 = [];
+  for (const s of shots) {
+    if (Array.isArray(s.repairChangelog)) all3.push(...s.repairChangelog);
+  }
+  return all3.slice(-80);
+}
+function undoRepairChangelogEntry(shot, entry) {
+  if (isDesignLocked(shot)) return { ok: false, residual: "design_locked" };
+  if (entry.slot === "split" || entry.reason?.includes("split") || entry.after === "reveal_then_reaction") {
+    return { ok: false, residual: "undo_split_manual" };
+  }
+  if (!UNDOABLE_SLOTS.has(entry.slot) && entry.slot !== "shotDesign") {
+    return { ok: false, residual: `undo_unsupported:${entry.slot}` };
+  }
+  const before = entry.before === "(empty)" ? "" : entry.before;
+  if (entry.slot === "shotSize") {
+    shot.shotSize = before || void 0;
+    const narr2 = { ...shot.narrative ?? {} };
+    if (before) narr2.shotSize = before;
+    else delete narr2.shotSize;
+    shot.narrative = narr2;
+    delete shot._industryNearPromoted;
+  } else if (entry.slot === "visualDescription") {
+    shot.visualDescription = before;
+  } else if (entry.slot === "microExpression") {
+    shot.microExpression = before || void 0;
+  } else if (entry.slot === "spatialRelation") {
+    const narr2 = { ...shot.narrative ?? {} };
+    narr2.spatialRelation = before;
+    delete narr2.screenSide;
+    shot.narrative = narr2;
+    try {
+      ensureScreenSideOnShot(shot);
+    } catch {
+    }
+  } else if (entry.slot === "narrative.screenSide") {
+    const narr2 = { ...shot.narrative ?? {} };
+    if (before) narr2.screenSide = before;
+    else delete narr2.screenSide;
+    shot.narrative = narr2;
+  } else if (entry.slot === "narrative.eyelineDir") {
+    const narr2 = { ...shot.narrative ?? {} };
+    if (before && before !== "(empty)") narr2.eyelineDir = before;
+    else delete narr2.eyelineDir;
+    shot.narrative = narr2;
+  } else if (entry.slot === "shotDesign.cameraMotion") {
+    const sd = { ...shot.shotDesign ?? {} };
+    sd.cameraMotion = before || void 0;
+    shot.shotDesign = sd;
+  } else if (entry.slot === "narrative.avBeats") {
+    const narr2 = { ...shot.narrative ?? {} };
+    narr2.avBeats = before ? before.split("|").filter(Boolean) : [];
+    shot.narrative = narr2;
+    delete shot._industryAvAtoms;
+  } else if (entry.slot === "shotDesign") {
+    return { ok: false, residual: "undo_shotDesign_manual" };
+  }
+  const log = Array.isArray(shot.repairChangelog) ? [...shot.repairChangelog] : [];
+  const idx = log.findIndex(
+    (e) => e.at === entry.at && e.slot === entry.slot && e.after === entry.after && e.before === entry.before
+  );
+  if (idx >= 0) log.splice(idx, 1);
+  log.push({
+    slot: entry.slot,
+    before: entry.after,
+    after: before || "(empty)",
+    reason: "undo_silent_repair",
+    trigger: entry.trigger,
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    packageVersion: Number(shot.packageVersion ?? 0)
+  });
+  shot.repairChangelog = log.slice(-40);
+  shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
+  shot.promptState = "stale";
+  shot.videoStale = true;
+  return { ok: true };
+}
+function undoLastIndustryRepairs(shot, count = 1) {
+  const log = Array.isArray(shot.repairChangelog) ? [...shot.repairChangelog] : [];
+  const residuals = [];
+  let undone = 0;
+  for (let n = 0; n < count; n++) {
+    let target;
+    for (let i = log.length - 1; i >= 0; i--) {
+      const e = log[i];
+      if (e.reason === "undo_silent_repair") continue;
+      target = e;
+      break;
+    }
+    if (!target) break;
+    const r = undoRepairChangelogEntry(shot, target);
+    if (r.ok) {
+      undone += 1;
+      log.length = 0;
+      log.push(...shot.repairChangelog ?? []);
+    } else if (r.residual) {
+      residuals.push(r.residual);
+      const idx = log.findIndex(
+        (e) => e.at === target.at && e.slot === target.slot && e.after === target.after && e.before === target.before
+      );
+      if (idx >= 0) log.splice(idx, 1);
+    }
+  }
+  return { undone, residuals };
+}
+var PRIORITY3, UNDOABLE_SLOTS;
+var init_industryAvSilentRepair = __esm({
+  "src/ruleEngine/design/industryAvSilentRepair.ts"() {
+    "use strict";
+    init_faceBudgetPolicy();
+    init_cinematicShotGrammar();
+    init_screenSideAxis();
+    init_onCameraDialogue();
+    init_repairAsDesign();
+    init_splitChildContinuity();
+    PRIORITY3 = [
+      "face_split",
+      "reaction_expand",
+      "near_promote",
+      "av_atoms",
+      "eyeline",
+      "grammar_defaults"
+    ];
+    UNDOABLE_SLOTS = /* @__PURE__ */ new Set([
+      "shotSize",
+      "visualDescription",
+      "microExpression",
+      "spatialRelation",
+      "narrative.screenSide",
+      "narrative.eyelineDir",
+      "shotDesign.cameraMotion",
+      "narrative.avBeats"
+    ]);
+  }
+});
+
+// src/ruleEngine/bundle/generationClosureDryRun.ts
+function runGenerationClosureDryRun(opts) {
+  return runGenerationClosureViaRegistry({
+    genError: opts.error,
+    sfRound: opts.sfRound,
+    hasRePush: opts.hasRePush,
+    probeDuration: opts.probeDuration,
+    sbDuration: opts.sbDuration,
+    probeHasAudio: opts.probeHasAudio,
+    policyNative: opts.policyNative
+  });
+}
+var init_generationClosureDryRun = __esm({
+  "src/ruleEngine/bundle/generationClosureDryRun.ts"() {
+    "use strict";
+    init_registerHandlers();
+  }
+});
+
+// src/ruleEngine/bundle/intelligentClosureDryRun.ts
+function runIntelligentClosureDryRun(bundle) {
+  return runIntelligentClosureViaRegistry(bundle);
+}
+var init_intelligentClosureDryRun = __esm({
+  "src/ruleEngine/bundle/intelligentClosureDryRun.ts"() {
+    "use strict";
+    init_registerHandlers();
+  }
+});
+
+// src/ruleEngine/design/unifiedDryRun.ts
+function runUnifiedClosure(bundle, opts = {}) {
+  const tier = opts.tier ?? "T1";
+  const enriched = enrichBundleForwardTrace(bundle, tier);
+  const dc = runDesignClosureDryRun(enriched);
+  const pc = tier === "T3" ? runProductionClosureDryRunForTier(enriched, "T3") : tier === "T2" ? runProductionClosureDryRunForTier(enriched, "T2") : [];
+  const gc = runGenerationClosureDryRun({
+    error: opts.genError ?? "",
+    sfRound: opts.sfRound
+  });
+  const ic = runIntelligentClosureDryRun(enriched);
+  const blocked = [...dc, ...pc, ...gc, ...ic].some((c) => !c.passed && c.severity === "BLOCK");
+  return { dc, pc, gc, ic, blocked };
+}
+var init_unifiedDryRun = __esm({
+  "src/ruleEngine/design/unifiedDryRun.ts"() {
+    "use strict";
+    init_productionClosureDryRun();
+    init_designClosureDryRun();
+    init_generationClosureDryRun();
+    init_intelligentClosureDryRun();
+    init_forwardTrace();
+  }
+});
+
+// src/ruleEngine/bundle/coerceShotStringFields.ts
+function pickString(...vals) {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return void 0;
+}
+function coerceVisualEffectObject(obj) {
+  const level = pickString(obj.level, obj.type, obj.fxLevel, obj.grade);
+  const desc = pickString(obj.desc, obj.content, obj.description, obj.text, obj.summary);
+  if (level && desc) return { text: `${level}: ${desc}`, fxLevel: level };
+  if (desc) return { text: desc, fxLevel: level };
+  if (level) return { text: level, fxLevel: level };
+  const compact = JSON.stringify(obj);
+  return { text: compact.length > 120 ? compact.slice(0, 117) + "..." : compact };
+}
+function coerceAudioCueObject(obj) {
+  const beat = pickString(obj.beat, obj.audioBeat, obj.desc, obj.type, obj.cue);
+  if (beat) return beat;
+  const compact = JSON.stringify(obj);
+  return compact.length > 120 ? compact.slice(0, 117) + "..." : compact;
+}
+function snapshotChineseSceneKeys(bundle, log) {
+  const lock = bundle.visualLockTable?.sceneColorLock ?? bundle.assetPipeline?.sceneColorLock;
+  if (!lock || typeof lock !== "object") return;
+  for (const key of Object.keys(lock)) {
+    if (/[\u4e00-\u9fff]/.test(key)) {
+      log.push("SH-SCENE-KEY-RAW", `visualLockTable.sceneColorLock.${key}`, "chinese_key_will_rewrite_on_normalize");
+    }
+  }
+}
+function coerceShotStringFields(bundle, log) {
+  snapshotChineseSceneKeys(bundle, log);
+  const pack2 = bundle.preDesignPack;
+  if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) return;
+  const shots = pack2.shots;
+  if (!Array.isArray(shots)) return;
+  for (let i = 0; i < shots.length; i++) {
+    const shot = shots[i];
+    if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
+    const s = shot;
+    const basePath = `preDesignPack.shots[${i}]`;
+    const ve = s.visualEffect;
+    if (ve && typeof ve === "object" && !Array.isArray(ve)) {
+      const { text: text2, fxLevel } = coerceVisualEffectObject(ve);
+      s.visualEffect = text2;
+      if (fxLevel && !s.fxLevel) s.fxLevel = fxLevel;
+      log.push("SH-VISUAL-EFFECT-OBJ", `${basePath}.visualEffect`, `object\u2192string "${text2.slice(0, 40)}${text2.length > 40 ? "\u2026" : ""}"`);
+    }
+    const ac = s.audioCue;
+    if (ac && typeof ac === "object" && !Array.isArray(ac)) {
+      const text2 = coerceAudioCueObject(ac);
+      s.audioCue = text2;
+      log.push("SH-AUDIO-CUE-OBJ", `${basePath}.audioCue`, `object\u2192string "${text2.slice(0, 40)}${text2.length > 40 ? "\u2026" : ""}"`);
+    }
+    for (const field of SHOT_STRING_FIELDS) {
+      const v = s[field];
+      if (v != null && typeof v !== "string") {
+        s[field] = String(v);
+        log.push("SH-SHOT-STR-COERCE", `${basePath}.${field}`, `${typeof v}\u2192string`);
+      }
+    }
+  }
+}
+var SHOT_STRING_FIELDS;
+var init_coerceShotStringFields = __esm({
+  "src/ruleEngine/bundle/coerceShotStringFields.ts"() {
+    "use strict";
+    SHOT_STRING_FIELDS = ["visualEffect", "audioCue"];
+  }
+});
+
+// src/ruleEngine/bundle/normalizeDeepAdaptation.ts
+function splitArrowKey(s) {
+  const parts = s.split(ARROW_RE).map((p3) => p3.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  return { from: parts[0], to: parts.slice(1).join("\u2192") };
+}
+function pairFromObject(o) {
+  const from = typeof o.from === "string" ? o.from : typeof o.original === "string" ? o.original : typeof o.source === "string" ? o.source : null;
+  const to = typeof o.to === "string" ? o.to : typeof o.new === "string" ? o.new : typeof o.target === "string" ? o.target : null;
+  if (from && to) {
+    const reason = typeof o.reason === "string" ? o.reason : void 0;
+    return [{ from, to, ...reason ? { reason } : {} }];
+  }
+  const keys2 = Object.keys(o);
+  if (keys2.length === 1) {
+    const k = keys2[0];
+    const arrow = splitArrowKey(k);
+    if (arrow) return [arrow];
+  }
+  const out = [];
+  for (const [k, v] of Object.entries(o)) {
+    if (/^D\d+_/.test(k)) continue;
+    if (typeof v === "string" && CHOICE_LIKE.has(v) && !ARROW_RE.test(k)) continue;
+    const arrowKey = splitArrowKey(k);
+    if (arrowKey) {
+      out.push(arrowKey);
+      continue;
+    }
+    if (typeof v === "string" && v.length > 0) {
+      out.push({ from: k, to: v });
+    }
+  }
+  return out;
+}
+function normalizeRenameMap(input) {
+  if (input == null) return [];
+  if (typeof input === "string") {
+    const p3 = splitArrowKey(input);
+    return p3 ? [p3] : [];
+  }
+  if (Array.isArray(input)) {
+    const out = [];
+    for (const item of input) {
+      if (typeof item === "string") {
+        const p3 = splitArrowKey(item);
+        if (p3) out.push(p3);
+        continue;
+      }
+      if (item && typeof item === "object" && !Array.isArray(item)) {
+        out.push(...pairFromObject(item));
+      }
+    }
+    return out;
+  }
+  if (typeof input === "object") {
+    return pairFromObject(input);
+  }
+  return [];
+}
+function stripPollutionKeys(deep) {
+  const out = {};
+  for (const [k, v] of Object.entries(deep)) {
+    if (/^D\d+_/.test(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+function normalizeDeepAdaptation(deep) {
+  if (!deep || typeof deep !== "object" || Array.isArray(deep)) return {};
+  const raw = stripPollutionKeys(deep);
+  const out = { ...raw };
+  for (const field of ["nameMap", "relationMap", "substitutions"]) {
+    if (field in out) {
+      out[field] = normalizeRenameMap(out[field]);
+    }
+  }
+  if (out.settingProfile != null && (typeof out.settingProfile !== "object" || Array.isArray(out.settingProfile))) {
+    delete out.settingProfile;
+  }
+  return out;
+}
+function pairsToB16Record(pairs) {
+  const rec = {};
+  for (const p3 of pairs) {
+    if (p3.from && p3.to) rec[p3.from] = p3.to;
+  }
+  return rec;
+}
+function compileB16FromNameMap(nameMap, existing) {
+  const pairs = normalizeRenameMap(nameMap);
+  if (!pairs.length) {
+    return existing && typeof existing === "object" && !Array.isArray(existing) ? existing : void 0;
+  }
+  const compiled = pairsToB16Record(pairs);
+  if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+    return { ...existing, ...compiled };
+  }
+  return compiled;
+}
+function normalizeDeepAdaptationInBundle(bundle) {
+  const planData2 = bundle.planData;
+  if (planData2 && typeof planData2 === "object" && !Array.isArray(planData2)) {
+    const pd = planData2;
+    const structured = pd.adaptationMatrixStructured;
+    if (structured && typeof structured === "object" && !Array.isArray(structured)) {
+      const st = structured;
+      if (st.deepAdaptation != null) {
+        st.deepAdaptation = normalizeDeepAdaptation(st.deepAdaptation);
+      }
+    }
+    const brief = pd.narrativeBrief;
+    if (brief && typeof brief === "object" && !Array.isArray(brief)) {
+      const nb = brief;
+      if (nb.deepAdaptation != null) {
+        nb.deepAdaptation = normalizeDeepAdaptation(nb.deepAdaptation);
+      }
+    }
+  }
+  const designBrief = bundle.designBrief;
+  if (designBrief && typeof designBrief === "object" && !Array.isArray(designBrief)) {
+    const db2 = designBrief;
+    const nested = db2.B16_adaptationDeepRef;
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      const nestedNorm = normalizeDeepAdaptation(nested);
+      const pd2 = bundle.planData;
+      const structured = pd2?.adaptationMatrixStructured;
+      if (structured) {
+        const merged = normalizeDeepAdaptation({
+          ...typeof structured.deepAdaptation === "object" && structured.deepAdaptation ? structured.deepAdaptation : {},
+          ...nestedNorm
+        });
+        structured.deepAdaptation = merged;
+      }
+      db2.B16 = compileB16FromNameMap(nestedNorm.nameMap, db2.B16) ?? db2.B16;
+      delete db2.B16_adaptationDeepRef;
+    }
+    let nameMap;
+    const pd = bundle.planData;
+    const st = pd?.adaptationMatrixStructured;
+    const deep = st?.deepAdaptation;
+    nameMap = deep?.nameMap;
+    if (!nameMap) {
+      const nb = pd?.narrativeBrief;
+      nameMap = nb?.deepAdaptation?.nameMap;
+    }
+    if (nameMap) {
+      const compiled = compileB16FromNameMap(nameMap, db2.B16);
+      if (compiled) db2.B16 = compiled;
+    }
+  }
+}
+var ARROW_RE, CHOICE_LIKE;
+var init_normalizeDeepAdaptation = __esm({
+  "src/ruleEngine/bundle/normalizeDeepAdaptation.ts"() {
+    "use strict";
+    ARROW_RE = /\s*(?:→|->|⇒)\s*/;
+    CHOICE_LIKE = /* @__PURE__ */ new Set([
+      "keep",
+      "modernize",
+      "localize",
+      "full_rename",
+      "simplify",
+      "invert",
+      "expand",
+      "partial",
+      "full",
+      "era_shift",
+      "world_shift"
+    ]);
+  }
+});
+
+// src/ruleEngine/bundle/normalizeDesignBrief.ts
+function isPayoffSemanticString(s) {
+  return PAYOFF_SEMANTIC.test(s);
+}
+function coerceFiniteNumber(v) {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
+  return void 0;
+}
+function normalizeInfoLinkageItem(item, path44, log) {
+  const pe = item.payoffEp;
+  if (pe === void 0 || pe === null) return;
+  if (typeof pe === "number" && Number.isFinite(pe)) return;
+  if (typeof pe === "string") {
+    const num2 = coerceFiniteNumber(pe);
+    if (num2 !== void 0) {
+      item.payoffEp = num2;
+      log.push("SH-B5-PAYOFF", path44, `payoffEp string\u2192number(${num2})`);
+      return;
+    }
+    if (isPayoffSemanticString(pe) || pe.trim().length > 0) {
+      item.payoffLabel = pe;
+      delete item.payoffEp;
+      log.push("SH-B5-PAYOFF", path44, `payoffEp\u2192payoffLabel("${pe}")`);
+    }
+  }
+}
+function normalizeLinkageArray(arr, basePath, log) {
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      normalizeInfoLinkageItem(item, `${basePath}[${i}]`, log);
+    }
+  }
+}
+function normalizeNumberArray(arr, basePath, log, ruleId) {
+  for (let i = 0; i < arr.length; i++) {
+    const v = arr[i];
+    if (typeof v === "string") {
+      const n = coerceFiniteNumber(v);
+      if (n !== void 0) {
+        arr[i] = n;
+        log.push(ruleId, `${basePath}[${i}]`, `string\u2192number(${n})`);
+      }
+    }
+  }
+}
+function defaultBeatsForZone(zone) {
+  if (typeof zone !== "string") return 1;
+  const z3 = zone.trim();
+  if (z3 === "\u627F" || z3 === "\u8F6C") return 2;
+  if (z3 === "\u5408") return 3;
+  return 1;
+}
+function normalizeB12Items(arr, basePath, log) {
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const o = item;
+    const beats = o.beats;
+    if (typeof beats === "string") {
+      const n = coerceFiniteNumber(beats);
+      if (n !== void 0) {
+        o.beats = n;
+        log.push("SH-B12-BEATS", `${basePath}[${i}].beats`, `string\u2192number(${n})`);
+      } else if (beats.trim()) {
+        const summary = beats.trim();
+        if (typeof o.summary !== "string" || !String(o.summary).trim()) {
+          o.summary = summary;
+        } else if (typeof o.beatSummary !== "string" || !String(o.beatSummary).trim()) {
+          o.beatSummary = summary;
+        }
+        const def = defaultBeatsForZone(o.zone);
+        o.beats = def;
+        log.push(
+          "SH-B12-BEATS",
+          `${basePath}[${i}].beats`,
+          `narrative\u2192summary+beats=${def} ("${summary.slice(0, 24)}${summary.length > 24 ? "\u2026" : ""}")`
+        );
+      }
+    }
+  }
+}
+function formatSpatialRelationObject(obj) {
+  const parts = [];
+  if (typeof obj.axis === "string" && obj.axis.trim()) {
+    parts.push(`axis=${obj.axis.trim()}`);
+  }
+  if (Array.isArray(obj.anchors)) {
+    const anchors = obj.anchors.filter((a) => typeof a === "string" && a.trim().length > 0).map((a) => a.trim());
+    if (anchors.length) parts.push(`anchors=${anchors.join("|")}`);
+  }
+  if (typeof obj.scene === "string" && obj.scene.trim()) {
+    parts.push(`scene=${obj.scene.trim()}`);
+  }
+  if (parts.length) return parts.join("\uFF1B");
+  try {
+    return JSON.stringify(obj).slice(0, 200);
+  } catch {
+    return "spatial";
+  }
+}
+function normalizeMetaNumbers(meta4, log) {
+  for (const key of META_NUM_KEYS) {
+    const v = meta4[key];
+    if (typeof v === "string") {
+      const n = coerceFiniteNumber(v);
+      if (n !== void 0) {
+        meta4[key] = n;
+        log.push("SH-META-NUM", `meta.${key}`, `string\u2192number(${n})`);
+      }
+    }
+  }
+}
+function normalizeGenerationNulls(bundle, log) {
+  const pack2 = bundle.preDesignPack;
+  if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) return;
+  const shots = pack2.shots;
+  if (!Array.isArray(shots)) return;
+  const slots = ["imagePrompt", "videoPrompt", "audioPrompt", "fxPrompt"];
+  for (let i = 0; i < shots.length; i++) {
+    const shot = shots[i];
+    if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
+    const gen = shot.generation;
+    if (!gen || typeof gen !== "object" || Array.isArray(gen)) continue;
+    const g = gen;
+    for (const slot of slots) {
+      if (g[slot] === null) {
+        delete g[slot];
+        log.push("SH-GEN-NULL", `preDesignPack.shots[${i}].generation.${slot}`, "null\u2192omit");
+      }
+    }
+  }
+}
+function extractInfoId(item) {
+  if (typeof item === "string" && item.trim()) return item.trim();
+  if (!item || typeof item !== "object" || Array.isArray(item)) return void 0;
+  const o = item;
+  if (typeof o.infoId === "string" && o.infoId.trim()) return o.infoId.trim();
+  if (typeof o.id === "string" && o.id.trim()) return o.id.trim();
+  return void 0;
+}
+function normalizeB20(brief, log) {
+  const b20 = brief.B20;
+  if (!Array.isArray(b20)) return;
+  if (b20.every((x) => typeof x === "string")) return;
+  const ids = [];
+  for (let i = 0; i < b20.length; i++) {
+    const id = extractInfoId(b20[i]);
+    if (id) ids.push(id);
+    else if (b20[i] != null) {
+      const fallback = JSON.stringify(b20[i]).slice(0, 80);
+      ids.push(fallback);
+      log.push("SH-B20", `designBrief.B20[${i}]`, `object\u2192fallback string`);
+    }
+  }
+  brief.B20 = ids;
+  log.push("SH-B20", "designBrief.B20", `object[]\u2192string[](${ids.length})`);
+}
+function normalizeB23(brief, log) {
+  const b23 = brief.B23;
+  if (b23 == null) return;
+  if (typeof b23 === "object" && !Array.isArray(b23)) return;
+  if (!Array.isArray(b23)) return;
+  const items = b23.filter((x) => x && typeof x === "object" && !Array.isArray(x));
+  const ids = items.map((x) => extractInfoId(x)).filter((x) => !!x);
+  brief.B23 = {
+    retentionInfoDelivery: ids,
+    items
+  };
+  log.push("SH-B23", "designBrief.B23", `array\u2192record(retentionInfoDelivery=${ids.length},items=${items.length})`);
+}
+function normalizeShotSpatialInBundle(bundle, log) {
+  const pack2 = bundle.preDesignPack;
+  if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) return;
+  const shots = pack2.shots;
+  if (!Array.isArray(shots)) return;
+  for (let i = 0; i < shots.length; i++) {
+    const shot = shots[i];
+    if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
+    const s = shot;
+    const top = s.spatialRelation;
+    if (top == null) continue;
+    let spatialStr;
+    if (typeof top === "string" && top.trim()) {
+      spatialStr = top.trim();
+    } else if (top && typeof top === "object" && !Array.isArray(top)) {
+      spatialStr = formatSpatialRelationObject(top);
+      log.push(
+        "SH-SHOT-SPATIAL",
+        `preDesignPack.shots[${i}].spatialRelation`,
+        `object\u2192string "${spatialStr.slice(0, 48)}${spatialStr.length > 48 ? "\u2026" : ""}"`
+      );
+    } else {
+      continue;
+    }
+    let narrative = s.narrative;
+    if (!narrative || typeof narrative !== "object" || Array.isArray(narrative)) {
+      narrative = {};
+      s.narrative = narrative;
+    }
+    const n = narrative;
+    if (typeof n.spatialRelation !== "string" || !n.spatialRelation.trim()) {
+      n.spatialRelation = spatialStr;
+      log.push("SH-SHOT-SPATIAL", `preDesignPack.shots[${i}].spatialRelation`, "hoist\u2192narrative.spatialRelation");
+    }
+    delete s.spatialRelation;
+  }
+}
+function normalizeDesignBriefInBundle(bundle, log) {
+  const db2 = bundle.designBrief;
+  if (db2 && typeof db2 === "object" && !Array.isArray(db2)) {
+    const brief = db2;
+    if (Array.isArray(brief.B5)) normalizeLinkageArray(brief.B5, "designBrief.B5", log);
+    if (Array.isArray(brief.infoLinkageChain)) normalizeLinkageArray(brief.infoLinkageChain, "designBrief.infoLinkageChain", log);
+    if (Array.isArray(brief.B4)) normalizeNumberArray(brief.B4, "designBrief.B4", log, "SH-B4-NUM");
+    if (Array.isArray(brief.emotionCurveOutline)) {
+      normalizeNumberArray(brief.emotionCurveOutline, "designBrief.emotionCurveOutline", log, "SH-B4-NUM");
+    }
+    const b12 = brief.B12;
+    if (Array.isArray(b12)) normalizeB12Items(b12, "designBrief.B12", log);
+    normalizeB20(brief, log);
+    normalizeB23(brief, log);
+  }
+  const meta4 = bundle.meta;
+  if (meta4 && typeof meta4 === "object" && !Array.isArray(meta4)) {
+    normalizeMetaNumbers(meta4, log);
+  }
+  normalizeGenerationNulls(bundle, log);
+  normalizeShotSpatialInBundle(bundle, log);
+}
+var PAYOFF_SEMANTIC, META_NUM_KEYS;
+var init_normalizeDesignBrief = __esm({
+  "src/ruleEngine/bundle/normalizeDesignBrief.ts"() {
+    "use strict";
+    PAYOFF_SEMANTIC = /本集|current|same.?ep|this.?ep/i;
+    META_NUM_KEYS = ["episodeIndex", "projectId", "scriptId"];
+  }
+});
+
+// src/ruleEngine/bundle/frostShapeSalvage.ts
+function tryParseJsonObject(raw) {
+  const t = String(raw ?? "").trim();
+  if (!t.startsWith("{") && !t.startsWith("[")) return null;
+  try {
+    const v = JSON.parse(t);
+    if (v && typeof v === "object" && !Array.isArray(v)) return v;
+  } catch {
+  }
+  return null;
+}
+function collectCarryInfoIds(bundle, prose) {
+  const fromProse = [...prose.matchAll(INF_RE)].map((m) => m[0].toUpperCase());
+  const brief = bundle.designBrief ?? bundle.planData?.designBrief;
+  const b20 = brief?.B20;
+  const fromB20 = [];
+  if (Array.isArray(b20)) {
+    for (const item of b20) {
+      if (typeof item === "string" && /^INF-/i.test(item)) fromB20.push(item.toUpperCase());
+      else if (item && typeof item === "object" && !Array.isArray(item)) {
+        const id = String(item.infoId ?? item.id ?? "");
+        if (/^INF-/i.test(id)) fromB20.push(id.toUpperCase());
+      }
+    }
+  }
+  return [.../* @__PURE__ */ new Set([...fromProse, ...fromB20])];
+}
+function splitTagString(raw) {
+  return String(raw).split(/[,，;；|/\s]+/).map((s) => s.trim()).filter(Boolean);
+}
+function salvageSeriesContinuity(bundle, log) {
+  const pd = bundle.planData;
+  if (!pd || typeof pd !== "object" || Array.isArray(pd)) return;
+  const plan = pd;
+  let nb = plan.narrativeBrief;
+  if (typeof nb === "string") {
+    const parsed = tryParseJsonObject(nb);
+    if (parsed) {
+      plan.narrativeBrief = parsed;
+      nb = parsed;
+      log.push("SH-BRIEF-STRING", "planData.narrativeBrief", "string\u2192object");
+    } else {
+      plan.narrativeBrief = { storyKernel: nb };
+      nb = plan.narrativeBrief;
+      log.push("SH-BRIEF-STRING", "planData.narrativeBrief", "prose\u2192storyKernel");
+    }
+  }
+  if (!nb || typeof nb !== "object" || Array.isArray(nb)) return;
+  const brief = nb;
+  const sc = brief.seriesContinuity;
+  if (typeof sc !== "string") return;
+  const prose = sc.trim();
+  if (!prose) {
+    delete brief.seriesContinuity;
+    log.push("SH-SERIES-CONT", "planData.narrativeBrief.seriesContinuity", "empty_string\u2192omit");
+    return;
+  }
+  const carryInfoIds = collectCarryInfoIds(bundle, prose);
+  const next = { ep1Summary: prose };
+  if (carryInfoIds.length) next.carryInfoIds = carryInfoIds;
+  brief.seriesContinuity = next;
+  log.push(
+    "SH-SERIES-CONT",
+    "planData.narrativeBrief.seriesContinuity",
+    `string\u2192record;carry=${carryInfoIds.length}`
+  );
+}
+function salvageSceneAvTags(bundle, log) {
+  const pd = bundle.planData;
+  if (!pd || typeof pd !== "object" || Array.isArray(pd)) return;
+  const plan = pd;
+  const meta4 = plan.sceneMeta;
+  const allTags = /* @__PURE__ */ new Set();
+  if (Array.isArray(meta4)) {
+    for (let i = 0; i < meta4.length; i++) {
+      const row = meta4[i];
+      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+      const m = row;
+      for (const key of ["sceneAvTags", "avTags"]) {
+        const v = m[key];
+        if (typeof v === "string" && v.trim()) {
+          const arr = splitTagString(v);
+          m[key] = arr;
+          for (const t of arr) allTags.add(t);
+          log.push("SH-SCENE-AV-TAGS", `planData.sceneMeta[${i}].${key}`, `string\u2192array(${arr.length})`);
+        } else if (Array.isArray(v)) {
+          for (const t of v) if (typeof t === "string" && t.trim()) allTags.add(t.trim());
+        }
+      }
+    }
+  }
+  const top = plan.sceneAvTags;
+  if (typeof top === "string" && top.trim()) {
+    const arr = splitTagString(top);
+    plan.sceneAvTags = arr;
+    for (const t of arr) allTags.add(t);
+    log.push("SH-SCENE-AV-TAGS", "planData.sceneAvTags", `string\u2192array(${arr.length})`);
+  } else if (Array.isArray(top)) {
+    for (const t of top) if (typeof t === "string" && t.trim()) allTags.add(t.trim());
+  } else if (allTags.size && (top == null || Array.isArray(top) && top.length === 0)) {
+    plan.sceneAvTags = [...allTags];
+    log.push("SH-SCENE-AV-TAGS", "planData.sceneAvTags", `hoist_from_sceneMeta(${allTags.size})`);
+  }
+}
+function looksNamedMicroMap(obj) {
+  const keys2 = Object.keys(obj);
+  if (!keys2.length) return false;
+  if (keys2.every((k) => k === "eyes" || k === "mouthDetail" || k === "byName" || k === "flush" || k === "pupil")) {
+    return false;
+  }
+  return keys2.some((k) => {
+    const v = obj[k];
+    return v && typeof v === "object" && !Array.isArray(v) && ("eyes" in v || "mouthDetail" in v);
+  });
+}
+function salvageMicroExpression(bundle, log) {
+  const packs = [bundle.preDesignPack, bundle.planData?.preDesignPack];
+  for (const pack2 of packs) {
+    if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) continue;
+    const shots = pack2.shots;
+    if (!Array.isArray(shots)) continue;
+    for (let i = 0; i < shots.length; i++) {
+      const shot = shots[i];
+      if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
+      const s = shot;
+      const sd = s.shotDesign;
+      if (!sd || typeof sd !== "object" || Array.isArray(sd)) continue;
+      const design = sd;
+      const perf = design.performance;
+      if (!perf || typeof perf !== "object" || Array.isArray(perf)) continue;
+      const p3 = perf;
+      const micro = p3.microExpression;
+      if (!micro || typeof micro !== "object" || Array.isArray(micro)) continue;
+      const m = micro;
+      if (!looksNamedMicroMap(m)) continue;
+      const byName = {};
+      for (const [name28, val] of Object.entries(m)) {
+        if (!val || typeof val !== "object" || Array.isArray(val)) continue;
+        const row = val;
+        byName[name28] = { eyes: row.eyes, mouthDetail: row.mouthDetail };
+      }
+      const names = Object.keys(byName);
+      if (!names.length) continue;
+      const chars = Array.isArray(s.characters) ? s.characters.map(String) : [];
+      const prefer = names.find((n) => chars.some((c) => c.includes(n) || n.includes(c))) ?? names[0];
+      const pick3 = byName[prefer] ?? byName[names[0]];
+      p3.microExpression = {
+        eyes: pick3.eyes ?? "",
+        mouthDetail: pick3.mouthDetail ?? "",
+        byName,
+        primaryName: prefer
+      };
+      log.push(
+        "SH-MICRO-EXPR",
+        `preDesignPack.shots[${Number(s.shotIndex) || i}].shotDesign.performance.microExpression`,
+        `named_map\u2192compile;primary=${prefer};n=${names.length}`
+      );
+    }
+  }
+}
+function runFrostShapeSalvage(bundle, log) {
+  salvageSeriesContinuity(bundle, log);
+  salvageSceneAvTags(bundle, log);
+  salvageMicroExpression(bundle, log);
+}
+var INF_RE;
+var init_frostShapeSalvage = __esm({
+  "src/ruleEngine/bundle/frostShapeSalvage.ts"() {
+    "use strict";
+    INF_RE = /\bINF-[\w-]+\b/gi;
+  }
+});
+
+// src/ruleEngine/bundle/shapeRegistry.ts
+function runShapeRegistry(bundle, log) {
+  normalizeDeepAdaptationInBundle(bundle);
+  normalizeDesignBriefInBundle(bundle, log);
+  normalizeCharacterDesignInBundle(bundle, log);
+  runFrostShapeSalvage(bundle, log);
+}
+var init_shapeRegistry = __esm({
+  "src/ruleEngine/bundle/shapeRegistry.ts"() {
+    "use strict";
+    init_normalizeCharacterDesign();
+    init_normalizeDeepAdaptation();
+    init_normalizeDesignBrief();
+    init_frostShapeSalvage();
+  }
+});
+
+// src/ruleEngine/bundle/hoistPlanDataPackaging.ts
+function shotCount(pack2) {
+  if (!pack2 || typeof pack2 !== "object") return 0;
+  const shots = pack2.shots;
+  return Array.isArray(shots) ? shots.length : 0;
+}
+function cdAssetCount(cd) {
+  if (!cd || typeof cd !== "object") return 0;
+  if (Array.isArray(cd)) return cd.length;
+  const assets = cd.assets;
+  return Array.isArray(assets) ? assets.length : 0;
+}
+function isTopPdpEmpty(bundle) {
+  return shotCount(bundle.preDesignPack) === 0;
+}
+function isTopCdEmpty(bundle) {
+  return cdAssetCount(bundle.characterDesign) === 0;
+}
+function normalizeCdShape(cd) {
+  if (!cd) return void 0;
+  if (Array.isArray(cd)) return { assets: cd };
+  if (typeof cd === "object") return cd;
+  return void 0;
+}
+function hoistPlanDataPackaging(bundle, log) {
+  const pd = bundle.planData;
+  if (!pd || typeof pd !== "object" || Array.isArray(pd)) return;
+  const plan = pd;
+  const nestedPdp = plan.preDesignPack;
+  const nestedShots = shotCount(nestedPdp);
+  const topShots = shotCount(bundle.preDesignPack);
+  if (nestedShots > 0) {
+    if (isTopPdpEmpty(bundle)) {
+      const nested = nestedPdp;
+      if (typeof nested.scriptPlan !== "string") nested.scriptPlan = "";
+      bundle.preDesignPack = nested;
+      log.push("SH-HOIST-PDP", "preDesignPack", `from_planData:shots=${nestedShots}`);
+    } else if (nestedShots >= topShots * 2 && topShots <= 2) {
+      log.push(
+        "SH-HOIST-CONFLICT",
+        "preDesignPack",
+        `top_shots=${topShots};nested_shots=${nestedShots};kept_top`
+      );
+    }
+  }
+  const nestedCd = normalizeCdShape(plan.characterDesign);
+  if (nestedCd && cdAssetCount(nestedCd) > 0) {
+    if (isTopCdEmpty(bundle)) {
+      bundle.characterDesign = nestedCd;
+      log.push("SH-HOIST-CD", "characterDesign", `from_planData:assets=${cdAssetCount(nestedCd)}`);
+    }
+  } else if (Array.isArray(bundle.characterDesign) && bundle.characterDesign.length) {
+    bundle.characterDesign = { assets: bundle.characterDesign };
+    log.push("SH-HOIST-CD", "characterDesign", "normalize_array_to_assets");
+  }
+  for (const key of HOIST_KEYS) {
+    if (key === "preDesignPack" || key === "characterDesign") continue;
+    const nested = plan[key];
+    if (nested == null) continue;
+    const top = bundle[key];
+    const topEmpty = top == null || typeof top === "object" && !Array.isArray(top) && Object.keys(top).length === 0 || Array.isArray(top) && top.length === 0;
+    if (topEmpty) {
+      bundle[key] = nested;
+      log.push(`SH-HOIST-${key === "visualLockTable" ? "VLT" : key === "designBrief" ? "BRIEF" : "PACK"}`, key, "from_planData");
+    }
+  }
+}
+var HOIST_KEYS;
+var init_hoistPlanDataPackaging = __esm({
+  "src/ruleEngine/bundle/hoistPlanDataPackaging.ts"() {
+    "use strict";
+    HOIST_KEYS = [
+      "preDesignPack",
+      "characterDesign",
+      "visualLockTable",
+      "designBrief",
+      "debutIntroPack",
+      "narrativeCausalityGraph",
+      "fxFeasibilityAudit",
+      "modalityPromptAudit",
+      "narrativeSelfcheck"
+    ];
+  }
+});
+
+// src/ruleEngine/bundle/jsonBraceSalvage.ts
+var jsonBraceSalvage_exports = {};
+__export(jsonBraceSalvage_exports, {
+  JsonIncompleteError: () => JsonIncompleteError,
+  scanJsonBraceState: () => scanJsonBraceState,
+  tryCompleteRootBraces: () => tryCompleteRootBraces
+});
+function scanJsonBraceState(text2) {
+  let depth = 0;
+  let inString = false;
+  let escape2 = false;
+  let lastSignificant = null;
+  for (let i = 0; i < text2.length; i++) {
+    const ch = text2[i];
+    if (inString) {
+      if (escape2) {
+        escape2 = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escape2 = true;
+        continue;
+      }
+      if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      lastSignificant = '"';
+      continue;
+    }
+    if (/\s/.test(ch)) continue;
+    lastSignificant = ch;
+    if (ch === "{" || ch === "[") depth += 1;
+    else if (ch === "}" || ch === "]") depth -= 1;
+  }
+  return { depth, inString, escape: escape2, lastSignificant };
+}
+function tryCompleteRootBraces(text2) {
+  const trimmed = String(text2 ?? "").trimEnd();
+  if (!trimmed) {
+    return {
+      text: trimmed,
+      salvaged: false,
+      bracesAdded: 0,
+      reject: new JsonIncompleteError("\u7A7A JSON", { reason: "empty" })
+    };
+  }
+  try {
+    JSON.parse(trimmed);
+    return { text: trimmed, salvaged: false, bracesAdded: 0 };
+  } catch {
+  }
+  const scan = scanJsonBraceState(trimmed);
+  if (scan.inString || scan.escape) {
+    return {
+      text: trimmed,
+      salvaged: false,
+      bracesAdded: 0,
+      reject: new JsonIncompleteError(
+        "JSON \u622A\u65AD\u5728\u5B57\u7B26\u4E32\u4E2D\u90E8\uFF0C\u7981\u6B62\u778E\u8865\u3002\u8BF7\u91CD\u51FA\u5B8C\u6574 Bundle\uFF08JSON_INCOMPLETE\uFF09\u3002",
+        { depth: scan.depth, inString: true, reason: "mid_string" }
+      )
+    };
+  }
+  if (scan.depth <= 0) {
+    return {
+      text: trimmed,
+      salvaged: false,
+      bracesAdded: 0,
+      reject: new JsonIncompleteError("JSON \u65E0\u6CD5\u89E3\u6790\uFF08\u975E\u7F3A\u6839\u95ED\u5408\uFF09\u3002\u8BF7\u68C0\u67E5\u8BED\u6CD5\uFF08JSON_INCOMPLETE\uFF09\u3002", {
+        depth: scan.depth,
+        reason: "parse_fail"
+      })
+    };
+  }
+  const last = scan.lastSignificant;
+  if (last !== "}" && last !== "]") {
+    return {
+      text: trimmed,
+      salvaged: false,
+      bracesAdded: 0,
+      reject: new JsonIncompleteError(
+        "JSON \u622A\u65AD\u5728\u5BF9\u8C61/\u6570\u7EC4\u4E2D\u90E8\uFF0C\u7981\u6B62\u778E\u8865\u3002\u8BF7\u91CD\u51FA\u5B8C\u6574 preDesignPack\uFF08JSON_INCOMPLETE\uFF09\u3002",
+        { depth: scan.depth, reason: "mid_structure", inString: false }
+      )
+    };
+  }
+  const n = Math.min(scan.depth, 8);
+  const candidate = trimmed + "}".repeat(n);
+  try {
+    JSON.parse(candidate);
+    return {
+      text: candidate,
+      salvaged: true,
+      bracesAdded: n,
+      entry: {
+        ruleId: "SH-JSON-BRACE",
+        path: "$",
+        action: `append_${n}_root_braces`
+      }
+    };
+  } catch {
+    return {
+      text: trimmed,
+      salvaged: false,
+      bracesAdded: 0,
+      reject: new JsonIncompleteError(
+        "JSON \u4E0D\u5B8C\u6574\u4E14\u65E0\u6CD5\u5B89\u5168\u8865\u95ED\u5408\uFF08JSON_INCOMPLETE\uFF09\u3002\u52FF\u5F53\u4F5C\u300C\u96C6\u65E0\u53EF\u7528\u5206\u955C\u300D\u3002",
+        { depth: scan.depth, reason: "brace_still_fail" }
+      )
+    };
+  }
+}
+var JsonIncompleteError;
+var init_jsonBraceSalvage = __esm({
+  "src/ruleEngine/bundle/jsonBraceSalvage.ts"() {
+    "use strict";
+    JsonIncompleteError = class extends Error {
+      constructor(message, detail) {
+        super(message);
+        this.detail = detail;
+        this.name = "JsonIncompleteError";
+      }
+      code = "JSON_INCOMPLETE";
+    };
+  }
+});
+
+// src/ruleEngine/bundle/bundleShapePipeline.ts
+function stripCommentFields(obj) {
+  const { _comment, ...rest } = obj;
+  return rest;
+}
+function tryFixPasteJson(text2) {
+  let out = text2;
+  for (const field of MAP_FIELDS2) {
+    const re2 = new RegExp(`("${field}"\\s*:\\s*)\\{([^{}]*)\\}`, "g");
+    out = out.replace(re2, (full, prefix, body) => {
+      if (/"[^"]+"\s*:/.test(body)) return full;
+      const keys2 = [...body.matchAll(/"([^"\\]*)"/g)].map((m) => m[1]);
+      if (!keys2.length) return full;
+      if (!keys2.some((k) => /→|->|⇒/.test(k))) return full;
+      const pairs = keys2.map((k) => {
+        const parts = k.split(/\s*(?:→|->|⇒)\s*/).map((p3) => p3.trim()).filter(Boolean);
+        if (parts.length < 2) return null;
+        return `{"from":${JSON.stringify(parts[0])},"to":${JSON.stringify(parts.slice(1).join("\u2192"))}}`;
+      }).filter(Boolean);
+      if (!pairs.length) return full;
+      return `${prefix}[${pairs.join(",")}]`;
+    });
+  }
+  out = out.replace(/,\s*([}\]])/g, "$1");
+  return out;
+}
+function stripChatRepairPrefix(text2) {
+  const raw = String(text2 ?? "");
+  const trimmed = raw.trimStart();
+  const looksLikeRepair = trimmed.startsWith("\u3010\u95ED\u73AF\u4FEE\u590D\u6E05\u5355") || trimmed.startsWith("\u5F85\u5904\u7406\u89C4\u5219") || trimmed.includes("\u3010BLOCK \u660E\u7EC6\u3011") || trimmed.includes("SCHEMA_SHAPE_BLOCK");
+  if (!looksLikeRepair) return stripTrailingRepairSuffix(raw);
+  const markers = ['"bundleVersion"', '"bundleType"', '"preDesignPack"', '"designBrief"'];
+  let best = -1;
+  for (const m of markers) {
+    const idx = raw.indexOf(m);
+    if (idx < 0) continue;
+    let i = idx;
+    while (i > 0 && raw[i] !== "{") i--;
+    if (raw[i] === "{" && (best < 0 || i < best)) best = i;
+  }
+  if (best >= 0) return stripTrailingRepairSuffix(raw.slice(best));
+  const firstBrace = raw.indexOf("\n{");
+  if (firstBrace >= 0) return stripTrailingRepairSuffix(raw.slice(firstBrace + 1));
+  const brace = raw.indexOf("{");
+  if (brace >= 0) return stripTrailingRepairSuffix(raw.slice(brace));
+  return stripTrailingRepairSuffix(raw);
+}
+function stripTrailingRepairSuffix(text2) {
+  const raw = String(text2 ?? "");
+  const start = raw.indexOf("{");
+  if (start < 0) return raw;
+  let depth = 0;
+  let inStr = false;
+  let esc6 = false;
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inStr) {
+      if (esc6) esc6 = false;
+      else if (ch === "\\") esc6 = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') {
+      inStr = true;
+      continue;
+    }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        const jsonPart = raw.slice(start, i + 1);
+        const rest = raw.slice(i + 1).trimStart();
+        if (rest.startsWith("\u3010\u95ED\u73AF\u4FEE\u590D\u6E05\u5355") || rest.startsWith("\u5F85\u5904\u7406\u89C4\u5219") || rest.includes("\u3010\u987B\u624B\u6539") || rest.includes("toonflow://stage/")) {
+          return jsonPart;
+        }
+        return jsonPart + raw.slice(i + 1);
+      }
+    }
+  }
+  return raw;
+}
+function parseBundleJsonWithSalvage(text2) {
+  const stripped = stripChatRepairPrefix(text2);
+  try {
+    return { value: JSON.parse(stripped) };
+  } catch {
+  }
+  const fixed = tryFixPasteJson(stripped);
+  try {
+    return { value: JSON.parse(fixed) };
+  } catch {
+  }
+  const braced = tryCompleteRootBraces(fixed);
+  if (braced.salvaged) {
+    return { value: JSON.parse(braced.text), braceEntry: braced.entry };
+  }
+  if (braced.reject) throw braced.reject;
+  throw new JsonIncompleteError("JSON \u65E0\u6CD5\u89E3\u6790\uFF08JSON_INCOMPLETE\uFF09");
+}
+function omitNullLeaves(value) {
+  if (value === null) return void 0;
+  if (Array.isArray(value)) {
+    return value.map(omitNullLeaves).filter((v) => v !== void 0);
+  }
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (v === null) continue;
+      const next = omitNullLeaves(v);
+      if (next === void 0 && v !== void 0 && typeof v !== "object") continue;
+      if (next === void 0 && (v === null || v === void 0)) continue;
+      out[k] = next;
+    }
+    return out;
+  }
+  return value;
+}
+function coerceShotNumbers(bundle) {
+  const pack2 = bundle.preDesignPack;
+  if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) return;
+  const shots = pack2.shots;
+  if (!Array.isArray(shots)) return;
+  for (const shot of shots) {
+    if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
+    const s = shot;
+    for (const key of SHOT_NUM_KEYS) {
+      const v = s[key];
+      if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) {
+        s[key] = Number(v);
+      }
+    }
+    const narrative = s.narrative;
+    if (narrative && typeof narrative === "object" && !Array.isArray(narrative)) {
+      const n = narrative;
+      const ei = n.emotionIntensity;
+      if (typeof ei === "string" && ei.trim() !== "" && Number.isFinite(Number(ei))) {
+        n.emotionIntensity = Number(ei);
+      }
+    }
+  }
+}
+function prepareBundleWithLog(raw) {
+  const log = new ShapeSalvageLog();
+  let obj = raw;
+  if (typeof raw === "string") {
+    const parsed = parseBundleJsonWithSalvage(raw);
+    obj = parsed.value;
+    if (parsed.braceEntry) log.push(parsed.braceEntry.ruleId, parsed.braceEntry.path, parsed.braceEntry.action);
+  }
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+    throw new Error("ScriptBundle \u6839\u8282\u70B9\u5FC5\u987B\u662F object");
+  }
+  const stripped = stripCommentFields(obj);
+  const omitted = omitNullLeaves(stripped);
+  hoistPlanDataPackaging(omitted, log);
+  coerceShotNumbers(omitted);
+  coerceShotStringFields(omitted, log);
+  runShapeRegistry(omitted, log);
+  return { bundle: omitted, shapeSalvageLog: log.entries };
+}
+var MAP_FIELDS2, SHOT_NUM_KEYS;
+var init_bundleShapePipeline = __esm({
+  "src/ruleEngine/bundle/bundleShapePipeline.ts"() {
+    "use strict";
+    init_coerceShotStringFields();
+    init_shapeRegistry();
+    init_hoistPlanDataPackaging();
+    init_jsonBraceSalvage();
+    init_shapeSalvageTypes();
+    init_jsonBraceSalvage();
+    init_hoistPlanDataPackaging();
+    MAP_FIELDS2 = ["nameMap", "relationMap", "substitutions"];
+    SHOT_NUM_KEYS = /* @__PURE__ */ new Set(["shotIndex", "duration", "emotion"]);
+  }
+});
+
+// src/ruleEngine/bundle/shapeResidualAudit.ts
+function isPayoffEpInvalid(v) {
+  if (v === void 0 || v === null) return false;
+  if (typeof v === "number" && Number.isFinite(v)) return false;
+  return true;
+}
+function auditLinkageItems(arr, basePath) {
+  const gaps = [];
+  if (!Array.isArray(arr)) return gaps;
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const o = item;
+    if (isPayoffEpInvalid(o.payoffEp)) {
+      gaps.push({
+        id: "SHAPE-RESIDUAL-01",
+        severity: "WARN",
+        message: `${basePath}[${i}].payoffEp \u5F62\u72B6\u6B8B\u7559\uFF1A\u671F\u671B number \u6216\u7701\u7565\uFF08\u8BED\u4E49\u7528 payoffLabel\uFF09`,
+        chainId: "bundle_shape",
+        field: `${basePath}[${i}].payoffEp`
+      });
+    }
+  }
+  return gaps;
+}
+function auditShapeResidualGaps(bundle) {
+  const gaps = [];
+  const db2 = bundle.designBrief;
+  if (db2 && typeof db2 === "object") {
+    if (Array.isArray(db2.B5)) gaps.push(...auditLinkageItems(db2.B5, "designBrief.B5"));
+    if (Array.isArray(db2.infoLinkageChain)) gaps.push(...auditLinkageItems(db2.infoLinkageChain, "designBrief.infoLinkageChain"));
+    if (Array.isArray(db2.B20) && db2.B20.some((x) => typeof x !== "string")) {
+      gaps.push({
+        id: "SHAPE-RESIDUAL-B20",
+        severity: "BLOCK",
+        message: "designBrief.B20 \u5F62\u72B6\u6B8B\u7559\uFF1A\u671F\u671B string[]\uFF08infoId\uFF09\uFF0C\u4ECD\u542B object",
+        chainId: "bundle_shape",
+        field: "designBrief.B20"
+      });
+    }
+    if (Array.isArray(db2.B23)) {
+      gaps.push({
+        id: "SHAPE-RESIDUAL-B23",
+        severity: "BLOCK",
+        message: "designBrief.B23 \u5F62\u72B6\u6B8B\u7559\uFF1A\u671F\u671B record\uFF0C\u4ECD\u4E3A array",
+        chainId: "bundle_shape",
+        field: "designBrief.B23"
+      });
+    }
+  }
+  const pack2 = bundle.preDesignPack;
+  if (pack2?.shots?.length) {
+    for (let i = 0; i < pack2.shots.length; i++) {
+      const shot = pack2.shots[i];
+      for (const field of ["visualEffect", "audioCue"]) {
+        const v = shot[field];
+        if (v != null && typeof v === "object") {
+          gaps.push({
+            id: "SHAPE-RESIDUAL-SHOT",
+            severity: "BLOCK",
+            message: `shots[${i}].${field} \u5F62\u72B6\u6B8B\u7559\uFF1A\u671F\u671B string\uFF0C\u4ECD\u4E3A object`,
+            chainId: "bundle_shape",
+            field: `preDesignPack.shots[${i}].${field}`
+          });
+        }
+      }
+    }
+  }
+  return gaps;
+}
+var init_shapeResidualAudit = __esm({
+  "src/ruleEngine/bundle/shapeResidualAudit.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/bundle/schema.ts
+function detectBundleType(raw) {
+  if (!raw || typeof raw !== "object") return "legacy";
+  const o = raw;
+  if (o.bundleType === "script") return "script";
+  if (Array.isArray(o.episodes)) return "series";
+  if (o.flowData && typeof o.flowData === "object") return "episode";
+  if (o.script !== void 0 && !o.bundleType) return "legacy";
+  return "legacy";
+}
+function normalizeLegacyFlowData(raw) {
+  if (raw.flowData) {
+    return { flowData: raw.flowData, meta: raw.meta ?? {} };
+  }
+  return {
+    flowData: raw,
+    meta: { episodeKey: raw.episodeKey, episodeName: raw.episodeName }
+  };
+}
+var nullishStr, nullishRecord, bundleMetaSchema, infoLinkageItemSchema, assetHintsSchema, rhythmZoneItemSchema, spatialAnchorItemSchema, toneLockSchema, platformSpecSchema, audioMoodSchema, designBriefSchema, shotDesignSchema, generationSchema, preDesignShotSchema, preDesignPackSchema, storyboardPanelSchema2, scriptBundleSchema, episodeBundleSchema, seriesBundleSchema;
+var init_schema = __esm({
+  "src/ruleEngine/bundle/schema.ts"() {
+    "use strict";
+    init_zod();
+    init_bundleShapePipeline();
+    init_shapeRegistry();
+    init_shapeResidualAudit();
+    init_normalizeDeepAdaptation();
+    nullishStr = () => external_exports.string().nullish();
+    nullishRecord = () => external_exports.record(external_exports.string(), external_exports.unknown()).nullish();
+    bundleMetaSchema = external_exports.object({
+      episodeKey: external_exports.string().optional(),
+      episodeName: external_exports.string().optional(),
+      episodeIndex: external_exports.number().optional(),
+      projectId: external_exports.number().optional(),
+      scriptId: external_exports.number().optional(),
+      prevEpisodeKey: external_exports.string().nullable().optional(),
+      bundleHash: external_exports.string().optional(),
+      provenance: external_exports.object({
+        source: external_exports.string().optional(),
+        chapterRange: external_exports.string().optional(),
+        novelTitle: external_exports.string().optional(),
+        novelId: external_exports.number().nullable().optional(),
+        eventTrace: external_exports.array(external_exports.object({ novelRef: external_exports.string().optional(), scriptRef: external_exports.string().optional(), shotRef: external_exports.string().optional() })).optional()
+      }).optional()
+    });
+    infoLinkageItemSchema = external_exports.object({
+      type: external_exports.string().optional(),
+      desc: external_exports.string().optional(),
+      payoffEp: external_exports.number().optional(),
+      payoffLabel: external_exports.string().optional()
+    }).passthrough();
+    assetHintsSchema = external_exports.object({
+      characters: external_exports.array(external_exports.string()).optional(),
+      scenes: external_exports.array(external_exports.string()).optional(),
+      props: external_exports.array(external_exports.string()).optional()
+    }).passthrough();
+    rhythmZoneItemSchema = external_exports.object({
+      scene: external_exports.string().optional(),
+      zone: external_exports.string().optional(),
+      beats: external_exports.number().optional()
+    }).passthrough();
+    spatialAnchorItemSchema = external_exports.object({
+      scene: external_exports.string().optional(),
+      axis: external_exports.string().optional(),
+      anchors: external_exports.array(external_exports.string()).optional()
+    }).passthrough();
+    toneLockSchema = external_exports.union([
+      external_exports.string(),
+      external_exports.object({
+        genre: external_exports.string().optional(),
+        ratio: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
+      }).passthrough()
+    ]);
+    platformSpecSchema = external_exports.union([
+      external_exports.string(),
+      external_exports.object({
+        platform: external_exports.string().optional(),
+        duration: external_exports.string().optional(),
+        subtitleStyle: external_exports.string().optional()
+      }).passthrough()
+    ]);
+    audioMoodSchema = external_exports.union([external_exports.string(), external_exports.record(external_exports.string(), external_exports.string())]);
+    designBriefSchema = external_exports.object({
+      B1: external_exports.string().optional(),
+      B2: external_exports.string().optional(),
+      B3: toneLockSchema.optional(),
+      B4: external_exports.array(external_exports.number()).optional(),
+      B5: external_exports.array(external_exports.union([external_exports.string(), infoLinkageItemSchema])).optional(),
+      B6: external_exports.union([assetHintsSchema, external_exports.record(external_exports.string(), external_exports.string())]).optional(),
+      B7: external_exports.string().optional(),
+      B8: external_exports.string().optional(),
+      B9: audioMoodSchema.optional(),
+      B10: platformSpecSchema.optional(),
+      B11: external_exports.array(external_exports.string()).optional(),
+      B12: external_exports.union([external_exports.array(rhythmZoneItemSchema), external_exports.record(external_exports.string(), external_exports.string())]).optional(),
+      B13: external_exports.array(external_exports.union([external_exports.string(), spatialAnchorItemSchema])).optional(),
+      emotionCurveOutline: external_exports.array(external_exports.number()).optional(),
+      rhythmOutline: external_exports.record(external_exports.string(), external_exports.string()).optional(),
+      infoLinkageChain: external_exports.array(external_exports.union([external_exports.string(), infoLinkageItemSchema])).optional(),
+      arcToneMap: external_exports.record(external_exports.string(), external_exports.string()).optional(),
+      visualLockHints: external_exports.array(external_exports.string()).optional(),
+      paypointMarkers: external_exports.array(external_exports.object({ position: external_exports.string(), type: external_exports.string(), desc: external_exports.string().optional() }).passthrough()).optional(),
+      sceneTransitionPlan: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), reason: external_exports.string() }).passthrough()).optional(),
+      emotionCurveType: external_exports.string().optional(),
+      B14: external_exports.array(external_exports.object({ position: external_exports.string(), type: external_exports.string(), desc: external_exports.string().optional() }).passthrough()).optional(),
+      B15: external_exports.array(external_exports.object({ clipHookId: external_exports.string().optional(), hook: external_exports.string().optional(), duration: external_exports.string().optional() }).passthrough()).optional(),
+      B16: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      B17: external_exports.union([external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())), external_exports.record(external_exports.string(), external_exports.unknown())]).optional(),
+      B18: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      B19: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      B20: external_exports.array(external_exports.string()).optional(),
+      B21: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      B22: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      B23: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
+    }).passthrough().optional();
+    shotDesignSchema = external_exports.object({
+      composition: nullishRecord(),
+      blocking: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).nullish(),
+      performance: nullishRecord(),
+      cameraAnchor: nullishRecord(),
+      lipSyncPolicy: nullishStr()
+    }).nullish();
+    generationSchema = external_exports.object({
+      imagePrompt: nullishStr(),
+      videoPrompt: nullishStr(),
+      audioPrompt: nullishStr(),
+      fxPrompt: nullishStr()
+    });
+    preDesignShotSchema = external_exports.object({
+      shotIndex: external_exports.number().optional(),
+      type: nullishStr(),
+      sceneName: nullishStr(),
+      duration: external_exports.number().optional(),
+      shotSize: nullishStr(),
+      emotion: external_exports.number().optional(),
+      visualDescription: nullishStr(),
+      visualEffect: nullishStr(),
+      audioCue: nullishStr(),
+      fxLevel: nullishStr(),
+      charCodes: external_exports.array(external_exports.string()).optional(),
+      /** VisBeat L0 tags — law for conflict_matrix; not inventable by suggestor alone */
+      visualBeatTags: external_exports.array(external_exports.string()).optional(),
+      suggestedVisualBeatTags: external_exports.array(external_exports.string()).optional(),
+      weaponId: nullishStr(),
+      generation: generationSchema.optional(),
+      shotDesign: shotDesignSchema,
+      retentionTier: nullishStr(),
+      clip30sCandidate: external_exports.boolean().optional(),
+      rhythm31545: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      /** legacy top-level; normalize hoists into narrative.spatialRelation */
+      spatialRelation: nullishStr(),
+      narrative: external_exports.object({
+        dialogue: external_exports.object({
+          lines: external_exports.array(
+            external_exports.object({
+              speaker: external_exports.string().optional(),
+              text: external_exports.string().optional(),
+              lineId: external_exports.string().optional(),
+              functions: external_exports.array(external_exports.string()).optional(),
+              causedByActionId: external_exports.string().optional(),
+              subtext: external_exports.string().optional(),
+              /** Chat-confirmed split intent; must survive parse → hydrate → burn */
+              splitHint: external_exports.string().optional(),
+              reactionAction: external_exports.string().optional()
+            })
+          ).optional()
+        }).optional(),
+        markers: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
+        transitionType: external_exports.string().optional(),
+        rhythmZone: external_exports.string().optional(),
+        spatialRelation: external_exports.string().optional(),
+        emotionIntensity: external_exports.number().optional(),
+        sceneName: external_exports.string().optional(),
+        type: external_exports.string().optional()
+      }).passthrough().optional(),
+      markers: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional()
+    }).passthrough();
+    preDesignPackSchema = external_exports.object({
+      scriptPlan: external_exports.string(),
+      shots: external_exports.array(preDesignShotSchema).min(1),
+      externalHashCheck: external_exports.object({ match: external_exports.boolean().optional(), hash: external_exports.string().optional() }).optional(),
+      preDesignQuality: external_exports.object({ overall: external_exports.string().optional(), supervision: external_exports.string().optional() }).optional(),
+      sceneCodeMap: external_exports.record(external_exports.string(), external_exports.string()).optional(),
+      episodeBeat: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
+    }).passthrough().optional();
+    storyboardPanelSchema2 = external_exports.object({
+      id: external_exports.number().optional(),
+      clientId: external_exports.string().optional(),
+      flowId: external_exports.number().optional(),
+      duration: external_exports.number(),
+      prompt: external_exports.string(),
+      videoDesc: external_exports.string().optional(),
+      shouldGenerateImage: external_exports.number().optional(),
+      associateAssetsIds: external_exports.array(external_exports.number()).optional(),
+      track: external_exports.string().optional(),
+      state: external_exports.string().optional(),
+      src: external_exports.string().nullable().optional(),
+      index: external_exports.number().optional()
+    });
+    scriptBundleSchema = external_exports.object({
+      bundleVersion: external_exports.string().optional(),
+      bundleType: external_exports.literal("script"),
+      rulePackVersion: external_exports.string().optional(),
+      meta: bundleMetaSchema,
+      script: external_exports.string().min(1),
+      characters: external_exports.array(external_exports.string()).optional(),
+      scenes: external_exports.array(external_exports.string()).optional(),
+      continuity: external_exports.object({
+        prevEpisodeSummary: external_exports.string().optional(),
+        characterState: external_exports.record(external_exports.string(), external_exports.string()).optional(),
+        unresolvedHooks: external_exports.array(external_exports.string()).optional(),
+        recapHint: external_exports.string().optional()
+      }).optional(),
+      anchors: external_exports.object({
+        visual: external_exports.array(external_exports.string()).optional(),
+        emotionCarry: external_exports.string().optional()
+      }).optional(),
+      planData: external_exports.object({
+        narrativeBrief: external_exports.object({
+          adaptationConstraints: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
+          deepAdaptation: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+          storyKernel: external_exports.string().optional(),
+          mustResolveIssues: external_exports.array(external_exports.string()).optional(),
+          reconstructionTrace: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
+          empathyPlan: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+          densityBudget: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+          retentionBeats: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+          infoDeliveryPlan: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
+          dialogueRules: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+          implementationPlan: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
+          seriesContinuity: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
+        }).passthrough().optional(),
+        sceneMeta: external_exports.array(
+          external_exports.object({
+            sceneRef: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
+            opening5sHook: nullishStr(),
+            avCausality: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+            fxIntent: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+            densityScore: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
+          }).passthrough()
+        ).optional()
+      }).passthrough().optional(),
+      designBrief: designBriefSchema,
+      preDesignPack: preDesignPackSchema,
+      ruleAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      smartDetection: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      fixPlan: external_exports.array(external_exports.unknown()).optional(),
+      linkageRepairPlan: external_exports.array(external_exports.unknown()).optional(),
+      rePushPlan: external_exports.array(external_exports.unknown()).optional(),
+      linkageAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      forwardTrace: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      smartDesignProposals: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
+      supervisionReport: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      qualityDiagnostics: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      identityAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      fxFeasibilityAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      videoAudioPolicy: external_exports.union([external_exports.string(), external_exports.record(external_exports.string(), external_exports.unknown())]).optional(),
+      narrativeCausalityGraph: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      debutIntroPack: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      productionReasonableness: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      modalityPromptAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      modalityAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      assetPipeline: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      characterDesign: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      visualLockTable: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      narrativeSelfcheck: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
+      flowData: external_exports.object({
+        scriptPlan: external_exports.string().optional(),
+        storyboardTable: external_exports.string().optional(),
+        storyboard: external_exports.array(storyboardPanelSchema2).optional()
+      }).passthrough().optional(),
+      _comment: external_exports.string().optional()
+    }).passthrough();
+    episodeBundleSchema = external_exports.object({
+      bundleVersion: external_exports.string().optional(),
+      rulePackVersion: external_exports.string().optional(),
+      meta: bundleMetaSchema,
+      flowData: external_exports.object({
+        script: external_exports.string(),
+        scriptPlan: external_exports.string().optional().default(""),
+        storyboardTable: external_exports.string().optional().default(""),
+        assets: external_exports.array(external_exports.any()).optional().default([]),
+        storyboard: external_exports.array(storyboardPanelSchema2).optional().default([]),
+        workbench: external_exports.object({ videoList: external_exports.array(external_exports.any()).optional() }).optional()
+      }),
+      package: external_exports.any().optional(),
+      validationReport: external_exports.any().nullable().optional(),
+      _comment: external_exports.string().optional()
+    });
+    seriesBundleSchema = external_exports.object({
+      bundleVersion: external_exports.string().optional(),
+      meta: external_exports.object({ projectId: external_exports.number().optional(), seriesName: external_exports.string().optional() }),
+      project: external_exports.any().optional(),
+      episodes: external_exports.array(episodeBundleSchema)
+    });
+  }
+});
+
+// src/ruleEngine/bundle/closureSummary.ts
+function inferTierFromBundle(bundle) {
+  if (bundle.modalityPromptAudit) return "T3";
+  const shots = bundle.preDesignPack?.shots ?? [];
+  if (shots.some((s) => s.generation?.imagePrompt?.trim())) return "T3";
+  if (bundle.flowData?.storyboard?.some((p3) => p3.prompt?.trim())) return "T3";
+  if (bundle.characterDesign || bundle.assetPipeline || bundle.visualLockTable) return "T2";
+  return "T1";
+}
+function episodeToScriptBundle(ep) {
+  const fd = ep.flowData;
+  return {
+    bundleType: "script",
+    bundleVersion: ep.bundleVersion,
+    rulePackVersion: ep.rulePackVersion ?? "2.0.1",
+    meta: ep.meta,
+    script: fd.script ?? "",
+    preDesignPack: void 0,
+    modalityPromptAudit: fd.modalityPromptAudit,
+    identityAudit: fd.identityAudit,
+    fxFeasibilityAudit: fd.fxFeasibilityAudit,
+    debutIntroPack: fd.debutIntroPack,
+    productionReasonableness: fd.productionReasonableness,
+    characterDesign: fd.characterDesign,
+    assetPipeline: fd.assetPipeline
+  };
+}
+function runScriptBundleClosure(bundle, opts = {}) {
+  const tier = opts.tier ?? inferTierFromBundle(bundle);
+  const warnings = [];
+  const enriched = enrichBundleForwardTrace(bundle, tier);
+  const unified = runUnifiedClosure(enriched, { tier, genError: opts.genError, sfRound: opts.sfRound });
+  const pcTier = tier === "T1" && (bundle.identityAudit || bundle.fxFeasibilityAudit || bundle.modalityPromptAudit) ? "T3" : tier === "T1" ? "T2" : tier;
+  const pcDry = tier === "T2" || tier === "T3" || bundle.identityAudit || bundle.fxFeasibilityAudit || bundle.modalityPromptAudit ? runProductionClosureDryRunForTier(enriched, pcTier) : [];
+  const productionClosureChecks = (() => {
+    if (!pcDry.length) return unified.pc;
+    if (!unified.pc.length) return pcDry;
+    const byId2 = new Map(pcDry.map((c) => [c.id, c]));
+    for (const c of unified.pc) byId2.set(c.id, c);
+    return [...byId2.values()];
+  })();
+  const reverseHints = buildReverseHints(enriched, tier);
+  const blocked = unified.blocked || designClosureBlocked(unified.dc) || productionClosureBlocked(productionClosureChecks);
+  if (blocked) {
+    warnings.push("unified_closure_checklist \u5B58\u5728 BLOCK \u9879");
+  }
+  return {
+    tier,
+    blocked,
+    rulePackVersion: getRulePackVersion(),
+    closureChecks: { ...unified, blocked, pc: productionClosureChecks },
+    designClosureChecks: unified.dc,
+    productionClosureChecks,
+    intelligentClosureChecks: unified.ic,
+    forwardTrace: enriched.forwardTrace,
+    reverseHints,
+    warnings
+  };
+}
+function parseScriptBundleRaw(raw) {
+  return scriptBundleSchema.parse(prepareBundleWithLog(raw).bundle);
+}
+function runRawBundleClosure(raw, opts = {}) {
+  const o = raw;
+  if (o?.bundleType === "script" || o?.script && !o?.flowData) {
+    return runScriptBundleClosure(parseScriptBundleRaw(raw), opts);
+  }
+  if (o?.flowData) {
+    const ep = { bundleVersion: o.bundleVersion, meta: o.meta ?? {}, flowData: o.flowData, rulePackVersion: o.rulePackVersion };
+    const sb = episodeToScriptBundle(ep);
+    return runScriptBundleClosure(sb, { ...opts, tier: opts.tier ?? "T2" });
+  }
+  return null;
+}
+var init_closureSummary = __esm({
+  "src/ruleEngine/bundle/closureSummary.ts"() {
+    "use strict";
+    init_forwardTrace();
+    init_bidirectionalTrace();
+    init_unifiedDryRun();
+    init_productionClosureDryRun();
+    init_designClosureDryRun();
+    init_ruleRegistry();
+    init_schema();
+  }
+});
+
+// src/ruleEngine/bundle/chatPromptAudit.ts
+function getShots2(bundle) {
+  return bundle.preDesignPack?.shots ?? [];
+}
+function getGeneration(shot, bundle, idx) {
+  if (shot.generation) return shot.generation;
+  const panel = bundle.flowData?.storyboard?.[idx];
+  if (panel) {
+    return { imagePrompt: panel.prompt, videoPrompt: panel.videoDesc };
+  }
+  return void 0;
+}
+function shotHasDialogue2(shot) {
+  return expandShotDialogueLines([shot]).keys.length > 0;
+}
+function auditChatPromptGaps(bundle, tier = "T3", opts) {
+  const demote = opts?.nonBlocking ?? false;
+  const sev2 = (s) => demote && s === "BLOCK" ? "WARN" : s;
+  const gaps = [];
+  const shots = getShots2(bundle);
+  const coverage = dialogueCoverageReport({
+    script: bundle.script ?? "",
+    shots,
+    planData: bundle.planData
+  });
+  if (!coverage.ok) {
+    const msg = formatDialogueCoverageMessage(coverage);
+    if (coverage.missingCount > 0) {
+      gaps.push({
+        id: "CHAT-DLG-01",
+        severity: sev2("BLOCK"),
+        message: msg.includes("\u4E71\u5165") && coverage.extraCount > 0 ? msg.split("\uFF1B")[0] : msg,
+        field: "dialogue"
+      });
+    }
+    if (coverage.extraCount > 0) {
+      gaps.push({
+        id: "DC-01-EXTRA",
+        severity: sev2("BLOCK"),
+        message: coverage.missingCount > 0 ? msg.split("\uFF1B").find((p3) => p3.includes("\u4E71\u5165")) ?? msg : msg,
+        field: "dialogue"
+      });
+    }
+    if (coverage.missingCount === 0 && coverage.extraCount === 0) {
+      gaps.push({
+        id: "CHAT-DLG-01",
+        severity: sev2("BLOCK"),
+        message: msg,
+        field: "dialogue"
+      });
+    }
+  }
+  shots.forEach((s, i) => {
+    const idx = s.shotIndex ?? i + 1;
+    const qp = checkQp02VisualDescription({
+      visualDescription: s.visualDescription,
+      shotIndex: idx
+    });
+    if (qp && qp.severity === "BLOCK") {
+      gaps.push({
+        id: qp.evidence?.reason === "empty" ? "CHAT-SB-01" : "QP-02",
+        shotIndex: idx,
+        severity: "BLOCK",
+        message: qp.message,
+        field: "visualDescription"
+      });
+      if (qp.evidence?.reason === "empty") {
+        gaps.push({
+          id: "QP-02",
+          shotIndex: idx,
+          severity: "BLOCK",
+          message: qp.message,
+          field: "visualDescription"
+        });
+      }
+    }
+  });
+  {
+    const assets = bundle.characterDesign?.assets ?? [];
+    const knownNames = [];
+    const nameToCodes = {};
+    for (const a of assets) {
+      const name28 = String(a.name ?? "").replace(/（OS）|\(OS\)/g, "").trim();
+      const code = String(a.code ?? "").trim();
+      if (!name28 || !code) continue;
+      knownNames.push(name28);
+      (nameToCodes[name28] ??= []).push(code);
+    }
+    shots.forEach((s, i) => {
+      const idx = s.shotIndex ?? i + 1;
+      const cast = checkCastOnDesc({
+        visualDescription: s.visualDescription,
+        charCodes: s.charCodes,
+        knownNames,
+        nameToCodes,
+        shotIndex: idx
+      });
+      if (cast) {
+        gaps.push({ id: cast.id, shotIndex: idx, severity: sev2(cast.severity), message: cast.message, field: "charCodes" });
+      }
+      const empty = checkEmptyShotConsistency({
+        visualDescription: s.visualDescription,
+        charCodes: s.charCodes,
+        knownNames,
+        shotIndex: idx
+      });
+      if (empty) {
+        gaps.push({ id: empty.id, shotIndex: idx, severity: sev2(empty.severity), message: empty.message, field: "visualDescription" });
+      }
+      const lines = s.narrative?.dialogue?.lines ?? [];
+      const expr = checkSpeakPerformance({
+        hasDialogue: hasOnCameraDialogue(lines),
+        emotionIntensity: s.emotionIntensity,
+        microExpression: s.shotDesign?.performance?.microExpression,
+        lipSyncPolicy: resolveLipSyncPolicyFromShot(s),
+        shotIndex: idx
+      });
+      if (expr) {
+        gaps.push({ id: expr.id, shotIndex: idx, severity: sev2(expr.severity), message: expr.message, field: "shotDesign.performance" });
+      }
+    });
+    {
+      const {
+        collectCharacterAssets: collectCharacterAssets2,
+        buildImagedMaps: buildImagedMaps2,
+        shotAssetCrefSatisfied: shotAssetCrefSatisfied2
+      } = (init_assetCrefBind(), __toCommonJS(assetCrefBind_exports));
+      const planView = {
+        planData: bundle.planData ?? {},
+        characterDesign: bundle.characterDesign,
+        preDesignPack: bundle.preDesignPack
+      };
+      const assetsList = collectCharacterAssets2(planView);
+      const { imagedByCode, imagedByName, codesPresent } = buildImagedMaps2(assetsList);
+      const crefPlan = Array.isArray(bundle.planData?.assetCrefPlan) ? bundle.planData.assetCrefPlan : [];
+      for (const s of shots) {
+        const idx = s.shotIndex ?? 0;
+        if (!shotAssetCrefSatisfied2(s, imagedByCode, imagedByName, crefPlan, {
+          allowStubBind: true,
+          codesPresent
+        })) {
+          const codes = (s.charCodes ?? []).filter((c) => /^CHAR-/i.test(String(c)));
+          const hasCodesNoImg = codes.length > 0;
+          gaps.push({
+            id: "DEX-ASSET-CREF",
+            shotIndex: idx,
+            severity: sev2("BLOCK"),
+            message: hasCodesNoImg ? "\u5DF2\u7ED1 CHAR \u4ECD\u65E0\u6CD5\u8BBE\u8BA1\u95ED\u5408\uFF08\u7F3A\u518C/\u6B67\u4E49\uFF09\uFF1B\u7F3A\u5B9A\u5986\u56FE\u53EF stub \u5EF6\u671F\u2192AS" : "\u51FA\u8138/CHAR \u987B\u672C\u955C\u5B9A\u5986\u7ED1\u5B9A\u6216\u8BBE\u8BA1\u671F stub+assetCrefPlan\uFF08\u6DF1\u94FE asset_cref\uFF09",
+            field: hasCodesNoImg ? "characterDesign.assets" : "assetCrefPlan"
+          });
+        }
+      }
+    }
+  }
+  if (tier === "T2" || tier === "T3") {
+    const cd = bundle.characterDesign;
+    if (!cd?.assets?.length) {
+      gaps.push({ id: "CHAT-CD-01", severity: sev2("BLOCK"), message: "\u7F3A characterDesign.assets", field: "characterDesign" });
+    }
+    if (!bundle.visualLockTable || !Object.keys(bundle.visualLockTable).length) {
+      gaps.push({ id: "CHAT-BP-01", severity: sev2("BLOCK"), message: "\u7F3A visualLockTable", field: "visualLockTable" });
+    }
+  }
+  if (tier === "T3") {
+    shots.forEach((s, i) => {
+      const idx = s.shotIndex ?? i + 1;
+      const gen = getGeneration(s, bundle, i);
+      if (!gen?.imagePrompt?.trim()) {
+        gaps.push({ id: "CHAT-IMG-01", shotIndex: idx, severity: sev2("BLOCK"), message: "\u7F3A imagePrompt", field: "imagePrompt" });
+      }
+      if (!gen?.videoPrompt?.trim()) {
+        gaps.push({ id: "CHAT-VID-01", shotIndex: idx, severity: sev2("BLOCK"), message: "\u7F3A videoPrompt", field: "videoPrompt" });
+      }
+      if (shotHasDialogue2(s) && !gen?.audioPrompt?.trim()) {
+        gaps.push({
+          id: "CHAT-AUD-01",
+          shotIndex: idx,
+          severity: sev2("BLOCK"),
+          message: "\u53F0\u8BCD\u955C\u7F3A audioPrompt\uFF08\u987B seed \u6216\u624B\u8865\uFF09",
+          field: "audioPrompt"
+        });
+      }
+      const fx = s.visualEffect;
+      if (fx?.trim() && !gen?.fxPrompt?.trim()) {
+        gaps.push({ id: "CHAT-FX-01", shotIndex: idx, severity: "WARN", message: "\u7279\u6548\u955C\u7F3A fxPrompt", field: "fxPrompt" });
+      }
+      if (hasOnCameraDialogue(s.narrative?.dialogue?.lines)) {
+        const pol = resolveLipSyncPolicyFromShot(s).toLowerCase();
+        const vp2 = String(gen?.videoPrompt ?? "");
+        if (/^(none|silent)$/.test(pol) || /no\s*lip[- ]*sync/i.test(vp2)) {
+          gaps.push({
+            id: "NO-LIP-DIALOGUE",
+            shotIndex: idx,
+            severity: sev2("BLOCK"),
+            message: "\u6709\u51FA\u955C\u5BF9\u767D\u7981\u6B62 no lip sync\uFF08\u6DF1\u94FE no_lip_dialogue\uFF09",
+            field: "lipSyncPolicy"
+          });
+        }
+      }
+      const vp = String(gen?.videoPrompt ?? "");
+      const cue = String(s.audioCue ?? "").trim();
+      if (/sfx\s*:\s*</i.test(vp) && !cue) {
+        gaps.push({
+          id: "SFX-UNBACKED",
+          shotIndex: idx,
+          severity: "BLOCK",
+          message: "\u5B57\u9762 sfx:<> \u65E0 audioCue \u771F\u6E90\uFF1B\u8BBE\u8BA1\u51FA\u53E3\u987B\u8865 audioCue\uFF08\u4E0D\u7F16\u9020\u97F3\u6548\uFF09",
+          field: "audioCue"
+        });
+      }
+    });
+  }
+  return gaps;
+}
+var init_chatPromptAudit = __esm({
+  "src/ruleEngine/bundle/chatPromptAudit.ts"() {
+    "use strict";
+    init_dialogueCoverage();
+    init_visualQualityAudit();
+    init_shotQualityPredicates();
+    init_onCameraDialogue();
+    init_resolveLipSyncPolicy();
+  }
+});
+
+// src/ruleEngine/portable/inspectBundle.ts
+function loadRepairHints(ids) {
+  const catalog = readFixtureJson("repair_hint_catalog.json", { hints: [] });
+  const hints = catalog.hints ?? [];
+  const idSet = new Set(ids);
+  return hints.filter(
+    (h) => idSet.has(h.ruleId) || idSet.has(h.id) || h.qpId && idSet.has(h.qpId) || (h.checkIds?.some((c) => idSet.has(c)) ?? false) || h.symptom && ids.some((i) => i.includes(h.symptom) || h.symptom.includes(i))
+  ).map((h) => ({ id: h.id, chatTemplate: h.chatTemplate, ruleId: h.ruleId }));
+}
+function toResult(closure, bundle, opts) {
+  const tier = closure.tier;
+  const gapResult = bundle ? auditAllBundleGaps(bundle, tier) : null;
+  const closureTriggers = closure.reverseHints.map(
+    (h) => h.chainId === "dialogue" ? "dialogue_hash_mismatch" : h.symptom.includes("\u2192") ? h.chainId : h.symptom
+  );
+  const gapTriggers = gapResult?.triggers ?? [];
+  const triggers = [.../* @__PURE__ */ new Set([...closureTriggers, ...gapTriggers])];
+  const rePushPlan = triggers.length ? buildRePushPlan(triggers, ["script", "globalAnchors"]) : [];
+  const failedCheckIds = [
+    ...closure.closureChecks?.dc ?? [],
+    ...closure.closureChecks?.pc ?? [],
+    ...closure.closureChecks?.gc ?? [],
+    ...closure.closureChecks?.ic ?? []
+  ].filter((c) => c && c.passed === false && c.id).map((c) => c.id);
+  const ruleIds = [
+    ...closure.reverseHints.map((h) => h.ruleId).filter(Boolean),
+    ...gapResult?.allGaps.map((g) => g.id) ?? [],
+    ...failedCheckIds
+  ];
+  const repairHints = loadRepairHints(ruleIds);
+  const chatPromptGaps = bundle ? auditChatPromptGaps(bundle, tier) : [];
+  const gapWarnings = gapResult?.allGaps.map((g) => g.shotIndex != null ? `[\u955C${g.shotIndex}] ${g.id}: ${g.message}` : `${g.id}: ${g.message}`) ?? [];
+  const closureReport = buildClosureReport({
+    allGaps: gapResult?.allGaps ?? [],
+    chatPromptGaps,
+    closureChecks: closure.closureChecks,
+    tier
+  });
+  const linkageRepairPlan = gapResult?.repairMode === "linkageRepair" && gapResult.allGaps.length ? gapResult.allGaps.map((g) => ({ gapId: g.id, chainId: g.chainId, trigger: g.trigger, field: g.field })) : void 0;
+  let qualityGateResult;
+  if (bundle) {
+    qualityGateResult = qualityGate(bundle, { stage: "export", tier });
+  }
+  const chatBlocks = tier === "T3" ? chatPromptGaps.filter((g) => g.severity === "BLOCK") : [];
+  const qgBlocked = Boolean(qualityGateResult?.blocked);
+  const blocked = closure.closureChecks.blocked || qgBlocked || tier === "T3" && chatBlocks.length > 0;
+  const qgWarnings = qualityGateResult?.issues.map(
+    (i) => i.shotIndex != null ? `[\u955C${i.shotIndex}] ${i.id}: ${i.message}` : `${i.id}: ${i.message}`
+  ) ?? [];
+  return {
+    tier,
+    blocked,
+    rulePackVersion: closure.rulePackVersion ?? getRulePackVersion(),
+    closureChecks: { ...closure.closureChecks, blocked },
+    forwardTrace: closure.forwardTrace,
+    reverseHints: closure.reverseHints,
+    repairHints,
+    rePushPlan,
+    linkageRepairPlan,
+    smartDetection: gapResult ? {
+      gapCount: gapResult.allGaps.length,
+      repairMode: gapResult.repairMode,
+      chains: [...new Set(gapResult.allGaps.map((g) => g.chainId).filter(Boolean))]
+    } : void 0,
+    warnings: [
+      ...closure.warnings,
+      ...gapWarnings,
+      ...chatPromptGaps.map((g) => g.shotIndex != null ? `[\u955C${g.shotIndex}] ${g.message}` : g.message),
+      ...qgWarnings
+    ],
+    chatPromptGaps,
+    adaptationGaps: gapResult?.adaptationGaps,
+    retentionGaps: gapResult?.retentionGaps,
+    narrativeDriveGaps: gapResult?.narrativeDriveGaps,
+    packagingGaps: gapResult?.packagingGaps,
+    generationApplyGaps: gapResult?.generationApplyGaps,
+    designSpecGaps: gapResult?.designSpecGaps,
+    scriptViralGaps: gapResult?.scriptViralGaps,
+    modalityGaps: gapResult?.modalityGaps,
+    closureReport,
+    qualityGate: qualityGateResult
+  };
+}
+function inspectBundle(raw, opts = {}) {
+  const closure = runRawBundleClosure(raw, {
+    tier: opts.tier,
+    genError: opts.genError,
+    sfRound: opts.sfRound
+  });
+  if (!closure) {
+    try {
+      const parsed = parseScriptBundleRaw(raw);
+      return toResult(runScriptBundleClosure(parsed, opts), parsed, opts);
+    } catch {
+      throw new Error("Unsupported bundle: expected ScriptBundle or EpisodeBundle");
+    }
+  }
+  let bundle = null;
+  try {
+    bundle = parseScriptBundleRaw(raw);
+  } catch {
+    bundle = null;
+  }
+  return toResult(closure, bundle, opts);
+}
+var init_inspectBundle = __esm({
+  "src/ruleEngine/portable/inspectBundle.ts"() {
+    "use strict";
+    init_ruleRegistry();
+    init_fixturesPath();
+    init_closureSummary();
+    init_chatPromptAudit();
+    init_bundleGapAudits();
+    init_closureReport();
+    init_reverseRouteEngine();
+    init_qualityGate();
+  }
+});
+
+// src/ruleEngine/bundle/schemaShapeErrors.ts
+function pathTail(path44) {
+  const last = path44[path44.length - 1];
+  return typeof last === "string" ? last : path44.join(".");
+}
+function issueRepairHint(path44, pathStr, expected, received) {
+  const tail = pathTail(path44);
+  if (tail in FIELD_REPAIR) return FIELD_REPAIR[tail].id;
+  for (const rule of PATH_REPAIR) {
+    if (rule.test(pathStr)) return rule.id;
+  }
+  if (expected === "string" && received === "object") return "RH-SHAPE-STRING";
+  return void 0;
+}
+function formatSchemaShapeBlock(err) {
+  const issues = err.issues.map((iss) => {
+    const path44 = iss.path.map(String).join(".");
+    const expected = "expected" in iss ? String(iss.expected) : void 0;
+    const received = "received" in iss ? String(iss.received) : void 0;
+    const repairHintId = issueRepairHint(
+      iss.path.filter((p3) => typeof p3 === "string" || typeof p3 === "number"),
+      path44,
+      expected,
+      received
+    );
+    return {
+      path: path44,
+      code: iss.code,
+      expected,
+      received,
+      message: iss.message,
+      repairHintId
+    };
+  });
+  const hintIds = /* @__PURE__ */ new Set();
+  const repairHints = [];
+  const pushHint = (id, message) => {
+    if (hintIds.has(id)) return;
+    hintIds.add(id);
+    repairHints.push({ id, message });
+  };
+  for (const iss of issues) {
+    const tail = iss.path.split(".").pop() ?? "";
+    const spec = FIELD_REPAIR[tail];
+    if (spec) pushHint(spec.id, spec.template);
+    for (const rule of PATH_REPAIR) {
+      if (rule.test(iss.path)) pushHint(rule.id, rule.template);
+    }
+    if (iss.repairHintId === "RH-SHAPE-STRING") {
+      pushHint("RH-SHAPE-STRING", `\u5B57\u6BB5 ${iss.path} \u671F\u671B string\uFF0C\u6536\u5230 object \u2014 \u8BF7\u6539\u4E3A canonical string \u6216\u7701\u7565 key\u3002`);
+    }
+  }
+  const lines = [
+    "\u3010\u5F62\u6001\u9519\u8BEF SCHEMA_SHAPE_BLOCK \u2014 \u8BF7\u4FEE\u6B63 JSON \u5F62\u72B6\u540E\u518D\u5BFC\u5165\u3011",
+    ...issues.slice(0, 12).map((i) => `- ${i.path}: ${i.message}`),
+    "",
+    ...repairHints.map((h) => `[${h.id}] ${h.message}`)
+  ];
+  return {
+    code: "SCHEMA_SHAPE_BLOCK",
+    issues,
+    repairHints,
+    chatRepairText: lines.join("\n")
+  };
+}
+function parseScriptBundleOrThrowShape(bundle, schema) {
+  try {
+    return schema.parse(bundle);
+  } catch (e) {
+    if (e instanceof ZodError) throw new SchemaShapeBlockError(e);
+    throw e;
+  }
+}
+var FIELD_REPAIR, PATH_REPAIR, SchemaShapeBlockError;
+var init_schemaShapeErrors = __esm({
+  "src/ruleEngine/bundle/schemaShapeErrors.ts"() {
+    "use strict";
+    init_zod();
+    FIELD_REPAIR = {
+      visualEffect: {
+        id: "RH-MOD-01",
+        template: '\u5C06 shots[].visualEffect \u6539\u4E3A string\uFF0C\u5982 "F1: \u70DB\u706B\u6447\u66F3\uFF0C\u5FAE\u5149\u95EA\u70C1"\uFF1B\u53EF\u9009\u540C\u955C fxLevel: "F1"\u3002\u7981\u6B62 object {level,desc}\u3002'
+      },
+      audioCue: {
+        id: "RH-MOD-AV",
+        template: '\u5C06 shots[].audioCue \u6539\u4E3A string\uFF08\u5982 "\u8336\u76CF\u788E\u88C2\u58F0\u9AA4\u505C"\uFF09\uFF0C\u7981\u6B62 object {beat,type}\u3002'
+      },
+      spatialRelation: {
+        id: "RH-SPATIAL-OBJ",
+        template: '\u5C06 shots[].spatialRelation / narrative.spatialRelation \u6539\u4E3A\u7AD9\u4F4D string\uFF0C\u4F8B\u5982 "axis=\u5973\u4E3B-\u7537\u4E3B\uFF1Banchors=\u5973\u4E3B\u5DE6|\u7537\u4E3B\u53F3"\u3002\u7981\u6B62\u76F4\u63A5\u8D34 B13 \u5BF9\u8C61 {axis,anchors}\u3002'
+      },
+      beats: {
+        id: "RH-B12-BEATS",
+        template: 'designBrief.B12[].beats \u5FC5\u987B\u4E3A\u8282\u62CD\u6570\u91CF number\uFF08\u5982 2\uFF09\uFF1B\u53D9\u4E8B\u8BF4\u660E\u5199\u5165 summary\uFF08\u5982 "\u81EA\u6B8B\u53D6\u4F69\uFF0C\u7ACB\u4E0B\u51B3\u610F"\uFF09\uFF0C\u7981\u6B62\u628A\u53D9\u4E8B\u4E32\u5199\u8FDB beats\u3002'
+      }
+    };
+    PATH_REPAIR = [
+      {
+        test: (p3) => /\.B12(\.|$)/.test(p3) || p3.includes("designBrief.B12"),
+        id: "RH-B12-BEATS",
+        template: FIELD_REPAIR.beats.template
+      },
+      {
+        test: (p3) => p3.includes("spatialRelation"),
+        id: "RH-SPATIAL-OBJ",
+        template: FIELD_REPAIR.spatialRelation.template
+      }
+    ];
+    SchemaShapeBlockError = class extends Error {
+      payload;
+      constructor(err) {
+        const payload = formatSchemaShapeBlock(err);
+        super(JSON.stringify(payload));
+        this.name = "SchemaShapeBlockError";
+        this.payload = payload;
+      }
+    };
+  }
+});
+
+// src/ruleEngine/design/migrateMultiBeatStock.ts
+var migrateMultiBeatStock_exports = {};
+__export(migrateMultiBeatStock_exports, {
+  migrateMultiBeatStockShots: () => migrateMultiBeatStockShots,
+  shouldMigrateMultiBeat: () => shouldMigrateMultiBeat
+});
+function shouldMigrateMultiBeat(meta4) {
+  if (!meta4) return false;
+  const flag = meta4.pillarsStillOneBeatMigrate;
+  if (flag === false || flag === "off") return false;
+  if (flag === true || flag === "enforce" || flag === "migrate") return true;
+  return String(meta4.pillarsVisBeatV2 ?? "") === "enforce";
+}
+function migrateMultiBeatStockShots(shots, opts) {
+  if (!shouldMigrateMultiBeat(opts?.meta)) {
+    return { shots, migrated: 0, refused: 0, log: ["migrate_skipped_flag"] };
+  }
+  const dirty = shots.filter((s) => !s._stillBeatSplitId && shouldWarnOneBeat(String(s.visualDescription ?? "")));
+  if (!dirty.length) return { shots, migrated: 0, refused: 0, log: [] };
+  const exp = expandStillOneBeat(shots, { maxExpand: opts?.maxExpand ?? 40 });
+  const recomposed = recomposeChildrenAfterSplit(exp.shots);
+  cascadeForwardStale({ shots: recomposed.shots, forwardStages: ["SB", "MD-IMG", "EN"] });
+  return {
+    shots: recomposed.shots,
+    migrated: exp.expandedCount,
+    refused: exp.refused,
+    log: [...exp.log, `recompose:${recomposed.recomposed}`]
+  };
+}
+var init_migrateMultiBeatStock = __esm({
+  "src/ruleEngine/design/migrateMultiBeatStock.ts"() {
+    "use strict";
+    init_expandStillOneBeat();
+    init_recomposeAfterSplit();
+    init_forwardStaleCascade();
+    init_stillIdentitySsot();
+  }
+});
+
+// src/ruleEngine/design/rePushRunner.ts
+var rePushRunner_exports = {};
+__export(rePushRunner_exports, {
+  executeRePushPlan: () => executeRePushPlan,
+  planRePush: () => planRePush
+});
+function planRePush(items) {
+  const stages = [...new Set(items.flatMap((i) => i.forwardRerun))];
+  const preserved = [...new Set(items.flatMap((i) => i.preserveFields ?? []))];
+  const round = items[0] ? 1 : 0;
+  const designExitRequired = stages.some((s) => {
+    const u = String(s).toUpperCase();
+    return u === "SB" || u === "AS" || u === "W3" || u === "DESIGNBRIEF" || u === "MD-IMG";
+  });
+  return { stagesToRerun: stages, preservedFields: preserved, round, designExitRequired };
+}
+function executeRePushPlan(items, opts) {
+  const planned = planRePush(items);
+  const maxRounds = opts?.maxRounds ?? 3;
+  const round = opts?.currentRound ?? planned.round;
+  if (round > maxRounds) {
+    return {
+      ...planned,
+      round,
+      status: "exhausted",
+      items: items.map((i) => ({ ...i, status: "exhausted" }))
+    };
+  }
+  let shots = opts?.ctx?.shots ? [...opts.ctx.shots] : void 0;
+  const stageResults = [];
+  let designExitRequired = planned.designExitRequired;
+  try {
+    const { isRedesignRequired: isRedesignRequired2 } = (init_redesignContract(), __toCommonJS(redesignContract_exports));
+    const planForDebt = {
+      planData: opts?.ctx?.planData ?? opts?.ctx?.bundle?.planData ?? {}
+    };
+    if (isRedesignRequired2(planForDebt)) {
+      const blocked = planned.stagesToRerun.filter((st) => {
+        const u = String(st).toUpperCase();
+        return u === "MD-IMG" || u === "EN" || u === "MD-VID";
+      });
+      if (blocked.length) {
+        return {
+          ...planned,
+          stagesToRerun: planned.stagesToRerun.filter((st) => !blocked.includes(st)),
+          round,
+          status: "pending",
+          designExitRequired: true,
+          items: items.map((i) => ({ ...i, status: "blocked_redesign_debt" })),
+          stageResults: blocked.map((stage) => ({
+            stage,
+            ok: false,
+            detail: "redesignRequired\uFF1A\u987B W3 redesignPass \u540E\u518D regen"
+          })),
+          shots
+        };
+      }
+    }
+  } catch {
+  }
+  for (const stage of planned.stagesToRerun) {
+    const s = String(stage).toUpperCase();
+    try {
+      if (shots && (s === "SB" || s === "AS" || s === "W3" || s === "DESIGNBRIEF")) {
+        if (opts?.ctx?.bundle || opts?.ctx?.planData) {
+          const bundle = opts.ctx.bundle ?? {
+            preDesignPack: { shots },
+            planData: opts.ctx.planData ?? {},
+            meta: opts.ctx.meta ?? {}
+          };
+          if (bundle.preDesignPack) {
+            bundle.preDesignPack.shots = shots;
+          }
+          const ird = runStillIntentHeal(bundle, {
+            chatStrict: opts.ctx.chatStrict,
+            literaryLocked: opts.ctx.literaryLocked,
+            meta: opts.ctx.meta,
+            planData: opts.ctx.planData
+          });
+          shots = ird.shots;
+          stageResults.push({
+            stage: s,
+            ok: true,
+            detail: `ird_applied=${ird.applied.length};refused=${ird.refused.length}`
+          });
+          if (ird.applied.length) designExitRequired = true;
+        }
+        const mig = migrateMultiBeatStockShots(shots, {
+          meta: opts?.ctx?.meta ?? { pillarsStillOneBeatMigrate: true }
+        });
+        shots = mig.shots;
+        const re2 = runForwardReentryAfterRepair({
+          planData: opts?.ctx?.planData,
+          shots,
+          meta: opts?.ctx?.meta,
+          applyClauseSplit: false
+        });
+        shots = re2.shots;
+        stageResults.push({
+          stage: s,
+          ok: true,
+          detail: `migrate=${mig.migrated};refuse=${mig.refused};reentry_stale=${re2.reentry.staleClientIds.length}`
+        });
+        if (opts?.ctx?.meta) {
+          opts.ctx.meta.designExitRequiredAfterIrd = true;
+        }
+      } else if (shots && (s === "MD-IMG" || s === "MD" || s === "EN" || s === "MD-VID")) {
+        cascadeForwardStale({
+          shots,
+          forwardStages: [s === "MD-VID" ? "EN" : s === "MD" ? "MD-IMG" : s]
+        });
+        stageResults.push({ stage: s, ok: true, detail: "stale_cascade;await_designExit" });
+      } else {
+        stageResults.push({ stage: s, ok: true, detail: "queued" });
+      }
+      if (opts?.runStage) {
+        void opts.runStage(s, {
+          shots: shots ?? [],
+          meta: opts.ctx?.meta,
+          planData: opts.ctx?.planData
+        });
+      }
+    } catch (e) {
+      stageResults.push({ stage: s, ok: false, detail: e instanceof Error ? e.message : "fail" });
+    }
+  }
+  return {
+    ...planned,
+    designExitRequired,
+    round,
+    status: planned.stagesToRerun.length ? "completed" : "pending",
+    items: items.map((i) => ({
+      ...i,
+      status: i.forwardRerun?.length ? "completed" : "pending"
+    })),
+    stageResults,
+    shots
+  };
+}
+var init_rePushRunner = __esm({
+  "src/ruleEngine/design/rePushRunner.ts"() {
+    "use strict";
+    init_migrateMultiBeatStock();
+    init_forwardStaleCascade();
+    init_designSplitLifecycle();
+    init_stillIntentReverse();
+  }
+});
+
+// src/ruleEngine/design/fixPlanApplicator.ts
+function applyFixPlanToBundle(bundle, issues) {
+  const fix = applyAutoFix(issues);
+  const round = (bundle.fixPlan?.round ?? 0) + 1;
+  const next = {
+    ...bundle,
+    fixPlan: {
+      round,
+      items: fix.patches.map((p3, i) => ({
+        id: `fix-${i + 1}`,
+        ruleId: String(p3.ruleId ?? ""),
+        autoApplicable: true,
+        confidence: 0.9,
+        patch: p3
+      }))
+    }
+  };
+  const fieldsWritten = [];
+  if (next.preDesignPack?.shots?.length && fix.patches.length) {
+    const shots = next.preDesignPack.shots.map((s) => ({ ...s }));
+    for (const patch of fix.patches) {
+      const shotId2 = patch.shotId;
+      const idx = shotId2 ? shots.findIndex((s) => String(s.id) === shotId2) : 0;
+      const target = shots[idx >= 0 ? idx : 0];
+      if (!target) continue;
+      const { shot, applied } = applyPatchesToShot(target, patch);
+      Object.assign(target, shot);
+      fieldsWritten.push(...applied);
+    }
+    next.preDesignPack = { ...next.preDesignPack, shots };
+  }
+  let stagesExecuted = [];
+  if (fix.applied.length) {
+    next.rePushPlan = buildRePushPlan(fix.applied);
+    const shots = next.preDesignPack?.shots ?? [];
+    const executed = executeRePushPlan(next.rePushPlan, {
+      ctx: {
+        shots,
+        meta: next.meta ?? {},
+        planData: next.planData ?? {},
+        bundle: next,
+        chatStrict: false
+      },
+      maxRounds: 3
+    });
+    if (executed.shots?.length && next.preDesignPack) {
+      next.preDesignPack = { ...next.preDesignPack, shots: executed.shots };
+    }
+    stagesExecuted = executed.stagesToRerun;
+    next.rePushExecution = executed;
+  }
+  return {
+    bundle: next,
+    applied: fix.applied,
+    round,
+    patches: fix.patches,
+    rePushPlan: next.rePushPlan ?? [],
+    fieldsWritten: [...new Set(fieldsWritten)],
+    stagesExecuted
+  };
+}
+var init_fixPlanApplicator = __esm({
+  "src/ruleEngine/design/fixPlanApplicator.ts"() {
+    "use strict";
+    init_autoFix();
+    init_rePushRunner();
+    init_reverseRouteEngine();
+    init_patchApplicator();
+  }
+});
+
+// src/ruleEngine/design/smartProposalApplier.ts
+function applySmartProposalsToBundle(bundle, proposals, issues = []) {
+  const merged = mergeConfirmedProposals(bundle, proposals);
+  let next = merged.bundle;
+  if (issues.length) {
+    next = applyFixPlanToBundle(next, issues).bundle;
+  }
+  return next;
+}
+var init_smartProposalApplier = __esm({
+  "src/ruleEngine/design/smartProposalApplier.ts"() {
+    "use strict";
+    init_smartProposalMerger();
+    init_fixPlanApplicator();
+  }
+});
+
+// src/ruleEngine/bundle/packagingMaterialize.ts
+function materializePackaging(bundle) {
+  const patches = [];
+  const shots = [...bundle.preDesignPack?.shots ?? []];
+  if (!shots.length) {
+    return { bundle, report: { debutApplied: false, endHookApplied: false, patches } };
+  }
+  let debutApplied = false;
+  const debut = bundle.debutIntroPack;
+  if (debut && (debut.characters?.length || debut.scenes?.length || debut.beatHint)) {
+    const s0 = { ...shots[0] };
+    const narr2 = { ...s0.narrative ?? {} };
+    if (!narr2.debutBeat) {
+      narr2.debutBeat = debut.beatHint ?? "debut_intro";
+      patches.push("shot1.narrative.debutBeat");
+    }
+    if (!s0.packagingTag) {
+      s0.packagingTag = "debut";
+      patches.push("shot1.packagingTag=debut");
+    }
+    s0.narrative = narr2;
+    shots[0] = s0;
+    debutApplied = true;
+  }
+  let endHookApplied = false;
+  const endHook = bundle.endHookPack ?? bundle.continuity;
+  const hookText = typeof endHook === "object" && endHook && ("hook" in endHook ? endHook.hook : endHook.endHook) || bundle.continuity?.unresolvedHooks?.[0];
+  if (hookText) {
+    const last = { ...shots[shots.length - 1] };
+    const narr2 = { ...last.narrative ?? {} };
+    if (!narr2.endHook) {
+      narr2.endHook = hookText;
+      patches.push(`shot${shots.length}.narrative.endHook`);
+    }
+    if (!last.packagingTag) {
+      last.packagingTag = "endHook";
+      patches.push(`shot${shots.length}.packagingTag=endHook`);
+    }
+    last.narrative = narr2;
+    shots[shots.length - 1] = last;
+    endHookApplied = true;
+  }
+  const next = {
+    ...bundle,
+    preDesignPack: {
+      scriptPlan: bundle.preDesignPack?.scriptPlan ?? "",
+      ...bundle.preDesignPack,
+      shots
+    }
+  };
+  return { bundle: next, report: { debutApplied, endHookApplied, patches } };
+}
+var init_packagingMaterialize = __esm({
+  "src/ruleEngine/bundle/packagingMaterialize.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/bundle/preDesignPackAdapter.ts
+function linesToText(shot) {
+  const lines = shot.narrative?.dialogue?.lines ?? [];
+  return lines.map((l) => `${l.speaker ?? ""}\uFF1A${l.text ?? ""}`).join(" ");
+}
+function preDesignShotsToStoryboardTable(shots) {
+  const rows = [
+    "| \u955C | \u7C7B\u578B | \u573A\u666F | \u753B\u9762\u63CF\u5199 | \u666F\u522B | \u8868\u6F14 | \u53F0\u8BCD | \u65F6\u957F |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |"
+  ];
+  shots.forEach((s, i) => {
+    const idx = s.shotIndex ?? i + 1;
+    const line = linesToText(s).replace(/\|/g, "\\|");
+    const vd = String(s.visualDescription ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+    const size = String(s.shotSize ?? s.narrative?.shotSize ?? "").replace(
+      /\|/g,
+      "\\|"
+    );
+    const sd = s.shotDesign;
+    const micro = sd?.performance?.microExpression;
+    const perf = [micro?.eyes, micro?.mouthDetail, sd?.lipSyncPolicy].filter(Boolean).join("\uFF1B").replace(/\|/g, "\\|");
+    rows.push(
+      `| ${idx} | ${s.type ?? "CHAR-SCENE"} | ${s.sceneName ?? ""} | ${vd} | ${size} | ${perf} | ${line} | ${s.duration ?? 3}s |`
+    );
+  });
+  return normalizeStoryboardTableMd(rows.join("\n"));
+}
+function preDesignShotsToPanels(shots, opts) {
+  return shots.map((s, i) => {
+    const shot = opts?.enrichFromDesign ? enrichShotGenerationFromDesign(s, { visualLockTable: opts.visualLockTable }) : s;
+    const idx = shot.shotIndex ?? i + 1;
+    const gen = shot.generation;
+    const desc = shot.visualDescription ?? linesToText(shot);
+    const chars = shot.charCodes?.join(", ") ?? "";
+    let imagePrompt = gen?.imagePrompt?.trim() || "";
+    const videoPrompt = gen?.videoPrompt?.trim();
+    const sceneCode = shot.sceneCode;
+    const crefCodes = parsePromptRefs(imagePrompt || "").crefs;
+    const srefCodes = parsePromptRefs(imagePrompt || "").srefs;
+    if (sceneCode && !srefCodes.length && imagePrompt && !/--sref\s+/i.test(imagePrompt)) {
+      imagePrompt = `${imagePrompt} --sref ${sceneCode}`;
+    }
+    const allCharCodes = [.../* @__PURE__ */ new Set([...shot.charCodes ?? [], ...crefCodes])];
+    const associateAssetsIds = [];
+    for (const code of allCharCodes) {
+      const id = opts?.codeToAssetId?.[code] ?? opts?.codeToAssetId?.[code.toUpperCase()];
+      if (id) associateAssetsIds.push(id);
+    }
+    if (sceneCode) {
+      const sid = opts?.codeToAssetId?.[sceneCode];
+      if (sid) associateAssetsIds.push(sid);
+    }
+    const rawFx = gen?.fxPrompt?.trim();
+    const fxPrompt = rawFx && !/^F[0-5]$/i.test(rawFx) ? rawFx : void 0;
+    const stableClientId = String(
+      shot.clientId ?? shot._stillBeatSplitId ?? shot._visualSplitId ?? `sb-${idx}`
+    );
+    const burnParentForbidden = Boolean(
+      shot.burnParentForbidden || shot._stillBeatSplitId || shot._visualSplitId
+    );
+    const literary = String(desc ?? "").trim() || [chars, shot.sceneName, sceneCode].filter(Boolean).join("\uFF0C").trim();
+    const promptLiterary = literary.slice(0, 2e3) || imagePrompt.slice(0, 2e3);
+    return {
+      clientId: stableClientId,
+      id: shot.storyboardId,
+      duration: shot.duration ?? 3,
+      prompt: promptLiterary,
+      videoDesc: videoPrompt || `${shot.shotSize ?? "medium shot"} ${shot.camera ?? "static"}, ${shot.duration ?? 3}s`,
+      audioPrompt: gen?.audioPrompt?.trim(),
+      fxPrompt,
+      shouldGenerateImage: 1,
+      associateAssetsIds: [...new Set(associateAssetsIds)],
+      track: String(idx),
+      burnParentForbidden,
+      _stillBeatSplitId: shot._stillBeatSplitId,
+      _visualSplitId: shot._visualSplitId,
+      state: "\u672A\u751F\u6210",
+      index: idx - 1
+    };
+  });
+}
+function applyPreDesignPack(pack2, opts) {
+  return {
+    scriptPlan: pack2.scriptPlan,
+    storyboardTable: preDesignShotsToStoryboardTable(pack2.shots),
+    storyboard: preDesignShotsToPanels(pack2.shots, opts)
+  };
+}
+function hasPreDesignShots(pack2) {
+  return Boolean(pack2?.shots?.length);
+}
+var init_preDesignPackAdapter = __esm({
+  "src/ruleEngine/bundle/preDesignPackAdapter.ts"() {
+    "use strict";
+    init_modalityChainAudit();
+    init_vendorPromptAdapter();
+    init_normalizeStoryboardTableMd();
+  }
+});
+
+// src/ruleEngine/bundle/warehouseDebtMeta.ts
+var warehouseDebtMeta_exports = {};
+__export(warehouseDebtMeta_exports, {
+  applyWarehouseDebtToPackage: () => applyWarehouseDebtToPackage,
+  extractWarehouseDebtFromBundle: () => extractWarehouseDebtFromBundle,
+  readWarehouseDebtFromPackage: () => readWarehouseDebtFromPackage,
+  warehouseDebtBlocksVideo: () => warehouseDebtBlocksVideo,
+  warehouseDebtStillEnhance: () => warehouseDebtStillEnhance,
+  writeWarehouseDebtToBundle: () => writeWarehouseDebtToBundle
+});
+function extractWarehouseDebtFromBundle(bundle) {
+  const b = bundle;
+  const bMeta = b.meta ?? {};
+  const pdMeta = b.planData?.meta ?? {};
+  const meta4 = { ...pdMeta, ...bMeta };
+  return {
+    importOkNotExitPass: Boolean(meta4.importOkNotExitPass),
+    importDiagnoseOnly: Boolean(meta4.importDiagnoseOnly),
+    lipConfirmRequired: Boolean(meta4.lipConfirmRequired),
+    irdConfirmRequired: Boolean(
+      meta4.irdConfirmRequired || b.irdConfirmRequired || pdMeta.irdConfirmRequired
+    ),
+    importSplitExpanded: Boolean(
+      meta4.importSplitExpanded || b._importSplitExpanded || pdMeta.importSplitExpanded
+    ),
+    expandProvenance: meta4.expandProvenance ?? pdMeta.expandProvenance,
+    designSlotHealSummary: meta4.designSlotHealSummary,
+    designExitIncomplete: Boolean(meta4.designExitIncomplete)
+  };
+}
+function writeWarehouseDebtToBundle(bundle, debt) {
+  const bMeta = bundle.meta ??= {};
+  const pd = bundle.planData ?? (bundle.planData = {});
+  const pdMeta = pd.meta ?? (pd.meta = {});
+  for (const [k, v] of Object.entries(debt)) {
+    if (v === void 0) continue;
+    bMeta[k] = v;
+    pdMeta[k] = v;
+  }
+  if (debt.irdConfirmRequired) {
+    bundle.irdConfirmRequired = true;
+  }
+  if (debt.importSplitExpanded) {
+    bundle._importSplitExpanded = true;
+  }
+}
+function applyWarehouseDebtToPackage(pkg, debt) {
+  const next = {
+    ...pkg,
+    warehouseDebt: { ...pkg.warehouseDebt ?? {}, ...debt },
+    meta: { ...pkg.meta ?? {}, ...debt }
+  };
+  return next;
+}
+function readWarehouseDebtFromPackage(pkg) {
+  if (!pkg) return {};
+  const wd = pkg.warehouseDebt ?? {};
+  const meta4 = pkg.meta ?? {};
+  return {
+    importOkNotExitPass: Boolean(wd.importOkNotExitPass ?? meta4.importOkNotExitPass),
+    importDiagnoseOnly: Boolean(wd.importDiagnoseOnly ?? meta4.importDiagnoseOnly),
+    lipConfirmRequired: Boolean(wd.lipConfirmRequired ?? meta4.lipConfirmRequired),
+    irdConfirmRequired: Boolean(wd.irdConfirmRequired ?? meta4.irdConfirmRequired),
+    importSplitExpanded: Boolean(wd.importSplitExpanded ?? meta4.importSplitExpanded),
+    expandProvenance: wd.expandProvenance ?? meta4.expandProvenance,
+    designSlotHealSummary: wd.designSlotHealSummary ?? meta4.designSlotHealSummary,
+    designExitIncomplete: Boolean(wd.designExitIncomplete ?? meta4.designExitIncomplete)
+  };
+}
+function warehouseDebtBlocksVideo(debt) {
+  return Boolean(debt.lipConfirmRequired || debt.importOkNotExitPass || debt.irdConfirmRequired);
+}
+function warehouseDebtStillEnhance(debt) {
+  if (!warehouseDebtBlocksVideo(debt) && !debt.designExitIncomplete) {
+    return { enhance: false, ctaLabel: "", userMessage: "" };
+  }
+  return {
+    enhance: true,
+    ctaLabel: "\u667A\u80FD\u4FEE\u590D",
+    userMessage: "importOk\u2260designExitPass\uFF1A\u4ED3\u503A\u672A\u95ED\uFF08\u53EF draft\uFF0Cdraft\u2260hq_ok\u2260\u8BBE\u8BA1\u5DF2\u95ED\uFF09\u3002\u8BF7\u70B9\u300C\u667A\u80FD\u4FEE\u590D\u300D\u69FD\u6108/Confirm \u667A\u62C6\u540E\u518D\u5F53 HQ\u3002"
+  };
+}
+var init_warehouseDebtMeta = __esm({
+  "src/ruleEngine/bundle/warehouseDebtMeta.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/design/intentGraphPrune.ts
+var intentGraphPrune_exports = {};
+__export(intentGraphPrune_exports, {
+  pruneIntentGraphEdges: () => pruneIntentGraphEdges,
+  pruneIntentGraphOnBundle: () => pruneIntentGraphOnBundle
+});
+function pruneIntentGraphEdges(input) {
+  const keys2 = new Set(
+    input.shots.map((s) => String(s.clientId ?? s.shotIndex ?? "")).filter(Boolean)
+  );
+  const src = input.edges ?? [];
+  const kept = [];
+  let pruned = 0;
+  for (const e of src) {
+    if (!keys2.has(e.fromShotKey) || !keys2.has(e.toShotKey)) {
+      pruned += 1;
+      continue;
+    }
+    kept.push(e);
+  }
+  let rebuilt = 0;
+  const have = new Set(kept.map((e) => `${e.kind}:${e.fromShotKey}->${e.toShotKey}`));
+  for (const s of input.shots) {
+    const parent = String(
+      s._stillBeatSplitId ?? s._visualSplitId ?? s._litXorSplitId ?? s._cuCastSplitId ?? ""
+    );
+    const child = String(s.clientId ?? "");
+    if (!parent || !child || parent === child) continue;
+    if (!keys2.has(parent) && !keys2.has(child)) continue;
+    const fromKey = keys2.has(parent) ? parent : String(s._propContFrom ?? parent);
+    if (!keys2.has(fromKey) || !keys2.has(child)) continue;
+    const isOral = s._contactEventMustProp === false || /__lit_oral$/i.test(child) || String(s.visualSplitRole ?? s.beatRole ?? "") === "reaction";
+    if (isOral) continue;
+    const id = `prop_cont:${fromKey}->${child}`;
+    if (have.has(id)) continue;
+    kept.push({ kind: "prop_cont", fromShotKey: fromKey, toShotKey: child });
+    have.add(id);
+    rebuilt += 1;
+  }
+  const filtered = [];
+  for (const e of kept) {
+    if (e.kind !== "prop_cont") {
+      filtered.push(e);
+      continue;
+    }
+    const toShot = input.shots.find((s) => String(s.clientId ?? "") === e.toShotKey);
+    const oralTo = toShot && (toShot._contactEventMustProp === false || /__lit_oral$/i.test(e.toShotKey) || String(toShot.visualSplitRole ?? toShot.beatRole ?? "") === "reaction");
+    if (oralTo) {
+      pruned += 1;
+      continue;
+    }
+    filtered.push(e);
+  }
+  return { edges: filtered, pruned, rebuilt };
+}
+function pruneIntentGraphOnBundle(bundle) {
+  const shots = bundle.preDesignPack?.shots ?? [];
+  if (!shots.length) return { pruned: 0, rebuilt: 0 };
+  const pd = bundle.planData ?? {};
+  const graph = pd.intentGraph ?? bundle.meta?.intentGraph ?? {};
+  const result = pruneIntentGraphEdges({ shots, edges: graph.edges });
+  const nextGraph = { ...graph, edges: result.edges };
+  if (bundle.planData) {
+    bundle.planData.intentGraph = nextGraph;
+  }
+  if (bundle.meta) {
+    bundle.meta.intentGraph = nextGraph;
+  }
+  return { pruned: result.pruned, rebuilt: result.rebuilt };
+}
+var init_intentGraphPrune = __esm({
+  "src/ruleEngine/design/intentGraphPrune.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/design/importDesignSlotHeal.ts
+var importDesignSlotHeal_exports = {};
+__export(importDesignSlotHeal_exports, {
+  importDesignSlotHeal: () => importDesignSlotHeal
+});
+function stampDesignIntentSilentPrefetch(s) {
+  try {
+    const { deriveDesignIntentProfile: deriveDesignIntentProfile2, profileNeedsPropPlate: profileNeedsPropPlate2 } = (init_designIntentProfile(), __toCommonJS(designIntentProfile_exports));
+    const sd = s.shotDesign;
+    const micro = sd?.performance?.microExpression;
+    const microStr = micro ? [micro.eyes, micro.mouthDetail].filter(Boolean).join("/") : void 0;
+    const profile = deriveDesignIntentProfile2({
+      visualDescription: String(s.visualDescription ?? ""),
+      imagePrompt: String(s.generation?.imagePrompt ?? ""),
+      shotSize: String(s.shotSize ?? sd?.cameraAnchor?.shotSize ?? ""),
+      background: sd?.composition?.background,
+      foreground: sd?.composition?.foreground,
+      microExpression: microStr
+    });
+    s.designIntentProfile = {
+      classes: profile.classes,
+      plateMode: profile.plateMode,
+      glyphPolicy: profile.glyphPolicy,
+      glyphText: profile.glyphText,
+      propClassId: profile.propClassId,
+      primaryObjective: profile.primaryObjective,
+      secondaryBudget: profile.secondaryBudget,
+      fragment: profile.fragment,
+      poseOccupancy: profile.poseOccupancy,
+      gripLocus: profile.gripLocus,
+      seatingXorPickup: profile.seatingXorPickup,
+      dofBudget: profile.dofBudget,
+      formScale: profile.formScale
+    };
+    if (profileNeedsPropPlate2(profile)) {
+      s._needsPropPrefetch = true;
+      s._propPlateSoftDefer = true;
+      return true;
+    }
+    try {
+      const { profileNeedsFragmentPlate: profileNeedsFragmentPlate2 } = (init_designIntentProfile(), __toCommonJS(designIntentProfile_exports));
+      if (profileNeedsFragmentPlate2(profile)) {
+        s._needsFragmentPrefetch = true;
+        s._propPlateSoftDefer = true;
+        return true;
+      }
+    } catch {
+    }
+  } catch {
+  }
+  return false;
+}
+function rewriteShotEgress(s) {
+  const vd = String(s.visualDescription ?? "").trim();
+  if (!vd) return false;
+  const gen = s.generation ?? {};
+  const img = String(gen.imagePrompt ?? "").trim();
+  const drift = isSplitChildShot(s) || !img || vd && img && !img.toLowerCase().includes(vd.slice(0, Math.min(4, vd.length)).toLowerCase());
+  if (!drift && !isSplitChildShot(s)) return false;
+  if (isSplitChildShot(s)) clearInheritedGeneration(s);
+  const sd = s.shotDesign;
+  const micro = sd?.performance?.microExpression;
+  const microStr = micro ? [micro.eyes, micro.mouthDetail].filter(Boolean).join("/") : void 0;
+  try {
+    const composed = composeStillPrompt(
+      {
+        visualDescription: vd,
+        shotSize: String(s.shotSize ?? sd?.cameraAnchor?.shotSize ?? ""),
+        foreground: sd?.composition?.foreground,
+        background: sd?.composition?.background,
+        microExpression: microStr,
+        qualityMode: "draft",
+        episodeShot: s
+      },
+      { mode: "full" }
+    );
+    let prompt = String(composed.prompt ?? "").trim() || vd;
+    if (sd?.cameraAnchor?.bgBlur && !/blur|bokeh|景深/i.test(prompt)) {
+      prompt = `${prompt}\uFF0C\u6D45\u666F\u6DF1 bokeh blur`;
+    }
+    const nextGen = { ...s.generation ?? {}, imagePrompt: prompt };
+    s.generation = nextGen;
+    s.promptState = "composed";
+    const fid = healPromptFidelityAnchors({
+      visualDescription: vd,
+      visualBody: prompt,
+      videoPrompt: String(nextGen.videoPrompt ?? "")
+    });
+    if (fid.injected.length) {
+      s.visualDescription = fid.visualDescription;
+      nextGen.imagePrompt = fid.visualBody;
+      s.generation = nextGen;
+    }
+    return true;
+  } catch {
+    const nextGen = { ...s.generation ?? {}, imagePrompt: vd };
+    s.generation = nextGen;
+    s.promptState = "stale";
+    return true;
+  }
+}
+function importDesignSlotHeal(bundle) {
+  const shots = bundle.preDesignPack?.shots ?? [];
+  if (!shots.length) {
+    return {
+      bundle,
+      summary: {
+        healed: 0,
+        fidelityHealed: 0,
+        continuityInherited: 0,
+        recomposed: 0,
+        egressRewritten: 0,
+        genCleared: 0,
+        propPrefetchMarked: 0
+      }
+    };
+  }
+  const cont = inheritContinuityAlongEdges({ shots });
+  const rc = recomposeChildrenAfterSplit(cont.shots);
+  let healed = 0;
+  let fidelityHealed = 0;
+  let genCleared = 0;
+  let propPrefetchMarked = 0;
+  for (const s of rc.shots) {
+    if (isSplitChildShot(s)) genCleared += 1;
+    if (stampDesignIntentSilentPrefetch(s)) propPrefetchMarked += 1;
+    const before = String(s.generation?.imagePrompt ?? "");
+    if (rewriteShotEgress(s)) {
+      healed += 1;
+      const after = String(s.generation?.imagePrompt ?? "");
+      if (after !== before && after.includes(String(s.visualDescription ?? "").slice(0, 2))) {
+      }
+      const fid = healPromptFidelityAnchors({
+        visualDescription: String(s.visualDescription ?? ""),
+        visualBody: after
+      });
+      if (fid.injected.length) {
+        s.visualDescription = fid.visualDescription;
+        const g = { ...s.generation ?? {}, imagePrompt: fid.visualBody };
+        s.generation = g;
+        fidelityHealed += 1;
+      }
+    }
+  }
+  if (bundle.preDesignPack) {
+    bundle.preDesignPack.shots = rc.shots;
+  }
+  try {
+    const { pruneIntentGraphOnBundle: pruneIntentGraphOnBundle2 } = (init_intentGraphPrune(), __toCommonJS(intentGraphPrune_exports));
+    pruneIntentGraphOnBundle2(bundle);
+  } catch {
+  }
+  const summary = {
+    healed,
+    fidelityHealed,
+    continuityInherited: cont.inherited,
+    recomposed: rc.recomposed,
+    egressRewritten: rc.egressRewritten,
+    genCleared,
+    propPrefetchMarked
+  };
+  writeWarehouseDebtToBundle(bundle, {
+    designSlotHealSummary: summary
+  });
+  const meta4 = bundle.meta ??= {};
+  meta4.packageVersion = Number(meta4.packageVersion ?? 0) + 1;
+  meta4.silentPropPrefetch = propPrefetchMarked > 0;
+  meta4.warehouseDebtDecision = "soft_defer";
+  for (const s of rc.shots) {
+    s.packageVersion = Number(s.packageVersion ?? 0) + 1;
+  }
+  return { bundle, summary };
+}
+var init_importDesignSlotHeal = __esm({
+  "src/ruleEngine/design/importDesignSlotHeal.ts"() {
+    "use strict";
+    init_recomposeAfterSplit();
+    init_composeStillPrompt();
+    init_healPromptFidelityAnchors();
+    init_splitContinuityInherit();
+    init_warehouseDebtMeta();
+  }
+});
+
+// src/ruleEngine/bundle/prepareBundleForInspect.ts
+function prepareBundleForInspect(raw, opts = {}) {
+  const prepared = prepareBundleWithLog(raw);
+  const parsed = parseScriptBundleOrThrowShape(prepared.bundle, scriptBundleSchema);
+  let bundle = parsed;
+  const proposals = bundle.smartDesignProposals;
+  if (proposals?.length) {
+    bundle = applySmartProposalsToBundle(bundle, proposals);
+  }
+  const mat = materializePackaging(bundle);
+  bundle = mat.bundle;
+  normalizeVisualLockTableOnBundle(bundle);
+  let speakerOrphans = [];
+  let semanticHealLog = [];
+  let rawShotCount = 0;
+  let authorShotsPresent = false;
+  let expandApplied = false;
+  let diagnoseOnly = false;
+  if (bundle.preDesignPack && hasPreDesignShots(bundle.preDesignPack)) {
+    authorShotsPresent = true;
+    rawShotCount = Array.isArray(bundle.preDesignPack.shots) ? bundle.preDesignPack.shots.length : 0;
+    const normalized = normalizePreDesignPack(bundle, {
+      ingestHeal: opts.ingestHeal !== false,
+      chatStrict: Boolean(bundle.chatStrict)
+    });
+    let shots = normalized.shots;
+    if (opts.ingestHeal !== false) {
+      shots = shots.map((s) => migrateShotVisualBeatTags(s, { confirmSuggested: false }));
+      const meta4 = bundle.planData?.meta ?? bundle.meta ?? {};
+      const chatStrict = Boolean(bundle.chatStrict);
+      const EXPAND_NET_CAP = 8;
+      let allowApplyExpand = Boolean(opts.forceExpand) && !chatStrict;
+      let pressureConfirmOnly = false;
+      if (!allowApplyExpand && !chatStrict && opts.ingestHeal !== false) {
+        try {
+          const { diagnoseStillIntent: diagnoseStillIntent2 } = (init_stillIntentReverse(), __toCommonJS(stillIntentReverse_exports));
+          const { detectLipSplitPressure: detectLipSplitPressure2 } = (init_lipSplit(), __toCommonJS(lipSplit_exports));
+          const diagnose = diagnoseStillIntent2(shots, {
+            chatStrict: true,
+            bundle,
+            planData: bundle.planData ?? {},
+            meta: meta4
+          });
+          const lipP = shots.some((s) => detectLipSplitPressure2(s).mustConfirm);
+          const splitPatches = diagnose.patches.filter(
+            (p3) => p3.op === "split_onebeat" || p3.op === "split_speak_react" || p3.op === "split_cu_cast" || p3.op === "split_lit_xor" || /split/i.test(String(p3.op ?? ""))
+          );
+          const highConf = diagnose.confirmRequired === false && (splitPatches.length > 0 || lipP) && splitPatches.every((p3) => Number(p3.confidence ?? 0.85) >= 0.75);
+          const estimatedNet = Math.max(splitPatches.length, lipP ? 1 : 0);
+          if (highConf && estimatedNet <= EXPAND_NET_CAP) {
+            allowApplyExpand = true;
+          } else if (diagnose.confirmRequired || lipP || splitPatches.length) {
+            pressureConfirmOnly = true;
+            allowApplyExpand = false;
+          }
+        } catch {
+          allowApplyExpand = false;
+        }
+      }
+      diagnoseOnly = !allowApplyExpand;
+      if (!chatStrict || diagnoseOnly) {
+        if (allowApplyExpand && opts.forceExpand) {
+          const { shouldMigrateMultiBeat: shouldMigrateMultiBeat2, migrateMultiBeatStockShots: migrateMultiBeatStockShots2 } = (init_migrateMultiBeatStock(), __toCommonJS(migrateMultiBeatStock_exports));
+          if (shouldMigrateMultiBeat2(meta4)) {
+            const mig = migrateMultiBeatStockShots2(shots, { meta: meta4 });
+            shots = mig.shots;
+            if (mig.migrated > 0) {
+              expandApplied = true;
+              semanticHealLog.push({
+                ruleId: "DEX-STILL-ONEBEAT",
+                path: "preDesignPack.shots",
+                action: `migrate:${mig.migrated};refuse=${mig.refused}`
+              });
+            }
+          }
+        }
+        try {
+          const { runStillIntentHeal: runStillIntentHeal2, diagnoseStillIntent: diagnoseStillIntent2 } = (init_stillIntentReverse(), __toCommonJS(stillIntentReverse_exports));
+          applyNormalizedShotsToBundle(bundle, shots);
+          if (allowApplyExpand && opts.forceExpand) {
+            const ird = runStillIntentHeal2(bundle, {
+              chatStrict: false,
+              meta: meta4,
+              planData: bundle.planData ?? {}
+            });
+            shots = ird.shots;
+            if (ird.applied.length) {
+              expandApplied = true;
+              semanticHealLog.push({
+                ruleId: "IRD-APPLY",
+                path: "preDesignPack.shots",
+                action: `applied:${ird.applied.length};refused:${ird.refused.length}`
+              });
+              bundle._importSplitExpanded = true;
+              const bMeta = bundle.meta ??= {};
+              bMeta.irdProvenance = bundle.meta?.irdProvenance ?? bMeta.irdProvenance;
+              bMeta.importOkNotExitPass = true;
+            }
+            if (ird.diagnose.confirmRequired || ird.refused.length) {
+              semanticHealLog.push({
+                ruleId: "IRD-CONFIRM",
+                path: "preDesignPack.shots",
+                action: `confirmRequired;primary=${ird.diagnose.primaryAction}`
+              });
+              bundle.irdConfirmRequired = true;
+            }
+          } else {
+            const diagnose = diagnoseStillIntent2(shots, {
+              chatStrict: true,
+              bundle,
+              planData: bundle.planData ?? {},
+              meta: meta4
+            });
+            const must = diagnose.confirmRequired || pressureConfirmOnly || diagnose.patches.some((p3) => p3.op === "split_onebeat" || p3.op === "split_speak_react");
+            if (must) {
+              semanticHealLog.push({
+                ruleId: "IRD-DIAGNOSE-ONLY",
+                path: "preDesignPack.shots",
+                action: `mustSplit;primary=${diagnose.primaryAction};patches=${diagnose.patches.length};pressureConfirm=${pressureConfirmOnly}`
+              });
+              bundle.irdConfirmRequired = true;
+              const bMeta = bundle.meta ??= {};
+              bMeta.irdConfirmRequired = true;
+              bMeta.importOkNotExitPass = true;
+              bMeta.importDiagnoseOnly = true;
+            } else {
+              semanticHealLog.push({
+                ruleId: "IRD-DIAGNOSE-ONLY",
+                path: "preDesignPack.shots",
+                action: "ok_no_must_split"
+              });
+            }
+          }
+        } catch (e) {
+          semanticHealLog.push({
+            ruleId: allowApplyExpand ? "IRD-FALLBACK" : "IRD-DIAGNOSE-ONLY",
+            path: "preDesignPack.shots",
+            action: e instanceof Error ? e.message.slice(0, 80) : "ird_fail"
+          });
+        }
+        try {
+          const { runCamFitUntilClear: runCamFitUntilClear2 } = (init_camFitHygiene(), __toCommonJS(camFitHygiene_exports));
+          applyNormalizedShotsToBundle(bundle, shots);
+          const cam = runCamFitUntilClear2(bundle, {
+            chatStrict: !opts.forceExpand,
+            maxRounds: opts.forceExpand ? 5 : 0
+          });
+          shots = bundle.preDesignPack?.shots ?? shots;
+          if (cam.applied) {
+            expandApplied = true;
+            semanticHealLog.push({
+              ruleId: "SH-CAM-FIT-UNTIL-CLEAR",
+              path: "preDesignPack.shots",
+              action: `applied:${cam.applied};rounds:${cam.rounds};remain=${cam.remainingMustSplit}`
+            });
+            bundle._importSplitExpanded = true;
+          }
+          if (cam.confirmRequired) {
+            semanticHealLog.push({
+              ruleId: opts.forceExpand ? "IRD-CONFIRM" : "IRD-DIAGNOSE-ONLY",
+              path: "preDesignPack.shots",
+              action: `cam_fit_remain:${cam.remainingMustSplit}`
+            });
+            bundle.irdConfirmRequired = true;
+            const bMeta = bundle.meta ??= {};
+            bMeta.irdConfirmRequired = true;
+            if (!opts.forceExpand) bMeta.importDiagnoseOnly = true;
+          }
+        } catch (e) {
+          semanticHealLog.push({
+            ruleId: "CAM-FIT-FALLBACK",
+            path: "preDesignPack.shots",
+            action: e instanceof Error ? e.message.slice(0, 80) : "cam_fit_fail"
+          });
+        }
+        if (allowApplyExpand) {
+          const beforeN = shots.length;
+          const expanded = runShotExpanders(shots, {
+            meta: { ...meta4, pillarsVisBeatV2: meta4.pillarsVisBeatV2 || "enforce" },
+            applyClusters: Boolean(opts.forceExpand),
+            applyStillOneBeat: Boolean(opts.forceExpand),
+            applyCuCast: true,
+            applyLitXor: true,
+            forceExpand: Boolean(opts.forceExpand),
+            maxVisualExpand: 40
+          });
+          shots = expanded.shots;
+          const net = shots.length - beforeN;
+          if (net > EXPAND_NET_CAP && !opts.forceExpand) {
+            shots = normalized.shots.slice();
+            expandApplied = false;
+            bundle.irdConfirmRequired = true;
+            const bMeta = bundle.meta ??= {};
+            bMeta.irdConfirmRequired = true;
+            bMeta.importOkNotExitPass = true;
+            semanticHealLog.push({
+              ruleId: "EXPAND-CAP-CONFIRM",
+              path: "preDesignPack.shots",
+              action: `net=${net}>cap=${EXPAND_NET_CAP};rolled_back`
+            });
+          } else if (expanded.log.some((l) => l.expanded) && net > 0) {
+            expandApplied = true;
+            semanticHealLog.push({
+              ruleId: "VIS-MULTI-BEAT",
+              path: "preDesignPack.shots",
+              action: `expand:${expanded.log.map((l) => `${l.expanderId}:${l.count}`).join(",")};net=${net}`
+            });
+            cascadeForwardStale({ shots, forwardStages: ["SB", "MD-IMG", "EN"] });
+            bundle._importSplitExpanded = true;
+            const bAny = bundle;
+            if (!bAny.meta) bAny.meta = {};
+            bAny.meta.importSplitExpanded = true;
+            bAny.meta.packageVersion = Number(bAny.meta.packageVersion ?? 0) + 1;
+            for (const s of shots) {
+              s.packageVersion = Number(s.packageVersion ?? 0) + 1;
+            }
+            if (!bAny.meta.irdProvenance) {
+              semanticHealLog.push({
+                ruleId: "IRD-PROVENANCE-MISSING",
+                path: "meta",
+                action: "silent_expand_without_ird"
+              });
+            }
+          } else if (expanded.log.some((l) => l.expanded) && net === 0) {
+            semanticHealLog.push({
+              ruleId: "VIS-MULTI-BEAT",
+              path: "preDesignPack.shots",
+              action: `expand_noop:${expanded.log.map((l) => `${l.expanderId}:${l.count}`).join(",")};net=0`
+            });
+          }
+        } else {
+          semanticHealLog.push({
+            ruleId: "IMPORT-NO-REEXPAND",
+            path: "preDesignPack.shots",
+            action: `author_shots=${rawShotCount};skip_expanders`
+          });
+        }
+      }
+    }
+    const pack2 = bundle.preDesignPack;
+    if (pack2?.mediaSlots?.length) {
+      pack2.mediaSlots = rebindMediaSlotsByClientId(pack2.mediaSlots, shots) ?? pack2.mediaSlots;
+    }
+    applyNormalizedShotsToBundle(bundle, shots);
+    try {
+      const { sliceChildrenAfterSplit: sliceChildrenAfterSplit2 } = (init_orchestratorTailSlice(), __toCommonJS(orchestratorTailSlice_exports));
+      const sl = sliceChildrenAfterSplit2(shots);
+      if (sl.chainBeatBlocks === 0 && sl.shots !== shots) {
+        shots = sl.shots;
+        applyNormalizedShotsToBundle(bundle, shots);
+      } else if (sl.shots.some((s, i) => s.visualDescription !== shots[i]?.visualDescription)) {
+        shots = sl.shots;
+        applyNormalizedShotsToBundle(bundle, shots);
+        semanticHealLog.push({
+          ruleId: "CHAIN-BEAT-GRAFT",
+          path: "preDesignPack.shots",
+          action: `grafted;remain=${sl.chainBeatBlocks}`
+        });
+      }
+    } catch {
+    }
+    try {
+      const { reindexDerivedTables: reindexDerivedTables2 } = (init_reindexDerivedTables(), __toCommonJS(reindexDerivedTables_exports));
+      const { syncOsPeelToDialoguePlan: syncOsPeelToDialoguePlan2, stubCausedByActionIds: stubCausedByActionIds2 } = (init_osPeelToDialoguePlan(), __toCommonJS(osPeelToDialoguePlan_exports));
+      const ri = reindexDerivedTables2(bundle);
+      if (ri.fxStubbed || ri.fxReindexed || ri.mirrored) {
+        semanticHealLog.push({
+          ruleId: "REINDEX-DERIVED",
+          path: "fxFeasibilityAudit|dialoguePlan|preview",
+          action: `fx=${ri.fxReindexed}+${ri.fxStubbed};mirror=${ri.mirrored};preview=${ri.previewRebound}`
+        });
+      }
+      const os = syncOsPeelToDialoguePlan2(bundle);
+      if (os.added || os.lipStripped) {
+        semanticHealLog.push({
+          ruleId: "OS-PEEL-PLAN",
+          path: "dialoguePlan.lines",
+          action: `added=${os.added};lipStrip=${os.lipStripped}`
+        });
+      }
+      const stubbed = stubCausedByActionIds2(bundle);
+      if (stubbed) {
+        semanticHealLog.push({
+          ruleId: "CAUSAL-STUB",
+          path: "dialoguePlan.lines[].causedByActionId",
+          action: `stubbed=${stubbed}`
+        });
+      }
+    } catch (e) {
+      semanticHealLog.push({
+        ruleId: "REINDEX-DERIVED",
+        path: "post_expand",
+        action: e instanceof Error ? e.message.slice(0, 80) : "fail"
+      });
+    }
+    try {
+      const { healLiteraryBeatCoverage: healLiteraryBeatCoverage2 } = (init_literaryBeatCoverage(), __toCommonJS(literaryBeatCoverage_exports));
+      const { sliceChildrenAfterSplit: sliceChildrenAfterSplit2 } = (init_orchestratorTailSlice(), __toCommonJS(orchestratorTailSlice_exports));
+      const hb = healLiteraryBeatCoverage2(shots);
+      shots = hb.shots;
+      const sl = sliceChildrenAfterSplit2(shots);
+      shots = sl.shots;
+      if (hb.grafted || sl.chainBeatBlocks === 0) {
+        semanticHealLog.push({
+          ruleId: "CHAIN-BEAT-HEAL",
+          path: "preDesignPack.shots",
+          action: `grafted=${hb.grafted};remain=${hb.remaining || sl.chainBeatBlocks}`
+        });
+      }
+      applyNormalizedShotsToBundle(bundle, shots);
+    } catch {
+    }
+    try {
+      const { softHealVideoHomologyOnShots: softHealVideoHomologyOnShots2 } = (init_videoHomologyHeal(), __toCommonJS(videoHomologyHeal_exports));
+      const vh = softHealVideoHomologyOnShots2({ shots });
+      if (vh.changed) {
+        shots = vh.shots;
+        applyNormalizedShotsToBundle(bundle, shots);
+        semanticHealLog.push({
+          ruleId: "SH-VIDEO-HOMOLOGY",
+          path: "preDesignPack.shots",
+          action: `heals=${vh.heals.join(",")};cleared=${vh.cleared}`
+        });
+      }
+    } catch {
+    }
+    for (const s of shots) {
+      const lines = s.narrative?.dialogue?.lines ?? [];
+      const hasDial = Array.isArray(lines) && lines.some((l) => String(l?.text ?? "").trim());
+      const dur = Number(s.duration);
+      if (hasDial && Number.isFinite(dur) && dur > 0 && dur < 2) {
+        s.duration = 2;
+        semanticHealLog.push({
+          ruleId: "DURATION-RAISE",
+          path: `preDesignPack.shots[${s.shotIndex ?? "?"}].duration`,
+          action: `${dur}\u21922`
+        });
+      }
+    }
+    applyNormalizedShotsToBundle(bundle, shots);
+    try {
+      const { importDesignSlotHeal: importDesignSlotHeal2 } = (init_importDesignSlotHeal(), __toCommonJS(importDesignSlotHeal_exports));
+      const healed = importDesignSlotHeal2(bundle);
+      shots = bundle.preDesignPack?.shots ?? shots;
+      if (healed.summary.healed || healed.summary.egressRewritten) {
+        semanticHealLog.push({
+          ruleId: "DESIGN-SLOT-HEAL",
+          path: "preDesignPack.shots",
+          action: `healed=${healed.summary.healed};egress=${healed.summary.egressRewritten};fid=${healed.summary.fidelityHealed};cont=${healed.summary.continuityInherited}`
+        });
+      }
+    } catch (e) {
+      semanticHealLog.push({
+        ruleId: "DESIGN-SLOT-HEAL",
+        path: "preDesignPack.shots",
+        action: e instanceof Error ? e.message.slice(0, 80) : "fail"
+      });
+    }
+    try {
+      const { pruneIntentGraphOnBundle: pruneIntentGraphOnBundle2 } = (init_intentGraphPrune(), __toCommonJS(intentGraphPrune_exports));
+      const pg = pruneIntentGraphOnBundle2(bundle);
+      if (pg.pruned || pg.rebuilt) {
+        semanticHealLog.push({
+          ruleId: "INTENT-GRAPH-PRUNE",
+          path: "planData.intentGraph",
+          action: `pruned=${pg.pruned};rebuilt=${pg.rebuilt}`
+        });
+      }
+    } catch {
+    }
+    try {
+      const { auditGenerationApplyGaps: auditGenerationApplyGaps2 } = (init_generationApplyAudit(), __toCommonJS(generationApplyAudit_exports));
+      const openGen = auditGenerationApplyGaps2(bundle).filter((g) => /^GEN-0[356]$/.test(g.id));
+      if (openGen.length) {
+        const bMeta = bundle.meta ??= {};
+        bMeta.importOkNotExitPass = true;
+        bMeta.designExitIncomplete = true;
+        bundle.irdConfirmRequired = bundle.irdConfirmRequired || openGen.length > 2;
+        semanticHealLog.push({
+          ruleId: "POST-HEAL-DESIGN-EXIT",
+          path: "generation.imagePrompt",
+          action: `gen_open:${openGen.map((g) => g.id).join(",")};importOk\u2260exit`
+        });
+      }
+    } catch {
+    }
+    applyNormalizedShotsToBundle(bundle, shots);
+    speakerOrphans = normalized.speakerOrphans ?? [];
+    semanticHealLog = [...normalized.semanticHealLog ?? [], ...semanticHealLog];
+    bundle._speakerOrphans = speakerOrphans;
+  }
+  const postPrepareCount = bundle.preDesignPack && Array.isArray(bundle.preDesignPack.shots) ? bundle.preDesignPack.shots.length : rawShotCount;
+  const shotCounts = {
+    rawShotCount: rawShotCount || postPrepareCount,
+    postPrepareCount,
+    authorShotsPresent,
+    expandApplied,
+    diagnoseOnly: authorShotsPresent && diagnoseOnly
+  };
+  const bMetaCounts = bundle.meta ??= {};
+  bMetaCounts.prepareShotCounts = shotCounts;
+  if (shotCounts.diagnoseOnly) {
+    bMetaCounts.importDiagnoseOnly = true;
+    bMetaCounts.expandProvenance = {
+      mode: "diagnose_only",
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      forceExpand: false,
+      via: "prepareBundleForInspect"
+    };
+  } else if (expandApplied) {
+    bMetaCounts.expandProvenance = {
+      mode: "force_expand",
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      forceExpand: true,
+      via: "prepareBundleForInspect"
+    };
+  }
+  if (shotCounts.authorShotsPresent && shotCounts.postPrepareCount > shotCounts.rawShotCount && shotCounts.rawShotCount > 0 && shotCounts.postPrepareCount / shotCounts.rawShotCount >= 2) {
+    semanticHealLog.push({
+      ruleId: "IMPORT-EXPAND-RATIO",
+      path: "preDesignPack.shots",
+      action: `${shotCounts.rawShotCount}\u2192${shotCounts.postPrepareCount}`
+    });
+    bundle.irdConfirmRequired = true;
+    bMetaCounts.importOkNotExitPass = true;
+  }
+  if (opts.ingestHeal !== false) {
+    const bMeta = bundle.meta ??= {};
+    if (bMeta.importOkNotExitPass || bundle._importSplitExpanded) {
+      bMeta.importOkNotExitPass = true;
+    }
+    const self2 = bundle.narrativeSelfcheck ?? bundle.planData?.narrativeSelfcheck;
+    if (self2?.passed === true && (Boolean(bundle.irdConfirmRequired) || Boolean(bMeta.importOkNotExitPass))) {
+      const failIds = [
+        .../* @__PURE__ */ new Set([
+          ...self2.failedIds ?? [],
+          ...bundle.irdConfirmRequired ? ["IRD-CONFIRM"] : [],
+          ...bMeta.importOkNotExitPass ? ["IMPORT_OK_NOT_EXIT"] : []
+        ])
+      ];
+      bundle.narrativeSelfcheck = {
+        ...self2,
+        passed: false,
+        failedIds: failIds,
+        serverOverwritten: true,
+        checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      semanticHealLog.push({
+        ruleId: "FALSE-GREEN-SELFCHECK",
+        path: "narrativeSelfcheck",
+        action: `overwrite_pass:${failIds.join(",")}`
+      });
+    }
+    const mod = bundle.modalityPromptAudit ?? bundle.planData?.modalityPromptAudit;
+    if (mod && bMeta.importOkNotExitPass) {
+      if (mod.IMG === "pass" || mod.VID === "pass") {
+        bundle.modalityPromptAudit = {
+          ...mod,
+          IMG: mod.IMG === "pass" ? "import_ok_not_exit" : mod.IMG,
+          VID: mod.VID === "pass" ? "import_ok_not_exit" : mod.VID,
+          _serverNote: "import\u2260designExitPass"
+        };
+        semanticHealLog.push({
+          ruleId: "FALSE-GREEN-MODALITY",
+          path: "modalityPromptAudit",
+          action: "downgrade_pass_to_import_ok_not_exit"
+        });
+      }
+    }
+  }
+  const mergedLog = [...prepared.shapeSalvageLog ?? [], ...semanticHealLog];
+  const tier = inferTierFromBundle(bundle);
+  return {
+    bundle,
+    tier,
+    shapeSalvageLog: mergedLog,
+    shapeSalvageSummary: formatShapeSalvageSummary(mergedLog),
+    speakerOrphans,
+    shotCounts
+  };
+}
+var init_prepareBundleForInspect = __esm({
+  "src/ruleEngine/bundle/prepareBundleForInspect.ts"() {
+    "use strict";
+    init_shapeSalvageTypes();
+    init_schema();
+    init_schemaShapeErrors();
+    init_smartProposalApplier();
+    init_packagingMaterialize();
+    init_normalizePreDesignPack();
+    init_preDesignPackAdapter();
+    init_closureSummary();
+    init_assetLabel();
+    init_expanderRegistry();
+    init_visualBeatPolicy();
+    init_forwardStaleCascade();
+  }
+});
+
+// src/ruleEngine/bundle/emptyEpisodeGate.ts
+function assertNonEmptyEpisode(input) {
+  const shotCount2 = Math.max(
+    input.storyboardCount ?? 0,
+    input.preDesignShotCount ?? 0,
+    input.packageShotCount ?? 0
+  );
+  if (shotCount2 <= 0) {
+    return {
+      ok: false,
+      shotCount: 0,
+      code: "EMPTY_EPISODE",
+      message: "\u96C6\u65E0\u53EF\u7528\u5206\u955C\uFF0C\u7981\u6B62\u751F\u6210"
+    };
+  }
+  return { ok: true, shotCount: shotCount2 };
+}
+var init_emptyEpisodeGate = __esm({
+  "src/ruleEngine/bundle/emptyEpisodeGate.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/bundle/sceneCardinality.ts
+function uniqueSceneNameOrder(bundle) {
+  const order = [];
+  for (const s of bundle.preDesignPack?.shots ?? []) {
+    const n = String(s.sceneName ?? "").trim();
+    if (n && !order.includes(n)) order.push(n);
+  }
+  return order;
+}
+function implementationPlanItems(bundle) {
+  const fromRoot = bundle.implementationPlan;
+  const fromBrief = bundle.planData?.narrativeBrief?.implementationPlan;
+  const fromPlan = bundle.planData?.implementationPlan;
+  return fromRoot ?? fromBrief ?? fromPlan ?? [];
+}
+function sceneMetaItems(bundle) {
+  const fromPlan = bundle.planData?.sceneMeta;
+  return fromPlan ?? [];
+}
+function shotsForSceneRef(bundle, ref) {
+  const shots = bundle.preDesignPack?.shots ?? [];
+  const explicit = shots.filter((s) => Number(s.sceneRef) === ref);
+  if (explicit.length) return explicit;
+  const order = uniqueSceneNameOrder(bundle);
+  const name28 = order[ref - 1];
+  if (!name28) return [];
+  return shots.filter((s) => String(s.sceneName ?? "").trim() === name28);
+}
+function isFxIntentF1Plus(level) {
+  const g = String(level ?? "").toUpperCase().replace(/^FX:/, "").trim();
+  return /^F[1-5]$/.test(g);
+}
+function orphanF1SceneRefs(bundle) {
+  const out = [];
+  for (const item of implementationPlanItems(bundle)) {
+    const ref = Number(item.sceneRef);
+    if (!Number.isFinite(ref) || ref < 1) continue;
+    if (!isFxIntentF1Plus(item.fxIntent?.level)) continue;
+    if (shotsForSceneRef(bundle, ref).length > 0) continue;
+    out.push({
+      sceneRef: ref,
+      fxLevel: String(item.fxIntent?.level ?? "F1"),
+      path: `planData.narrativeBrief.implementationPlan[sceneRef=${ref}].fxIntent.level`
+    });
+  }
+  return out;
+}
+function sceneCardinalityIssues(bundle) {
+  const scenes = uniqueSceneNameOrder(bundle);
+  const impl = implementationPlanItems(bundle);
+  const meta4 = sceneMetaItems(bundle);
+  const issues = [];
+  if (impl.length > 0 && scenes.length > 0 && impl.length !== scenes.length) {
+    const orphanRefs = impl.map((p3) => Number(p3.sceneRef)).filter((r) => Number.isFinite(r) && r > scenes.length);
+    const extraNames = scenes.length > impl.length ? scenes.slice(impl.length) : [];
+    if (impl.length > scenes.length) {
+      issues.push({
+        kind: "plan_gt_scenes",
+        message: `\u3010\u573A\u955C\u57FA\u6570\u3011implementationPlan ${impl.length} \u6761 vs \u552F\u4E00 sceneName ${scenes.length} \u4E2A\uFF08${scenes.join("\u3001")}\uFF09\u3002\u591A\u4F59 sceneRef=${orphanRefs.join(",") || "?"} \u65E0\u6620\u5C04\u955C \u2014 \u63A5\u573A\u987B\u72EC\u7ACB sceneName\uFF0C\u6216\u5220\u9664/\u5408\u5E76\u591A\u4F59 plan\uFF0C\u6216\u5C06\u5B64\u513F fxIntent \u6539\u4E3A F0`,
+        field: "planData.narrativeBrief.implementationPlan"
+      });
+    } else {
+      issues.push({
+        kind: "scenes_gt_plan",
+        message: `\u3010\u5E7D\u7075\u573A\u3011\u552F\u4E00 sceneName ${scenes.length} \u4E2A\u591A\u4E8E implementationPlan ${impl.length} \u6761\uFF1B\u672A\u8986\u76D6\uFF1A${extraNames.join("\u3001")} \u2014 \u8BF7\u8865 plan \u9879\u6216\u6539 sceneName \u5F52\u5165\u5DF2\u6709\u573A`,
+        field: "preDesignPack.shots[].sceneName"
+      });
+    }
+  }
+  if (meta4.length > 0 && impl.length > 0 && meta4.length !== impl.length) {
+    issues.push({
+      kind: "meta_mismatch",
+      message: `\u3010\u573A\u955C\u57FA\u6570\u3011sceneMeta ${meta4.length} \u6761 vs implementationPlan ${impl.length} \u6761\u4E0D\u4E00\u81F4 \u2014 \u8BF7\u5BF9\u9F50\u6216\u5220\u9664\u591A\u4F59\u9879`,
+      field: "planData.sceneMeta"
+    });
+  }
+  return issues;
+}
+var init_sceneCardinality = __esm({
+  "src/ruleEngine/bundle/sceneCardinality.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/bundle/designPhaseGates.ts
+function runDesignPhaseGates(bundle) {
+  const findings = [];
+  const shots = bundle.preDesignPack?.shots ?? [];
+  const flowPanels = Array.isArray(bundle.flowData?.storyboard) ? bundle.flowData.storyboard.length : 0;
+  const empty = assertNonEmptyEpisode({
+    preDesignShotCount: shots.length,
+    packageShotCount: flowPanels
+  });
+  if (!empty.ok) {
+    const nested = bundle.planData?.preDesignPack?.shots?.length;
+    const msg = nested && nested > 0 ? `\u96C6\u65E0\u53EF\u7528\u5206\u955C\uFF08\u9876\u5C42\u7A7A\uFF0C\u4F46 planData.preDesignPack \u6709 ${nested} \u955C \u2014 \u5E94\u8D70 SH-HOIST-PDP\uFF1B\u82E5\u4ECD\u89C1\u6B64\u6761\u8BF7\u91CD\u5BFC\uFF09` : empty.message ?? "\u65E0\u5206\u955C";
+    findings.push({ id: "DG-EMPTY", severity: "BLOCK", message: msg });
+  } else if (shots.length === 0 && flowPanels > 0) {
+    findings.push({
+      id: "DG-FLOW-ONLY",
+      severity: "WARN",
+      message: `\u65E0 preDesignPack.shots\uFF0C\u4F46 flowData.storyboard \u6709 ${flowPanels} \u6761 \u2014 \u65C1\u8DEF\u8BA1\u6570\u5DF2\u901A\u8FC7\u7A7A\u96C6\u95F8\uFF1B\u8BF7\u5C3D\u5FEB\u5199\u56DE\u9876\u5C42 preDesignPack`,
+      field: "flowData.storyboard"
+    });
+  }
+  const nestedPdpShots = bundle.planData?.preDesignPack?.shots?.length ?? 0;
+  if (nestedPdpShots > 0 && shots.length > 0) {
+    findings.push({
+      id: "NESTED_PACK_ONLY",
+      severity: "WARN",
+      message: "planData.preDesignPack \u4ECD\u6709\u526F\u672C\uFF1B\u95F8\u95E8\u8BA4\u9876\u5C42\u3002\u4E0B\u6B21\u5BFC\u51FA\u8BF7\u628A preDesignPack/characterDesign/designBrief \u5199\u5728 Bundle \u6839\uFF0C\u7981\u6B62\u53EA\u585E planData",
+      field: "planData.preDesignPack"
+    });
+  } else if (nestedPdpShots > 0 && shots.length === 0) {
+    findings.push({
+      id: "NESTED_PACK_ONLY",
+      severity: "WARN",
+      message: "\u5206\u955C\u4EC5\u5728 planData.preDesignPack\uFF1B\u5E94\u5DF2\u88AB SH-HOIST-PDP \u63D0\u5347\u3002\u82E5\u4ECD\u7A7A\u9876\u5C42\u8BF7\u91CD\u5BFC/\u68C0\u67E5 prepare \u7BA1\u9053",
+      field: "planData.preDesignPack"
+    });
+  }
+  const impl = bundle.implementationPlan ?? bundle.planData?.implementationPlan;
+  if (impl == null && !bundle.designBrief?.B14) {
+    findings.push({
+      id: "DG-IMPL-PLAN",
+      severity: "WARN",
+      message: "\u7F3A implementationPlan / B14 \u2014 \u8BBE\u8BA1\u671F\u5EFA\u8BAE\u8865\u9F50",
+      field: "implementationPlan"
+    });
+  }
+  for (let i = 0; i < shots.length; i++) {
+    const s = shots[i];
+    const n = s.narrative ?? {};
+    if (!s.duration && !n.duration) {
+      findings.push({ id: "DG-SB-DURATION", severity: "BLOCK", message: `\u955C ${i + 1} \u7F3A duration`, field: `shots[${i}].duration` });
+    }
+    if (!n.type && !s.type) {
+      findings.push({ id: "DG-SB-TYPE", severity: "WARN", message: `\u955C ${i + 1} \u7F3A narrative.type`, field: `shots[${i}].type` });
+    }
+  }
+  const blob = JSON.stringify(bundle.preDesignPack ?? {});
+  const codes = normalizeAssetCodes([blob]);
+  const bad = [...blob.matchAll(/\bROLE-[\w-]+/gi)].map((m) => m[0]);
+  const cjkCode = [...blob.matchAll(/\b(?:CHAR|SCENE|PROP)-[\u4e00-\u9fff]+/g)].map((m) => m[0]);
+  for (const b of [...bad, ...cjkCode]) {
+    findings.push({ id: "DG-CODE-FORBIDDEN", severity: "BLOCK", message: `\u7981\u7801\u5F62\u6001 ${b}`, field: "charCodes" });
+  }
+  if (codes.length === 0 && /--cref|--sref/.test(blob)) {
+    findings.push({ id: "DG-CODE-PARSE", severity: "WARN", message: "\u63D0\u793A\u8BCD\u542B cref/sref \u4F46\u672A\u80FD\u89E3\u6790\u6807\u51C6\u7801" });
+  }
+  const shotFxDeclared = (s) => {
+    const n = s.narrative ?? {};
+    const gen = s.generation ?? {};
+    const prose = String(s.fxPrompt ?? n.fxPrompt ?? gen.fxPrompt ?? "").trim();
+    if (prose && !/^F[0-5]$/i.test(prose)) return true;
+    const levels = [
+      s.visualEffect,
+      s.fxLevel,
+      s.fxFeasibility,
+      gen.fxFeasibility,
+      n.fxFeasibility,
+      n.fxLevel
+    ];
+    for (const lv of levels) {
+      const t = String(lv ?? "").trim();
+      if (/^F0\b/i.test(t) || /^F0\s*[:：]/i.test(t)) return true;
+    }
+    return false;
+  };
+  const allFxEmpty = shots.length > 0 && shots.every((s) => !shotFxDeclared(s));
+  if (allFxEmpty && shots.length >= 3) {
+    findings.push({
+      id: "DG-FALSE-GREEN-FX",
+      severity: "BLOCK",
+      message: "\u5168\u955C FX \u7A7A \u2014 \u7981\u6B62\u5047\u7EFF PASS \u5BFC\u51FA\uFF08\u6BCF\u955C\u987B\u58F0\u660E F0 \u6216\u5199 fxPrompt \u6563\u6587\uFF09",
+      field: "fxPrompt"
+    });
+  }
+  const dualViolations = fxDualTrackViolations(bundle);
+  if (dualViolations.length > 0) {
+    const sample = dualViolations.slice(0, 8).map((v) => `${v.shotIndex}(${v.reason})`).join("\u3001");
+    findings.push({
+      id: "DG-FX-DUAL-TRACK",
+      severity: "BLOCK",
+      message: `FX \u53CC\u8F68\u8FDD\u89C4 ${dualViolations.length} \u955C\uFF1A${sample} \u2014 \u65E0\u7279\u6548\u58F0\u660E F0\uFF0C\u6709\u7279\u6548\u5199\u6563\u6587 fxPrompt`,
+      field: "fxFeasibility"
+    });
+  }
+  for (const issue3 of sceneCardinalityIssues(bundle)) {
+    findings.push({
+      id: "DG-SCENE-CARDINALITY",
+      severity: "BLOCK",
+      message: issue3.message,
+      field: issue3.field
+    });
+  }
+  for (const o of orphanF1SceneRefs(bundle)) {
+    findings.push({
+      id: "DG-SCENE-ORPHAN-FX",
+      severity: "BLOCK",
+      message: `\u3010\u5B64\u513F\u573A\u3011sceneRef=${o.sceneRef} fxIntent ${o.fxLevel} \u65E0\u5BF9\u5E94\u552F\u4E00 sceneName \u6620\u5C04\u955C \u2014 \u8BF7\u5220\u9664\u8BE5 plan \u9879\uFF0C\u6216 fxIntent\u2192F0\uFF0C\u6216\u7ED9\u63A5\u573A\u72EC\u7ACB sceneName \u5E76\u6302\u955C+\u6563\u6587\u3002\u7981\u6B62\u53EA\u7ED9\u5176\u4ED6\u573A\u8865 fxPrompt\u3002path: ${o.path}`,
+      field: o.path
+    });
+  }
+  const tier = inferTierFromBundle(bundle);
+  for (const key of sceneColorLockHasChineseKeys(bundle)) {
+    findings.push({
+      id: "DG-SCENE-KEY",
+      severity: "BLOCK",
+      message: `sceneColorLock \u7981\u6B62\u4E2D\u6587 key\u300C${key}\u300D\u2014 \u8BF7\u7528 SCENE-* code`,
+      field: `visualLockTable.sceneColorLock.${key}`
+    });
+  }
+  const narSelf = bundle.narrativeSelfcheck;
+  const serverNarFails = serverNarrativeSelfcheckFails(bundle);
+  if (serverNarFails.length > 0) {
+    bundle.narrativeSelfcheck = {
+      ...narSelf ?? {},
+      passed: false,
+      failedIds: [.../* @__PURE__ */ new Set([...narSelf?.failedIds ?? [], ...serverNarFails.map((f) => f.id)])],
+      serverOverwritten: true,
+      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  if (narSelf?.passed === true && serverNarFails.length > 0) {
+    findings.push({
+      id: "DG-NAR-SELFCHECK",
+      severity: "BLOCK",
+      message: `narrativeSelfcheck \u81EA\u62A5 passed \u4F46\u670D\u52A1\u5668\u68C0\u51FA ${serverNarFails.map((f) => f.id).join(", ")}\uFF08\u5DF2\u8986\u5199 passed=false\uFF09`,
+      field: "narrativeSelfcheck"
+    });
+  } else if (serverNarFails.length > 0) {
+    for (const f of serverNarFails) {
+      const elevate = f.id === "NAR-14" || f.id === "NAR-15" || tier === "T3";
+      findings.push({
+        id: f.id,
+        severity: elevate ? "BLOCK" : "WARN",
+        message: f.message,
+        field: "dialoguePlan.lines"
+      });
+    }
+  }
+  try {
+    const { auditCamShootableFit: auditCamShootableFit2 } = (init_camShootableFit(), __toCommonJS(camShootableFit_exports));
+    const shots2 = bundle.preDesignPack?.shots ?? [];
+    const camHits = shots2.filter(
+      (s) => auditCamShootableFit2(s).findings.some((f) => f.id === "DEX-CAM-FIT" && f.severity === "BLOCK")
+    );
+    if (camHits.length) {
+      const self2 = bundle.narrativeSelfcheck;
+      if (self2?.passed === true) {
+        bundle.narrativeSelfcheck = {
+          ...self2 ?? {},
+          passed: false,
+          failedIds: [.../* @__PURE__ */ new Set([...self2?.failedIds ?? [], "DEX-CAM-FIT"])],
+          serverOverwritten: true,
+          checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        findings.push({
+          id: "DG-CAM-FIT-FALSE-GREEN",
+          severity: "BLOCK",
+          message: `narrativeSelfcheck \u5047\u7EFF\uFF1A\u4ECD\u6709 ${camHits.length} \u955C\u672A\u62C6 DEX-CAM-FIT\uFF08\u987B\u6743\u5A01\u53CC\u955C\u6216 untilClear\uFF09`,
+          field: "narrativeSelfcheck"
+        });
+      } else if (Boolean(bundle.chatStrict)) {
+        findings.push({
+          id: "DEX-CAM-FIT",
+          severity: "BLOCK",
+          message: `chatStrict\uFF1A${camHits.length} \u955C\u53E3\u64AD+\u53CD\u5E94\u672A\u7269\u7406\u62C6\uFF0C\u4E0D\u5F97\u5047\u7EFF\u51FA\u7AD9`,
+          field: "preDesignPack.shots"
+        });
+      }
+    }
+  } catch {
+  }
+  if (linkageAssetChainFalseGreen(bundle)) {
+    const miss = speakersMissingFromCd(bundle);
+    findings.push({
+      id: "DG-LINKAGE-FALSE-GREEN",
+      severity: "BLOCK",
+      message: `linkageAudit.\u8D44\u4EA7=pass \u4F46\u5BF9\u767D\u8BF4\u8BDD\u4EBA\u672A\u5165 characterDesign\uFF1A${miss.join("\u3001")}`,
+      field: "linkageAudit.chains"
+    });
+  }
+  const cast = auditCastCoverage(bundle);
+  if (cast.block) {
+    findings.push({
+      id: "DG-CD-COVERAGE",
+      severity: "BLOCK",
+      message: `characterDesign \u914D\u89D2\u5165\u518C\u7F3A\u53E3\uFF08DC-16\uFF09\uFF1A${cast.labels.join("\u3001")} \u2014 \u987B\u8865\u771F\u5B9E CD\uFF08code/name/L0.identity\uFF09\uFF0C\u7981\u6B62\u4EC5 L0.stub`,
+      field: "characterDesign.assets"
+    });
+    findings.push({
+      id: "DC-16",
+      severity: "BLOCK",
+      message: `\u8BF4\u8BDD\u4EBA/\u4E0A\u955C\u7801\u672A\u5165 CD \u6216\u4EC5\u4E3A stub\uFF1A${cast.labels.join("\u3001")}`,
+      field: "characterDesign.assets"
+    });
+  } else if (cast.genderWarn.length && (tier === "T2" || tier === "T3")) {
+    findings.push({
+      id: "DG-CD-GENDER",
+      severity: "WARN",
+      message: `\u8BF4\u8BDD\u4EBA\u7F3A L0.gender\uFF1A${cast.genderWarn.join("\u3001")}`,
+      field: "characterDesign.assets"
+    });
+  }
+  if (modalityAuditFalseGreen(bundle)) {
+    const undeclared = undeclaredEmptyFxShotIndexes(bundle);
+    findings.push({
+      id: "DG-MODALITY-MISMATCH",
+      severity: "BLOCK",
+      message: `modalityPromptAudit.FX=pass \u4F46\u955C ${undeclared.slice(0, 8).join(",")} \u7A7A\u672A\u58F0\u660E F0\uFF08\u6DF7\u5408\u5047\u7EFF\uFF09`,
+      field: "modalityPromptAudit.FX"
+    });
+  }
+  const blocked = findings.some((f) => f.severity === "BLOCK");
+  return { ok: !blocked, findings, allowFalseGreenExport: false };
+}
+var init_designPhaseGates = __esm({
+  "src/ruleEngine/bundle/designPhaseGates.ts"() {
+    "use strict";
+    init_assetCodeContract();
+    init_emptyEpisodeGate();
+    init_closureSummary();
+    init_designExportHelpers();
+    init_sceneCardinality();
+  }
+});
+
+// src/ruleEngine/bundle/bundleIntegrityAudit.ts
+function shotGen(s) {
+  return s.generation ?? {};
+}
+function auditBundleIntegrity(bundle) {
+  const gaps = [];
+  const shots = bundle.preDesignPack?.shots ?? [];
+  const forAudit = shots.map((s, i) => {
+    const g = shotGen(s);
+    return {
+      index: s.shotIndex ?? s.index ?? i + 1,
+      shotIndex: s.shotIndex ?? i + 1,
+      narrative: s.narrative,
+      visualEffect: s.visualEffect ?? g.fxPrompt,
+      generation: {
+        imagePrompt: g.imagePrompt,
+        videoPrompt: g.videoPrompt,
+        audioPrompt: g.audioPrompt,
+        fxPrompt: g.fxPrompt,
+        compiled: {
+          image: g.imagePrompt ?? g.compiled?.image,
+          video: g.videoPrompt ?? g.compiled?.video,
+          audio: g.audioPrompt ?? g.compiled?.audio,
+          fx: g.fxPrompt ?? g.compiled?.fx
+        }
+      }
+    };
+  });
+  const modality = buildModalityPromptAudit(forAudit);
+  for (const item of modality.items) {
+    if (item.severity === "BLOCK" || item.severity === "WARN") {
+      gaps.push({
+        id: `MOD-${item.modality}-${item.ruleId}`,
+        severity: item.severity === "BLOCK" ? "BLOCK" : "WARN",
+        message: item.issue ?? `${item.modality} ${item.severity}`,
+        field: `shots[${item.shotIndex}]`
+      });
+    }
+  }
+  for (const s of shots) {
+    const g = shotGen(s);
+    const fx = (g.fxPrompt ?? "").trim();
+    const idx = s.shotIndex ?? s.index;
+    if (!fx && !(s.visualEffect ?? "").trim()) {
+      gaps.push({
+        id: "INT-FX-EMPTY",
+        severity: "WARN",
+        message: `shot ${idx} fxPrompt empty`,
+        field: "generation.fxPrompt"
+      });
+    }
+  }
+  const cd = new Set(
+    (bundle.characterDesign?.assets ?? []).map((a) => normalizeAssetCode(a.code ?? "") ?? "").filter(Boolean)
+  );
+  const vltChars = new Set(
+    Object.keys(
+      bundle.visualLockTable?.characterAssets ?? {}
+    ).map((k) => normalizeAssetCode(k) ?? "").filter(Boolean)
+  );
+  for (const code of collectReferencedCodes(bundle)) {
+    if (code.startsWith("CHAR-") && !cd.has(code) && !vltChars.has(code)) {
+      gaps.push({
+        id: "INT-CHAR-ORPHAN",
+        severity: "WARN",
+        message: `referenced ${code} missing from characterDesign/visualLock (import may stub o_assets)`,
+        field: "charCodes"
+      });
+    }
+  }
+  const plan = bundle.planData?.narrativeBrief ?? {};
+  const defined = new Set(
+    (plan.infoDeliveryPlan ?? []).map((x) => x.infoId).filter(Boolean)
+  );
+  const beats = bundle.preDesignPack?.episodeBeat?.sceneCausalBeats ?? [];
+  for (const b of beats) {
+    for (const id of b.infoIds ?? []) {
+      if (!defined.has(id)) {
+        gaps.push({
+          id: "INT-INFO-ORPHAN",
+          severity: "WARN",
+          message: `infoId ${id} used in ${b.scene} but not in infoDeliveryPlan`,
+          field: "infoIds"
+        });
+      }
+    }
+  }
+  const sceneMeta = (plan.sceneMeta ?? (bundle.planData?.sceneMeta ?? [])).map((s) => s.sceneRef);
+  const impl = new Set(
+    (plan.implementationPlan ?? []).map((s) => s.sceneRef).filter((n) => n != null)
+  );
+  for (const ref of sceneMeta) {
+    if (ref != null && !impl.has(ref)) {
+      gaps.push({
+        id: "INT-IMPL-GAP",
+        severity: "WARN",
+        message: `sceneRef ${ref} in sceneMeta but missing implementationPlan`,
+        field: "implementationPlan"
+      });
+    }
+  }
+  for (const s of shots) {
+    if (s.sceneName && !resolveSceneCodeByName(bundle, s.sceneName)) {
+      gaps.push({
+        id: "INT-SCENE-UNMAPPED",
+        severity: "INFO",
+        message: `sceneName "${s.sceneName}" not in visualLockTable.sceneColorLock`,
+        field: "sceneName"
+      });
+    }
+  }
+  for (const s of shots) {
+    const lines = s.narrative?.dialogue?.lines?.length ?? 0;
+    const aud = (shotGen(s).audioPrompt ?? "").trim();
+    const idx = s.shotIndex ?? s.index;
+    if (lines > 0 && !aud) {
+      gaps.push({
+        id: "INT-AUD-LINES",
+        severity: "WARN",
+        message: `shot ${idx} has dialogue lines but empty audioPrompt`,
+        field: "audioPrompt"
+      });
+    }
+  }
+  const self2 = bundle.modalityPromptAudit;
+  if (self2?.passRate === 100 && gaps.some((g) => g.id.startsWith("INT-FX") || g.id.startsWith("MOD-FX"))) {
+    gaps.push({
+      id: "INT-FALSE-GREEN",
+      severity: "WARN",
+      message: "Chat modalityPromptAudit passRate=100 but server found FX/modality gaps",
+      field: "modalityPromptAudit"
+    });
+  }
+  void parsePromptRefs;
+  return gaps;
+}
+var init_bundleIntegrityAudit = __esm({
+  "src/ruleEngine/bundle/bundleIntegrityAudit.ts"() {
+    "use strict";
+    init_modalityOrchestrator();
+    init_assetClosureGate();
+    init_assetCodeContract();
+    init_vendorPromptAdapter();
+  }
+});
+
+// src/ruleEngine/bundle/auditImplementationFieldWalk.ts
+function isFxProse2(text2) {
+  const t = text2.trim();
+  if (!t) return false;
+  return !/^F[0-5]$/i.test(t);
+}
+function shotsForSceneRef2(shots, ref) {
+  const explicit = shots.filter((s) => s.sceneRef === ref);
+  if (explicit.length) return explicit;
+  const order = [];
+  const byName = /* @__PURE__ */ new Map();
+  for (const s of shots) {
+    const name29 = String(s.sceneName ?? "").trim() || `__idx_${s.shotIndex ?? order.length + 1}`;
+    if (!byName.has(name29)) {
+      byName.set(name29, []);
+      order.push(name29);
+    }
+    byName.get(name29).push(s);
+  }
+  const name28 = order[ref - 1];
+  if (name28) return byName.get(name28) ?? [];
+  return shots.filter((s) => s.shotIndex === ref);
+}
+function hasDialogue(shot) {
+  const lines = shot.narrative?.dialogue?.lines ?? [];
+  return lines.some((l) => (l.text ?? "").trim().length > 0);
+}
+function genSlot(shot, slot) {
+  const gen = shot.generation ?? {};
+  return String(gen[SLOT_MAP[slot].slot] ?? "").trim();
+}
+function pushGap(gaps, rows, gap) {
+  gaps.push({
+    id: gap.id,
+    severity: gap.severity,
+    message: gap.message,
+    field: gap.field,
+    shotIndex: gap.shotIndex,
+    sceneRef: gap.sceneRef,
+    fieldId: gap.fieldId,
+    repairHintId: gap.repairHintId
+  });
+  rows.push({
+    id: gap.id,
+    severity: gap.severity,
+    message: gap.message,
+    sceneRef: gap.sceneRef,
+    shotIndex: gap.shotIndex,
+    sourcePath: gap.sourcePath,
+    targetPath: gap.targetPath,
+    fieldId: gap.fieldId,
+    repairHintId: gap.repairHintId
+  });
+}
+function auditImplPlanSlots(bundle, shots, gaps, rows) {
+  const plan = bundle.planData?.narrativeBrief ?? {};
+  const impl = plan.implementationPlan ?? [];
+  if (!impl.length) return;
+  for (const item of impl) {
+    const ref = item.sceneRef;
+    if (ref == null) continue;
+    const sceneShots = shotsForSceneRef2(shots, ref);
+    if (!sceneShots.length) {
+      pushGap(gaps, rows, {
+        id: "DFW-IMPL-SHOT",
+        severity: "WARN",
+        message: `implementationPlan sceneRef ${ref} \u65E0\u5BF9\u5E94\u5206\u955C`,
+        field: "implementationPlan",
+        sceneRef: ref,
+        sourcePath: `planData.narrativeBrief.implementationPlan[sceneRef=${ref}]`,
+        targetPath: `preDesignPack.shots[]`
+      });
+      continue;
+    }
+    const anchors = item.promptAnchors ?? {};
+    for (const key of ["img", "vid"]) {
+      if (!anchors[key]?.length) continue;
+      const anyFilled = sceneShots.some((s) => genSlot(s, key).length > 0);
+      if (!anyFilled) {
+        pushGap(gaps, rows, {
+          id: SLOT_MAP[key].id,
+          severity: "BLOCK",
+          message: `\u573A${ref} promptAnchors.${key} \u6709\u951A\u70B9\u4F46\u5206\u955C\u7F3A ${SLOT_MAP[key].label}`,
+          field: `shots[].generation.${SLOT_MAP[key].slot}`,
+          sceneRef: ref,
+          sourcePath: `implementationPlan[sceneRef=${ref}].promptAnchors.${key}`,
+          targetPath: `shots[].generation.${SLOT_MAP[key].slot}`,
+          fieldId: key === "img" ? "composition" : "camera",
+          repairHintId: SLOT_MAP[key].repair
+        });
+      }
+    }
+    const needsAud = Boolean(item.avCausality?.audioBeat || item.voiceIntent?.speaker);
+    if (needsAud && (anchors.aud?.length || item.voiceIntent)) {
+      for (const s of sceneShots.filter(hasDialogue)) {
+        if (!genSlot(s, "aud")) {
+          pushGap(gaps, rows, {
+            id: "MOD-03",
+            severity: "BLOCK",
+            message: `\u955C${s.shotIndex ?? "?"} \u6709\u53F0\u8BCD/\u58F0\u753B\u610F\u56FE\u4F46\u7F3A audioPrompt`,
+            field: `shots[].generation.audioPrompt`,
+            shotIndex: s.shotIndex,
+            sceneRef: ref,
+            sourcePath: `implementationPlan[sceneRef=${ref}].avCausality.audioBeat`,
+            targetPath: `shots[${s.shotIndex ?? "?"}].generation.audioPrompt`,
+            fieldId: "dialogue",
+            repairHintId: "RH-MOD-03"
+          });
+        }
+      }
+    }
+    const fxLevel = item.fxIntent?.level ?? "F0";
+    if (fxLevel !== "F0" && fxLevel !== "NONE") {
+      if (sceneShots.length === 0) {
+        pushGap(gaps, rows, {
+          id: "MOD-02",
+          severity: "BLOCK",
+          message: `\u3010\u5B64\u513F\u573A\u3011sceneRef=${ref} fxIntent ${fxLevel} \u65E0\u6620\u5C04\u955C\uFF08\u552F\u4E00 sceneName \u5E8F\u65E0\u7B2C ${ref} \u573A\uFF09\u2014 \u5220\u9664 plan \u9879\u6216 fxIntent\u2192F0\uFF0C\u6216\u63A5\u573A\u72EC\u7ACB sceneName \u5E76\u6302\u955C\uFF1B\u7981\u6B62\u53EA\u7ED9\u5176\u4ED6\u573A\u8865 fxPrompt`,
+          field: "implementationPlan.fxIntent",
+          sceneRef: ref,
+          sourcePath: `implementationPlan[sceneRef=${ref}].fxIntent.level`,
+          targetPath: `planData.narrativeBrief.implementationPlan[sceneRef=${ref}]`,
+          fieldId: "fx",
+          repairHintId: "RH-MOD-02-ORPHAN"
+        });
+      } else {
+        const anyFxProse = sceneShots.some((s) => isFxProse2(genSlot(s, "fx")));
+        if (!anyFxProse) {
+          const idxs = sceneShots.map((s) => s.shotIndex).filter((n) => n != null).slice(0, 6);
+          pushGap(gaps, rows, {
+            id: "MOD-02",
+            severity: "BLOCK",
+            message: `\u573A${ref} fxIntent ${fxLevel} \u4F46\u6620\u5C04\u955C ${idxs.join(",") || "?"} \u65E0 generation.fxPrompt \u6563\u6587 \u2014 \u5199 shots[shotIndex].generation.fxPrompt \u6216 fxIntent\u2192F0\uFF08\u7981\u5B57\u6BCD F1\u2013F5\uFF09`,
+            field: "generation.fxPrompt",
+            sceneRef: ref,
+            sourcePath: `implementationPlan[sceneRef=${ref}].fxIntent.level`,
+            targetPath: `shots[].generation.fxPrompt`,
+            fieldId: "fx",
+            repairHintId: "RH-MOD-02"
+          });
+        }
+      }
+    }
+  }
+}
+function auditRegistryPerShot(shots, gaps, rows) {
+  const registry4 = loadDesignFieldRegistry();
+  for (const shot of shots) {
+    const idx = shot.shotIndex;
+    const ctx = buildExtractContext({
+      modality: "video",
+      mode: "text",
+      charCodes: shot.charCodes,
+      episodeShot: {
+        id: `shot-${idx ?? 0}`,
+        storyboardId: idx ?? 0,
+        index: (idx ?? 1) - 1,
+        narrative: {
+          type: "CHAR-SCENE",
+          sceneName: shot.sceneName,
+          duration: shot.duration,
+          emotionIntensity: shot.narrative?.emotionIntensity,
+          dialogue: shot.narrative?.dialogue,
+          lipSyncPolicy: shot.narrative?.lipSyncPolicy ?? shot.shotDesign?.lipSyncPolicy
+        },
+        generation: shot.generation ?? {}
+      }
+    });
+    const fields = extractDesignFields(ctx);
+    const dialogue = hasDialogue(shot);
+    for (const reg of registry4) {
+      const rw = reg.requiredWhen ?? "hasValue";
+      if (rw === "alwaysOptional") continue;
+      let required3 = false;
+      if (rw === "hasDialogue") required3 = dialogue;
+      else if (rw === "charOrSingleImage") required3 = (shot.charCodes ?? []).some((c) => /^CHAR-/i.test(c));
+      else if (rw === "hasValue") {
+        const val = fields[reg.id];
+        required3 = val != null && val !== "" && val !== false;
+      }
+      if (!required3) continue;
+      const gen = shot.generation ?? {};
+      const slotChecks = [
+        { fieldId: "dialogue", genKey: "audioPrompt", label: "audioPrompt" },
+        { fieldId: "fx", genKey: "fxPrompt", label: "fxPrompt" }
+      ];
+      for (const sc of slotChecks) {
+        if (reg.id !== sc.fieldId && !reg.sources?.some((s) => s.includes(sc.label))) continue;
+        if (!String(gen[sc.genKey] ?? "").trim() && required3) {
+          const gapId = sc.fieldId === "fx" ? "MOD-02" : "MOD-03";
+          if (gaps.some((g) => g.id === gapId && g.shotIndex === idx)) continue;
+          pushGap(gaps, rows, {
+            id: gapId,
+            severity: "WARN",
+            message: `\u955C${idx ?? "?"} registry.${reg.id} \u8981\u6C42 ${sc.label} \u4F46 generation \u69FD\u7A7A`,
+            field: `shots[].generation.${sc.label}`,
+            shotIndex: idx,
+            sourcePath: `design_field_registry.${reg.id}`,
+            targetPath: `shots[${idx ?? "?"}].generation.${sc.label}`,
+            fieldId: reg.id,
+            repairHintId: FIELD_REPAIR2[reg.id] ?? FIELD_REPAIR2[sc.fieldId]
+          });
+        }
+      }
+    }
+    if (dialogue) {
+      const minDur = Math.ceil(
+        (shot.narrative?.dialogue?.lines ?? []).reduce((n, l) => n + (l.text?.length ?? 0), 0) / 4
+      );
+      if ((shot.duration ?? 0) < minDur && minDur > 0) {
+        pushGap(gaps, rows, {
+          id: "DFW-DURATION",
+          severity: "WARN",
+          message: `\u955C${idx ?? "?"} duration ${shot.duration}s < \u53F0\u8BCD\u6717\u8BFB\u7EA6 ${minDur}s`,
+          field: `shots[].duration`,
+          shotIndex: idx,
+          sourcePath: `shots[${idx ?? "?"}].narrative.dialogue`,
+          targetPath: `shots[${idx ?? "?"}].duration`,
+          fieldId: "duration",
+          repairHintId: "RH-PR-09"
+        });
+      }
+    }
+  }
+}
+function auditImplementationFieldWalk(bundle) {
+  const { rows } = buildMissingFieldReport(bundle);
+  return rows.map((r) => ({
+    id: r.id,
+    severity: r.severity,
+    message: r.message,
+    field: r.targetPath,
+    shotIndex: r.shotIndex,
+    sceneRef: r.sceneRef,
+    fieldId: r.fieldId,
+    repairHintId: r.repairHintId
+  }));
+}
+function buildMissingFieldReport(bundle) {
+  const gaps = [];
+  const rows = [];
+  const shots = bundle.preDesignPack?.shots ?? [];
+  auditImplPlanSlots(bundle, shots, gaps, rows);
+  auditRegistryPerShot(shots, gaps, rows);
+  const dedup = /* @__PURE__ */ new Map();
+  for (const r of rows) {
+    const k = `${r.id}:${r.shotIndex ?? ""}:${r.sceneRef ?? ""}:${r.targetPath}`;
+    if (!dedup.has(k)) dedup.set(k, r);
+  }
+  const unique = [...dedup.values()];
+  const lines = unique.slice(0, 20).map((r) => {
+    const loc = r.shotIndex != null ? `\u955C${r.shotIndex}` : r.sceneRef != null ? `\u573A${r.sceneRef}` : "bundle";
+    return `- ${loc} \u2192 ${r.targetPath} (${r.id})\uFF1A${r.message}`;
+  });
+  const summary = unique.length === 0 ? "\uFF08\u65E0 implementationPlan\u2192generation \u7F3A\u53E3\uFF09" : `\u7F3A\u5931\u5B57\u6BB5 ${unique.length} \u9879\uFF1A
+${lines.join("\n")}${unique.length > 20 ? `
+\u2026\u53E6\u6709 ${unique.length - 20} \u9879` : ""}`;
+  return { rows: unique, summary };
+}
+var SLOT_MAP, FIELD_REPAIR2;
+var init_auditImplementationFieldWalk = __esm({
+  "src/ruleEngine/bundle/auditImplementationFieldWalk.ts"() {
+    "use strict";
+    init_designFieldRegistry();
+    SLOT_MAP = {
+      img: { slot: "imagePrompt", id: "DFW-IMG", repair: "RH-MOD-07", label: "imagePrompt" },
+      vid: { slot: "videoPrompt", id: "DFW-VID", repair: "RH-MOD-07", label: "videoPrompt" },
+      aud: { slot: "audioPrompt", id: "MOD-03", repair: "RH-MOD-03", label: "audioPrompt" },
+      fx: { slot: "fxPrompt", id: "MOD-02", repair: "RH-MOD-02", label: "fxPrompt" }
+    };
+    FIELD_REPAIR2 = {
+      dialogue: "RH-MOD-03",
+      lipSync: "RH-QP-15",
+      fx: "RH-MOD-02",
+      voice: "RH-MOD-04",
+      duration: "RH-PR-09",
+      emotion: "RH-QP-06"
+    };
+  }
+});
+
+// src/ruleEngine/compilers/burnGateEnvelope.ts
+var burnGateEnvelope_exports = {};
+__export(burnGateEnvelope_exports, {
+  BLOCK_TO_TRIGGER_FOR_TEST: () => BLOCK_TO_TRIGGER_FOR_TEST,
+  BURN_NEXT_STEPS: () => BURN_NEXT_STEPS,
+  buildBurnGateEnvelope: () => buildBurnGateEnvelope,
+  triggersFromBurnBlocks: () => triggersFromBurnBlocks
+});
+function triggersFromBurnBlocks(blocks) {
+  const triggers = [];
+  for (const b of blocks) {
+    const t = b.reverseTrigger || BLOCK_TO_TRIGGER[b.id];
+    if (t) triggers.push(t);
+  }
+  return [...new Set(triggers)];
+}
+function buildBurnGateEnvelope(blocks, opts) {
+  const triggers = triggersFromBurnBlocks(blocks);
+  const rePushPlan = triggers.length ? buildRePushPlan(triggers) : [];
+  const catalog = readFixtureJson("repair_hint_catalog.json", { hints: [] });
+  const idSet = /* @__PURE__ */ new Set([...blocks.map((b) => b.id), ...triggers]);
+  const repairHints = (catalog.hints ?? []).filter(
+    (h) => idSet.has(h.ruleId) || idSet.has(h.id) || h.qpId && idSet.has(h.qpId) || (h.checkIds?.some((c) => idSet.has(c)) ?? false)
+  ).map((h) => ({ id: h.id, chatTemplate: h.chatTemplate, ruleId: h.ruleId })).slice(0, 8);
+  let nextStep = opts?.nextStep ?? (triggers.includes("img_cref_missing") ? "batch_still" : triggers.includes("img_still_weak") || triggers.includes("still_firstframe_weak") ? "batch_still" : triggers.includes("still_onebeat_multi") || triggers.includes("still_cu_cast") || triggers.includes("still_firstframe_dirty") ? "split_shot" : triggers.includes("dialogue_hash_mismatch") ? "soft_patch" : triggers.includes("narrative_split_hint") || triggers.includes("pr_lip_duration") || triggers.includes("fx_infeasible") || triggers.includes("cam_fit") ? blocks.some((b) => /拆镜|split|NAR-14|F3|IRD-CONFIRM/i.test(`${b.id} ${b.message}`)) ? triggers.includes("cam_fit") ? "split_shot" : "split_shot" : triggers.includes("pr_lip_duration") ? "raise_duration" : "split_shot" : triggers.some((t) => t.startsWith("lang_") || t === "vp_conflict" || t === "cam_speak" || t === "qf_expr_face") ? "soft_patch" : "chat_repair");
+  if (opts?.decision === "soft_defer" && !opts?.nextStep) nextStep = "retry_shot";
+  if (opts?.decision === "soft_patch" && !opts?.nextStep) nextStep = "soft_patch";
+  if (opts?.decision === "split_shot" && !opts?.nextStep) nextStep = "split_shot";
+  if (opts?.decision === "rePush_design" && triggers.includes("img_cref_missing") && !opts?.nextStep) nextStep = "batch_still";
+  if (opts?.nextStep) nextStep = opts.nextStep;
+  let userMessageOverride = opts?.primary?.userMessage;
+  let ctaOverride = opts?.primary?.ctaLabel;
+  if (!userMessageOverride && triggers.includes("dialogue_hash_mismatch")) {
+    const dcBlock = blocks.find((b) => b.id === "DC-01" || /台词|dialogue/i.test(b.message));
+    const env2 = buildDc01HumanEnvelope({ message: dcBlock?.message });
+    userMessageOverride = env2.userMessage;
+    if (nextStep === "soft_patch") ctaOverride = ctaOverride ?? env2.ctaLabel;
+  }
+  if (!userMessageOverride && triggers.includes("img_cref_missing") && nextStep === "batch_still") {
+    userMessageOverride = "\u89D2\u8272\u5B9A\u5986\u56FE\u8FD8\u6CA1\u6709";
+    ctaOverride = ctaOverride ?? "\u53BB\u751F\u6210\u5B9A\u5986";
+  }
+  if (!userMessageOverride && nextStep === "batch_still" && (triggers.includes("still_firstframe_weak") || triggers.includes("still_firstframe_dirty") || triggers.includes("img_still_weak"))) {
+    const msg = blocks.map((b) => b.message).find((m) => String(m ?? "").trim());
+    if (msg) userMessageOverride = msg;
+    if (!ctaOverride && /拼版|多格|四视/i.test(String(msg))) ctaOverride = "\u7981\u62FC\u7248\u91CD\u62BD";
+    else if (!ctaOverride) ctaOverride = "\u53BB\u751F\u6210\u9759\u7167";
+  }
+  const primary = buildPrimaryBlock(nextStep, {
+    suggestedValue: opts?.suggestedValue ?? opts?.primary?.suggestedValue,
+    fieldPath: opts?.fieldPath ?? opts?.primary?.fieldPath,
+    stage: opts?.stage ?? opts?.primary?.stage ?? "burn",
+    userMessageOverride,
+    ctaLabelOverride: ctaOverride
+  });
+  return {
+    rePushPlan,
+    repairHints,
+    triggers,
+    nextStep,
+    primaryNextStep: primary.primaryNextStep,
+    userMessage: primary.userMessage,
+    ctaLabel: primary.ctaLabel,
+    userMessageKey: primary.userMessageKey,
+    suggestedValue: primary.suggestedValue,
+    fieldPath: primary.fieldPath,
+    stage: primary.stage,
+    decision: opts?.decision,
+    splitHint: opts?.splitHint
+  };
+}
+var BLOCK_TO_TRIGGER, BLOCK_TO_TRIGGER_FOR_TEST, BURN_NEXT_STEPS;
+var init_burnGateEnvelope = __esm({
+  "src/ruleEngine/compilers/burnGateEnvelope.ts"() {
+    "use strict";
+    init_reverseRouteEngine();
+    init_fixturesPath();
+    init_primaryBlock();
+    init_dc01Envelope();
+    BLOCK_TO_TRIGGER = {
+      "LANG-01": "lang_vid_mismatch",
+      "LANG-AUD-01": "lang_aud_mismatch",
+      "LIP-01": "pr_lip_duration",
+      "PR-09": "pr_lip_duration",
+      "CAM-SPEAK": "cam_speak",
+      "FX-GRADE-01": "fx_infeasible",
+      "FX-FALSE-GREEN": "fx_empty",
+      "VP-CONFLICT": "vp_conflict",
+      "DC-09": "cam_whitelist",
+      "PR-CAM-01": "cam_whitelist",
+      "NAR-14": "nar14_split",
+      "NAR-15": "nar15_reaction",
+      "NAR-14-RESIDUAL": "nar14_residual",
+      "DC-16": "dc16_cast",
+      "DG-CD-COVERAGE": "dc16_cast",
+      "DEX-SPEAKER-BARE": "speaker_bare",
+      "DEX-LIP-SPLIT": "nar14_split",
+      "DG-NAR-SELFCHECK": "self_report_mismatch",
+      "FALSE_GREEN_SELFCHECK": "self_report_mismatch",
+      "DEX-LITERARY-STALE": "literary_stale",
+      "DC-01": "dialogue_hash_mismatch",
+      R2: "dialogue_hash_mismatch",
+      H3: "dialogue_hash_mismatch",
+      "DEX-VIS-SPLIT": "visual_multi_beat",
+      "DEX-VIS-TAG-MISSING": "visual_tag_missing",
+      "DEX-VIS-TAG-INCONSISTENT": "visual_tag_inconsistent",
+      "VIS-MULTI-BEAT": "visual_multi_beat",
+      "VIS-BEAT-SCORE": "visual_beat_score",
+      "VIS-SYNC-DRIFT": "visual_sync_drift",
+      "DFW-DURATION": "lip_duration_short",
+      "IMG-CREF": "img_cref_missing",
+      "IMG-STILL-QA": "img_still_weak",
+      "STILL-FIRSTFRAME-DIRTY": "still_firstframe_dirty",
+      "STILL-FIRSTFRAME-STALE": "still_firstframe_stale",
+      "STILL-FIRSTFRAME-WEAK": "still_firstframe_weak",
+      "STILL-FIRSTFRAME-MISSING": "still_firstframe_weak",
+      "DEX-STILL-ONEBEAT": "still_onebeat_multi",
+      "DEX-STILL-CU-CAST": "still_cu_cast",
+      "DEX-LIT-CONTACT": "lit_detail_contact",
+      "DEX-LIT-CONTACT-XOR": "lit_detail_contact_xor",
+      "DEX-LIT-ANCHOR": "lit_detail_anchor",
+      "DEX-LIT-EXPR": "lit_detail_expr",
+      "DEX-PROP-CONT": "prop_continuity",
+      "DEX-PROP-IN-FRAME": "still_prop_missing",
+      "STILL-CONTACT-HANDOFF": "still_video_contact_handoff",
+      "VID-CONTACT-BEATS": "vid_contact_beats",
+      "DEX-STILL-OS-NAME": "still_firstframe_dirty",
+      "DEX-STILL-FILLER": "still_firstframe_dirty",
+      "VID-INHERIT-COMPOSITION": "vid_inherit_composition",
+      "VP-XML-ASK-STUB": "video_prompt_stub",
+      "VP-THIN-SHELL": "video_prompt_stub",
+      "VP-CROSS-SHOT-SIDECAR": "video_prompt_stub",
+      "QP-02": "qp02_visual_short",
+      "CHAT-SB-01": "qp02_visual_short",
+      "DEX-QP-02": "qp02_visual_short",
+      "DEX-CAST-ON-DESC": "cast_on_desc_missing",
+      "DEX-EMPTY-SHOT-CONSISTENCY": "empty_shot_conflict",
+      "DEX-EXPR-SPEAK": "expr_speak_missing",
+      "DEX-ASSET-CREF": "asset_cref",
+      "DEX-SHOT-INTENT": "shot_intent_decay",
+      "DEX-CUT-01": "cut01_adjacent",
+      "DEX-CAM-XSHOT": "cam_xshot",
+      "CUT-01": "cut01_adjacent",
+      "CAM-XSHOT": "cam_xshot",
+      "GEN-01": "expr_speak_missing",
+      "QF-EXPR-01": "expr_speak_missing",
+      "NO-LIP-DIALOGUE": "no_lip_dialogue",
+      "DESIGN-LOSS": "design_loss",
+      "DESIGN-LOSS-DURATION": "design_loss",
+      "DUR-DESYNC": "dur_desync",
+      "PROMPT-FIDELITY": "prompt_fidelity",
+      "VIDEO-PROMPT-STALE": "video_prompt_stale",
+      "DEX-CAM-FIT": "cam_fit",
+      "DC-01-EXTRA": "dialogue_extra",
+      "CHAIN-BEAT": "chain_beat",
+      "CHAT-AUD-01": "audio_missing",
+      "AUD-ORPHAN-SPEECH": "aud_orphan",
+      "IMPORT-SPLIT-SYNC": "import_split_sync",
+      "DEX-INTENT-PIC": "intent_pic",
+      "IRD-CONFIRM": "ird_confirm",
+      "DEX-DIRTY-STILL-PROMPT": "dirty_still_prompt",
+      "DEX-DUP-VD": "dirty_still_prompt",
+      "DEX-HAND-LIP": "dirty_still_prompt",
+      "VID-INHERIT-DIRTY-STILL": "dirty_still_prompt",
+      "SFX-UNBACKED": "sfx_unbacked",
+      "MIRROR-WARP": "svq_motion_fail",
+      "identity_cast": "still_firstframe_dirty",
+      "dialogue_lip": "still_mouth_handoff",
+      "emotion_clarity": "expr_speak_missing",
+      "motion_fidelity": "svq_motion_fail",
+      "audio_mood": "svq_audio_fail",
+      "sfx_unbacked": "sfx_unbacked"
+    };
+    BLOCK_TO_TRIGGER_FOR_TEST = BLOCK_TO_TRIGGER;
+    BURN_NEXT_STEPS = [
+      "chat_repair",
+      "soft_patch",
+      "split_shot",
+      "batch_still",
+      "retry_shot",
+      "burn",
+      "raise_duration",
+      "regen_storyboard_hq",
+      "human_review"
+    ];
+  }
+});
+
+// src/ruleEngine/design/chatRepairDeeplink.ts
+function resolveTriggerForBlockId(blockId) {
+  const doc = loadSvqDoctrine();
+  const fromFailDim = doc.failDimTriggers[blockId];
+  if (fromFailDim) return fromFailDim;
+  const fromDex = doc.dex[blockId]?.trigger;
+  if (fromDex) return fromDex;
+  return BLOCK_TO_TRIGGER_FOR_TEST[blockId] ?? loadDesignGateMountMatrix().rows.find((r) => r.ruleId === blockId)?.reverseTrigger ?? "chat_repair";
+}
+function buildChatRepairDeeplinks(blockIds) {
+  const routes = readFixtureJson("reverse_route_table.json", { routes: [] }).routes ?? [];
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const id of blockIds) {
+    const trigger = resolveTriggerForBlockId(id);
+    if (seen.has(`${id}:${trigger}`)) continue;
+    seen.add(`${id}:${trigger}`);
+    const row = routes.find((r) => r.trigger === trigger || (r.ruleIds ?? []).includes(id));
+    const plan = buildRePushPlan([trigger])[0];
+    const reverseTarget = String(plan?.reverseTarget ?? row?.reverseTarget ?? "SB");
+    const forwardStages = plan?.forwardRerun ?? row?.forwardStages ?? [reverseTarget];
+    out.push({
+      blockId: id,
+      trigger,
+      reverseTarget,
+      forwardStages,
+      deeplink: `toonflow://stage/${encodeURIComponent(reverseTarget)}?trigger=${encodeURIComponent(trigger)}&rule=${encodeURIComponent(id)}`,
+      authoritativeFields: row?.authoritativeFields
+    });
+  }
+  return out;
+}
+function formatDeeplinkSection(links) {
+  if (!links.length) return "";
+  const lines = ["\u3010\u6DF1\u94FE\xB7\u53CD\u63A8\u821E\u53F0\u3011"];
+  for (const l of links.slice(0, 12)) {
+    const camNote = l.trigger === "cam_fit" || l.blockId === "DEX-CAM-FIT" ? " \u2014 auto\u2192\u670D\u52A1\u7AEF\u667A\u80FD\u62C6\uFF1BConfirm \u4EC5 IRD-CONFIRM\uFF1B\u52FF\u624B\u6539\u955C\u53F7" : "";
+    lines.push(`- ${l.blockId} \u2192 ${l.reverseTarget} (${l.trigger}) ${l.deeplink}${camNote}`);
+  }
+  return lines.join("\n");
+}
+var init_chatRepairDeeplink = __esm({
+  "src/ruleEngine/design/chatRepairDeeplink.ts"() {
+    "use strict";
+    init_reverseRouteEngine();
+    init_burnGateEnvelope();
+    init_gateDiagnose();
+    init_loadSvqDoctrine();
+    init_fixturesPath();
+  }
+});
+
 // src/ruleEngine/design/sealThemeGlueUntilClear.ts
 var sealThemeGlueUntilClear_exports = {};
 __export(sealThemeGlueUntilClear_exports, {
@@ -278107,17 +285243,2673 @@ var init_sealThemeGlueUntilClear = __esm({
   }
 });
 
+// src/ruleEngine/design/importLitDebtHygiene.ts
+var importLitDebtHygiene_exports = {};
+__export(importLitDebtHygiene_exports, {
+  runImportLitDebtHygiene: () => runImportLitDebtHygiene
+});
+function runImportLitDebtHygiene(input) {
+  const out = {
+    softFilled: [],
+    splitCount: 0,
+    confirmRequired: false,
+    missingSlots: []
+  };
+  let shots = input.shots;
+  if (!shots.length) return out;
+  try {
+    const { getEnhancementFillPolicy: getEnhancementFillPolicy2, auditLiteraryDetailQuality: auditLiteraryDetailQuality2 } = (init_stillLiteraryDetailQuality(), __toCommonJS(stillLiteraryDetailQuality_exports));
+    const { applyLitFillToShots: applyLitFillToShots2, buildLitFillSuggestions: buildLitFillSuggestions2 } = (init_literaryDetailLlmFill(), __toCommonJS(literaryDetailLlmFill_exports));
+    const { diagnoseStillIntent: diagnoseStillIntent2 } = (init_stillIntentReverse(), __toCommonJS(stillIntentReverse_exports));
+    const { expandLitContactXor: expandLitContactXor2 } = (init_expandLitContactXor(), __toCommonJS(expandLitContactXor_exports));
+    const { sliceFieldsAfterIrdSplit: sliceFieldsAfterIrdSplit2 } = (init_sliceFieldsAfterIrdSplit(), __toCommonJS(sliceFieldsAfterIrdSplit_exports));
+    const hasLitDebt = shots.some((s) => {
+      const a = auditLiteraryDetailQuality2({
+        visualDescription: String(s.visualDescription ?? ""),
+        shotSize: String(s.shotSize ?? "")
+      });
+      return a.findings.some(
+        (f) => f.severity === "BLOCK" && (/^DEX-LIT-/.test(f.id) || f.id === "DEX-PROP-CONT")
+      );
+    });
+    const hasFaceDual = !hasLitDebt && shots.some((s) => {
+      const vd = String(s.visualDescription ?? "");
+      const sz = String(s.shotSize ?? "");
+      const faceCu = /特写|近景|CU/i.test(sz) || /侧脸|正脸|特写/.test(vd);
+      return faceCu && /划过|贴/.test(vd) && /咬|渗血|血珠/.test(vd) && !s._litXorSplitId;
+    });
+    if (!hasLitDebt && !hasFaceDual) return out;
+    const lx = expandLitContactXor2(shots, { forceExpand: true, chatStrict: false });
+    if (lx.expandedCount > 0) {
+      shots = lx.shots;
+      try {
+        shots = sliceFieldsAfterIrdSplit2(shots).shots;
+      } catch {
+      }
+      out.splitCount = lx.expandedCount;
+      out.shots = shots;
+      for (const s of shots) {
+        if (s._litXorSplitId) {
+          s.promptState = "stale";
+          s.composeHash = void 0;
+          s.stillQuality = void 0;
+          s.visualPass = false;
+          s.visualPassAt = void 0;
+        }
+      }
+      try {
+        const { cascadeForwardStale: cascadeForwardStale2 } = (init_forwardStaleCascade(), __toCommonJS(forwardStaleCascade_exports));
+        cascadeForwardStale2({
+          shots,
+          forwardStages: ["SB", "MD-IMG", "EN"]
+        });
+      } catch {
+      }
+      input.shots.length = 0;
+      input.shots.push(...shots);
+      input.meta.importOkNotExitPass = true;
+      input.meta.litImportSmartSplit = lx.expandedCount;
+      input.meta.importSplitExpanded = true;
+      (input.shapeSalvageLog ??= []).push({
+        ruleId: "SH-LIT-IMPORT-SMART-SPLIT",
+        path: "preDesignPack.shots",
+        action: `expanded=${lx.expandedCount};log=${lx.log.slice(0, 4).join("|")}`
+      });
+    } else if (lx.confirmRequired) {
+      out.confirmRequired = true;
+      out.primaryAction = "confirm_split";
+      out.ctaLabel = "\u786E\u8BA4\u62C6\u955C\uFF08\u988A\u89E6\u4E0E\u53E3\u521B\u5206\u955C\uFF09";
+      input.meta.irdConfirmRequired = true;
+      input.meta.litDebtPrimaryAction = "confirm_split";
+      input.meta.litDebtCta = out.ctaLabel;
+      input.meta.importOkNotExitPass = true;
+      input.meta.litDebtImportPending = true;
+    }
+    const residual = shots.filter((s) => {
+      if (s._litXorSplitId) return false;
+      const a = auditLiteraryDetailQuality2({
+        visualDescription: String(s.visualDescription ?? ""),
+        shotSize: String(s.shotSize ?? "")
+      });
+      return a.findings.some(
+        (f) => f.severity === "BLOCK" && (f.id === "DEX-LIT-CONTACT" || f.id === "DEX-LIT-ANCHOR" || f.id === "DEX-LIT-EXPR")
+      );
+    });
+    if (residual.length && getEnhancementFillPolicy2().allowImportStructureSoftFill) {
+      const meta4 = { ...input.meta, importTrack: true };
+      const sug = buildLitFillSuggestions2({
+        shots: residual,
+        literaryDetailLlmFill: true,
+        intentVisualEnhance: true,
+        importTrack: true,
+        confidence: 0.85,
+        meta: meta4
+      });
+      if (sug.suggestions.length) {
+        const filled = applyLitFillToShots2({
+          shots,
+          fills: sug.suggestions.map((s) => ({ shotIndex: s.shotIndex, append: s.suggestedAppend })),
+          literaryDetailLlmFill: true,
+          intentVisualEnhance: true,
+          importTrack: true,
+          confidence: 0.85,
+          forceApply: true,
+          meta: meta4
+        });
+        if (filled.applied.length) {
+          out.softFilled = filled.applied;
+          input.meta.litImportSoftFilled = filled.applied;
+          input.meta.importOkNotExitPass = true;
+          (input.shapeSalvageLog ??= []).push({
+            ruleId: "SH-LIT-IMPORT-SOFT-FILL",
+            path: "preDesignPack.shots[].visualDescription",
+            action: `filled=${filled.applied.join(",")}`
+          });
+        }
+      }
+    }
+    const ird = diagnoseStillIntent2(shots, { meta: { ...input.meta, importTrack: true } });
+    out.primaryAction = out.splitCount ? "apply_auto" : out.primaryAction || ird.primaryAction;
+    out.ctaLabel = out.splitCount ? `\u5DF2\u667A\u80FD\u62C6\u988A\u89E6/\u53E3\u521B\uFF08${out.splitCount}\uFF09` : out.ctaLabel || ird.ctaLabel;
+    out.missingSlots = ird.missingSlots ?? [];
+    if (!out.splitCount && (ird.primaryAction === "confirm_split" || ird.primaryAction === "confirm_enhance")) {
+      out.confirmRequired = true;
+      input.meta.irdConfirmRequired = true;
+      input.meta.litDebtPrimaryAction = ird.primaryAction;
+      input.meta.litDebtCta = ird.ctaLabel;
+      input.meta.litDebtImportPending = true;
+      input.meta.importOkNotExitPass = true;
+    }
+    if (out.confirmRequired && !(input.shapeSalvageLog ?? []).some((e) => e.ruleId === "SH-LIT-IMPORT-CONFIRM")) {
+      (input.shapeSalvageLog ??= []).push({
+        ruleId: "SH-LIT-IMPORT-CONFIRM",
+        path: "meta.litDebtPrimaryAction",
+        action: `action=${out.primaryAction};cta=${out.ctaLabel ?? ""}`
+      });
+    }
+    out.warnMessage = out.splitCount ? `\u3010\u53EF\u5BFC\u5165 \xB7 \u5DF2\u667A\u80FD\u62C6\u6587\u5B66\u53CC\u63A5\u89E6\u3011\u6269 ${out.splitCount} \u7EC4\u988A\u89E6/\u53E3\u521B\uFF1BimportOk\u2260designExitPass\uFF0C\u987B\u8BBE\u8BA1 Exit \u590D\u68C0` : out.confirmRequired ? `\u3010\u53EF\u5BFC\u5165 \xB7 \u6587\u5B66\u503A\u987B\u8BBE\u8BA1\u786E\u8BA4\u3011${out.ctaLabel || out.primaryAction || "confirm"}\uFF1BimportOk\u2260designExitPass` : out.softFilled.length ? `\u3010\u53EF\u5BFC\u5165 \xB7 \u5DF2\u6587\u5B66\u7ED3\u6784\u8F6F\u586B\u3011\u955C ${out.softFilled.join(",")}\uFF1B\u4ECD\u987B\u8BBE\u8BA1 Exit \u590D\u68C0` : void 0;
+  } catch {
+  }
+  return out;
+}
+var init_importLitDebtHygiene = __esm({
+  "src/ruleEngine/design/importLitDebtHygiene.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/z110TimelineTransitions.ts
+function shotId(s, i) {
+  return s.id ?? s.clientId ?? s.shotIndex ?? i;
+}
+function readTransitionAudio(s) {
+  const ta = s.narrative?.transitionAudio;
+  if (!ta || typeof ta !== "object") return null;
+  return ta;
+}
+function readAvBeats(s) {
+  const beats = s.narrative?.avBeats;
+  return Array.isArray(beats) ? beats.map(String) : [];
+}
+function buildZ110TimelineTransitions(shots) {
+  const transitions = [];
+  for (let i = 0; i < shots.length - 1; i++) {
+    const a = shots[i];
+    const b = shots[i + 1];
+    if (!a || !b) continue;
+    const taA = readTransitionAudio(a);
+    const taB = readTransitionAudio(b);
+    const detA = detectJlCutFromAvBeats(readAvBeats(a));
+    const detB = detectJlCutFromAvBeats(readAvBeats(b));
+    const lag = taA?.lCutAudioLagMs ?? (detA.wantsL ? 400 : void 0);
+    const lead = taB?.jCutAudioLeadMs ?? (detB.wantsJ ? 400 : void 0);
+    let type = "cut";
+    let source = "default_cut";
+    if (lag != null && lead != null) {
+      type = "j_l_cut";
+      source = taA || taB ? "transitionAudio" : "avBeats";
+    } else if (lag != null) {
+      type = "l_cut";
+      source = taA ? "transitionAudio" : "avBeats";
+    } else if (lead != null) {
+      type = "j_cut";
+      source = taB ? "transitionAudio" : "avBeats";
+    }
+    const tt = String(
+      b.narrative?.transitionType ?? b.transitionType ?? "\u5207"
+    );
+    const note = [taA?.note, taB?.note].filter(Boolean).join("\uFF1B") || void 0;
+    transitions.push({
+      fromIndex: i,
+      toIndex: i + 1,
+      fromShotId: shotId(a, i),
+      toShotId: shotId(b, i + 1),
+      type,
+      audioLeadMs: lead,
+      audioLagMs: lag,
+      transitionType: tt,
+      note,
+      source
+    });
+  }
+  return { transitions, exportReady: false, nleFormat: "stub_json" };
+}
+var init_z110TimelineTransitions = __esm({
+  "src/ruleEngine/compilers/z110TimelineTransitions.ts"() {
+    "use strict";
+    init_jlCutTimeline();
+  }
+});
+
+// src/ruleEngine/compilers/edlStubFromTransitions.ts
+function pad(n, w = 2) {
+  return String(Math.max(0, Math.floor(n))).padStart(w, "0");
+}
+function secToEdlTc(sec, fps = 25) {
+  const s = Math.max(0, sec);
+  const frames = Math.floor(s % 1 * fps);
+  const totalSec = Math.floor(s);
+  const ss = totalSec % 60;
+  const mm = Math.floor(totalSec / 60) % 60;
+  const hh = Math.floor(totalSec / 3600);
+  return `${pad(hh)}:${pad(mm)}:${pad(ss)}:${pad(frames)}`;
+}
+function buildEdlStubFromTransitions(input) {
+  const title = String(input.title ?? "Toonflow Episode").slice(0, 80);
+  const lines = [
+    `TITLE: ${title}`,
+    "FCM: NON-DROP FRAME",
+    "* TOONFLOW Z110 EDL STUB \u2014 not Premiere/FCPXML",
+    ""
+  ];
+  let cursor = 0;
+  let event = 1;
+  const durs = input.durationsSec ?? [];
+  for (let i = 0; i < input.transitions.length; i++) {
+    const t = input.transitions[i];
+    const dur = Number(durs[t.toIndex] ?? durs[i + 1] ?? 3) || 3;
+    const srcIn = secToEdlTc(0);
+    const srcOut = secToEdlTc(dur);
+    const recIn = secToEdlTc(cursor);
+    const recOut = secToEdlTc(cursor + dur);
+    const reel = "AX";
+    lines.push(
+      `${pad(event, 3)}  ${reel}       V     C        ${srcIn} ${srcOut} ${recIn} ${recOut}`
+    );
+    lines.push(`* FROM SHOT ${String(t.fromShotId ?? t.fromIndex)} \u2192 ${String(t.toShotId ?? t.toIndex)}`);
+    lines.push(`* TRANSITION ${t.type} source=${t.source}`);
+    if (t.audioLeadMs != null) lines.push(`* AUDIO LEAD ${t.audioLeadMs}ms (J-CUT)`);
+    if (t.audioLagMs != null) lines.push(`* AUDIO LAG ${t.audioLagMs}ms (L-CUT)`);
+    if (t.note) lines.push(`* NOTE ${t.note}`);
+    lines.push("");
+    cursor += dur;
+    event += 1;
+  }
+  return lines.join("\n").trim() + "\n";
+}
+var init_edlStubFromTransitions = __esm({
+  "src/ruleEngine/compilers/edlStubFromTransitions.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/fcpXmlStubFromTransitions.ts
+function esc3(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function frameRate() {
+  return { timebase: 25, ntsc: "FALSE" };
+}
+function framesFromSec(sec, fps = 25) {
+  return Math.max(1, Math.round(Math.max(0.04, sec) * fps));
+}
+function buildFcpXmlStubFromTransitions(input) {
+  const title = esc3(String(input.title ?? "Toonflow Episode").slice(0, 80));
+  const { timebase, ntsc } = frameRate();
+  const durs = input.durationsSec ?? [];
+  const clips = [];
+  let start = 0;
+  for (let i = 0; i < input.transitions.length; i++) {
+    const t = input.transitions[i];
+    const durSec = Number(durs[t.toIndex] ?? durs[i + 1] ?? 3) || 3;
+    const dur = framesFromSec(durSec, timebase);
+    const name28 = esc3(`shot_${String(t.toShotId ?? t.toIndex)}`);
+    const note = esc3(
+      [
+        `trans=${t.type}`,
+        t.audioLeadMs != null ? `jLeadMs=${t.audioLeadMs}` : "",
+        t.audioLagMs != null ? `lLagMs=${t.audioLagMs}` : "",
+        t.note ?? ""
+      ].filter(Boolean).join("; ")
+    );
+    clips.push(`    <clipitem id="clip${i + 1}">
+      <name>${name28}</name>
+      <duration>${dur}</duration>
+      <rate><timebase>${timebase}</timebase><ntsc>${ntsc}</ntsc></rate>
+      <start>${start}</start>
+      <end>${start + dur}</end>
+      <in>0</in>
+      <out>${dur}</out>
+      <logginginfo><lognote>${note}</lognote></logginginfo>
+      <file id="file${i + 1}"><name>${name28}.mov</name></file>
+    </clipitem>`);
+    start += dur;
+  }
+  const seqDur = start || framesFromSec(3, timebase);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xmeml>
+<!-- TOONFLOW Z110 FCPXML STUB \u2014 not Premiere/FCPXML production project -->
+<xmeml version="5">
+  <sequence id="sequence-1">
+    <name>${title}</name>
+    <duration>${seqDur}</duration>
+    <rate><timebase>${timebase}</timebase><ntsc>${ntsc}</ntsc></rate>
+    <media>
+      <video>
+        <track>
+${clips.join("\n") || "          <!-- empty -->"}
+        </track>
+      </video>
+    </media>
+  </sequence>
+</xmeml>
+`;
+}
+var init_fcpXmlStubFromTransitions = __esm({
+  "src/ruleEngine/compilers/fcpXmlStubFromTransitions.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/premiereXmlStubFromTransitions.ts
+function esc4(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function framesFromSec2(sec, fps = 25) {
+  return Math.max(1, Math.round(Math.max(0.04, sec) * fps));
+}
+function buildPremiereXmlStubFromTransitions(input) {
+  const title = esc4(String(input.title ?? "Toonflow Episode").slice(0, 80));
+  const fps = 25;
+  const durs = input.durationsSec ?? [];
+  const clips = [];
+  let t0 = 0;
+  for (let i = 0; i < input.transitions.length; i++) {
+    const tr = input.transitions[i];
+    const durSec = Number(durs[tr.toIndex] ?? durs[i + 1] ?? 3) || 3;
+    const dur = framesFromSec2(durSec, fps);
+    const name28 = esc4(`shot_${String(tr.toShotId ?? tr.toIndex)}`);
+    const marker29 = esc4(
+      [
+        `type=${tr.type}`,
+        tr.audioLeadMs != null ? `jLeadMs=${tr.audioLeadMs}` : "",
+        tr.audioLagMs != null ? `lLagMs=${tr.audioLagMs}` : "",
+        tr.note ?? ""
+      ].filter(Boolean).join("; ")
+    );
+    clips.push(`    <clip id="c${i + 1}" name="${name28}" start="${t0}" end="${t0 + dur}" duration="${dur}">
+      <marker name="jlcut" comment="${marker29}"/>
+      <file path="${name28}.mov"/>
+    </clip>`);
+    t0 += dur;
+  }
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!-- TOONFLOW Z110 PREMIERE XML STUB \u2014 not a real Premiere/AAF project -->
+<premiereProject version="stub-1" fps="${fps}">
+  <sequence name="${title}" duration="${t0 || framesFromSec2(3, fps)}">
+    <videoTrack>
+${clips.join("\n") || "      <!-- empty -->"}
+    </videoTrack>
+  </sequence>
+</premiereProject>
+`;
+}
+var init_premiereXmlStubFromTransitions = __esm({
+  "src/ruleEngine/compilers/premiereXmlStubFromTransitions.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/otioStubFromTransitions.ts
+function rateTime(sec, rate = 25) {
+  const value = Math.max(0, Number(sec) || 0);
+  return {
+    OTIO_SCHEMA: "RationalTime.1",
+    value: Math.round(value * rate),
+    rate
+  };
+}
+function trRange(startSec, durSec, rate = 25) {
+  return {
+    OTIO_SCHEMA: "TimeRange.1",
+    start_time: rateTime(startSec, rate),
+    duration: rateTime(durSec, rate)
+  };
+}
+function buildOtioStubFromTransitions(input) {
+  const title = String(input.title ?? "Toonflow Episode").slice(0, 80);
+  const durs = input.durationsSec ?? [];
+  const rate = 25;
+  const children = [];
+  let t0 = 0;
+  if (input.transitions.length) {
+    const first = input.transitions[0];
+    const d0 = Number(durs[first.fromIndex] ?? durs[0] ?? 3) || 3;
+    children.push({
+      OTIO_SCHEMA: "Clip.1",
+      name: `shot_${String(first.fromShotId ?? first.fromIndex)}`,
+      source_range: trRange(0, d0, rate),
+      media_reference: {
+        OTIO_SCHEMA: "ExternalReference.1",
+        target_url: `shot_${String(first.fromShotId ?? first.fromIndex)}.mov`
+      },
+      markers: []
+    });
+    t0 = d0;
+  }
+  for (let i = 0; i < input.transitions.length; i++) {
+    const tr = input.transitions[i];
+    const durSec = Number(durs[tr.toIndex] ?? durs[i + 1] ?? 3) || 3;
+    const markerNote = [
+      `type=${tr.type}`,
+      tr.audioLeadMs != null ? `jLeadMs=${tr.audioLeadMs}` : "",
+      tr.audioLagMs != null ? `lLagMs=${tr.audioLagMs}` : "",
+      tr.note ?? ""
+    ].filter(Boolean).join("; ");
+    children.push({
+      OTIO_SCHEMA: "Clip.1",
+      name: `shot_${String(tr.toShotId ?? tr.toIndex)}`,
+      source_range: trRange(0, durSec, rate),
+      media_reference: {
+        OTIO_SCHEMA: "ExternalReference.1",
+        target_url: `shot_${String(tr.toShotId ?? tr.toIndex)}.mov`
+      },
+      markers: markerNote ? [
+        {
+          OTIO_SCHEMA: "Marker.1",
+          name: "jlcut",
+          comment: markerNote,
+          marked_range: trRange(0, 0.04, rate)
+        }
+      ] : [],
+      metadata: {
+        toonflow_transition: {
+          type: tr.type,
+          audioLeadMs: tr.audioLeadMs ?? null,
+          audioLagMs: tr.audioLagMs ?? null,
+          source: tr.source
+        }
+      }
+    });
+    t0 += durSec;
+  }
+  const doc = {
+    OTIO_SCHEMA: "Timeline.1",
+    name: title,
+    global_start_time: rateTime(0, rate),
+    tracks: {
+      OTIO_SCHEMA: "Stack.1",
+      name: "tracks",
+      children: [
+        {
+          OTIO_SCHEMA: "Track.1",
+          name: "Video",
+          kind: "Video",
+          children
+        }
+      ]
+    },
+    metadata: {
+      toonflow: {
+        exportReady: false,
+        nleFormat: "otio_stub",
+        note: "Wave-13 OTIO stub \u2014 not production OpenTimelineIO / Resolve project",
+        durationSecApprox: t0
+      }
+    }
+  };
+  return `${JSON.stringify(doc, null, 2)}
+`;
+}
+var init_otioStubFromTransitions = __esm({
+  "src/ruleEngine/compilers/otioStubFromTransitions.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/resolveXmlStubFromTransitions.ts
+function esc5(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function framesFromSec3(sec, fps = 25) {
+  return Math.max(1, Math.round(Math.max(0.04, sec) * fps));
+}
+function buildResolveXmlStubFromTransitions(input) {
+  const title = esc5(String(input.title ?? "Toonflow Episode").slice(0, 80));
+  const fps = 25;
+  const durs = input.durationsSec ?? [];
+  const clips = [];
+  let t0 = 0;
+  if (input.transitions.length) {
+    const first = input.transitions[0];
+    const d0 = Number(durs[first.fromIndex] ?? durs[0] ?? 3) || 3;
+    const fr0 = framesFromSec3(d0, fps);
+    const name0 = esc5(`shot_${String(first.fromShotId ?? first.fromIndex)}`);
+    clips.push(`    <clip id="r0" name="${name0}" start="${t0}" end="${t0 + fr0}" duration="${fr0}">
+      <media path="${name0}.mov"/>
+    </clip>`);
+    t0 += fr0;
+  }
+  for (let i = 0; i < input.transitions.length; i++) {
+    const tr = input.transitions[i];
+    const durSec = Number(durs[tr.toIndex] ?? durs[i + 1] ?? 3) || 3;
+    const dur = framesFromSec3(durSec, fps);
+    const name28 = esc5(`shot_${String(tr.toShotId ?? tr.toIndex)}`);
+    const marker29 = esc5(
+      [
+        `type=${tr.type}`,
+        tr.audioLeadMs != null ? `jLeadMs=${tr.audioLeadMs}` : "",
+        tr.audioLagMs != null ? `lLagMs=${tr.audioLagMs}` : "",
+        tr.note ?? ""
+      ].filter(Boolean).join("; ")
+    );
+    clips.push(`    <clip id="r${i + 1}" name="${name28}" start="${t0}" end="${t0 + dur}" duration="${dur}">
+      <marker name="jlcut" note="${marker29}"/>
+      <media path="${name28}.mov"/>
+    </clip>`);
+    t0 += dur;
+  }
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!-- TOONFLOW Z110 RESOLVE XML STUB \u2014 not a real DaVinci Resolve / AAF project -->
+<resolveProject version="stub-1" fps="${fps}">
+  <timeline name="${title}" duration="${t0 || framesFromSec3(3, fps)}">
+    <videoTrack>
+${clips.join("\n") || "      <!-- empty -->"}
+    </videoTrack>
+  </timeline>
+</resolveProject>
+`;
+}
+var init_resolveXmlStubFromTransitions = __esm({
+  "src/ruleEngine/compilers/resolveXmlStubFromTransitions.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/z110AxisAudit.ts
+function buildZ110AxisAudit(shots) {
+  const chain = auditAxis180Chain(shots);
+  return {
+    ok: chain.ok && !chain.chainFinding,
+    pairCount: chain.pairFindings.length,
+    chainFinding: chain.chainFinding,
+    pairs: chain.pairFindings,
+    sceneFailCounts: chain.sceneFailCounts,
+    note: "Wave-15 soft axis audit \u2014 not CV 180\xB0 solver"
+  };
+}
+var init_z110AxisAudit = __esm({
+  "src/ruleEngine/compilers/z110AxisAudit.ts"() {
+    "use strict";
+    init_screenSideAxis();
+  }
+});
+
+// src/ruleEngine/compilers/handoffStubSelect.ts
+var handoffStubSelect_exports = {};
+__export(handoffStubSelect_exports, {
+  listZ110HandoffStubs: () => listZ110HandoffStubs,
+  pickZ110HandoffStub: () => pickZ110HandoffStub
+});
+function pickZ110HandoffStub(z110, format, scriptId) {
+  if (!z110) return null;
+  const id = String(scriptId ?? "episode");
+  if (format === "edl") {
+    const text3 = String(z110.edlStub ?? "");
+    if (text3.length < 8) return null;
+    return { format, filename: `toonflow-${id}.edl`, mime: "text/plain;charset=utf-8", text: text3 };
+  }
+  if (format === "fcp") {
+    const text3 = String(z110.fcpXmlStub ?? "");
+    if (!text3.includes("xmeml")) return null;
+    return { format, filename: `toonflow-${id}.fcpxml.xml`, mime: "application/xml;charset=utf-8", text: text3 };
+  }
+  if (format === "premiere") {
+    const text3 = String(z110.premiereXmlStub ?? "");
+    if (!text3.includes("premiereProject")) return null;
+    return { format, filename: `toonflow-${id}.premiere.stub.xml`, mime: "application/xml;charset=utf-8", text: text3 };
+  }
+  if (format === "otio") {
+    const text3 = String(z110.otioStub ?? "");
+    if (!text3.includes("OTIO_SCHEMA")) return null;
+    return {
+      format,
+      filename: `toonflow-${id}.otio.json`,
+      mime: "application/json;charset=utf-8",
+      text: text3
+    };
+  }
+  if (format === "resolve") {
+    const text3 = String(z110.resolveXmlStub ?? "");
+    if (!text3.includes("resolveProject")) return null;
+    return {
+      format,
+      filename: `toonflow-${id}.resolve.stub.xml`,
+      mime: "application/xml;charset=utf-8",
+      text: text3
+    };
+  }
+  if (format === "srt") {
+    const text3 = String(z110.srtStub ?? "");
+    if (text3.length < 12 || !/\d+\r?\n\d{2}:\d{2}/.test(text3)) return null;
+    return {
+      format,
+      filename: `toonflow-${id}.srt`,
+      mime: "application/x-subrip;charset=utf-8",
+      text: text3
+    };
+  }
+  if (format === "manifest") {
+    let text3 = "";
+    if (typeof z110.handoffManifest === "string") text3 = z110.handoffManifest;
+    else if (z110.handoffManifest && typeof z110.handoffManifest === "object") {
+      text3 = `${JSON.stringify(z110.handoffManifest, null, 2)}
+`;
+    }
+    if (!text3.includes("formats")) return null;
+    return {
+      format,
+      filename: `toonflow-${id}.handoff.manifest.json`,
+      mime: "application/json;charset=utf-8",
+      text: text3
+    };
+  }
+  const text2 = JSON.stringify({ timeline: z110.timeline ?? null }, null, 2);
+  return {
+    format: "json",
+    filename: `toonflow-${id}.transitions.json`,
+    mime: "application/json;charset=utf-8",
+    text: text2
+  };
+}
+function listZ110HandoffStubs(z110, scriptId) {
+  const out = [];
+  for (const format of ALL_FORMATS) {
+    if (format === "manifest" && !z110?.handoffManifest) continue;
+    const pick3 = pickZ110HandoffStub(z110, format, scriptId);
+    if (pick3) out.push(pick3);
+  }
+  return out;
+}
+var ALL_FORMATS;
+var init_handoffStubSelect = __esm({
+  "src/ruleEngine/compilers/handoffStubSelect.ts"() {
+    "use strict";
+    ALL_FORMATS = [
+      "edl",
+      "fcp",
+      "premiere",
+      "otio",
+      "resolve",
+      "srt",
+      "manifest",
+      "json"
+    ];
+  }
+});
+
+// src/ruleEngine/compilers/z110HandoffManifest.ts
+function buildZ110HandoffManifest(input) {
+  const stubs = listZ110HandoffStubs(input.z110, input.scriptId);
+  const axis = input.z110.timeline?.axisAudit;
+  return {
+    exportReady: false,
+    formats: stubs.map((s) => ({
+      format: s.format,
+      filename: s.filename,
+      mime: s.mime,
+      bytesApprox: s.text.length
+    })),
+    axisAudit: axis ? {
+      ok: axis.ok,
+      pairCount: axis.pairCount,
+      chainFinding: axis.chainFinding,
+      note: axis.note
+    } : null,
+    note: "Wave-16 handoff manifest \u2014 inventory only, not production NLE"
+  };
+}
+function stringifyZ110HandoffManifest(manifest) {
+  return `${JSON.stringify(manifest, null, 2)}
+`;
+}
+var init_z110HandoffManifest = __esm({
+  "src/ruleEngine/compilers/z110HandoffManifest.ts"() {
+    "use strict";
+    init_handoffStubSelect();
+  }
+});
+
+// src/ruleEngine/compilers/z110FramingAudit.ts
+function shotIdOf(s, i) {
+  return s.id ?? s.clientId ?? s.shotIndex ?? i;
+}
+function buildZ110FramingAudit(shots) {
+  const findings = [];
+  let headroomTight = 0;
+  let lookingRoomTight = 0;
+  let undeclared = 0;
+  let shotCount2 = 0;
+  for (let i = 0; i < shots.length; i++) {
+    const s = shots[i];
+    if (!s) continue;
+    shotCount2 += 1;
+    const narr2 = s.narrative;
+    const hr = String(narr2?.headroomStatus ?? "");
+    const lr = String(narr2?.lookingRoomStatus ?? "");
+    if (!hr && !lr) continue;
+    if (hr === "tight") headroomTight += 1;
+    if (lr === "tight") lookingRoomTight += 1;
+    if (hr === "undeclared" || lr === "undeclared") undeclared += 1;
+    if (hr === "tight" || lr === "tight" || hr === "undeclared" || lr === "undeclared") {
+      findings.push({
+        shotIndex: Number(s.shotIndex ?? i),
+        shotId: shotIdOf(s, i),
+        headroomStatus: hr || void 0,
+        lookingRoomStatus: lr || void 0
+      });
+    }
+  }
+  return {
+    ok: headroomTight === 0 && lookingRoomTight === 0,
+    shotCount: shotCount2,
+    headroomTight,
+    lookingRoomTight,
+    undeclared,
+    findings,
+    note: "Wave-17 soft framing audit \u2014 not CV / not measured visualPass"
+  };
+}
+var init_z110FramingAudit = __esm({
+  "src/ruleEngine/compilers/z110FramingAudit.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/compilers/srtStubFromShots.ts
+function pad2(n) {
+  return String(Math.max(0, Math.floor(n))).padStart(2, "0");
+}
+function pad3(n) {
+  return String(Math.max(0, Math.floor(n))).padStart(3, "0");
+}
+function formatSrtTimestamp(sec) {
+  const s = Math.max(0, Number(sec) || 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor(s % 3600 / 60);
+  const secInt = Math.floor(s % 60);
+  const ms = Math.round((s - Math.floor(s)) * 1e3);
+  return `${pad2(h)}:${pad2(m)}:${pad2(secInt)},${pad3(ms)}`;
+}
+function dialogueText2(shot) {
+  const lines = shot.narrative?.dialogue?.lines;
+  if (!Array.isArray(lines) || !lines.length) return "";
+  const parts = [];
+  for (const l of lines) {
+    if (typeof l === "string" && l.trim()) parts.push(l.trim());
+    else if (l && typeof l === "object") {
+      const o = l;
+      const t = String(o.text ?? "").trim();
+      if (!t) continue;
+      const sp = String(o.speaker ?? "").trim();
+      parts.push(sp ? `${sp}\uFF1A${t}` : t);
+    }
+  }
+  return parts.join("\n");
+}
+function buildSrtCuesFromShots(shots) {
+  const cues = [];
+  let t = 0;
+  let idx = 1;
+  for (let i = 0; i < shots.length; i++) {
+    const s = shots[i];
+    if (!s) continue;
+    const dur = Number(s.narrative?.duration ?? s.duration ?? 3) || 3;
+    const text2 = dialogueText2(s);
+    if (text2) {
+      cues.push({
+        index: idx++,
+        startSec: t,
+        endSec: t + Math.max(0.4, dur * 0.85),
+        text: text2
+      });
+    }
+    t += dur;
+  }
+  return cues;
+}
+function buildSrtStubFromShots(shots) {
+  const cues = buildSrtCuesFromShots(shots);
+  if (!cues.length) {
+    return "1\n00:00:00,000 --> 00:00:00,040\n[TOONFLOW SRT STUB \u2014 no dialogue cues]\n\n";
+  }
+  const blocks = cues.map((c) => {
+    return `${c.index}
+${formatSrtTimestamp(c.startSec)} --> ${formatSrtTimestamp(c.endSec)}
+${c.text}
+`;
+  });
+  return `${blocks.join("\n")}`;
+}
+var init_srtStubFromShots = __esm({
+  "src/ruleEngine/compilers/srtStubFromShots.ts"() {
+    "use strict";
+  }
+});
+
+// src/ruleEngine/packager/zPackager.ts
+var zPackager_exports = {};
+__export(zPackager_exports, {
+  buildZ107: () => buildZ107,
+  buildZ108: () => buildZ108,
+  buildZ109: () => buildZ109,
+  buildZ110: () => buildZ110,
+  exportPackage: () => exportPackage
+});
+function buildZ107(pkg) {
+  return { episodeId: pkg.scriptId, shots: pkg.shots.length, meta: pkg.scriptMeta };
+}
+function buildZ108(pkg) {
+  return {
+    scriptId: pkg.scriptId,
+    prompts: pkg.shots.map((s) => ({
+      shotId: s.id,
+      image: s.generation?.compiled?.image,
+      video: s.generation?.compiled?.video,
+      audio: s.generation?.compiled?.audio
+    }))
+  };
+}
+function buildZ109(pkg) {
+  return {
+    tracks: {
+      video: pkg.shots.map((s, i) => ({
+        shotId: s.id,
+        index: i,
+        duration: s.narrative?.duration
+      })),
+      audio: pkg.shots.map((s) => ({
+        shotId: s.id,
+        sfx: s.narrative?.sound?.sfx,
+        bgm: s.narrative?.sound?.bgm
+      })),
+      subtitle: pkg.shots.filter((s) => s.narrative?.dialogue?.lines).map((s) => ({
+        shotId: s.id,
+        text: s.narrative?.dialogue?.lines,
+        type: s.narrative?.dialogue?.type
+      }))
+    }
+  };
+}
+function buildZ110(pkg) {
+  const shotRecords = (pkg.shots ?? []).map((s) => s);
+  const timeline = buildZ110TimelineTransitions(shotRecords);
+  const durationsSec = shotRecords.map((s) => {
+    const n = s.narrative?.duration;
+    return Number(n ?? s.duration ?? 3) || 3;
+  });
+  const title = `Toonflow ${String(pkg.scriptId ?? "episode")}`;
+  const edlStub = buildEdlStubFromTransitions({
+    title,
+    transitions: timeline.transitions,
+    durationsSec
+  });
+  const fcpXmlStub = buildFcpXmlStubFromTransitions({
+    title,
+    transitions: timeline.transitions,
+    durationsSec
+  });
+  const premiereXmlStub = buildPremiereXmlStubFromTransitions({
+    title,
+    transitions: timeline.transitions,
+    durationsSec
+  });
+  const otioStub = buildOtioStubFromTransitions({
+    title,
+    transitions: timeline.transitions,
+    durationsSec
+  });
+  const resolveXmlStub = buildResolveXmlStubFromTransitions({
+    title,
+    transitions: timeline.transitions,
+    durationsSec
+  });
+  const axisAudit = buildZ110AxisAudit(shotRecords);
+  const framingAudit = buildZ110FramingAudit(shotRecords);
+  const srtStub = buildSrtStubFromShots(shotRecords);
+  const z110Partial = {
+    timeline: { transitions: timeline.transitions, axisAudit, framingAudit },
+    edlStub,
+    fcpXmlStub,
+    premiereXmlStub,
+    otioStub,
+    resolveXmlStub,
+    srtStub
+  };
+  const handoffManifestObj = buildZ110HandoffManifest({
+    z110: z110Partial,
+    scriptId: pkg.scriptId
+  });
+  const handoffManifest = stringifyZ110HandoffManifest(handoffManifestObj);
+  return {
+    preview: buildZ109(pkg),
+    timeline: { transitions: timeline.transitions, axisAudit, framingAudit },
+    edlStub,
+    fcpXmlStub,
+    premiereXmlStub,
+    otioStub,
+    resolveXmlStub,
+    srtStub,
+    handoffManifest,
+    exportReady: false,
+    nleFormat: timeline.nleFormat,
+    note: "Wave-17 stubs + axis/framing audit + SRT \u2014 not production NLE / not CV 180"
+  };
+}
+function exportPackage(pkg) {
+  const Z110 = buildZ110(pkg);
+  return {
+    Z107: buildZ107(pkg),
+    Z108: buildZ108(pkg),
+    Z109: buildZ109(pkg),
+    Z110,
+    handoff: {
+      transitionCount: Z110.timeline.transitions.length,
+      hasEdl: Boolean(Z110.edlStub),
+      hasFcpXml: Boolean(Z110.fcpXmlStub),
+      hasPremiereXml: Boolean(Z110.premiereXmlStub),
+      hasOtio: Boolean(Z110.otioStub && Z110.otioStub.includes("OTIO_SCHEMA")),
+      hasResolveXml: Boolean(Z110.resolveXmlStub && Z110.resolveXmlStub.includes("resolveProject")),
+      hasManifest: Boolean(Z110.handoffManifest && String(Z110.handoffManifest).includes("formats")),
+      hasSrt: Boolean(Z110.srtStub && String(Z110.srtStub).length > 12),
+      axisPairFindings: Number(Z110.timeline.axisAudit?.pairCount ?? 0),
+      framingTight: Number(
+        (Z110.timeline.framingAudit?.headroomTight ?? 0) + (Z110.timeline.framingAudit?.lookingRoomTight ?? 0)
+      ),
+      exportReady: false,
+      nleFormat: Z110.nleFormat
+    }
+  };
+}
+var init_zPackager = __esm({
+  "src/ruleEngine/packager/zPackager.ts"() {
+    "use strict";
+    init_z110TimelineTransitions();
+    init_edlStubFromTransitions();
+    init_fcpXmlStubFromTransitions();
+    init_premiereXmlStubFromTransitions();
+    init_otioStubFromTransitions();
+    init_resolveXmlStubFromTransitions();
+    init_z110AxisAudit();
+    init_z110HandoffManifest();
+    init_z110FramingAudit();
+    init_srtStubFromShots();
+  }
+});
+
+// src/ruleEngine/exportGate.ts
+var exportGate_exports = {};
+__export(exportGate_exports, {
+  ExportGateBlockError: () => ExportGateBlockError,
+  assertExportAllowed: () => assertExportAllowed,
+  buildAggregatedChatRepairText: () => buildAggregatedChatRepairText,
+  buildExportPreviewStatusLine: () => buildExportPreviewStatusLine,
+  classifyBlockId: () => classifyBlockId,
+  filterAuthorMustFixIds: () => filterAuthorMustFixIds,
+  formatExportGateBlockPayload: () => formatExportGateBlockPayload,
+  isAuthorMustFixId: () => isAuthorMustFixId,
+  runExportGate: () => runExportGate
+});
+function loadRepairHints2(ids) {
+  const catalog = readFixtureJson("repair_hint_catalog.json", { hints: [] });
+  const idSet = new Set(ids);
+  return (catalog.hints ?? []).filter(
+    (h) => idSet.has(h.ruleId) || idSet.has(h.id) || h.qpId && idSet.has(h.qpId) || (h.checkIds?.some((c) => idSet.has(c)) ?? false)
+  ).map((h) => ({ id: h.id, chatTemplate: h.chatTemplate, ruleId: h.ruleId }));
+}
+function aggregateRepairHints(inspected, designFindings, fieldWalk) {
+  const ids = /* @__PURE__ */ new Set();
+  for (const c of [
+    ...inspected.closureChecks?.dc ?? [],
+    ...inspected.closureChecks?.pc ?? [],
+    ...inspected.closureChecks?.gc ?? [],
+    ...inspected.closureChecks?.ic ?? []
+  ]) {
+    if (!c.passed && c.id) ids.add(c.id);
+  }
+  for (const i of inspected.qualityGate?.issues ?? []) {
+    if (i.id) ids.add(i.id);
+  }
+  for (const g of inspected.chatPromptGaps ?? []) {
+    if (g.id) ids.add(g.id);
+  }
+  for (const f of designFindings) {
+    ids.add(f.id);
+  }
+  for (const f of fieldWalk) {
+    ids.add(f.id);
+  }
+  const fromInspect = inspected.repairHints ?? [];
+  const loaded = loadRepairHints2([...ids]);
+  const byId2 = /* @__PURE__ */ new Map();
+  for (const h of [...fromInspect, ...loaded]) {
+    if (!byId2.has(h.id)) byId2.set(h.id, h);
+  }
+  return [...byId2.values()];
+}
+function loadRepairLayerSets() {
+  try {
+    const matrix = readFixtureJson("semantic_gate_dual_track_matrix.json", {});
+    const untilClearAuto = new Set(
+      (matrix.importSalvageRegistry ?? []).filter(
+        (e) => e.untilClear === true && e.confirmOnly !== true && e.ruleId && e.ruleId !== "DEX-QP-02"
+      ).map((e) => String(e.ruleId))
+    );
+    untilClearAuto.add("FALSE_GREEN_SELFCHECK");
+    untilClearAuto.add("DG-CAM-FIT-FALSE-GREEN");
+    untilClearAuto.add("DG-NAR-SELFCHECK");
+    untilClearAuto.add("DEX-VID-VOICE-MODE");
+    untilClearAuto.add("DEX-VID-PSEUDO-LINE");
+    untilClearAuto.add("DEX-VID-BEAT-DUR");
+    untilClearAuto.add("DEX-VID-MOTION-VERB");
+    untilClearAuto.add("DEX-DUP-VD");
+    const mustEdit = /* @__PURE__ */ new Set([...matrix.mustEditBlockIds ?? [], ...DEFAULT_MUST_EDIT]);
+    for (const id of untilClearAuto) mustEdit.delete(id);
+    return {
+      mustEdit,
+      autoAdapt: new Set(
+        [...matrix.autoAdaptBlockIds ?? [], ...DEFAULT_AUTO_ADAPT, ...untilClearAuto].filter(
+          (id) => id !== "NAR-14" && id !== "DEX-VIS-SPLIT"
+        )
+      ),
+      untilClearAuto
+    };
+  } catch {
+    return { mustEdit: DEFAULT_MUST_EDIT, autoAdapt: DEFAULT_AUTO_ADAPT, untilClearAuto: DEFAULT_AUTO_ADAPT };
+  }
+}
+function classifyBlockId(id, layers, ctx) {
+  if (id === "NAR-14" || id.startsWith("NAR-14")) {
+    if (ctx?.nar14Class === "auto") return "auto";
+    return "must";
+  }
+  if (id === "LIP-01" || id === "PR-09" || id === "DEX-LIP-SPLIT") {
+    if (ctx?.lipClass === "auto") return "auto";
+    if (ctx?.lipClass === "must" || ctx?.lipMustPresent) return "must";
+    if (layers.untilClearAuto?.has(id) || layers.autoAdapt.has(id)) return "auto";
+    return "must";
+  }
+  if (id === "DFW-DURATION") {
+    if (ctx?.lipMustPresent) return "must";
+    return "auto";
+  }
+  if (id === "DEX-VIS-SPLIT") return "must";
+  if (id === "DEX-LITERARY-STALE") return "must";
+  if (id === "DEX-QP-02" || id === "QP-02") return "must";
+  if (layers.untilClearAuto?.has(id) || layers.autoAdapt.has(id)) return "auto";
+  if (layers.mustEdit.has(id)) return "must";
+  if (id.startsWith("DFW-") || id.startsWith("MOD-")) return "auto";
+  if (/^(DG-.*FALSE-GREEN|.*SELFCHECK)/i.test(id)) return "auto";
+  return "other";
+}
+function isAuthorMustFixId(id, ctx) {
+  const layers = loadRepairLayerSets();
+  return classifyBlockId(id, layers, ctx) === "must";
+}
+function filterAuthorMustFixIds(ids, ctx) {
+  const layers = loadRepairLayerSets();
+  return [...new Set(ids)].filter((id) => classifyBlockId(id, layers, ctx) === "must");
+}
+function buildAggregatedChatRepairText(hints, blockIds, missingSummary, blocks, opts) {
+  const layers = loadRepairLayerSets();
+  const nar14Class = classifyNar14ForChatRepair({
+    planLines: opts?.planLines,
+    shots: opts?.shots,
+    blockHasNar14: blockIds.some((id) => id === "NAR-14" || id.startsWith("NAR-14"))
+  });
+  const lipDetail = classifyLipForChatRepairDetailed({
+    shots: opts?.shots,
+    blockHasLip01: blockIds.some((id) => id === "LIP-01" || id === "PR-09" || id === "DEX-LIP-SPLIT")
+  });
+  const lipClass = lipDetail.pack;
+  const lipMustPresent = lipDetail.mustShotIndexes.length > 0;
+  const lipRaiseOnly = lipDetail.raiseShotIndexes.length > 0 && !lipMustPresent;
+  const mustPending = [];
+  const autoPending = [];
+  const clearedSet = new Set(opts?.autoClosedClearedIds ?? []);
+  for (const id of [...new Set(blockIds)]) {
+    if (clearedSet.has(id)) continue;
+    const kind = classifyBlockId(id, layers, {
+      nar14Class,
+      lipClass,
+      lipMustPresent,
+      lipRaiseOnly
+    });
+    if (kind === "must") mustPending.push(id);
+    else autoPending.push(id);
+  }
+  const lines = [
+    "\u3010\u95ED\u73AF\u4FEE\u590D\u6E05\u5355 \u2014 \u8BF7\u6309\u9879\u4FEE\u6539 JSON \u5B57\u6BB5\uFF0C\u52FF\u53EA\u6539 audit \u81EA\u62A5 / modalityPromptAudit\u3011",
+    `\u5F85\u5904\u7406\u89C4\u5219\uFF1A${mustPending.join(", ") || "\uFF08\u65E0\u987B\u624B\u6539 BLOCK\uFF09"}`,
+    autoPending.length ? `\u670D\u52A1\u7AEF untilClear / \u81EA\u52A8\u9002\u914D\uFF1A${autoPending.join(", ")}\uFF08\u52FF\u624B\u6539\u81EA\u62A5\u5B57\u6BB5\uFF09` : "",
+    ""
+  ].filter((l, i, arr) => !(l === "" && arr[i - 1] === ""));
+  if (lipDetail.mixed) {
+    lines.push(
+      `\u3010LIP \u9010\u955C\u3011\u8D85\u9650/\u591A\u53E5\u987B Confirm\uFF1A\u955C ${lipDetail.mustShotIndexes.join(",") || "\u2014"}\uFF1B\u53EF\u62AC\u77ED\u955C\u5E94\u7531\u8BBE\u8BA1\u62AC\u65F6\uFF08\u52FF\u4E0E DFW\u300C\u5BFC\u5165\u53EF\u6108\u300D\u6DF7\u79F0\uFF09\uFF1A\u955C ${lipDetail.raiseShotIndexes.join(",") || "\u2014"}`,
+      ""
+    );
+  } else if (lipRaiseOnly) {
+    lines.push(
+      "\u3010LIP \u62AC\u65F6\u3011\u77ED\u955C\u53EF\u62AC\uFF1A\u8BBE\u8BA1\u4FA7\u8C03 duration\uFF08autoClose/export \u4F1A\u62AC\uFF09\uFF1B\u5BFC\u5165\u4EC5\u515C\u5E95\u6108\uFF0C\u4E0D\u62E6\u5BFC\u5165\u3002",
+      ""
+    );
+  } else if (lipMustPresent) {
+    lines.push(
+      "\u3010\u53CD\u63A8\u8BBE\u8BA1 \xB7 \u8D85\u9650/\u591A\u53E5\u53E3\u578B\u3011\u53F0\u8BCD\u6240\u9700 > \u5382\u5546\u4E0A\u9650\u6216\u540C\u955C\u591A\u53E5\uFF1A\u8BBE\u8BA1\u4E0D\u8FC7\u7EFF\uFF0C\u987B SB Confirm \u8BED\u4E49\u62C6\uFF08confirmClusterSplit\uFF09\u6216\u6539\u77ED\u3002\u5BFC\u5165\u4E0D\u9759\u9ED8\u540C\u6587\u62C6\u3001\u4EA6\u4E0D\u56E0\u672C\u9879\u786C\u62E6\uFF08importOk\u2260designExitPass\uFF09\u3002",
+      ""
+    );
+  }
+  if (blockIds.includes("DEX-LITERARY-STALE")) {
+    lines.push(
+      "\u3010\u987B\u91CD\u8BBE\u8BA1\u3011\u516C\u5F0F\u5DF2\u66F4\u6362\u3002\u8BF7\u6309\u65B0\u89C4\u8303\u91CD\u8D70\u8BBE\u8BA1\uFF0C\u52FF\u53EA\u6539\u65E7\u5B57\u6BB5\u3002",
+      "\u9009\u9879\uFF1AA \u6309\u65B0\u89C4\u8303\u91CD\u8BBE\u8BA1\uFF08\u63A8\u8350\uFF09 / B \u4FDD\u7559\u65E7\u7A3F\u7EE7\u7EED\u8865\u6D1E\uFF08\u987B acknowledgeKeepLegacy\uFF09",
+      ""
+    );
+  }
+  if (opts?.designExitIncomplete) {
+    if (mustPending.length === 0) {
+      lines.push(
+        "\u3010\u53EF\u5BFC\u5165 \xB7 \u8BBE\u8BA1\u672A\u5B8C\u5168\u95ED\u5408\u3011\u5269\u4F59 CAM-FIT \u7B49\u53EF\u7531\u670D\u52A1\u7AEF\u8BCA\u6108\uFF1B\u65F6\u957F\u77ED\u955C\u987B\u8BBE\u8BA1\u4FA7\u62AC\u65F6\u6216 Confirm\u3002importOk\u2260designExitPass\u3002\u7CBE\u54C1\u8BF7\u56DE SB Confirm/\u5199\u6743\u5A01\u53CC\u955C\u5F62\u540E\u518D export\u3002",
+        ""
+      );
+    } else {
+      lines.push(
+        "\u3010\u8BBE\u8BA1\u672A\u95ED\u5408 \xB7 \u53CD\u63A8 SB/W3\u3011\u672C\u9879\u5C5E\u8BBE\u8BA1\u5951\u7EA6\uFF08\u975E\u5BFC\u5165\u53E3\u786C\u62E6\uFF09\u3002\u8BF7 Confirm/\u6539\u77ED\u540E forwardReentry \u518D export\uFF1B\u5BFC\u5165\u53EA\u6108\u53EF\u6108\u9879\uFF0CimportOk\u2260designExitPass\u3002",
+        ""
+      );
+    }
+  }
+  if (blockIds.includes("NAR-15") || blocks?.some((b) => b.id === "NAR-15")) {
+    lines.push(
+      "\u3010NAR-15\u3011\u4ECD\u6709 emotion_hit \u7F3A reactionAction\uFF08\u670D\u52A1\u7AEF\u5DF2\u5C1D\u8BD5\u5360\u4F4D RA\uFF1B\u82E5\u672C\u6761\u4ECD\u5728=\u5199\u56DE\u5931\u8D25\u6216\u9501\u7A3F\u8DEF\u5F84\u672A\u89E6\u8FBE\uFF09\u3002\u987B\u5728 dialoguePlan.lines \u540C\u5199\u542C\u8005\u53EF\u89C1\u53CD\u5E94\uFF0C\u7981\u53EA\u6539 narrativeSelfcheck.passed\u3002",
+      ""
+    );
+  } else if (opts?.autoClosedClearedIds?.includes("NAR-15")) {
+    lines.push(
+      "\u3010NAR-15\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1A\u670D\u52A1\u7AEF\u5DF2\u8865\u5360\u4F4D reactionAction\uFF08raSource=heal_placeholder\uFF09\u3002\u82E5\u8981\u7CBE\u54C1\u53CD\u5E94\u8BF7\u56DE W3 \u624B\u6539\u540E\u518D forwardReentry\u3002"
+    );
+    if (mustPending.some((id) => id === "LIP-01" || id === "DEX-LIP-SPLIT" || id === "DFW-DURATION")) {
+      lines.push("\u6CE8\u610F\uFF1ANAR \u95ED\u5408\u2260\u8BBE\u8BA1\u5B8C\u6210\uFF1B\u4ECD\u6709\u53E3\u578B\u8D85\u9650\u987B Confirm \u8BED\u4E49\u62C6\uFF08\u6216\u53EF\u62AC\u77ED\u955C\u987B\u8BBE\u8BA1\u62AC\u65F6\uFF09\u3002");
+    }
+    lines.push("");
+  }
+  if (blockIds.includes("DEX-SHOT-INTENT") || blocks?.some((b) => b.id === "DEX-SHOT-INTENT")) {
+    lines.push(
+      "\u3010DEX-SHOT-INTENT\u3011shotDesignIntent \u4ECD\u7F3A picture/durationSec\uFF08\u670D\u52A1\u7AEF\u5DF2\u5C1D\u8BD5\u4ECE peak/\u5206\u955C VD \u6D3E\u751F\uFF1B\u82E5\u672C\u6761\u4ECD\u5728=\u65E0\u955C\u53EF\u6D3E\u751F\u6216\u9501\u7A3F\u672A\u5199\u56DE\uFF09\u3002reverseTarget=W3\u3002",
+      ""
+    );
+  } else if (opts?.autoClosedClearedIds?.includes("DEX-SHOT-INTENT")) {
+    lines.push(
+      "\u3010DEX-SHOT-INTENT\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1A\u5DF2\u4ECE peakLedger \u6216\u5206\u955C VD/\u65F6\u957F\u8865 sidecar intents\u3002",
+      ""
+    );
+  }
+  if (blockIds.includes("DEX-PROP-CONT") || blocks?.some((b) => b.id === "DEX-PROP-CONT")) {
+    lines.push(
+      "\u3010DEX-PROP-CONT\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1Adeclare-only propState \u987A\u5EF6\u5DF2\u5199\u5165\uFF08\u672A\u53D1\u660E VD\uFF09\u3002\u7CBE\u54C1\u4EA4\u5F85\u53EF\u56DE SB\u3002",
+      ""
+    );
+  } else if (opts?.autoClosedClearedIds?.includes("DEX-PROP-CONT")) {
+    lines.push(
+      "\u3010DEX-PROP-CONT\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1A\u5DF2 declare-only \u5199\u5165 propState \u987A\u5EF6\uFF08\u672A\u53D1\u660E VD \u9053\u5177\uFF09\u3002\u7CBE\u54C1\u4EA4\u5F85\u53EF\u56DE SB\u3002",
+      ""
+    );
+  }
+  if (blockIds.includes("DEX-INTENT-PIC") || blocks?.some((b) => b.id === "DEX-INTENT-PIC")) {
+    lines.push(
+      "\u3010DEX-INTENT-PIC\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1Apicture\u2194VD \u540C\u6838\uFF08sidecar 1:1\uFF09\u3002",
+      ""
+    );
+  } else if (opts?.autoClosedClearedIds?.includes("DEX-INTENT-PIC")) {
+    lines.push(
+      "\u3010DEX-INTENT-PIC\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1A\u5DF2\u5C06 shotDesignIntent.picture \u4E0E visualDescription \u540C\u6838\u3002",
+      ""
+    );
+  }
+  if (blockIds.includes("DG-CAM-FIT-FALSE-GREEN") || blockIds.includes("FALSE_GREEN_SELFCHECK") || blocks?.some((b) => b.id === "DG-CAM-FIT-FALSE-GREEN" || b.id === "FALSE_GREEN_SELFCHECK")) {
+    lines.push(
+      "\u3010\u5047\u7EFF\u6D3E\u751F\u3011DG-CAM-FIT-FALSE-GREEN / FALSE_GREEN_SELFCHECK\uFF1A\u670D\u52A1\u7AEF\u5DF2\u8986\u5199 narrativeSelfcheck.passed=false\uFF1B\u6839\u56E0\u8D70 DEX-CAM-FIT untilClear / Confirm \u62C6\uFF0C\u52FF\u624B\u6539\u81EA\u62A5\u5B57\u6BB5\u3002",
+      ""
+    );
+  }
+  if (blockIds.includes("DEX-ASSET-CREF") || blocks?.some((b) => b.id === "DEX-ASSET-CREF")) {
+    const crefMsgs = (blocks ?? []).filter((b) => b.id === "DEX-ASSET-CREF").map((b) => b.message);
+    const needAs = crefMsgs.some((m) => /缺定妆图|needsAsStill|已绑码缺/.test(m));
+    lines.push(
+      needAs ? "\u3010DEX-ASSET-CREF\u3011\u7F3A\u5B9A\u5986\u771F\u56FE\uFF1A\u8BBE\u8BA1\u671F\u53EF stub \u5EF6\u671F\uFF1B\u56DE AS \u51FA\u56FE\u540E\u518D\u70E7\u3002\u5BFC\u5165\u4E0D\u53D1\u660E\u5047 --cref\u3002" : "\u3010DEX-ASSET-CREF\u3011\u51FA\u8138\u672A\u5B8C\u6210\u8BBE\u8BA1\u7ED1\uFF1A\u670D\u52A1\u7AEF\u5C06\u5C1D\u8BD5 stub+assetCrefPlan\uFF1B\u4ECD\u7EA2\u5219\u56DE SB/AS\u3002",
+      ""
+    );
+  } else if (opts?.autoClosedClearedIds?.includes("DEX-ASSET-CREF")) {
+    lines.push(
+      "\u3010DEX-ASSET-CREF\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF08\u8BBE\u8BA1\u671F\uFF09\uFF1A\u5DF2 stub/\u7ED1 charCodes+assetCrefPlan\uFF1B\u5B9A\u5986\u771F\u56FE\u5EF6\u671F AS \u8865\uFF0C\u751F\u6210\u524D\u4ECD\u987B\u5E26\u56FE\u3002",
+      ""
+    );
+  }
+  if (autoPending.length) {
+    lines.push(
+      `\u3010\u670D\u52A1\u7AEF\u5C06\u6108 \xB7 \u52FF\u6539 JSON\u3011${autoPending.join(", ")} \u2014 \u542B DEX-CAM-FIT \u7B49 auto\uFF1B\u52FF\u624B\u62C6\u955C\u53F7/\u5220 reactionAction\uFF1B\u4E0B\u6B21\u4ECD\u987B\u5199\u6743\u5A01\u53CC\u955C\u5F62`,
+      ""
+    );
+  }
+  const salvage = opts?.shapeSalvageLog ?? [];
+  const struct = salvage.filter((e) => /SH-JSON-BRACE|SH-HOIST-/.test(e.ruleId));
+  if (struct.length) {
+    const ids = [...new Set(struct.map((e) => e.ruleId))].join("\uFF0C");
+    lines.push(
+      `\u3010\u5DF2\u7ED3\u6784 salvage\u3011${ids} \u2014 \u4E0B\u5217\u4E3A\u5269\u4F59\u771F\u95F8\uFF1B\u52FF\u518D\u628A preDesignPack/characterDesign \u53EA\u5199\u8FDB planData\uFF0C\u52FF\u56E0\u5047\u7A7A\u96C6\u91CD\u5199\u6574\u5305\u3002`,
+      ""
+    );
+  }
+  if (blockIds.includes("JSON_INCOMPLETE")) {
+    lines.push(
+      "\u3010\u4E3B\u56E0\xB7JSON \u4E0D\u5B8C\u6574\u3011\u89E3\u6790\u5931\u8D25\uFF08\u622A\u65AD/\u4E2D\u6BB5\u635F\u574F\uFF09\u3002\u7981\u6B62\u5F53\u6210\u300C\u96C6\u65E0\u53EF\u7528\u5206\u955C / DG-EMPTY\u300D\u3002\u8BF7\u91CD\u51FA\u53EF JSON.parse \u7684\u5B8C\u6574\u6839\u5BF9\u8C61\u3002",
+      ""
+    );
+  }
+  const orphanBlocks = (blocks ?? []).filter((b) => /孤儿场|场镜基数|幽灵场/.test(b.message));
+  if (orphanBlocks.length) {
+    lines.push("\u3010\u4E3B\u56E0\xB7\u7ED3\u6784\u3011\u52FF\u53EA\u8865\u5176\u4ED6\u573A\u7684 fxPrompt\uFF1A");
+    for (const b of orphanBlocks.slice(0, 8)) {
+      lines.push(`- ${b.id}: ${b.message}`);
+    }
+    lines.push("");
+  }
+  const healInducedShots = (opts?.shots ?? []).filter((s) => s._healInducedVd || /听者反应特写/.test(String(s.visualDescription ?? "")));
+  const qp02Blocks = (blocks ?? []).filter((b) => b.id === "QP-02" || /too_short|画面描述过短/.test(b.message));
+  if (qp02Blocks.length && healInducedShots.length) {
+    lines.push(
+      "\u3010\u81EA\u6108\u81EA\u4F24 \xB7 \u975E\u6587\u5B66\u7A7A\u6D1E\u3011\u4E0B\u5217 QP-02 \u7591\u4F3C IRD/lip \u62C6\u955C\u77ED\u5360\u4F4D\uFF1B\u8BF7 Confirm/\u91CD\u5207\u7236 VD\uFF0C\u52FF\u6574\u5305\u91CD\u5199\uFF1A"
+    );
+    for (const b of qp02Blocks.slice(0, 8)) {
+      const loc = b.shotIndex != null ? `\u955C${b.shotIndex}` : b.field?.trim() ? b.field : "";
+      lines.push(`- ${b.id}${loc ? ` (${loc})` : ""}: ${b.message}`);
+    }
+    lines.push("[RH-QP-02-HEAL] \u670D\u52A1\u7AEF\u5E94\u91CD\u5207\u6216 Confirm\uFF1B\u7981\u6B62\u53EA\u6539 audit / \u6574\u96C6\u91CD\u8BBE\u8BA1\u3002", "");
+  }
+  const mustBlocks = [];
+  const autoBlocks = [];
+  const otherBlocks = [];
+  const lipCtx = { nar14Class, lipClass, lipMustPresent, lipRaiseOnly };
+  for (const b of blocks ?? []) {
+    if ((b.id === "DFW-DURATION" || b.id === "LIP-01" || b.id === "PR-09" || b.id === "DEX-LIP-SPLIT") && b.shotIndex != null && opts?.shots?.length) {
+      const p3 = detectLipSplitPressure(
+        opts.shots.find((s) => Number(s.shotIndex) === Number(b.shotIndex)) ?? {}
+      );
+      if (p3.mustConfirm) {
+        mustBlocks.push(b);
+        continue;
+      }
+      if (p3.canSilentRaise && (b.id === "DFW-DURATION" || b.id === "LIP-01")) {
+        mustBlocks.push(b);
+        continue;
+      }
+    }
+    const kind = classifyBlockId(b.id, layers, lipCtx);
+    if (kind === "must") mustBlocks.push(b);
+    else if (kind === "auto") autoBlocks.push(b);
+    else otherBlocks.push(b);
+  }
+  const { dedupeChatRepairBlocks: dedupeChatRepairBlocks2 } = (init_planFromBundleForDesignExit(), __toCommonJS(planFromBundleForDesignExit_exports));
+  let mustDeduped = dedupeChatRepairBlocks2(mustBlocks);
+  const hasDc01 = mustDeduped.some((b) => b.id === "DC-01" || b.id === "DC-01-EXTRA") || blockIds.includes("DC-01") || blockIds.includes("DC-01-EXTRA");
+  const dc13Secondary = hasDc01 ? mustDeduped.filter((b) => b.id === "DC-13") : [];
+  if (dc13Secondary.length) {
+    mustDeduped = mustDeduped.filter((b) => b.id !== "DC-13");
+  }
+  const pushBlockSection = (title, list2) => {
+    if (!list2.length) return;
+    lines.push(title);
+    for (const b of list2.slice(0, CHAT_REPAIR_BLOCK_CAP)) {
+      const loc = b.shotIndex != null ? `\u955C${b.shotIndex}` : b.field?.trim() ? b.field : "";
+      lines.push(`- ${b.id}${loc ? ` (${loc})` : ""}: ${b.message}`);
+    }
+    if (list2.length > CHAT_REPAIR_BLOCK_CAP) {
+      lines.push(`\u2026\u53E6\u6709 ${list2.length - CHAT_REPAIR_BLOCK_CAP} \u9879`);
+    }
+    lines.push("");
+  };
+  pushBlockSection(
+    "\u3010\u987B\u624B\u6539 \xB7 Chat \u5951\u7EA6\u3011NAR \u6B8B\u53E5/\u91CD\u8BBE\u8BA1\u3001DC\u3001\u771F\u7F3A F0\xB7\u6563\u6587/\u5047 audit\u3001\u8D85\u9650\u53E3\u578B Confirm\u3001\u8BBE\u8BA1\u4FA7\u62AC\u65F6 \u2014 \u5BFC\u5165\u4E0D\u4F1A\u66FF\u4F60\u7F16\u9020\uFF1B\u6B8B\u53E5\u987B\u6539\u77ED/\u663E\u5F0F splitHint/Confirm \u62C6\u955C",
+    mustDeduped
+  );
+  if (dc13Secondary.length) {
+    pushBlockSection("\u3010\u9644\u4ECE \xB7 \u968F DC-01 \u4FEE\u3011", dc13Secondary);
+  }
+  pushBlockSection(
+    "\u3010\u5BFC\u5165\u5C06\u81EA\u52A8\u9002\u914D \xB7 \u53EF\u4E0D\u624B\u6539 / \u52FF\u6539 JSON\u3011\u7A7A prompt / sceneKey / \u5F62\u6001 salvage / DEX-CAM-FIT \u667A\u80FD\u62C6\uFF08untilClear\uFF09\uFF1B\u65F6\u957F\u4EC5\u5386\u53F2\u6B8B\u7559\u515C\u5E95\uFF08\u8BBE\u8BA1\u4E3B\u8D23\u5DF2\u62AC\uFF09\uFF1BNAR-14 \u4EC5\u6807\u70B9 A \u62C6\u51C0 \u2014 \u6B8B\u53E5\u2260\u53EF\u4E0D\u624B\u6539",
+    autoBlocks
+  );
+  pushBlockSection("\u3010\u5176\u4ED6 BLOCK\u3011", otherBlocks);
+  if ((blocks?.length ?? 0) > 0 && autoBlocks.length === 0) {
+    lines.push(
+      "\u3010\u5BFC\u5165\u5C06\u81EA\u52A8\u9002\u914D \xB7 \u53EF\u4E0D\u624B\u6539\u3011\uFF08\u672C\u5305\u6682\u65E0\u6B64\u7C7B BLOCK\uFF1B\u82E5\u4EC5\u6709 duration/\u7A7A prompt/sceneKey\uFF0CdryRun\xB7\u843D\u5E93\u4F1A\u4FEE\uFF09",
+      ""
+    );
+  }
+  if ((blocks?.length ?? 0) > 0 && mustDeduped.length === 0 && dc13Secondary.length === 0) {
+    lines.push("\u3010\u987B\u624B\u6539 \xB7 Chat \u5951\u7EA6\u3011\uFF08\u672C\u5305\u6682\u65E0 NAR/DC \u7B49\u987B\u624B\u6539\u9879\uFF09", "");
+  }
+  if (missingSummary?.trim()) {
+    const missLines = missingSummary.trim().split("\n");
+    const autoMiss = missLines.filter((l) => {
+      if (/DFW-DURATION|duration/i.test(l) && (lipMustPresent || lipRaiseOnly)) return false;
+      return /MOD-03|MOD-IMG|MOD-VID|DFW-DURATION|audioPrompt|imagePrompt|videoPrompt|duration/i.test(l);
+    });
+    const mustMiss = missLines.filter((l) => !autoMiss.includes(l));
+    if (mustMiss.length) {
+      lines.push("\u3010\u7F3A\u5931\u5B57\u6BB5 \xB7 \u987B\u624B\u6539\u3011", ...mustMiss, "");
+    }
+    if (autoMiss.length) {
+      lines.push("\u3010\u7F3A\u5931\u5B57\u6BB5 \xB7 \u5BFC\u5165\u5C06\u81EA\u52A8\u9002\u914D\u3011", ...autoMiss, "");
+    }
+  }
+  const blockSet = new Set(blockIds);
+  const hintPrimary = [];
+  const hintSecondary = [];
+  for (const h of hints) {
+    const hit = blockSet.size === 0 || blockSet.has(h.id) || (h.ruleId ? blockSet.has(h.ruleId) : false) || blockSet.has(String(h.id).replace(/^RH-/, "")) || [...blockSet].some((bid) => h.id.includes(bid) || h.ruleId && h.ruleId.includes(bid));
+    if (hit) hintPrimary.push(h);
+    else hintSecondary.push(h);
+  }
+  for (const h of hintPrimary) {
+    if (h.chatTemplate) lines.push(`[${h.id}] ${h.chatTemplate}`);
+  }
+  if (hintSecondary.length && blockSet.size > 0) {
+    lines.push("", "\u3010\u53C2\u8003 RH \xB7 \u975E\u672C\u5305\u4E3B\u56E0 BLOCK\u3011\u4E0B\u5217\u975E\u5F53\u524D\u5F85\u5904\u7406\u89C4\u5219\uFF0C\u52FF\u5F53\u4F5C\u672C\u5305\u5168\u7EA2\uFF1A");
+    for (const h of hintSecondary.slice(0, 4)) {
+      if (h.chatTemplate) lines.push(`[${h.id}] ${h.chatTemplate}`);
+    }
+  } else if (blockSet.size === 0) {
+    for (const h of hintSecondary) {
+      if (h.chatTemplate) lines.push(`[${h.id}] ${h.chatTemplate}`);
+    }
+  }
+  const deeplinkSec = formatDeeplinkSection(buildChatRepairDeeplinks(blockIds));
+  if (deeplinkSec) lines.push("", deeplinkSec);
+  const visBlocks = (blocks ?? []).filter((b) => /DEX-VIS|VIS-MULTI|VIS-BEAT|VIS-TAG|VIS-SYNC/i.test(b.id));
+  if (visBlocks.length || blockIds.some((id) => /DEX-VIS|VIS-MULTI|VIS-BEAT|VIS-TAG/i.test(id))) {
+    lines.push(
+      "",
+      "\u3010VisBeat\u3011DEX-VIS-SPLIT \u987B Confirm \u62C6\u955C\uFF08confirmClusterSplit|VisBeatConfirmBar\uFF09\uFF1BVIS-MULTI-BEAT \u9AD8\u7F6E\u4FE1\u7531\u670D\u52A1\u7AEF untilClear \u6269\uFF0C\u6B8B\u7559\u2192IRD-CONFIRM\uFF0C\u7981\u6B62\u53EA\u9760 suggestor \u9759\u9ED8\u62C6\u3001\u4EA6\u52FF\u4E00\u5F8B\u300C\u987B\u624B\u6539\u91CD\u8BBE\u8BA1\u300D\u3002",
+      "\u5141\u8BB8 visualBeatTags\uFF1Areveal,prop_insert,reaction,face_cu,establish,action,speak,os_vo",
+      "\u6DF1\u94FE\uFF1Atoonflow://stage/SB?trigger=visual_multi_beat \u2192 EN\uFF1BSuggestor \u4E0D\u5F97\u76F4\u63A5\u7ACB\u6CD5"
+    );
+    for (const b of visBlocks.slice(0, 6)) {
+      lines.push(`- ${b.id}: ${b.message}`);
+    }
+  }
+  const stillIds = [.../* @__PURE__ */ new Set([...blockIds, ...opts?.warnIds ?? []])].filter(
+    (id) => /DEX-STILL|STILL-FIRSTFRAME/i.test(id)
+  );
+  const stillWarns = (opts?.warnRows ?? []).filter((w) => /DEX-STILL|STILL-FIRSTFRAME/i.test(w.id));
+  if (stillIds.length || stillWarns.length) {
+    const pickTrigger = () => {
+      if (stillIds.includes("DEX-STILL-CU-CAST")) return "still_cu_cast";
+      if (stillIds.includes("DEX-STILL-ONEBEAT")) return "still_onebeat_multi";
+      if (stillIds.some((id) => /STILL-FIRSTFRAME-STALE|DEX-STILL-STALE/i.test(id))) return "still_firstframe_stale";
+      if (stillIds.some((id) => /STILL-FIRSTFRAME-WEAK|MISSING/i.test(id))) return "still_firstframe_weak";
+      if (stillIds.some((id) => /DIRTY|OS-NAME|FILLER|HAND/i.test(id))) return "dirty_still_prompt";
+      return "still_firstframe_dirty";
+    };
+    const trig = pickTrigger();
+    lines.push(
+      "",
+      "\u3010\u9759\u5E27 Identity \xB7 Chat \u987B\u6539\u3011DEX-STILL-*\uFF1A\u8BBE\u8BA1\u671F\u5F3A\u5951\u7EA6\uFF1B\u5BFC\u5165\u4E0D\u786C\u62E6\u3002\u4F18\u5148\u667A\u80FD\u62C6/Confirm\uFF0C\u7981\u6B62\u53EA regen\u3002",
+      `\u6DF1\u94FE\uFF1Atoonflow://stage/SB?trigger=${trig}`
+    );
+    for (const id of stillIds.slice(0, 8)) lines.push(`- ${id}`);
+    for (const w of stillWarns.slice(0, 6)) lines.push(`- ${w.id}: ${w.message}`);
+  }
+  lines.push(
+    "",
+    "\u987B\u624B\u6539\u9879\u6539\u6B63\u540E\u91CD\u65B0 exportGate\uFF1B\u4EC5\u81EA\u52A8\u9002\u914D\u9879\u53EF\u76F4\u63A5 dryRun/\u5BFC\u5165\u3002merge \u4FDD\u6301 preserveMedia\u3002\u56DE\u63A8\u821E\u53F0\u4EC5\u8DF3\u8F6C\uFF0C\u4E0D\u6539\u6570\u636E\u3002"
+  );
+  return lines.join("\n");
+}
+function buildExportPreviewStatusLine(input) {
+  const tier = input.tier ?? "T3";
+  const ids = [...new Set((input.blocks ?? []).map((b) => b.id))].slice(0, 8);
+  const salvageN = input.shapeSalvageLog?.length ?? 0;
+  const closed = (input.autoClosedClearedIds ?? []).filter(Boolean);
+  const closedNote = closed.length ? `\u5DF2\u81EA\u52A8\u95ED\u5408 ${closed.slice(0, 4).join(",")}` : "";
+  const deferred = (input.deferredStill ?? 0) > 0 ? `\u5B9A\u5986\u5EF6\u671F ${input.deferredStill}` : "";
+  const lipNote = input.lipConfirmRequired ? "\u53E3\u578B\u987BConfirm\u8BED\u4E49\u62C6" : "";
+  const litNote = input.litSmartSplit ? "\u6587\u5B66\u53CC\u63A5\u89E6\u5DF2\u667A\u80FD\u62C6" : input.litConfirmRequired ? input.litDebtCta ? `\u6587\u5B66\u503A\u987BConfirm\uFF1A${input.litDebtCta}` : "\u6587\u5B66\u503A\u987BConfirm\u62C6\u955C/\u589E\u5F3A" : "";
+  const dupNote = typeof input.illegalSameVdRatio === "number" && input.illegalSameVdRatio >= 0.2 ? `\u975E\u6CD5\u540C\u6587\u5360\u6BD4${Math.round(input.illegalSameVdRatio * 100)}%` : "";
+  const extrasBase = [closedNote, deferred, lipNote, litNote, dupNote].filter(Boolean);
+  if (input.exportAllowed) {
+    const head2 = input.litSmartSplit ? "\u53EF\u5BFC\u5165\xB7\u5DF2\u667A\u80FD\u62C6\u6587\u5B66\u503A" : input.litConfirmRequired ? "\u53EF\u5BFC\u5165\xB7\u6587\u5B66\u503A\u672A\u95ED\u5408" : input.designExitIncomplete ? "\u53EF\u5BFC\u5165\xB7\u672A\u5B8C\u5168\u95ED\u5408" : "\u53EF\u5BFC\u5165";
+    const extras = [...extrasBase, salvageN ? `\u5F62\u6001\u5DF2\u9002\u914D ${salvageN}` : ""].filter(Boolean).join(" \xB7 ");
+    return `\u9884\u89C8\u66F4\u65B0\u5B8C\u6210 \xB7 ${tier} \xB7 ${head2}${extras ? ` \xB7 ${extras}` : ""}`;
+  }
+  const literaryStale = ids.includes("DEX-LITERARY-STALE");
+  const head = literaryStale ? "\u987B\u91CD\u8BBE\u8BA1" : input.designExitIncomplete && ids.length === 0 ? "\u53EF\u5BFC\u5165\xB7\u672A\u5B8C\u5168\u95ED\u5408" : input.designExitIncomplete ? "\u8BBE\u8BA1\u672A\u95ED\u5408" : "\u963B\u65AD";
+  const rules = ids.length ? `\u89C4\u5219 ${ids.join(",")}` : input.designExitIncomplete ? "\u65E0\u786C BLOCK\xB7\u53EF dryRun" : "\u6709\u987B\u624B\u6539 BLOCK";
+  const mid = extrasBase.length ? ` \xB7 ${extrasBase.join(" \xB7 ")}` : "";
+  return `\u9884\u89C8\u66F4\u65B0\u5B8C\u6210 \xB7 ${tier} \xB7 ${head}${mid} \xB7 ${rules}\uFF08\u5F62\u6001\u9002\u914D\u2260\u5951\u7EA6\u5DF2\u4FEE\uFF09`;
+}
+function formatExportGateBlockPayload(result) {
+  const chatRepairText = result.chatRepairText || buildAggregatedChatRepairText(
+    result.repairHints,
+    result.closureSnapshot.blockIds,
+    result.missingFieldSummary,
+    result.blocks,
+    {
+      warnIds: result.closureSnapshot.warnIds,
+      warnRows: result.warns,
+      shapeSalvageLog: result.shapeSalvageLog,
+      designExitIncomplete: result.designExitIncomplete
+    }
+  );
+  return {
+    code: "EXPORT_GATE_BLOCK",
+    exportAllowed: false,
+    tier: result.tier,
+    blocks: result.blocks,
+    warns: result.warns,
+    repairHints: result.repairHints,
+    chatRepairText,
+    designExitIncomplete: result.designExitIncomplete,
+    previewStatusLine: result.previewStatusLine,
+    autoClosed: result.autoClosed,
+    missingFieldReport: result.missingFieldReport,
+    missingFieldSummary: result.missingFieldSummary,
+    closureSnapshot: result.closureSnapshot,
+    coverage: result.coverage,
+    fieldWalkGaps: result.fieldWalkGaps,
+    designFindings: result.designFindings,
+    shapeSalvageLog: result.shapeSalvageLog,
+    rePushPlan: result.inspected?.rePushPlan ?? []
+  };
+}
+function loadImportSalvageRegistry() {
+  try {
+    const matrix = readFixtureJson(
+      "semantic_gate_dual_track_matrix.json",
+      {}
+    );
+    return matrix.importSalvageRegistry ?? [];
+  } catch {
+    return [];
+  }
+}
+function importSalvageDemoteIds() {
+  return new Set(
+    loadImportSalvageRegistry().filter((e) => {
+      const soft = e.importSoftBanner === true;
+      if (soft) return true;
+      return e.demoteAfterHeal === true && e.untilClear !== true;
+    }).map((e) => e.ruleId)
+  );
+}
+function runExportGate(raw, opts = {}) {
+  try {
+    return runExportGateInner(raw, opts);
+  } catch (e) {
+    const { JsonIncompleteError: JsonIncompleteError2 } = (init_jsonBraceSalvage(), __toCommonJS(jsonBraceSalvage_exports));
+    if (e instanceof JsonIncompleteError2 || e?.code === "JSON_INCOMPLETE") {
+      const msg = e instanceof Error ? e.message : "JSON_INCOMPLETE";
+      const blocks = [{ id: "JSON_INCOMPLETE", message: msg, field: "$" }];
+      const repairHints = [
+        {
+          id: "RH-JSON-INCOMPLETE",
+          ruleId: "JSON_INCOMPLETE",
+          chatTemplate: "\u3010JSON_INCOMPLETE\u3011Bundle JSON \u622A\u65AD\u6216\u4E0D\u5B8C\u6574\uFF0C\u7981\u6B62\u778E\u8865\u4E2D\u6BB5\u3002\u8BF7\u91CD\u51FA\u5B8C\u6574\u53EF parse \u7684\u6839\u5BF9\u8C61\uFF08\u542B\u9876\u5C42 preDesignPack/characterDesign\uFF09\u3002\u52FF\u5F53\u4F5C DG-EMPTY\u3002"
+        }
+      ];
+      const emptyBundle = { preDesignPack: { shots: [] } };
+      return {
+        exportAllowed: false,
+        tier: "T1",
+        bundle: emptyBundle,
+        inspected: {
+          blocked: true,
+          tier: "T1",
+          rulePackVersion: "2.1.0",
+          qualityGate: { issues: [{ id: "JSON_INCOMPLETE", severity: "BLOCK", message: msg }] }
+        },
+        designFindings: [{ id: "JSON_INCOMPLETE", severity: "BLOCK", message: msg }],
+        integrityGaps: [],
+        fieldWalkGaps: [],
+        missingFieldReport: [],
+        missingFieldSummary: msg,
+        repairHints,
+        closureSnapshot: {
+          tier: "T1",
+          blocked: true,
+          blockIds: ["JSON_INCOMPLETE"],
+          warnIds: [],
+          checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+        },
+        coverage: { matrixTotal: 0, blocks: 1, warns: 0, softPatchEligible: 0 },
+        blocks,
+        warns: [],
+        shapeSalvageLog: [],
+        chatRepairText: buildAggregatedChatRepairText(repairHints, ["JSON_INCOMPLETE"], msg, blocks, {}),
+        designExitIncomplete: false,
+        previewStatusLine: buildExportPreviewStatusLine({
+          exportAllowed: false,
+          tier: "T1",
+          blocks,
+          shapeSalvageLog: []
+        })
+      };
+    }
+    throw e;
+  }
+}
+function runExportGateInner(raw, opts = {}) {
+  const prep = opts.alreadyPrepared && opts.bundle ? {
+    bundle: opts.bundle,
+    tier: opts.tier ?? inferTier2(opts.bundle),
+    shapeSalvageLog: opts.shapeSalvageLog ?? prepareBundleWithLog(raw).shapeSalvageLog,
+    shapeSalvageSummary: void 0
+  } : prepareBundleForInspect(raw, { ingestHeal: false });
+  const bundle = prep.bundle;
+  const tier = opts.tier ?? prep.tier;
+  try {
+    const { raiseDurationHygieneOnly: raiseDurationHygieneOnly2 } = (init_durationHygiene(), __toCommonJS(durationHygiene_exports));
+    const vendorId = bundle.meta?.vendorId ?? bundle.planData?.vendorId ?? null;
+    const hy = raiseDurationHygieneOnly2(bundle, { vendorId, respectEpisodeCap: false });
+    if (hy.raised || hy.skippedCap || hy.skippedOverVendor || hy.skippedNeedsSplit) {
+      (prep.shapeSalvageLog ??= []).push({
+        ruleId: "SH-DURATION-ALIGN",
+        path: "preDesignPack.shots[].duration",
+        action: `export_raise:${hy.raised};over_vendor=${hy.skippedOverVendor};cap=${hy.skippedCap};split_note=${hy.skippedNeedsSplit}`
+      });
+    }
+  } catch {
+  }
+  try {
+    const { applyCamFitHygieneOnExport: applyCamFitHygieneOnExport2, runCamFitUntilClear: runCamFitUntilClear2 } = (init_camFitHygiene(), __toCommonJS(camFitHygiene_exports));
+    const alreadyExpanded = Boolean(
+      bundle._importSplitExpanded || bundle.meta?.importSplitExpanded
+    );
+    const camDiagnoseOnly = !opts.forceExpand || alreadyExpanded;
+    const cam = (runCamFitUntilClear2 ?? applyCamFitHygieneOnExport2)(bundle, {
+      chatStrict: camDiagnoseOnly,
+      maxRounds: camDiagnoseOnly ? 0 : 5,
+      autoMinConfidence: 0.7
+    });
+    if (cam.applied) {
+      (prep.shapeSalvageLog ??= []).push({
+        ruleId: "SH-CAM-FIT-UNTIL-CLEAR",
+        path: "preDesignPack.shots",
+        action: `export_cam_split:${cam.applied};rounds=${cam.rounds};remain=${cam.remainingMustSplit}`
+      });
+    } else if (camDiagnoseOnly && cam.remainingMustSplit > 0) {
+      (prep.shapeSalvageLog ??= []).push({
+        ruleId: "SH-CAM-FIT-DIAGNOSE-ONLY",
+        path: "preDesignPack.shots",
+        action: `no_expand;remain=${cam.remainingMustSplit}`
+      });
+    }
+    if (cam.confirmRequired) {
+      bundle.irdConfirmRequired = true;
+      const meta4 = bundle.meta ??= {};
+      meta4.irdConfirmRequired = true;
+    }
+    const metaCam = bundle.meta ??= {};
+    metaCam.camFitUntilClear = {
+      remainingMustSplit: cam.remainingMustSplit,
+      applied: cam.applied,
+      rounds: cam.rounds
+    };
+  } catch {
+  }
+  let autoClosed;
+  try {
+    const { applyDesignAutoCloseToBundle: applyDesignAutoCloseToBundle2 } = (init_designAutoClose(), __toCommonJS(designAutoClose_exports));
+    const ac = applyDesignAutoCloseToBundle2(bundle, {
+      stageId: "SB",
+      // Dirty/DUP heals often need merge then re-audit
+      maxRounds: opts.allowShapeSalvage === true ? 5 : 4,
+      // 语义扩仅 opts.forceExpand；prepare 已扩则禁二次增产
+      forceExpand: Boolean(opts.forceExpand) && !Boolean(
+        bundle._importSplitExpanded || bundle.meta?.importSplitExpanded
+      )
+    });
+    autoClosed = ac.autoClosed;
+    if (ac.autoClosed.applied) {
+      (prep.shapeSalvageLog ??= []).push({
+        ruleId: "SH-DESIGN-AUTO-CLOSE",
+        path: "planData.dialoguePlan|preDesignPack.shots",
+        action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"};ops=${ac.autoClosed.changes.length}`
+      });
+      try {
+        if (Array.isArray(ac.repairChangelog) && ac.repairChangelog.length) {
+          const bMeta = bundle.meta ??= {};
+          bMeta.repairChangelog = ac.repairChangelog;
+          autoClosed.repairChangelog = ac.repairChangelog;
+        }
+        if (ac.industryResidualDebts?.length) {
+          const bMeta = bundle.meta ??= {};
+          bMeta.industryResidualDebts = ac.industryResidualDebts;
+          bMeta.designExitIncomplete = true;
+        }
+      } catch {
+      }
+      try {
+        const { auditGenerationApplyGaps: auditGenerationApplyGaps2 } = (init_generationApplyAudit(), __toCommonJS(generationApplyAudit_exports));
+        const openGen = auditGenerationApplyGaps2(bundle).filter((g) => /^GEN-0[356]$/.test(g.id));
+        if (openGen.length) {
+          const bMeta = bundle.meta ??= {};
+          bMeta.importOkNotExitPass = true;
+          bMeta.designExitIncomplete = true;
+          (prep.shapeSalvageLog ??= []).push({
+            ruleId: "FALSE-GREEN-GEN",
+            path: "generation.imagePrompt",
+            action: `gen_open:${openGen.map((g) => g.id).join(",")}`
+          });
+        }
+      } catch {
+      }
+    }
+  } catch {
+  }
+  try {
+    const { sealThemeGlueUntilClear: sealThemeGlueUntilClear2 } = (init_sealThemeGlueUntilClear(), __toCommonJS(sealThemeGlueUntilClear_exports));
+    const seal = sealThemeGlueUntilClear2(bundle);
+    if (seal.sealedIds.length || seal.propMutated || seal.intentSynced) {
+      (prep.shapeSalvageLog ??= []).push({
+        ruleId: "SH-THEME-GLUE-SEAL",
+        path: "preDesignPack.shots|planData.shotDesignIntent",
+        action: `sealed=${seal.sealedIds.join(",") || "none"};propMut=${seal.propMutated};propLeft=${seal.propBlocksLeft};intentSync=${seal.intentSynced};intentLeft=${seal.intentBlocksLeft}`
+      });
+      if (!autoClosed) {
+        autoClosed = {
+          applied: true,
+          clearedIds: seal.sealedIds,
+          remainingFailedIds: [],
+          changes: seal.sealedIds.map((id) => ({
+            ruleId: id,
+            detail: "theme_glue_seal",
+            path: "sealThemeGlueUntilClear"
+          })),
+          chatRetryRequired: false
+        };
+      } else {
+        autoClosed = {
+          ...autoClosed,
+          applied: true,
+          clearedIds: [.../* @__PURE__ */ new Set([...autoClosed.clearedIds ?? [], ...seal.sealedIds])],
+          remainingFailedIds: (autoClosed.remainingFailedIds ?? []).filter(
+            (id) => !seal.sealedIds.includes(id)
+          ),
+          changes: [
+            ...autoClosed.changes ?? [],
+            ...seal.sealedIds.map((id) => ({
+              ruleId: id,
+              detail: "theme_glue_seal",
+              path: "sealThemeGlueUntilClear"
+            }))
+          ]
+        };
+      }
+    }
+  } catch {
+  }
+  if (opts.allowShapeSalvage === true) {
+    try {
+      const { collapseCloneVdOnBundle: collapseCloneVdOnBundle2 } = (init_designAutoClose(), __toCommonJS(designAutoClose_exports));
+      const col = collapseCloneVdOnBundle2(bundle);
+      if (col.merged > 0) {
+        (prep.shapeSalvageLog ??= []).push({
+          ruleId: "SH-CLONE-VD-COLLAPSE",
+          path: "preDesignPack.shots",
+          action: `${col.before}\u2192${col.after};merged=${col.merged};empty_only`
+        });
+      }
+    } catch {
+    }
+  }
+  {
+    const author = Number(
+      bundle.meta?.prepareShotCounts?.rawShotCount ?? prep.shotCounts?.rawShotCount ?? 0
+    );
+    const postHeal = (bundle.preDesignPack?.shots ?? []).length;
+    const bMeta = bundle.meta ??= {};
+    const prepCounts = bMeta.prepareShotCounts ?? prep.shotCounts ?? {};
+    bMeta.shotCounts = {
+      ...prepCounts,
+      author: author || prepCounts.rawShotCount || postHeal,
+      postPrepare: prepCounts.postPrepareCount ?? postHeal,
+      postHeal
+    };
+    bMeta.prepareShotCounts = {
+      ...prepCounts,
+      postHeal
+    };
+  }
+  const designGates = runDesignPhaseGates(bundle);
+  const integrityGaps = auditBundleIntegrity(bundle);
+  const fieldWalkReport = buildMissingFieldReport(bundle);
+  const fieldWalkGaps = auditImplementationFieldWalk(bundle);
+  const inspected = inspectBundle(bundle, { tier, alreadyParsed: true });
+  const blocks = [];
+  const warns = [];
+  for (const f of designGates.findings) {
+    const row = { id: f.id, message: f.message, field: f.field };
+    if (f.severity === "BLOCK") blocks.push(row);
+    else warns.push(row);
+  }
+  {
+    const hasCamDebt = blocks.some(
+      (b) => /DEX-CAM-FIT|DG-CAM-FIT-FALSE-GREEN|IRD-CONFIRM/.test(b.id)
+    ) || Boolean(bundle.meta?.camFitChatStrictBlocked);
+    const narSelf = bundle.narrativeSelfcheck ?? {};
+    if (hasCamDebt && narSelf.passed === true) {
+      bundle.narrativeSelfcheck = {
+        ...narSelf,
+        passed: false,
+        failedIds: [.../* @__PURE__ */ new Set([...narSelf.failedIds ?? [], "DEX-CAM-FIT"])],
+        serverOverwritten: true,
+        checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+  }
+  for (const g of integrityGaps) {
+    const row = { id: g.id, message: g.message, field: g.field };
+    if (g.severity === "BLOCK") blocks.push(row);
+    else if (g.severity === "WARN") warns.push(row);
+  }
+  for (const g of fieldWalkGaps) {
+    const row = { id: g.id, message: g.message, field: g.field };
+    if (g.severity === "BLOCK") blocks.push(row);
+    else warns.push(row);
+  }
+  for (const i of inspected.qualityGate?.issues ?? []) {
+    const row = { id: i.id, message: i.message, field: i.evidence ? JSON.stringify(i.evidence) : void 0 };
+    if (i.severity === "BLOCK") blocks.push(row);
+    else warns.push(row);
+  }
+  if (inspected.blocked && tier === "T3") {
+    for (const c of [
+      ...inspected.closureChecks?.dc ?? [],
+      ...inspected.closureChecks?.pc ?? []
+    ]) {
+      if (!c.passed && c.severity === "BLOCK" && c.id) {
+        if (!blocks.some((b) => b.id === c.id)) {
+          blocks.push({ id: c.id, message: c.message ?? c.id });
+        }
+      }
+    }
+  }
+  const salvageLog = prep.shapeSalvageLog ?? [];
+  const chatShapeBlocks = salvageLog.filter(
+    (e) => /SH-VISUAL-EFFECT-OBJ|SH-AUDIO-CUE-OBJ/.test(e.ruleId)
+  );
+  if (opts.allowShapeSalvage !== true && chatShapeBlocks.length) {
+    const veN = chatShapeBlocks.filter((e) => e.ruleId === "SH-VISUAL-EFFECT-OBJ").length;
+    blocks.push({
+      id: "DG-CHAT-SHAPE-VE",
+      message: `Chat \u5BFC\u51FA\u5F62\u6001\u8FDD\u89C4\uFF1A\u9700\u5C06 visualEffect/audioCue \u5199\u6210 string\uFF08\u68C0\u6D4B\u5230 ${chatShapeBlocks.length} \u5904\u5BF9\u8C61\u5F62\u6001\uFF0C\u542B visualEffect\xD7${veN}\uFF09\u3002\u8BF7\u6309 RH-MOD-01 \u4FEE\u6539 JSON\uFF0C\u52FF\u4F9D\u8D56\u670D\u52A1\u5668 salvage\u3002`,
+      field: "preDesignPack.shots[].visualEffect"
+    });
+  }
+  const microSalvage = salvageLog.filter((e) => e.ruleId === "SH-MICRO-EXPR");
+  if (opts.allowShapeSalvage !== true && microSalvage.length) {
+    warns.push({
+      id: "DG-CHAT-SHAPE-MICRO",
+      message: `Chat microExpression \u540D\u952E map \u5DF2 salvage\uFF08\xD7${microSalvage.length}\uFF09\uFF1B\u4E0B\u6B21\u8BF7\u5199 {eyes,mouthDetail}\uFF08\u591A\u89D2 byName\uFF09\uFF0C\u52FF\u540D\u952E\u6839\u5BF9\u8C61`,
+      field: "preDesignPack.shots[].shotDesign.performance.microExpression"
+    });
+  }
+  try {
+    const { shouldWarnOneBeat: shouldWarnOneBeat2, hasOsInNameDisplay: hasOsInNameDisplay2, hasDesignFiller: hasDesignFiller2 } = (init_stillIdentitySsot(), __toCommonJS(stillIdentitySsot_exports));
+    const { detectCuCastConflict: detectCuCastConflict2 } = (init_detectCuCastConflict(), __toCommonJS(detectCuCastConflict_exports));
+    const shotsForStill = bundle.preDesignPack?.shots ?? [];
+    for (const s of shotsForStill) {
+      const vd = String(s.visualDescription ?? "").trim();
+      if (vd && shouldWarnOneBeat2(vd) && !blocks.some((b) => b.id === "DEX-STILL-ONEBEAT")) {
+        blocks.push({
+          id: "DEX-STILL-ONEBEAT",
+          message: "visualDescription \u591A\u62CD\u987B\u667A\u80FD\u62C6\u955C\u540E\u518D\u5BFC\u51FA",
+          field: "visualDescription"
+        });
+      }
+      const cu = detectCuCastConflict2({
+        shotSize: String(s.shotSize ?? s.narrative?.shotSize ?? ""),
+        charCodes: Array.isArray(s.charCodes) ? s.charCodes : [],
+        characterNames: Array.isArray(s.characterNames) ? s.characterNames : [],
+        visualDescription: vd,
+        alreadySplit: Boolean(s._cuCastSplitId || s._stillBeatSplitId || s._visualSplitId || s._cuCastSliced)
+      });
+      if (cu.conflict && cu.healMode === "slice_cast" && cu.primaryName) {
+        const { sliceShotCastToPrimary: sliceShotCastToPrimary2 } = (init_detectCuCastConflict(), __toCommonJS(detectCuCastConflict_exports));
+        sliceShotCastToPrimary2(s, cu.primaryName);
+      } else if (cu.conflict && !blocks.some((b) => b.id === "DEX-STILL-CU-CAST")) {
+        blocks.push({
+          id: "DEX-STILL-CU-CAST",
+          message: cu.message,
+          field: "shotSize"
+        });
+      }
+      if (vd && hasOsInNameDisplay2(vd) && !blocks.some((b) => b.id === "DEX-STILL-OS-NAME")) {
+        blocks.push({ id: "DEX-STILL-OS-NAME", message: "\u753B\u9762\u63CF\u5199\u542B\uFF08OS\uFF09\u987B\u88F8\u540D", field: "visualDescription" });
+      }
+      if (vd && hasDesignFiller2(vd) && !blocks.some((b) => b.id === "DEX-STILL-FILLER")) {
+        blocks.push({ id: "DEX-STILL-FILLER", message: "\u7981\u5BF9\u767D\u77AC\u95F4\u795E\u6001\u7B49\u65E0\u753B\u9762\u586B\u6599", field: "visualDescription" });
+      }
+    }
+    const cdAssets = bundle.characterDesign?.assets ?? [];
+    for (const a of cdAssets) {
+      if (hasOsInNameDisplay2(String(a.name ?? "")) && !blocks.some((b) => b.id === "DEX-STILL-OS-NAME")) {
+        blocks.push({ id: "DEX-STILL-OS-NAME", message: "CD.name \u542B\uFF08OS\uFF09\u987B\u88F8\u540D", field: "characterDesign.assets.name" });
+      }
+    }
+  } catch {
+  }
+  try {
+    const shotsChain = bundle.preDesignPack?.shots ?? [];
+    const meta4 = bundle.meta ?? bundle.planData?.meta;
+    const { chainContractEnabled: chainContractEnabled2, buildShotChainContract: buildShotChainContract2, assertChainEgress: assertChainEgress2 } = (init_shotChainContract(), __toCommonJS(shotChainContract_exports));
+    const { auditLiteraryBeatCoverage: auditLiteraryBeatCoverage2 } = (init_literaryBeatCoverage(), __toCommonJS(literaryBeatCoverage_exports));
+    const { auditCamShootableFit: auditCamShootableFit2 } = (init_camShootableFit(), __toCommonJS(camShootableFit_exports));
+    const { auditDesignLoss: auditDesignLoss2 } = (init_designLossSupplement(), __toCommonJS(designLossSupplement_exports));
+    if (chainContractEnabled2(meta4) && shotsChain.length) {
+      for (const f of auditLiteraryBeatCoverage2(shotsChain)) {
+        if (f.severity === "BLOCK" && !blocks.some((b) => b.id === f.id)) {
+          blocks.push({ id: f.id, message: f.message, field: "visualDescription" });
+        }
+      }
+      for (const f of auditDesignLoss2(bundle)) {
+        if (f.severity === "BLOCK" && !blocks.some((b) => b.id === f.id)) {
+          blocks.push({ id: f.id, message: f.message, field: "visualDescription" });
+        }
+      }
+      for (const s of shotsChain) {
+        const cam = auditCamShootableFit2(s);
+        for (const f of cam.findings) {
+          if (f.severity === "BLOCK" && !blocks.some((b) => b.id === f.id)) {
+            blocks.push({ id: f.id, message: f.message, field: "camera" });
+          }
+        }
+        const eg = assertChainEgress2("exit", buildShotChainContract2(s));
+        for (const f of eg.findings.filter((x) => x.severity === "BLOCK")) {
+          if (!blocks.some((b) => b.id === f.id)) {
+            blocks.push({ id: f.id, message: f.message, field: "shotChainContract" });
+          }
+        }
+      }
+    }
+    {
+      const camCleared = (prep.shapeSalvageLog ?? []).some(
+        (e) => (e.ruleId === "SH-CAM-FIT-UNTIL-CLEAR" || e.ruleId === "SH-CAM-FIT-HYGIENE") && /remain=0/.test(String(e.action ?? ""))
+      );
+      const remain = bundle.meta?.camFitUntilClear?.remainingMustSplit;
+      if (remain === 0 || camCleared) {
+        for (let i = blocks.length - 1; i >= 0; i--) {
+          if (blocks[i].id === "DEX-CAM-FIT") blocks.splice(i, 1);
+        }
+      } else if (blocks.some((b) => b.id === "DEX-CAM-FIT")) {
+        for (let i = blocks.length - 1; i >= 0; i--) {
+          if (blocks[i].id === "DEX-CAM-FIT") blocks.splice(i, 1);
+        }
+        if (!blocks.some((b) => b.id === "IRD-CONFIRM")) {
+          blocks.push({
+            id: "IRD-CONFIRM",
+            message: "DEX-CAM-FIT \u6B8B\u7559\u4F4E\u7F6E\u4FE1\u987B Confirm \u667A\u80FD\u62C6\uFF1B\u52FF\u624B\u6539\u955C\u53F7\uFF08IRD-CONFIRM\uFF09",
+            field: "stillIntentOps"
+          });
+        }
+        bundle.irdConfirmRequired = true;
+      }
+    }
+    if (bundle.importSplitSyncFailed) {
+      blocks.push({
+        id: "IMPORT-SPLIT-SYNC",
+        message: "\u62C6\u955C\u540E storyboard \u5199\u5E93\u5931\u8D25\uFF0C\u987B\u91CD\u8BD5\u540C\u6B65",
+        field: "o_storyboard"
+      });
+    }
+    const metaIrd = bundle.meta ?? bundle.planData?.meta ?? {};
+    if (bundle.irdConfirmRequired || metaIrd.irdConfirmRequired) {
+      if (!blocks.some((b) => b.id === "IRD-CONFIRM")) {
+        blocks.push({
+          id: "IRD-CONFIRM",
+          message: "IRD \u4F4E\u7F6E\u4FE1\u8865\u4E01\u5F85 Confirm\uFF1Bimport\u2260designExitPass\uFF0C\u7981\u6B62\u5047\u7EFF\u51FA\u7AD9",
+          field: "stillIntentOps"
+        });
+      }
+    }
+    const expandedSilent = Boolean(metaIrd.importSplitExpanded) && !metaIrd.irdProvenance;
+    if (expandedSilent) {
+      warns.push({
+        id: "IRD-PROVENANCE-MISSING",
+        message: "\u9759\u9ED8 expand \u65E0 irdProvenance\uFF1B\u4E0D\u5F97\u5BA3\u79F0\u667A\u80FD\u8BBE\u8BA1\u5B8C\u6210",
+        field: "meta.irdProvenance"
+      });
+    }
+    if (blocks.length === 0 && (prep.shapeSalvageLog ?? []).some((e) => /F0|fxPrompt|sceneAvTags|causedByActionId/i.test(e.ruleId + e.action))) {
+      warns.push({
+        id: "HYGIENE-ONLY",
+        message: "hygiene_only\u2260still_ok\uFF1A\u7ED3\u6784\u8F68\u4FEE\u590D\u4E0D\u4EE3\u8868\u9759\u5E27\u9996\u5E27\u8D28\u91CF\u901A\u8FC7",
+        field: "exportGate"
+      });
+    }
+    if (metaIrd.importOkNotExitPass && !warns.some((w) => w.id === "IMPORT_OK_NOT_EXIT")) {
+      warns.push({
+        id: "IMPORT_OK_NOT_EXIT",
+        message: "importOk\u2260designExitPass\uFF1BChat selfcheck/modality \u4E0D\u5F97\u5355\u72EC\u51FA\u7AD9",
+        field: "meta.importOkNotExitPass"
+      });
+    }
+  } catch {
+  }
+  let designExitIncomplete = false;
+  try {
+    const { runDesignExitGate: runDesignExitGate2 } = (init_designExitGate(), __toCommonJS(designExitGate_exports));
+    const {
+      planFromBundleForDesignExit: planFromBundleForDesignExit2,
+      deepCloneJson: deepCloneJson2,
+      dedupeChatRepairBlocks: dedupeChatRepairBlocks2
+    } = (init_planFromBundleForDesignExit(), __toCommonJS(planFromBundleForDesignExit_exports));
+    try {
+      const { sealThemeGlueUntilClear: sealThemeGlueUntilClear2 } = (init_sealThemeGlueUntilClear(), __toCommonJS(sealThemeGlueUntilClear_exports));
+      const seal2 = sealThemeGlueUntilClear2(bundle);
+      if (seal2.sealedIds.length && autoClosed) {
+        autoClosed.clearedIds = [.../* @__PURE__ */ new Set([...autoClosed.clearedIds ?? [], ...seal2.sealedIds])];
+        autoClosed.remainingFailedIds = (autoClosed.remainingFailedIds ?? []).filter(
+          (id) => !seal2.sealedIds.includes(id)
+        );
+      }
+    } catch {
+    }
+    const planView = deepCloneJson2(planFromBundleForDesignExit2(bundle));
+    const exit = runDesignExitGate2("SB", planView, { chatStrict: false });
+    if (!exit.ok && exit.failedIds.length) {
+      const themeGlue = /* @__PURE__ */ new Set([
+        "DEX-PROP-CONT",
+        "DEX-INTENT-PIC",
+        "DEX-SHOT-INTENT",
+        "DEX-EXPR-SPEAK",
+        "CHAT-AUD-01",
+        "FX-GRADE-01",
+        "FALSE_GREEN_SELFCHECK",
+        "DG-CAM-FIT-FALSE-GREEN",
+        "DG-NAR-SELFCHECK"
+      ]);
+      const sealed = new Set(autoClosed?.clearedIds ?? []);
+      let failedIds = opts.acknowledgeKeepLegacy ? exit.failedIds.filter((id) => id !== "DEX-LITERARY-STALE") : exit.failedIds;
+      for (const id of [...failedIds]) {
+        if (themeGlue.has(id) && (sealed.has(id) || id === "DEX-PROP-CONT" || id === "DEX-INTENT-PIC")) {
+          failedIds = failedIds.filter((x) => x !== id);
+          if (!warns.some((w) => w.id === id)) {
+            warns.push({
+              id,
+              message: `\u3010\u4E3B\u9898\u80F6\u6C34\u5DF2 seal / \u4E0D\u963B\u65AD\u3011${id}\uFF08declare-only / sidecar \u540C\u6E90\uFF1B\u7CBE\u54C1\u53EF\u56DE SB\uFF09`,
+              field: "designExitGate.SB"
+            });
+          }
+          if (autoClosed) {
+            autoClosed.clearedIds = [.../* @__PURE__ */ new Set([...autoClosed.clearedIds ?? [], id])];
+            autoClosed.remainingFailedIds = (autoClosed.remainingFailedIds ?? []).filter((x) => x !== id);
+          }
+        }
+      }
+      if (failedIds.length) {
+        designExitIncomplete = true;
+        const checklist = readFixtureJson("design_exit_checklist.json", {});
+        for (const id of failedIds) {
+          const msg = checklist.checks?.[id]?.message ?? exit.warnings.find((w) => w.includes(id)) ?? id;
+          if (!blocks.some((b) => b.id === id && b.message === msg)) {
+            blocks.push({ id, message: String(msg), field: "designExitGate.SB" });
+          }
+        }
+        const deduped = dedupeChatRepairBlocks2(blocks);
+        blocks.length = 0;
+        blocks.push(...deduped);
+      }
+    }
+    for (const w of exit.warnings) {
+      if (w.startsWith("UNIMPLEMENTED_DEX:") && !warns.some((x) => x.message === w)) {
+        warns.push({ id: "UNIMPLEMENTED_DEX", message: w, field: "designExitGate.SB" });
+      }
+    }
+  } catch {
+  }
+  const autoCleared = /* @__PURE__ */ new Set([...autoClosed?.clearedIds ?? []]);
+  for (const id of autoCleared) {
+    if (id === "NAR-15" || id === "DEX-SHOT-INTENT" || id === "DEX-INTENT-PIC" || id === "DEX-ASSET-CREF" || id === "DC-01" || id === "DC-01-EXTRA" || id === "DEX-DIRTY-STILL-PROMPT" || id === "DEX-HAND-LIP" || id === "DEX-PROP-CONT" || id === "DEX-EXPR-SPEAK" || id === "CHAT-AUD-01" || id === "FX-GRADE-01" || id === "NO-LIP-DIALOGUE" || id === "DEX-DUP-VD" || id === "DEX-VID-VOICE-MODE" || id === "DEX-VID-PSEUDO-LINE" || id === "DEX-VID-BEAT-DUR" || id === "DEX-VID-MOTION-VERB") {
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        if (blocks[i]?.id === id) blocks.splice(i, 1);
+      }
+    }
+  }
+  {
+    const camCleared = (prep.shapeSalvageLog ?? []).some(
+      (e) => (e.ruleId === "SH-CAM-FIT-UNTIL-CLEAR" || e.ruleId === "SH-CAM-FIT-HYGIENE") && /remain=0/.test(String(e.action ?? ""))
+    );
+    const remain = bundle.meta?.camFitUntilClear?.remainingMustSplit;
+    if (blocks.some((b) => b.id === "DEX-CAM-FIT")) {
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        if (blocks[i].id === "DEX-CAM-FIT") blocks.splice(i, 1);
+      }
+      if (!(remain === 0 || camCleared)) {
+        if (!blocks.some((b) => b.id === "IRD-CONFIRM")) {
+          blocks.push({
+            id: "IRD-CONFIRM",
+            message: "DEX-CAM-FIT \u6B8B\u7559\u4F4E\u7F6E\u4FE1\u987B Confirm \u667A\u80FD\u62C6\uFF1B\u52FF\u624B\u6539\u955C\u53F7\uFF08IRD-CONFIRM\uFF09",
+            field: "stillIntentOps"
+          });
+        }
+        bundle.irdConfirmRequired = true;
+      }
+    }
+    const self2 = bundle.narrativeSelfcheck;
+    const honestyDone = self2?.serverOverwritten === true || self2?.passed === false || remain === 0 || camCleared;
+    if (honestyDone) {
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        const id = blocks[i]?.id;
+        if (id === "DG-CAM-FIT-FALSE-GREEN" || id === "FALSE_GREEN_SELFCHECK" || id === "DG-NAR-SELFCHECK") {
+          blocks.splice(i, 1);
+        }
+      }
+      for (let i = designGates.findings.length - 1; i >= 0; i--) {
+        const id = designGates.findings[i]?.id;
+        if (id === "DG-CAM-FIT-FALSE-GREEN" || id === "FALSE_GREEN_SELFCHECK" || id === "DG-NAR-SELFCHECK") {
+          designGates.findings.splice(i, 1);
+        }
+      }
+    }
+  }
+  if (opts.allowShapeSalvage === true) {
+    const demoteSet = importSalvageDemoteIds();
+    const demoted = [];
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const id = blocks[i]?.id;
+      if (!id || !demoteSet.has(id)) continue;
+      const row = blocks[i];
+      blocks.splice(i, 1);
+      if (!warns.some((w) => w.id === id && w.message === row.message)) {
+        const isDirtySoft = id === "DEX-DIRTY-STILL-PROMPT" || id === "DEX-HAND-LIP";
+        warns.push({
+          ...row,
+          message: isDirtySoft ? `\u3010\u5BFC\u5165\u4E0D\u62E6 \xB7 \u53CD\u63A8\u8BBE\u8BA1 Confirm\u3011${row.message}\uFF08\u624B+\u8138\u771F\u810F\u987B SB \u6539 VD \u6216 VisBeat Confirm \u62C6\uFF1B\u7981\u5BFC\u5165\u9759\u9ED8\u62C6\uFF1B\u914D\u65B9\u9002\u914D\u2260\u6539 VD\uFF1BimportOk\u2260designExitPass\uFF09` : `\u3010\u5BFC\u5165\u667A\u80FD\u6108/\u52FF\u5F53 designExitPass\u3011${row.message}`
+        });
+      }
+      demoted.push(id);
+    }
+    if (demoted.length) {
+      designExitIncomplete = true;
+      const bMeta = bundle.meta ??= {};
+      bMeta.importOkNotExitPass = true;
+      if (demoted.includes("IRD-CONFIRM") || demoted.includes("DEX-CAM-FIT") || demoted.includes("DEX-LIP-SPLIT")) {
+        bMeta.importDiagnoseOnly = true;
+        bundle.irdConfirmRequired = true;
+      }
+      if (demoted.some((id) => /^DEX-LIT-|^DEX-PROP-CONT/.test(id))) {
+        bMeta.litDebtImportPending = true;
+      }
+      (prep.shapeSalvageLog ??= []).push({
+        ruleId: "SH-IMPORT-SALVAGE-DEMOTE",
+        path: "exportGate.blocks",
+        action: `demoted=${[...new Set(demoted)].join(",")}`
+      });
+    }
+    {
+      const bMeta = bundle.meta ??= {};
+      const shots = bundle.preDesignPack?.shots ?? [];
+      if (shots.length) {
+        try {
+          const { runImportLitDebtHygiene: runImportLitDebtHygiene2 } = (init_importLitDebtHygiene(), __toCommonJS(importLitDebtHygiene_exports));
+          const lit = runImportLitDebtHygiene2({
+            shots,
+            meta: bMeta,
+            shapeSalvageLog: prep.shapeSalvageLog ??= []
+          });
+          if ((lit.splitCount > 0 || lit.softFilled.length) && bundle.preDesignPack) {
+            bundle.preDesignPack.shots = shots;
+            if (bundle.planData && typeof bundle.planData === "object") {
+              const pd = bundle.planData;
+              if (pd.preDesignPack) pd.preDesignPack.shots = shots;
+            }
+          }
+          try {
+            const { declareF0OnBundle: declareF0OnBundle2 } = (init_declareF0(), __toCommonJS(declareF0_exports));
+            const f0 = declareF0OnBundle2(bundle);
+            if (f0.declared.length) {
+              (prep.shapeSalvageLog ??= []).push({
+                ruleId: "SH-FX-F0-AFTER-LIT-SPLIT",
+                path: "fxFeasibilityAudit.items",
+                action: `declared=${f0.declared.join(",")}`
+              });
+              if (!warns.some((w) => w.id === "FX-F0-IMPORT")) {
+                warns.push({
+                  id: "FX-F0-IMPORT",
+                  message: `\u3010\u53EF\u5BFC\u5165 \xB7 \u5DF2\u58F0\u660E\u65E0\u7279\u6548 F0\u3011\u955C ${f0.declared.slice(0, 8).join(",")}\uFF08\u65E0\u7279\u6548\u4E0D\u5199 fxPrompt\uFF09`,
+                  field: "fxFeasibility"
+                });
+              }
+            }
+          } catch {
+          }
+          try {
+            const { softHealTouchHomology: softHealTouchHomology2 } = (init_touchHomologyHeal(), __toCommonJS(touchHomologyHeal_exports));
+            const heal11 = softHealTouchHomology2(bundle);
+            if (heal11.absorbed > 0 || heal11.strippedNoise > 0 || heal11.f0Declared.length) {
+              (prep.shapeSalvageLog ??= []).push({
+                ruleId: "SH-DC01-ABSORB-EXTRA",
+                path: "planData.dialoguePlan.lines",
+                action: `cleared=${heal11.cleared};noise=${heal11.strippedNoise};absorb=${heal11.absorbed};left=${heal11.extrasLeft};f0=${heal11.f0Declared.join(",")}`
+              });
+              if (!warns.some((w) => w.id === "DC-01-ABSORB-EXTRA")) {
+                warns.push({
+                  id: "DC-01-ABSORB-EXTRA",
+                  message: heal11.cleared ? `\u3010\u53EF\u5BFC\u5165 \xB7 \u53F0\u8BCD/FX \u540C\u6838\u5DF2\u6E05\u96F6\u3011\u5265\u79BB\u566A\u70B9 ${heal11.strippedNoise} \xB7 \u5438\u6536\u6587\u5B66 ${heal11.absorbed} \xB7 F0 ${heal11.f0Declared.length}` : `\u3010\u53EF\u5BFC\u5165 \xB7 \u540C\u6838\u672A\u5B8C\u5168\u6E05\u96F6\u3011\u6B8B\u7559 EXTRA ${heal11.extrasLeft} / \u672A\u58F0\u660E FX ${heal11.undeclaredFxLeft} \u2014 \u987B\u8BBE\u8BA1\u91CD\u505A`,
+                  field: "planData.dialoguePlan"
+                });
+              }
+            }
+            if (heal11.extrasLeft === 0) {
+              for (let i = blocks.length - 1; i >= 0; i--) {
+                const id = String(blocks[i]?.id ?? "");
+                if (id === "DC-01-EXTRA" || id === "DC-01" || id === "H3" || id === "R2") {
+                  if (/乱入|EXTRA|台词覆盖/.test(String(blocks[i]?.message ?? "")) || id === "DC-01-EXTRA") {
+                    blocks.splice(i, 1);
+                  }
+                }
+              }
+            }
+            if (heal11.undeclaredFxLeft === 0) {
+              for (let i = blocks.length - 1; i >= 0; i--) {
+                const id = String(blocks[i]?.id ?? "");
+                if (id === "FX-GRADE-01" || id === "DG-FALSE-GREEN-FX" || id === "DG-FX-DUAL-TRACK") {
+                  if (/未声明|F0|空/.test(String(blocks[i]?.message ?? "")) || id !== "FX-GRADE-01") {
+                    const msg = String(blocks[i]?.message ?? "");
+                    if (/未声明|空未声明|须在 fxFeasibility/.test(msg) || id === "DG-FALSE-GREEN-FX") {
+                      blocks.splice(i, 1);
+                    }
+                  }
+                }
+              }
+            }
+            if (!heal11.cleared && (heal11.extrasLeft > 0 || heal11.undeclaredFxLeft > 0)) {
+              designExitIncomplete = true;
+              bMeta.importOkNotExitPass = true;
+            }
+          } catch {
+          }
+          if (lit.splitCount > 0) {
+            designExitIncomplete = true;
+            bMeta.importSplitExpanded = true;
+            bundle._importSplitExpanded = true;
+            if (!warns.some((w) => w.id === "LIT-IMPORT-SMART-SPLIT")) {
+              warns.push({
+                id: "LIT-IMPORT-SMART-SPLIT",
+                message: lit.warnMessage || `\u3010\u53EF\u5BFC\u5165 \xB7 \u5DF2\u667A\u80FD\u62C6\u6587\u5B66\u53CC\u63A5\u89E6\u3011\u6269 ${lit.splitCount} \u7EC4\uFF1BimportOk\u2260designExitPass`,
+                field: "preDesignPack.shots"
+              });
+            }
+          } else if (lit.confirmRequired) {
+            designExitIncomplete = true;
+            bundle.irdConfirmRequired = true;
+            if (!warns.some((w) => w.id === "LIT-IMPORT-CONFIRM")) {
+              warns.push({
+                id: "LIT-IMPORT-CONFIRM",
+                message: lit.warnMessage || `\u3010\u53EF\u5BFC\u5165 \xB7 \u6587\u5B66\u503A\u987B\u8BBE\u8BA1\u786E\u8BA4\u3011${lit.ctaLabel || "\u786E\u8BA4\u62C6\u955C/\u6279\u51C6\u589E\u5F3A"}\uFF1BimportOk\u2260designExitPass`,
+                field: "meta.litDebtPrimaryAction"
+              });
+            }
+          } else if (lit.warnMessage && !warns.some((w) => w.id === "LIT-IMPORT-SOFT")) {
+            warns.push({
+              id: "LIT-IMPORT-SOFT",
+              message: lit.warnMessage,
+              field: "preDesignPack.shots"
+            });
+          }
+        } catch {
+        }
+      }
+    }
+    {
+      const lipImportSoft = /* @__PURE__ */ new Set(["LIP-01", "PR-09", "DFW-DURATION", "DEX-LIP-SPLIT"]);
+      const softDemoted = [];
+      const bMeta = bundle.meta ??= {};
+      try {
+        if (!bMeta.importSplitExpanded && bundle.preDesignPack?.shots?.length) {
+          const { healMisboundDialoguePlacement: healMisboundDialoguePlacement2 } = (init_dialoguePlacementMatch(), __toCommonJS(dialoguePlacementMatch_exports));
+          const place = healMisboundDialoguePlacement2(
+            bundle.preDesignPack.shots.slice()
+          );
+          if (opts.forceExpand) {
+            const { runSplitOrchestrator: runSplitOrchestrator2 } = (init_splitOrchestrator(), __toCommonJS(splitOrchestrator_exports));
+            const beforeN = place.shots.length;
+            const orch = runSplitOrchestrator2({
+              planData: bundle.planData ?? {},
+              shots: place.shots,
+              meta: bMeta,
+              applyClauseSplit: true,
+              applyVisBeatExpanders: true,
+              applySemanticSplit: true
+            });
+            bundle.preDesignPack.shots = orch.shots;
+            bundle.planData = orch.planData;
+            (prep.shapeSalvageLog ??= []).push({
+              ruleId: "SH-IMPORT-SMART-SPLIT",
+              path: "exportGate.preLipSoft",
+              action: `shots=${orch.shots.length};steps=${orch.log.map((l) => l.step).join(",")}`
+            });
+            if (orch.shots.length > beforeN) {
+              bMeta.importSplitExpanded = true;
+              bundle._importSplitExpanded = true;
+            }
+          } else {
+            bundle.preDesignPack.shots = place.shots;
+            (prep.shapeSalvageLog ??= []).push({
+              ruleId: "SH-IMPORT-SMART-SPLIT",
+              path: "exportGate.preLipSoft",
+              action: `placement_only;shots=${place.shots.length};no_clause_inflate`
+            });
+          }
+        }
+      } catch {
+      }
+      const shotsForLip = bundle.preDesignPack?.shots ?? [];
+      let anyLipConfirm = false;
+      for (const s of shotsForLip) {
+        try {
+          const { detectLipSplitPressure: detectLipSplitPressure2 } = (init_lipSplit(), __toCommonJS(lipSplit_exports));
+          if (detectLipSplitPressure2(s).mustConfirm) anyLipConfirm = true;
+        } catch {
+        }
+      }
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        const row = blocks[i];
+        if (!lipImportSoft.has(row.id)) continue;
+        blocks.splice(i, 1);
+        const msg = anyLipConfirm ? `\u3010\u5BFC\u5165\u5DF2\u667A\u80FD\u62C6 \xB7 \u6B8B\u7559\u987B Confirm\u3011${row.message}\uFF08confirmClusterSplit\uFF1BimportOk\u2260designExitPass\uFF09` : `\u3010\u5BFC\u5165\u5DF2\u667A\u80FD\u62C6/\u62AC\u65F6\u3011${row.message}`;
+        if (!warns.some((w) => w.id === row.id && w.message === msg)) {
+          warns.push({ ...row, message: msg });
+        }
+        softDemoted.push(row.id);
+      }
+      if (softDemoted.length) {
+        if (anyLipConfirm) designExitIncomplete = true;
+        bMeta.importOkNotExitPass = anyLipConfirm ? true : bMeta.importOkNotExitPass;
+        if (anyLipConfirm) {
+          bMeta.lipConfirmRequired = true;
+          bundle.lipConfirmRequired = true;
+        } else {
+          bMeta.lipConfirmRequired = false;
+        }
+        (prep.shapeSalvageLog ??= []).push({
+          ruleId: anyLipConfirm ? "SH-IMPORT-LIP-RESIDUAL" : "SH-IMPORT-LIP-HEALED",
+          path: "exportGate.blocks",
+          action: `soft=${[...new Set(softDemoted)].join(",")};confirm=${anyLipConfirm}`
+        });
+      }
+    }
+    {
+      const dirtyImportSoft = /* @__PURE__ */ new Set(["DEX-DIRTY-STILL-PROMPT", "DEX-HAND-LIP"]);
+      const softDemoted = [];
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        const row = blocks[i];
+        if (!dirtyImportSoft.has(row.id)) continue;
+        blocks.splice(i, 1);
+        const msg = `\u3010\u5BFC\u5165\u4E0D\u62E6 \xB7 \u53CD\u63A8\u8BBE\u8BA1 Confirm\u3011${row.message}\uFF08\u624B+\u8138\u771F\u810F\u987B SB \u6539 VD \u6216 VisBeat Confirm \u62C6\uFF1B\u7981\u5BFC\u5165\u9759\u9ED8\u62C6\uFF1BimportOk\u2260designExitPass\uFF09`;
+        if (!warns.some((w) => w.id === row.id && w.message === msg)) {
+          warns.push({ ...row, message: msg });
+        }
+        softDemoted.push(row.id);
+      }
+      if (softDemoted.length) {
+        designExitIncomplete = true;
+        const bMeta = bundle.meta ??= {};
+        bMeta.importOkNotExitPass = true;
+        bMeta.dirtyStillConfirmRequired = true;
+        (prep.shapeSalvageLog ??= []).push({
+          ruleId: "SH-IMPORT-DIRTY-NONBLOCK",
+          path: "exportGate.blocks",
+          action: `soft=${[...new Set(softDemoted)].join(",")}`
+        });
+      }
+    }
+  }
+  try {
+    const {
+      isBundleLiteraryStale: isBundleLiteraryStale2,
+      LITERARY_STALE_USER_MESSAGE: LITERARY_STALE_USER_MESSAGE2
+    } = (init_viralDoctrine(), __toCommonJS(viralDoctrine_exports));
+    const { setKeepLegacyAck: setKeepLegacyAck2 } = (init_redesignContract(), __toCommonJS(redesignContract_exports));
+    if (opts.acknowledgeKeepLegacy && isBundleLiteraryStale2(bundle)) {
+      const planView = { planData: bundle.planData ?? {} };
+      setKeepLegacyAck2(planView, "acknowledgeKeepLegacy");
+      bundle.planData = { ...bundle.planData, ...planView.planData };
+    }
+    if (isBundleLiteraryStale2(bundle) && !opts.acknowledgeKeepLegacy) {
+      if (!blocks.some((b) => b.id === "DEX-LITERARY-STALE")) {
+        blocks.push({
+          id: "DEX-LITERARY-STALE",
+          message: LITERARY_STALE_USER_MESSAGE2,
+          field: "planData.genreTemplate"
+        });
+      }
+    } else if (opts.acknowledgeKeepLegacy) {
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        if (blocks[i]?.id === "DEX-LITERARY-STALE") blocks.splice(i, 1);
+      }
+    }
+  } catch {
+  }
+  const matrix = readFixtureJson("quality_matrix.json", { entries: [] });
+  const matrixTotal = matrix.entries?.length ?? 0;
+  const blockIds = [...new Set(blocks.map((b) => b.id))];
+  const warnIds = [...new Set(warns.map((w) => w.id))];
+  const softPatchEligible = (matrix.entries ?? []).filter((e) => e.softPatch && blockIds.includes(e.id)).length;
+  const lipDetailForGate = classifyLipForChatRepairDetailed({
+    shots: bundle.preDesignPack?.shots ?? [],
+    blockHasLip01: blockIds.some((id) => id === "LIP-01" || id === "PR-09" || id === "DEX-LIP-SPLIT")
+  });
+  const gateLipCtx = {
+    lipClass: lipDetailForGate.pack,
+    lipMustPresent: lipDetailForGate.mustShotIndexes.length > 0,
+    lipRaiseOnly: lipDetailForGate.raiseShotIndexes.length > 0 && lipDetailForGate.mustShotIndexes.length === 0
+  };
+  const authorMustIds = filterAuthorMustFixIds(blockIds, gateLipCtx);
+  const autoResidualIds = blockIds.filter((id) => !authorMustIds.includes(id));
+  const exportAllowed = authorMustIds.length === 0 && !(tier === "T3" && inspected.blocked && authorMustIds.length > 0);
+  let repairHints = aggregateRepairHints(inspected, designGates.findings, fieldWalkGaps);
+  if (blocks.some((b) => b.id === "DG-CHAT-SHAPE-VE") && !repairHints.some((h) => h.id === "RH-MOD-01")) {
+    const mod = loadRepairHints2(["RH-MOD-01"]);
+    repairHints = [...repairHints, ...mod];
+  }
+  if (blocks.some((b) => b.id === "JSON_INCOMPLETE") && !repairHints.some((h) => h.id === "RH-JSON-INCOMPLETE")) {
+    repairHints = [...repairHints, ...loadRepairHints2(["RH-JSON-INCOMPLETE", "JSON_INCOMPLETE"])];
+  }
+  if (blocks.some((b) => b.id === "DEX-LITERARY-STALE") && !repairHints.some((h) => h.id === "RH-LITERARY-STALE")) {
+    repairHints = [...repairHints, ...loadRepairHints2(["RH-LITERARY-STALE", "DEX-LITERARY-STALE"])];
+  }
+  if (warnIds.some((id) => id === "NESTED_PACK_ONLY") && !repairHints.some((h) => h.id === "RH-HOIST-NEST")) {
+    repairHints = [...repairHints, ...loadRepairHints2(["RH-HOIST-NEST", "NESTED_PACK_ONLY"])];
+  }
+  if (warnIds.some((id) => id.startsWith("DEX-STILL")) && !repairHints.some((h) => h.id === "RH-STILL-FIRSTFRAME")) {
+    repairHints = [...repairHints, ...loadRepairHints2(["RH-STILL-FIRSTFRAME"])];
+  }
+  if ((prep.shapeSalvageLog ?? []).some((e) => e.ruleId === "SH-SERIES-CONT" || e.ruleId === "SH-BRIEF-STRING") && !repairHints.some((h) => h.id === "RH-SERIES-CONT")) {
+    repairHints = [...repairHints, ...loadRepairHints2(["RH-SERIES-CONT"])];
+  }
+  const cast = auditCastCoverage(bundle);
+  const planLines = bundle.planData?.dialoguePlan?.lines ?? [];
+  const shotRows = bundle.preDesignPack?.shots ?? [];
+  if (blockIds.includes("QP-02") && shotRows.some((s) => s._healInducedVd || /听者反应特写/.test(String(s.visualDescription ?? ""))) && !repairHints.some((h) => h.id === "RH-QP-02-HEAL")) {
+    repairHints = [...repairHints, ...loadRepairHints2(["RH-QP-02-HEAL"])];
+  }
+  const serverNar = designGates.findings.filter((f) => f.id === "NAR-14" || f.id === "NAR-15" || f.id === "DG-NAR-SELFCHECK");
+  if (serverNar.length || blockIds.some((id) => /^NAR-1[45]$/.test(id) || id === "DG-NAR-SELFCHECK")) {
+    const narSelf = bundle.narrativeSelfcheck ?? {};
+    const failIds = [
+      .../* @__PURE__ */ new Set([
+        ...narSelf.failedIds ?? [],
+        ...designGates.findings.filter((f) => f.id === "NAR-14" || f.id === "NAR-15").map((f) => f.id)
+      ])
+    ];
+    bundle.narrativeSelfcheck = {
+      ...narSelf,
+      passed: false,
+      failedIds: failIds.length ? failIds : ["NAR-14"],
+      serverOverwritten: true,
+      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  if (blockIds.includes("IRD-CONFIRM") || blockIds.includes("DEX-CAM-FIT") || Boolean(bundle.meta?.camFitChatStrictBlocked)) {
+    const narSelf = bundle.narrativeSelfcheck ?? {};
+    if (narSelf.passed === true || blockIds.includes("DEX-CAM-FIT") || blockIds.includes("IRD-CONFIRM")) {
+      bundle.narrativeSelfcheck = {
+        ...narSelf,
+        passed: false,
+        failedIds: [.../* @__PURE__ */ new Set([...narSelf.failedIds ?? [], "DEX-CAM-FIT"])],
+        serverOverwritten: true,
+        checkedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+    const mod = bundle.modalityPromptAudit ?? {};
+    if (mod.IMG === "pass" || mod.VID === "pass" || mod.FX === "pass") {
+      bundle.modalityPromptAudit = {
+        ...mod,
+        ...mod.IMG === "pass" ? { IMG: "fail" } : {},
+        ...mod.VID === "pass" ? { VID: "fail" } : {},
+        ...mod.FX === "pass" ? { FX: "fail" } : {},
+        serverOverwritten: "DEX-CAM-FIT"
+      };
+    }
+  }
+  const closureSnapshot = {
+    tier,
+    blocked: !exportAllowed,
+    blockIds,
+    warnIds,
+    checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    rulePackVersion: inspected.rulePackVersion,
+    speakerOrphans: cast.missingSpeakers,
+    stubCodes: cast.stubOrIncomplete,
+    castGapLabels: cast.labels
+  };
+  const castRows = cast.labels.map((label, i) => ({
+    id: `DC-16-${i + 1}`,
+    severity: "BLOCK",
+    sourcePath: "dialogue.speaker|charCodes|B6.characters",
+    targetPath: "characterDesign.assets",
+    fieldId: label,
+    message: `\u914D\u89D2\u5165\u518C\u7F3A\u53E3: ${label}\uFF08\u987B code/name/L0.identity\uFF0C\u7981\u6B62\u4EC5 stub\uFF09`,
+    repairHintId: "RH-DC-16"
+  }));
+  const missingFieldReport = [...fieldWalkReport.rows, ...castRows];
+  const missingFieldSummary = [fieldWalkReport.summary, cast.block ? `DC-16: ${cast.labels.join("\u3001")}` : ""].filter(Boolean).join("\n");
+  try {
+    const { stampSmartDesignProposals: stampSmartDesignProposals2 } = (init_smartProposalMerger(), __toCommonJS(smartProposalMerger_exports));
+    if (blockIds.length) {
+      stampSmartDesignProposals2(bundle, blockIds, {
+        reverseTarget: "SB"
+      });
+    }
+  } catch {
+  }
+  return {
+    exportAllowed,
+    tier,
+    bundle,
+    inspected,
+    designFindings: designGates.findings,
+    integrityGaps,
+    fieldWalkGaps,
+    missingFieldReport,
+    missingFieldSummary,
+    repairHints,
+    closureSnapshot,
+    coverage: {
+      matrixTotal,
+      blocks: blockIds.length,
+      warns: warnIds.length,
+      softPatchEligible
+    },
+    blocks,
+    warns,
+    shapeSalvageLog: prep.shapeSalvageLog,
+    shapeSalvageSummary: prep.shapeSalvageSummary,
+    designExitIncomplete,
+    autoClosed,
+    repairChangelog: Array.isArray(bundle.meta?.repairChangelog) ? bundle.meta.repairChangelog : autoClosed?.repairChangelog,
+    industryResidualDebts: Array.isArray(
+      bundle.meta?.industryResidualDebts
+    ) ? bundle.meta.industryResidualDebts : void 0,
+    laneDiagnostics: {
+      mustIds: authorMustIds,
+      autoIds: autoResidualIds,
+      actuatorsRan: [...new Set((autoClosed?.changes ?? []).map((c) => c.ruleId))],
+      cleared: autoClosed?.clearedIds ?? [],
+      residual: autoClosed?.remainingFailedIds ?? blockIds
+    },
+    z110Handoff: (() => {
+      try {
+        const { buildZ110: buildZ1102 } = (init_zPackager(), __toCommonJS(zPackager_exports));
+        const shots = bundle.shots ?? bundle.planData?.shots ?? [];
+        if (!Array.isArray(shots) || !shots.length) return void 0;
+        const z110 = buildZ1102({
+          scriptId: Number(bundle.scriptId ?? 0),
+          shots,
+          scriptMeta: bundle.scriptMeta ?? {}
+        });
+        return {
+          timeline: z110.timeline,
+          edlStub: z110.edlStub,
+          fcpXmlStub: z110.fcpXmlStub,
+          premiereXmlStub: z110.premiereXmlStub,
+          otioStub: z110.otioStub,
+          resolveXmlStub: z110.resolveXmlStub,
+          handoffManifest: z110.handoffManifest,
+          srtStub: z110.srtStub,
+          exportReady: false,
+          nleFormat: z110.nleFormat,
+          note: z110.note
+        };
+      } catch {
+        return void 0;
+      }
+    })(),
+    chatRepairText: buildAggregatedChatRepairText(repairHints, blockIds, missingFieldSummary, blocks, {
+      planLines,
+      shots: shotRows,
+      warnIds,
+      warnRows: warns,
+      shapeSalvageLog: salvageLog,
+      designExitIncomplete,
+      autoClosedClearedIds: autoClosed?.clearedIds
+    }),
+    previewStatusLine: buildExportPreviewStatusLine({
+      exportAllowed,
+      tier,
+      blocks,
+      shapeSalvageLog: prep.shapeSalvageLog,
+      designExitIncomplete,
+      autoClosedClearedIds: autoClosed?.clearedIds,
+      deferredStill: Number(
+        bundle.meta?.deferredStill ?? bundle.planData?.assetCrefPlan?.filter(
+          (e) => e.deferredStill
+        ).length ?? 0
+      ),
+      lipConfirmRequired: Boolean(bundle.meta?.lipConfirmRequired),
+      litConfirmRequired: Boolean(
+        bundle.meta?.irdConfirmRequired || bundle.meta?.litDebtImportPending || bundle.irdConfirmRequired
+      ),
+      litDebtCta: String(
+        bundle.meta?.litDebtCta ?? ""
+      ) || void 0,
+      litSmartSplit: Boolean(
+        bundle.meta?.litImportSmartSplit || (prep.shapeSalvageLog ?? []).some((e) => e.ruleId === "SH-LIT-IMPORT-SMART-SPLIT")
+      ),
+      illegalSameVdRatio: (() => {
+        try {
+          const shots = bundle.preDesignPack?.shots ?? [];
+          if (shots.length < 3) return 0;
+          const { findDupVdStreaks: findDupVdStreaks2, normalizeVdKey: normalizeVdKey2 } = (init_dirtyStillPromptGate(), __toCommonJS(dirtyStillPromptGate_exports));
+          const dups = findDupVdStreaks2(
+            shots.map((s) => ({
+              shotIndex: Number(s.shotIndex),
+              visualDescription: String(s.visualDescription ?? "")
+            })),
+            3
+          );
+          if (!dups.length) return 0;
+          const keys2 = /* @__PURE__ */ new Map();
+          for (const s of shots) {
+            const k = normalizeVdKey2(String(s.visualDescription ?? ""));
+            if (k.length >= 6) keys2.set(k, (keys2.get(k) ?? 0) + 1);
+          }
+          let max = 0;
+          for (const n of keys2.values()) max = Math.max(max, n);
+          return max / shots.length;
+        } catch {
+          return 0;
+        }
+      })()
+    })
+  };
+}
+function inferTier2(bundle) {
+  if (bundle.modalityPromptAudit) return "T3";
+  const shots = bundle.preDesignPack?.shots ?? [];
+  if (shots.some((s) => s.generation?.imagePrompt?.trim())) return "T3";
+  if (bundle.characterDesign || bundle.visualLockTable) return "T2";
+  return "T1";
+}
+function assertExportAllowed(raw, opts) {
+  const result = runExportGate(raw, opts);
+  if (!result.exportAllowed) throw new ExportGateBlockError(result);
+  return result;
+}
+var CHAT_REPAIR_BLOCK_CAP, DEFAULT_MUST_EDIT, DEFAULT_AUTO_ADAPT, ExportGateBlockError;
+var init_exportGate = __esm({
+  "src/ruleEngine/exportGate.ts"() {
+    "use strict";
+    init_inspectBundle();
+    init_fixturesPath();
+    init_prepareBundleForInspect();
+    init_schema();
+    init_designPhaseGates();
+    init_bundleIntegrityAudit();
+    init_auditImplementationFieldWalk();
+    init_chatRepairDeeplink();
+    init_nar14Residual();
+    init_lipSplit();
+    init_designExportHelpers();
+    CHAT_REPAIR_BLOCK_CAP = 24;
+    DEFAULT_MUST_EDIT = /* @__PURE__ */ new Set([
+      "DEX-LITERARY-STALE",
+      "DEX-VIS-SPLIT",
+      "DEX-EMPTY-SHOT-CONSISTENCY",
+      "DEX-QP-02",
+      "QP-02",
+      "DESIGN-LOSS",
+      "PROMPT-FIDELITY",
+      "VIDEO-PROMPT-STALE",
+      "CHAIN-BEAT",
+      "CHAT-SB-01"
+    ]);
+    DEFAULT_AUTO_ADAPT = /* @__PURE__ */ new Set([
+      "DFW-DURATION",
+      "MOD-03",
+      "MOD-IMG-M1",
+      "MOD-VID-M1",
+      "MOD-AUD-M1",
+      "DG-SCENE-KEY",
+      "DEX-CAM-FIT",
+      // Theme-glue untilClear (G14) — 勿诱手改 JSON
+      "DEX-PROP-CONT",
+      "DEX-INTENT-PIC",
+      "DEX-SHOT-INTENT",
+      "FALSE_GREEN_SELFCHECK",
+      "DG-CAM-FIT-FALSE-GREEN",
+      "DG-NAR-SELFCHECK",
+      "FX-GRADE-01",
+      "DEX-EXPR-SPEAK",
+      "CHAT-AUD-01",
+      "DEX-DUP-VD",
+      "DEX-VID-VOICE-MODE",
+      "DEX-VID-PSEUDO-LINE",
+      "DEX-VID-BEAT-DUR",
+      "DEX-VID-MOTION-VERB",
+      "DEX-DIRTY-STILL-PROMPT",
+      "DEX-HAND-LIP",
+      "DC-01-EXTRA",
+      "NAR-15",
+      "NO-LIP-DIALOGUE",
+      "DEX-STILL-CU-CAST",
+      "DEX-STILL-ONEBEAT",
+      "DEX-LIT-CONTACT",
+      "DEX-LIT-CONTACT-XOR",
+      "DEX-LIT-ANCHOR",
+      "VIS-MULTI-BEAT",
+      "IRD-CONFIRM",
+      "LIP-01"
+      // NAR-14 / DEX-VIS-SPLIT / PROMPT-FIDELITY confirm_only — see classifyBlockId
+    ]);
+    ExportGateBlockError = class extends Error {
+      details;
+      constructor(result) {
+        const ids = result.blocks.map((b) => b.id).join(", ");
+        super(`EXPORT_GATE_BLOCK: ${ids}`);
+        this.name = "ExportGateBlockError";
+        this.details = result;
+      }
+    };
+  }
+});
+
 // src/ruleEngine/design/designAutoClose.ts
 var designAutoClose_exports = {};
 __export(designAutoClose_exports, {
   applyDesignAutoCloseToBundle: () => applyDesignAutoCloseToBundle,
   collapseCloneVdOnBundle: () => collapseCloneVdOnBundle,
   collapseCloneVdShots: () => collapseCloneVdShots,
+  diversifyDialogueDupVdShots: () => diversifyDialogueDupVdShots,
   runDesignAutoClose: () => runDesignAutoClose,
   stripHighConfidenceExtras: () => stripHighConfidenceExtras
 });
 function untilClearRoundBoost(failedIds) {
-  const until = /DEX-LIT-|DEX-PROP-|DEX-STILL-ONEBEAT|CHAIN-BEAT|DESIGN-LOSS|IRD-CONFIRM|VID-CONTACT|NAR-14|NAR-15/;
+  const until = /DEX-LIT-|DEX-PROP-|DEX-STILL-ONEBEAT|CHAIN-BEAT|DESIGN-LOSS|IRD-CONFIRM|VID-CONTACT|NAR-14|NAR-15|DEX-DUP-VD|DEX-VID-VOICE-MODE|DEX-VID-PSEUDO-LINE/;
   return failedIds.some((id) => until.test(id)) ? 5 : 1;
 }
 function asPd5(plan) {
@@ -278350,6 +288142,108 @@ function mergeDupVdShots(plan) {
     }
   ];
 }
+function diversifyDialogueDupVdShots(shotsIn, opts) {
+  const { normalizeVdKey: normalizeVdKey2 } = (init_dirtyStillPromptGate(), __toCommonJS(dirtyStillPromptGate_exports));
+  const { asDialogueLineObjects: asDialogueLineObjects2 } = (init_dialogueCoverage(), __toCommonJS(dialogueCoverage_exports));
+  const minRun = opts?.minRun ?? 3;
+  const shots = shotsIn.map((s) => ({ ...s }));
+  let diversified = 0;
+  let i = 0;
+  while (i < shots.length) {
+    const key = normalizeVdKey2(String(shots[i]?.visualDescription ?? ""));
+    let j = i + 1;
+    while (j < shots.length && key && key.length >= 6 && normalizeVdKey2(String(shots[j]?.visualDescription ?? "")) === key) {
+      j++;
+    }
+    const run = j - i;
+    if (run >= minRun) {
+      const base = String(shots[i]?.visualDescription ?? "").trim();
+      for (let k = i + 1; k < j; k++) {
+        const s = shots[k];
+        const narr0 = s.narrative ?? {};
+        const lines = asDialogueLineObjects2(
+          narr0.dialogue?.lines ?? narr0.lines ?? s.lines
+        );
+        const lineCue = lines.map((l) => String(l.text ?? "").replace(/\s+/g, "").trim()).find((t) => t.length >= 2)?.slice(0, 12);
+        const existingSize = String(
+          s.shotSize ?? narr0.shotSize ?? ""
+        ).trim();
+        const frame = existingSize && existingSize.length >= 2 ? existingSize : DUP_VD_FRAME_PREFIXES[(k - i) % DUP_VD_FRAME_PREFIXES.length];
+        let nextVd = base;
+        if (!normalizeVdKey2(nextVd).includes(normalizeVdKey2(frame))) {
+          nextVd = `${frame}\uFF0C${base}`;
+        }
+        if (lineCue && !nextVd.includes(lineCue)) {
+          nextVd = `${nextVd}\uFF0C\u53E3\u578B\u8282\u62CD\u300C${lineCue}\u300D`;
+        } else if (!lineCue && normalizeVdKey2(nextVd) === normalizeVdKey2(base)) {
+          nextVd = `${nextVd}\uFF0C\u955C\u4F4D\u8282\u62CD${k - i + 1}`;
+        }
+        if (normalizeVdKey2(nextVd) === normalizeVdKey2(base)) continue;
+        s.visualDescription = nextVd;
+        const narr2 = { ...narr0 };
+        if (narr2.visualDescription != null) narr2.visualDescription = nextVd;
+        if (!narr2.shotSize && frame) narr2.shotSize = frame;
+        s.narrative = narr2;
+        if (!s.shotSize) s.shotSize = frame;
+        diversified++;
+      }
+    }
+    i = j;
+  }
+  return { shots, diversified };
+}
+function diversifyDupVdShots(plan) {
+  const pd = asPd5(plan);
+  const pack2 = pd.preDesignPack ?? { shots: [] };
+  const shots = pack2.shots ?? [];
+  if (shots.length < 3) return [];
+  const { shots: next, diversified } = diversifyDialogueDupVdShots(shots, { minRun: 3 });
+  if (!diversified) return [];
+  pd.preDesignPack = { ...pack2, shots: next };
+  plan.planData = pd;
+  if (plan.preDesignPack) {
+    plan.preDesignPack = {
+      ...plan.preDesignPack,
+      shots: next
+    };
+  }
+  return [
+    {
+      ruleId: "DEX-DUP-VD",
+      detail: `diversified ${diversified} dialogue same-VD shots via frame+lineCue`,
+      path: "preDesignPack.shots[].visualDescription"
+    }
+  ];
+}
+function softHealVideoHomologyOnPlan(plan, opts) {
+  try {
+    const { softHealVideoHomologyOnShots: softHealVideoHomologyOnShots2 } = (init_videoHomologyHeal(), __toCommonJS(videoHomologyHeal_exports));
+    const pd = asPd5(plan);
+    const pack2 = pd.preDesignPack ?? { shots: [] };
+    const shots = pack2.shots ?? [];
+    if (!shots.length) return [];
+    const vh = softHealVideoHomologyOnShots2({ shots, vendorId: opts?.vendorId ?? null });
+    if (!vh.changed) return [];
+    pd.preDesignPack = { ...pack2, shots: vh.shots };
+    plan.planData = pd;
+    if (plan.preDesignPack) {
+      plan.preDesignPack = {
+        ...plan.preDesignPack,
+        shots: vh.shots
+      };
+    }
+    const ruleId = vh.findings.some((f) => f.id === "DEX-VID-VOICE-MODE") ? "DEX-VID-VOICE-MODE" : vh.heals.some((h) => /voice|orphan_lip|set_voice/.test(h)) ? "DEX-VID-VOICE-MODE" : "DEX-VID-PSEUDO-LINE";
+    return [
+      {
+        ruleId,
+        detail: `videoHomology heals=${vh.heals.slice(0, 8).join(",")};cleared=${vh.cleared}`,
+        path: "preDesignPack.shots"
+      }
+    ];
+  } catch {
+    return [];
+  }
+}
 function collapseCloneVdOnBundle(bundle) {
   const pack2 = bundle.preDesignPack;
   const shots = pack2?.shots ?? [];
@@ -278494,6 +288388,20 @@ function runDesignAutoClose(plan, opts) {
       if (merged.length) {
         touched = true;
         changes.push(...merged);
+      }
+      if (failed.has("DEX-DUP-VD")) {
+        const div = diversifyDupVdShots(plan);
+        if (div.length) {
+          touched = true;
+          changes.push(...div);
+        }
+      }
+    }
+    if (failed.has("DEX-VID-VOICE-MODE") || failed.has("DEX-VID-PSEUDO-LINE") || failed.has("DEX-VID-BEAT-DUR") || failed.has("DEX-VID-MOTION-VERB") || failed.has("DEX-VID-INTENT-MAP")) {
+      const vh = softHealVideoHomologyOnPlan(plan, { vendorId: opts?.vendorId ?? null });
+      if (vh.length) {
+        touched = true;
+        changes.push(...vh);
       }
     }
     if (failed.has("DEX-DIRTY-STILL-PROMPT") || failed.has("DEX-HAND-LIP") || stageId === "SB") {
@@ -278771,6 +288679,117 @@ function runDesignAutoClose(plan, opts) {
       } catch {
       }
     }
+    if (failed.has("DEX-STILL-CU-CAST") || failed.has("IRD-CONFIRM")) {
+      try {
+        const { expandStillCuCast: expandStillCuCast2 } = (init_expandStillCuCast(), __toCommonJS(expandStillCuCast_exports));
+        const pd = plan.planData ?? {};
+        const pack2 = pd.preDesignPack ?? plan.preDesignPack ?? {};
+        const shots = [...pack2.shots ?? []];
+        if (shots.length) {
+          const cu = expandStillCuCast2(shots, { chatStrict: false, forceExpand: false });
+          if (cu.expandedCount > 0 || cu.slicedCount > 0) {
+            pack2.shots = cu.shots;
+            if (pd.preDesignPack) pd.preDesignPack.shots = cu.shots;
+            else pd.preDesignPack = { shots: cu.shots };
+            plan.planData = pd;
+            if (plan.preDesignPack) plan.preDesignPack.shots = cu.shots;
+            touched = true;
+            changes.push({
+              ruleId: "DEX-STILL-CU-CAST",
+              detail: `cu_cast expand=${cu.expandedCount};slice=${cu.slicedCount};confirm=${cu.confirmRequired};${cu.log.slice(0, 4).join("|")}`,
+              path: "preDesignPack.shots"
+            });
+          } else if (cu.confirmRequired) {
+            changes.push({
+              ruleId: "IRD-CONFIRM",
+              detail: `cu_cast_confirm_residual refused=${cu.refused}`,
+              path: "preDesignPack.shots"
+            });
+          }
+        }
+      } catch {
+      }
+    }
+    if (failed.has("DEX-STILL-OS-NAME") || failed.has("DEX-STILL-FILLER")) {
+      try {
+        const { peelOsFromVisual: peelOsFromVisual2 } = (init_expandStillOneBeat(), __toCommonJS(expandStillOneBeat_exports));
+        const { hasDesignFiller: hasDesignFiller2, hasOsInNameDisplay: hasOsInNameDisplay2 } = (init_stillIdentitySsot(), __toCommonJS(stillIdentitySsot_exports));
+        const pd = plan.planData ?? {};
+        const pack2 = pd.preDesignPack ?? plan.preDesignPack ?? {};
+        const shots = [...pack2.shots ?? []];
+        let n = 0;
+        for (const s of shots) {
+          let vd = String(s.visualDescription ?? "");
+          const before2 = vd;
+          if (failed.has("DEX-STILL-OS-NAME") || hasOsInNameDisplay2(vd)) {
+            const peeled = peelOsFromVisual2(vd);
+            vd = peeled.visual.replace(/[（(]OS[）)]/g, "").replace(/\s{2,}/g, " ").trim();
+          }
+          if ((failed.has("DEX-STILL-FILLER") || hasDesignFiller2(vd)) && hasDesignFiller2(vd)) {
+            vd = vd.replace(/对白瞬间[^，。；;\n]{0,24}/g, "").replace(/瞬间神态[^，。；;\n]{0,16}/g, "").replace(/内心独白[^，。；;\n]{0,20}/g, "").replace(/[，,]{2,}/g, "\uFF0C").replace(/\s{2,}/g, " ").trim();
+          }
+          if (vd && vd !== before2) {
+            s.visualDescription = vd;
+            const narr2 = { ...s.narrative ?? {} };
+            if (narr2.visualDescription != null) narr2.visualDescription = vd;
+            s.narrative = narr2;
+            n++;
+          }
+        }
+        if (n) {
+          pack2.shots = shots;
+          if (pd.preDesignPack) pd.preDesignPack.shots = shots;
+          else pd.preDesignPack = { shots };
+          plan.planData = pd;
+          touched = true;
+          changes.push({
+            ruleId: failed.has("DEX-STILL-FILLER") ? "DEX-STILL-FILLER" : "DEX-STILL-OS-NAME",
+            detail: `stripped_os_or_filler shots=${n}`,
+            path: "preDesignPack.shots[].visualDescription"
+          });
+        }
+      } catch {
+      }
+    }
+    if (failed.has("DEX-FACE-BUDGET") || failed.has("DEX-CAM-FIT") || failed.has("DEX-STILL-CU-CAST")) {
+      try {
+        const { runIndustryAvSilentRepair: runIndustryAvSilentRepair2, collectRepairChangelog: collectRepairChangelog2 } = (init_industryAvSilentRepair(), __toCommonJS(industryAvSilentRepair_exports));
+        const pdInd = plan.planData ?? {};
+        const packInd = pdInd.preDesignPack ?? plan.preDesignPack ?? {};
+        const shotsInd = [...packInd.shots ?? []];
+        if (shotsInd.length) {
+          const beforeN = shotsInd.length;
+          const ind = runIndustryAvSilentRepair2(shotsInd, { maxMs: 6e3 });
+          if (ind.changed > 0 || ind.diffs.length) {
+            const afterN = (ind.shots ?? []).length;
+            if (afterN > beforeN + 2 && !failed.has("DEX-FACE-BUDGET") && !failed.has("DEX-CAM-FIT")) {
+              changes.push({
+                ruleId: "DEX-FACE-BUDGET",
+                detail: `industry_silent_skipped_inflate before=${beforeN} after=${afterN}`,
+                path: "preDesignPack.shots"
+              });
+            } else {
+              packInd.shots = ind.shots;
+              if (pdInd.preDesignPack) pdInd.preDesignPack.shots = ind.shots;
+              else pdInd.preDesignPack = { shots: ind.shots };
+              plan.planData = pdInd;
+              if (plan.preDesignPack) plan.preDesignPack.shots = ind.shots;
+              touched = true;
+              changes.push({
+                ruleId: "DEX-FACE-BUDGET",
+                detail: `industry_silent changed=${ind.changed};diffs=${ind.diffs.join(",") || "none"};residual=${ind.residualDebts.join(",") || "none"};shots=${beforeN}->${afterN}`,
+                path: "preDesignPack.shots"
+              });
+              plan.repairChangelog = collectRepairChangelog2(ind.shots);
+              if (ind.residualDebts.length) {
+                plan.industryResidualDebts = ind.residualDebts;
+              }
+            }
+          }
+        }
+      } catch {
+      }
+    }
     if (failed.has("DEX-PROP-CONT") || Boolean(opts?.forceExpand)) {
       try {
         const { softHealPropContinuityOnBundle: softHealPropContinuityOnBundle2 } = (init_propContinuitySsot(), __toCommonJS(propContinuitySsot_exports));
@@ -278878,7 +288897,14 @@ function runDesignAutoClose(plan, opts) {
     remainingFailedIds: exitGate.failedIds,
     plan,
     exitGate,
-    chatRetryRequired: !exitGate.ok
+    chatRetryRequired: (() => {
+      try {
+        const { filterAuthorMustFixIds: filterAuthorMustFixIds2 } = (init_exportGate(), __toCommonJS(exportGate_exports));
+        return filterAuthorMustFixIds2(exitGate.failedIds).length > 0;
+      } catch {
+        return !exitGate.ok;
+      }
+    })()
   };
 }
 function applyDesignAutoCloseToBundle(bundle, opts) {
@@ -278955,9 +288981,12 @@ function applyDesignAutoCloseToBundle(bundle, opts) {
       remainingFailedIds: result.remainingFailedIds,
       changes: result.changes,
       chatRetryRequired: result.chatRetryRequired && result.remainingFailedIds.length > 0
-    }
+    },
+    repairChangelog: Array.isArray(result.plan.repairChangelog) ? result.plan.repairChangelog : void 0,
+    industryResidualDebts: result.plan.industryResidualDebts
   };
 }
+var DUP_VD_FRAME_PREFIXES;
 var init_designAutoClose = __esm({
   "src/ruleEngine/design/designAutoClose.ts"() {
     "use strict";
@@ -278968,6 +288997,7 @@ var init_designAutoClose = __esm({
     init_planFromBundleForDesignExit();
     init_shotDesignIntent();
     init_assetCrefBind();
+    DUP_VD_FRAME_PREFIXES = ["\u8FD1\u666F", "\u4E2D\u666F", "\u7279\u5199", "\u8FC7\u80A9", "\u4FA7\u62CD"];
   }
 });
 
@@ -279843,106 +289873,6 @@ var init_contractStructureHeal = __esm({
     init_emotionNorm();
     init_loadGenreTemplatePack();
     init_expanderRegistry();
-  }
-});
-
-// src/ruleEngine/bundle/preDesignPackAdapter.ts
-function linesToText(shot) {
-  const lines = shot.narrative?.dialogue?.lines ?? [];
-  return lines.map((l) => `${l.speaker ?? ""}\uFF1A${l.text ?? ""}`).join(" ");
-}
-function preDesignShotsToStoryboardTable(shots) {
-  const rows = [
-    "| \u955C | \u7C7B\u578B | \u573A\u666F | \u753B\u9762\u63CF\u5199 | \u666F\u522B | \u8868\u6F14 | \u53F0\u8BCD | \u65F6\u957F |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |"
-  ];
-  shots.forEach((s, i) => {
-    const idx = s.shotIndex ?? i + 1;
-    const line = linesToText(s).replace(/\|/g, "\\|");
-    const vd = String(s.visualDescription ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
-    const size = String(s.shotSize ?? s.narrative?.shotSize ?? "").replace(
-      /\|/g,
-      "\\|"
-    );
-    const sd = s.shotDesign;
-    const micro = sd?.performance?.microExpression;
-    const perf = [micro?.eyes, micro?.mouthDetail, sd?.lipSyncPolicy].filter(Boolean).join("\uFF1B").replace(/\|/g, "\\|");
-    rows.push(
-      `| ${idx} | ${s.type ?? "CHAR-SCENE"} | ${s.sceneName ?? ""} | ${vd} | ${size} | ${perf} | ${line} | ${s.duration ?? 3}s |`
-    );
-  });
-  return normalizeStoryboardTableMd(rows.join("\n"));
-}
-function preDesignShotsToPanels(shots, opts) {
-  return shots.map((s, i) => {
-    const shot = opts?.enrichFromDesign ? enrichShotGenerationFromDesign(s, { visualLockTable: opts.visualLockTable }) : s;
-    const idx = shot.shotIndex ?? i + 1;
-    const gen = shot.generation;
-    const desc = shot.visualDescription ?? linesToText(shot);
-    const chars = shot.charCodes?.join(", ") ?? "";
-    let imagePrompt = gen?.imagePrompt?.trim() || "";
-    const videoPrompt = gen?.videoPrompt?.trim();
-    const sceneCode = shot.sceneCode;
-    const crefCodes = parsePromptRefs(imagePrompt || "").crefs;
-    const srefCodes = parsePromptRefs(imagePrompt || "").srefs;
-    if (sceneCode && !srefCodes.length && imagePrompt && !/--sref\s+/i.test(imagePrompt)) {
-      imagePrompt = `${imagePrompt} --sref ${sceneCode}`;
-    }
-    const allCharCodes = [.../* @__PURE__ */ new Set([...shot.charCodes ?? [], ...crefCodes])];
-    const associateAssetsIds = [];
-    for (const code of allCharCodes) {
-      const id = opts?.codeToAssetId?.[code] ?? opts?.codeToAssetId?.[code.toUpperCase()];
-      if (id) associateAssetsIds.push(id);
-    }
-    if (sceneCode) {
-      const sid = opts?.codeToAssetId?.[sceneCode];
-      if (sid) associateAssetsIds.push(sid);
-    }
-    const rawFx = gen?.fxPrompt?.trim();
-    const fxPrompt = rawFx && !/^F[0-5]$/i.test(rawFx) ? rawFx : void 0;
-    const stableClientId = String(
-      shot.clientId ?? shot._stillBeatSplitId ?? shot._visualSplitId ?? `sb-${idx}`
-    );
-    const burnParentForbidden = Boolean(
-      shot.burnParentForbidden || shot._stillBeatSplitId || shot._visualSplitId
-    );
-    const literary = String(desc ?? "").trim() || [chars, shot.sceneName, sceneCode].filter(Boolean).join("\uFF0C").trim();
-    const promptLiterary = literary.slice(0, 2e3) || imagePrompt.slice(0, 2e3);
-    return {
-      clientId: stableClientId,
-      id: shot.storyboardId,
-      duration: shot.duration ?? 3,
-      prompt: promptLiterary,
-      videoDesc: videoPrompt || `${shot.shotSize ?? "medium shot"} ${shot.camera ?? "static"}, ${shot.duration ?? 3}s`,
-      audioPrompt: gen?.audioPrompt?.trim(),
-      fxPrompt,
-      shouldGenerateImage: 1,
-      associateAssetsIds: [...new Set(associateAssetsIds)],
-      track: String(idx),
-      burnParentForbidden,
-      _stillBeatSplitId: shot._stillBeatSplitId,
-      _visualSplitId: shot._visualSplitId,
-      state: "\u672A\u751F\u6210",
-      index: idx - 1
-    };
-  });
-}
-function applyPreDesignPack(pack2, opts) {
-  return {
-    scriptPlan: pack2.scriptPlan,
-    storyboardTable: preDesignShotsToStoryboardTable(pack2.shots),
-    storyboard: preDesignShotsToPanels(pack2.shots, opts)
-  };
-}
-function hasPreDesignShots(pack2) {
-  return Boolean(pack2?.shots?.length);
-}
-var init_preDesignPackAdapter = __esm({
-  "src/ruleEngine/bundle/preDesignPackAdapter.ts"() {
-    "use strict";
-    init_modalityChainAudit();
-    init_vendorPromptAdapter();
-    init_normalizeStoryboardTableMd();
   }
 });
 
@@ -288430,8 +298360,8 @@ async function loadLayoutTemplateBase64(template) {
   const ext = import_path18.default.extname(p3).toLowerCase();
   try {
     if (ext === ".svg" || ext === ".png" || ext === ".jpg" || ext === ".jpeg" || ext === ".webp") {
-      const sharp8 = (await import("sharp")).default;
-      const png = await sharp8(p3).resize(576, 1024, { fit: "fill" }).png().toBuffer();
+      const sharp9 = (await import("sharp")).default;
+      const png = await sharp9(p3).resize(576, 1024, { fit: "fill" }).png().toBuffer();
       return png.toString("base64");
     }
     return import_fs13.default.readFileSync(p3).toString("base64");
@@ -289969,19 +299899,123 @@ var init_runStillVendorWithActuator = __esm({
   }
 });
 
+// src/ruleEngine/compilers/localSoftFaceBox.ts
+var localSoftFaceBox_exports = {};
+__export(localSoftFaceBox_exports, {
+  estimateLocalSoftFaceBox: () => estimateLocalSoftFaceBox,
+  stampLocalSoftFaceBoxOnMeta: () => stampLocalSoftFaceBoxOnMeta
+});
+function stripDataUrl3(b64) {
+  return String(b64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim();
+}
+function isSkinish(r, g, b) {
+  if (r < 60 || g < 40 || b < 30) return false;
+  if (r < g || r < b) return false;
+  if (r - g < 8 && r - b < 8) return false;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max - min < 12) return false;
+  return true;
+}
+async function estimateLocalSoftFaceBox(input) {
+  let buf = input.imageBuffer ?? null;
+  if (!buf) {
+    const raw = stripDataUrl3(String(input.imageBase64 ?? ""));
+    if (!raw) return null;
+    try {
+      buf = Buffer.from(raw, "base64");
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const { data, info } = await (0, import_sharp5.default)(buf).resize(48, 64, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const w = info.width;
+    const h = info.height;
+    const ch = info.channels || 3;
+    let minX = w;
+    let maxX = 0;
+    let minY = h;
+    let maxY = 0;
+    let hits = 0;
+    const yMax = Math.floor(h * 0.62);
+    for (let y = 0; y < yMax; y++) {
+      for (let x = Math.floor(w * 0.08); x < Math.floor(w * 0.92); x++) {
+        const i = (y * w + x) * ch;
+        const r = data[i] ?? 0;
+        const g = data[i + 1] ?? 0;
+        const b = data[i + 2] ?? 0;
+        if (!isSkinish(r, g, b)) continue;
+        hits++;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    const area = w * h;
+    const conf = hits / Math.max(1, area * 0.35);
+    if (hits < 12 || maxX <= minX || maxY <= minY || conf < 0.02) {
+      return null;
+    }
+    const padX = Math.max(1, Math.floor((maxX - minX) * 0.12));
+    const padY = Math.max(1, Math.floor((maxY - minY) * 0.15));
+    const left = Math.max(0, minX - padX) / w;
+    const right = Math.min(w - 1, maxX + padX) / w;
+    const top = Math.max(0, minY - padY) / h;
+    const bottom = Math.min(h - 1, maxY + padY) / h;
+    if (right - left > 0.85 && bottom - top > 0.7) return null;
+    return {
+      top,
+      bottom,
+      left,
+      right,
+      provisional: true,
+      source: "local_soft_luma",
+      confidence: Math.min(1, conf * 4),
+      reason: "upper_skinish_blob"
+    };
+  } catch {
+    return null;
+  }
+}
+function stampLocalSoftFaceBoxOnMeta(meta4, box) {
+  if (!box) return false;
+  meta4.localSoftFaceBox = box;
+  if (!meta4.faceBoxNorm && !meta4.vlmFaceBox && !meta4.compositionFaceBox) {
+    meta4.faceBoxNormProvisional = {
+      top: box.top,
+      bottom: box.bottom,
+      left: box.left,
+      right: box.right,
+      provisional: true,
+      source: box.source
+    };
+  }
+  meta4.pixelDimStatus = meta4.pixelDimStatus ?? "unmeasured";
+  return true;
+}
+var import_sharp5;
+var init_localSoftFaceBox = __esm({
+  "src/ruleEngine/compilers/localSoftFaceBox.ts"() {
+    "use strict";
+    import_sharp5 = __toESM(require("sharp"));
+  }
+});
+
 // src/ruleEngine/quality/localStillPoseHeuristic.ts
 var localStillPoseHeuristic_exports = {};
 __export(localStillPoseHeuristic_exports, {
   analyzeLocalStillPose: () => analyzeLocalStillPose
 });
-function stripDataUrl3(b64) {
+function stripDataUrl4(b64) {
   return String(b64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim();
 }
 async function analyzeLocalStillPose(input) {
   const sources = ["localStillPoseHeuristic"];
   let buf = input.imageBuffer ?? null;
   if (!buf) {
-    const raw = stripDataUrl3(String(input.imageBase64 ?? ""));
+    const raw = stripDataUrl4(String(input.imageBase64 ?? ""));
     if (!raw) return { ok: false, reason: "no_image", sources };
     try {
       buf = Buffer.from(raw, "base64");
@@ -289990,7 +300024,7 @@ async function analyzeLocalStillPose(input) {
     }
   }
   try {
-    const { data, info } = await (0, import_sharp5.default)(buf).resize(64, 96, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { data, info } = await (0, import_sharp6.default)(buf).resize(64, 96, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
     const w = info.width;
     const h = info.height;
     const channels = info.channels || 3;
@@ -290078,11 +300112,11 @@ async function analyzeLocalStillPose(input) {
     return { ok: false, reason: String(e?.message ?? e), sources };
   }
 }
-var import_sharp5;
+var import_sharp6;
 var init_localStillPoseHeuristic = __esm({
   "src/ruleEngine/quality/localStillPoseHeuristic.ts"() {
     "use strict";
-    import_sharp5 = __toESM(require("sharp"));
+    import_sharp6 = __toESM(require("sharp"));
   }
 });
 
@@ -290676,6 +300710,7 @@ var init_applyLiteraryRepairDeltas = __esm({
 // src/ruleEngine/quality/literaryEffectsAfterStill.ts
 var literaryEffectsAfterStill_exports = {};
 __export(literaryEffectsAfterStill_exports, {
+  inferFaceReadableFromStill: () => inferFaceReadableFromStill,
   literaryEffectsPersistSlice: () => literaryEffectsPersistSlice,
   reassertLiteraryEffectsAfterStill: () => reassertLiteraryEffectsAfterStill,
   syncStillModalityHints: () => syncStillModalityHints
@@ -290685,17 +300720,38 @@ function syncStillModalityHints(input) {
   const vd = String(input.visualDescription ?? "");
   const bend = seal?.poseOccupancy === "bend_pickup" || seal?.primaryObjective === "action_primary" || /弯腰|捡起|捡拾|俯身/.test(vd);
   const out = {};
-  const degraded = input.realizationDegraded === true || seal?.realizationDegraded === true;
-  if (bend) {
-    out.videoMotionStartHint = "\u8D77\u6001\uFF1A\u5F2F\u8170\u6361\u62FE\u89E6\u5730\uFF0C\u4E3B\u624B\u524D\u4F38\u8FD1\u5730\uFF1B\u7981\u6B62\u8DEA\u5750\u6367\u6301\u4E3E\u5361\u5F00\u573A";
+  const degraded = input.realizationDegraded === true || seal?.realizationDegraded === true || input.realization?.realizationDegraded === true;
+  if (bend || input.realization) {
     try {
-      const { buildI2vCriticalFactsFromSeal: buildI2vCriticalFactsFromSeal2 } = (init_stillSealGate(), __toCommonJS(stillSealGate_exports));
-      out.i2vCriticalFacts = buildI2vCriticalFactsFromSeal2(seal, vd);
+      const { buildRealizationAdaptPack: buildRealizationAdaptPack2 } = (init_realizationAdapt(), __toCommonJS(realizationAdapt_exports));
+      const pack2 = buildRealizationAdaptPack2({
+        visualDescription: vd,
+        durationSec: input.durationSec ?? 3,
+        dialoguePresent: input.dialoguePresent,
+        intentOccupancy: input.realization?.intentOccupancy ?? seal?.poseOccupancy,
+        realizationOccupancy: input.realizationOccupancy ?? input.realization?.realizationOccupancy,
+        realizationDegraded: degraded,
+        stillMeta: input.stillMeta,
+        emotionIntensity: input.emotionIntensity
+      });
+      out.realizationAdaptPack = pack2;
+      if (pack2.motionStartHint) out.videoMotionStartHint = pack2.motionStartHint;
+      if (pack2.i2vCriticalFacts.length) out.i2vCriticalFacts = pack2.i2vCriticalFacts;
+      if (!pack2.motionStartHint && !degraded && bend) {
+        out.videoMotionStartHint = "\u8D77\u6001\uFF1A\u5F2F\u8170\u6361\u62FE\u89E6\u5730\uFF0C\u4E3B\u624B\u524D\u4F38\u8FD1\u5730\uFF1B\u7981\u6B62\u8DEA\u5750\u6367\u6301\u4E3E\u5361\u5F00\u573A";
+      }
     } catch {
-      out.i2vCriticalFacts = ["\u5F2F\u8170\u6361\u62FE", "\u4F11\u4E66\u4E3B\u624B\u89E6\u5730", "\u7981\u6B62\u8DEA\u5750\u6367\u6301"];
+      if (bend && !degraded) {
+        out.videoMotionStartHint = "\u8D77\u6001\uFF1A\u5F2F\u8170\u6361\u62FE\u89E6\u5730\uFF0C\u4E3B\u624B\u524D\u4F38\u8FD1\u5730\uFF1B\u7981\u6B62\u8DEA\u5750\u6367\u6301\u4E3E\u5361\u5F00\u573A";
+      }
     }
-    if (degraded) {
-      out.i2vCriticalFacts = [...out.i2vCriticalFacts ?? [], "\u9759\u5E27\u59FF\u6001\u503A"];
+    if (!out.i2vCriticalFacts?.length && bend) {
+      try {
+        const { buildI2vCriticalFactsFromSeal: buildI2vCriticalFactsFromSeal2 } = (init_stillSealGate(), __toCommonJS(stillSealGate_exports));
+        out.i2vCriticalFacts = buildI2vCriticalFactsFromSeal2(seal, vd);
+      } catch {
+        out.i2vCriticalFacts = ["\u5F2F\u8170\u6361\u62FE", "\u4F11\u4E66\u4E3B\u624B\u89E6\u5730", "\u7981\u6B62\u8DEA\u5750\u6367\u6301"];
+      }
     }
   }
   if (input.literaryEffectsQualified === false && bend) {
@@ -290859,7 +300915,16 @@ async function reassertLiteraryEffectsAfterStill(input) {
     visualDescription: input.visualDescription,
     literaryEffectsQualified,
     realizationOccupancy: realization?.realizationOccupancy,
-    realizationDegraded: realization?.realizationDegraded
+    realizationDegraded: realization?.realizationDegraded,
+    realization,
+    durationSec: Number(input.episodeShot?.duration) || 3,
+    dialoguePresent: Boolean(
+      input.episodeShot?.narrative?.dialogue?.lines?.length
+    ),
+    emotionIntensity: Number(
+      input.episodeShot?.narrative?.emotionIntensity
+    ),
+    stillMeta: input.episodeShot
   });
   return {
     literaryEffectsQualified,
@@ -290877,14 +300942,40 @@ async function reassertLiteraryEffectsAfterStill(input) {
     sampleMustMissIds,
     sampleAtomJudgments,
     shotDesignSample: sample,
+    realizationAdaptPack: modality.realizationAdaptPack ?? null,
     ...modality
   };
 }
+function inferFaceReadableFromStill(input) {
+  const meta4 = input.stillMeta ?? {};
+  if (meta4.faceReadable === true || meta4.faceReadable === "ok") return "ok";
+  if (meta4.faceReadable === "risk" || meta4.faceReadable === false) return "risk";
+  const facts = input.i2vCriticalFacts ?? meta4.i2vCriticalFacts ?? [];
+  if (facts.some((f) => /面容可读|抬视线|半身|近景脸/.test(String(f)))) return "ok";
+  const vd = String(input.visualDescription ?? "");
+  const bow = /弯腰|俯身|低头|跪/.test(vd) || input.realizationOccupancy === "kneel_hold" || meta4.realizationOccupancy === "kneel_hold" || meta4.intentOccupancy === "bend_pickup";
+  if (input.dialoguePresent && bow) return "risk";
+  if (input.dialoguePresent) return "unknown";
+  return "ok";
+}
 function literaryEffectsPersistSlice(r) {
   const sampleMustFulfilled = r.sampleMustFulfilled ?? r.literaryEffectsQualified;
+  const faceReadable = inferFaceReadableFromStill({
+    stillMeta: {
+      realizationOccupancy: r.realization?.realizationOccupancy,
+      intentOccupancy: r.realization?.intentOccupancy,
+      i2vCriticalFacts: r.i2vCriticalFacts
+    },
+    dialoguePresent: Boolean(
+      r.i2vCriticalFacts?.some((f) => /口型|对白|抬视线|面容/.test(f)) || r.videoMotionStartHint?.includes("\u53E3\u578B") || r.videoMotionStartHint?.includes("\u62AC\u8138")
+    ),
+    i2vCriticalFacts: r.i2vCriticalFacts,
+    realizationOccupancy: r.realization?.realizationOccupancy
+  });
   return {
     literaryEffectsQualified: r.literaryEffectsQualified,
     sampleMustFulfilled,
+    faceReadable,
     sampleFulfillment: {
       mustFulfilled: sampleMustFulfilled,
       mustMissIds: r.sampleMustMissIds ?? r.missingEffects.filter((m) => m.bar === "must").map((m) => m.id),
@@ -290912,6 +301003,16 @@ function literaryEffectsPersistSlice(r) {
     repairDeltaHints: r.repairDeltaHints,
     videoMotionStartHint: r.videoMotionStartHint,
     i2vCriticalFacts: r.i2vCriticalFacts,
+    ...r.realizationAdaptPack ? {
+      realizationAdaptPack: {
+        mappingKey: r.realizationAdaptPack.mappingKey,
+        adapted: r.realizationAdaptPack.adapted,
+        motionPhases: r.realizationAdaptPack.motionPhases,
+        motionStartHint: r.realizationAdaptPack.motionStartHint,
+        cameraPolicy: r.realizationAdaptPack.cameraPolicy,
+        narrativeFootnote: r.realizationAdaptPack.narrativeFootnote
+      }
+    } : {},
     ...r.realization ? {
       intentOccupancy: r.realization.intentOccupancy,
       realizationOccupancy: r.realization.realizationOccupancy,
@@ -291172,99 +301273,6 @@ var init_bgReadableUntilClear = __esm({
   "src/ruleEngine/quality/handlers/bgReadableUntilClear.ts"() {
     "use strict";
     CLASS_ID = "BG_READABLE";
-  }
-});
-
-// src/ruleEngine/design/repairAsDesign.ts
-var repairAsDesign_exports = {};
-__export(repairAsDesign_exports, {
-  applyRepairAsDesignToShot: () => applyRepairAsDesignToShot,
-  planRepairFromFailureCluster: () => planRepairFromFailureCluster
-});
-function planRepairFromFailureCluster(input) {
-  const writes = [];
-  const kind = String(input.kind ?? "");
-  const vd = String(input.visualDescription ?? "");
-  if (kind === "contact_miss" || /paper_in_mouth|口含|纸入口/i.test(`${kind} ${input.hint ?? ""}`)) {
-    writes.push({
-      slot: "visualDescription",
-      value: /纸未入口|仅颊触/.test(vd) ? vd : `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}\u7EB8\u672A\u5165\u53E3\uFF1B\u4EC5\u988A\u89E6\u975E\u53E3\u542B\uFF1B\u8584\u7EB8\u89D2\u8D34\u5408\u9762\u988A\u5916\u4FA7\u3002`,
-      reason: "neg_repair_cheek"
-    });
-    writes.push({ slot: "propPose", value: "\u8584\u7EB8\u89D2\u8D34\u988A\u5212\u8FC7\uFF0C\u7981\u6B62\u53E3\u542B/\u624B\u6301\u5361\u7247", reason: "prop_pose" });
-    writes.push({ slot: "sfx", value: "\u7EB8\u9875\u6469\u64E6", reason: "contact_sfx" });
-  } else if (kind === "prompt_fidelity" || /PROMPT-FIDELITY|锚点未覆盖/i.test(`${kind} ${input.hint ?? ""}`)) {
-    const miss = String(input.hint ?? "\u7AEF\u5750\u3001\u592A\u5E08\u6905").replace(/提示词未覆盖设计锚点[^；]*/g, "").trim();
-    writes.push({
-      slot: "visualDescription",
-      value: `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}${miss || "\u7AEF\u5750\u592A\u5E08\u6905"}`,
-      reason: "prompt_fidelity_vd"
-    });
-  } else if (kind === "gray_studio" || kind === "missing_prop") {
-    writes.push({
-      slot: "visualDescription",
-      value: `${vd}${vd.endsWith("\u3002") ? "" : "\u3002"}\u4FDD\u7559\u5BA4\u5185\u8F6F\u73AF\u5883\u8F6E\u5ED3\uFF0C\u7981\u6B62\u7070\u68DA\u7A7A\u767D\u80CC\u666F\u3002`,
-      reason: "soft_env_repair"
-    });
-  } else if (kind === "prop_substitution") {
-    writes.push({
-      slot: "propPose",
-      value: "\u672C\u955C\u4E8B\u4EF6\u9053\u5177\u5165\u753B\u8D34\u5408\u89E6\u70B9\uFF0C\u7981\u6B62\u4EE5\u5916\u7C7B\u6301\u7269\u66FF\u4EE3",
-      reason: "prop_sub"
-    });
-  }
-  return buildRepairAsDesignPlan({
-    writes,
-    blocksBurn: writes.length > 0,
-    vendorConstraint: "seedream_multiref"
-  });
-}
-function applyRepairAsDesignToShot(shot, plan) {
-  const applied = [];
-  for (const w of plan.writes) {
-    const field = SLOT_FIELD[w.slot] ?? w.slot;
-    if (field === "sfx") {
-      const sound = { ...shot.sound ?? {}, sfx: w.value };
-      shot.sound = sound;
-      applied.push("sfx");
-      continue;
-    }
-    if (field === "avCausality") {
-      const narr2 = { ...shot.narrative ?? {} };
-      narr2.avCausality = typeof w.value === "string" ? { visualPeak: w.value } : w.value;
-      shot.narrative = narr2;
-      applied.push("avCausality");
-      continue;
-    }
-    if (field === "visualDescription") {
-      shot.visualDescription = w.value;
-      applied.push("visualDescription");
-      continue;
-    }
-    shot[field] = w.value;
-    applied.push(String(field));
-  }
-  shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
-  shot.promptState = "stale";
-  shot.repairAsDesignAt = (/* @__PURE__ */ new Date()).toISOString();
-  return { applied };
-}
-var SLOT_FIELD;
-var init_repairAsDesign = __esm({
-  "src/ruleEngine/design/repairAsDesign.ts"() {
-    "use strict";
-    init_shootableArchitecture();
-    SLOT_FIELD = {
-      visualDescription: "visualDescription",
-      microExpression: "microExpression",
-      propPose: "propPose",
-      dialogueCoverage: "dialogue",
-      audioCue: "audioCue",
-      sfx: "sfx",
-      fxPrompt: "fxPrompt",
-      avCausality: "avCausality",
-      shotSize: "shotSize"
-    };
   }
 });
 
@@ -292196,14 +302204,15 @@ __export(heuristicStillJudge_exports, {
   judgeStillHeuristicNoVlm: () => judgeStillHeuristicNoVlm
 });
 function judgeStillHeuristicNoVlm(input) {
-  if (input.vlmKeyPresent) {
-    return { measured: false, atomMisses: [], hints: ["defer_to_vlm"], visualPassClaim: false };
+  if (input.vlmKeyPresent && !input.faceBoxNorm) {
+    return { measured: false, atomMisses: [], hints: ["defer_to_vlm"], visualPassClaim: false, pixelDimStatus: "unmeasured" };
   }
   const vd = String(input.visualDescription ?? "");
   const prompt = String(input.promptUsed ?? "");
   const atomMisses = [];
   const hints = [];
   let debtKind = "key_unmeasured";
+  let pixelDimStatus2 = "unmeasured";
   if (String(input.propPlateGrade ?? "") === "missing" && /休书|婚书|信笺|纸|捡|捏/.test(vd)) {
     atomMisses.push("prop_plate");
     debtKind = "prop_plate";
@@ -292234,17 +302243,49 @@ function judgeStillHeuristicNoVlm(input) {
       hints.push("strip_secondary_full+skirt_blur");
     }
   }
+  {
+    const metaBag = {
+      faceBoxNorm: input.faceBoxNorm,
+      visualPassAt: input.vlmKeyPresent ? "x" : void 0,
+      vlmKeyPresent: input.vlmKeyPresent
+    };
+    let faceBox = input.faceBoxNorm ?? null;
+    try {
+      const { readFaceBoxNormFromMeta: readFaceBoxNormFromMeta2 } = (init_faceBoxNormFromMeta(), __toCommonJS(faceBoxNormFromMeta_exports));
+      faceBox = faceBox ?? readFaceBoxNormFromMeta2(metaBag);
+    } catch {
+    }
+    const soft = assessComposition({
+      keyOrAdapterPresent: Boolean(input.vlmKeyPresent && faceBox),
+      faceBoxNorm: faceBox,
+      visualDescription: vd,
+      promptUsed: prompt,
+      shotSize: input.shotSize,
+      faceBudget: input.faceBudget
+    });
+    pixelDimStatus2 = soft.pixelDimStatus;
+    for (const f of soft.findings) {
+      hints.push(f.id);
+      atomMisses.push(f.id);
+    }
+  }
   return {
-    measured: atomMisses.length > 0,
+    measured: softMeasuredOrMisses(atomMisses, pixelDimStatus2),
     debtKind,
     atomMisses,
     hints: hints.length ? hints : ["unmeasured_no_vlm_key"],
-    visualPassClaim: false
+    visualPassClaim: false,
+    pixelDimStatus: pixelDimStatus2
   };
+}
+function softMeasuredOrMisses(atomMisses, status) {
+  if (status === "measured_pass" || status === "measured_fail") return true;
+  return atomMisses.length > 0;
 }
 var init_heuristicStillJudge = __esm({
   "src/ruleEngine/quality/heuristicStillJudge.ts"() {
     "use strict";
+    init_compositionAssess();
   }
 });
 
@@ -294364,6 +304405,14 @@ async function runGenerateFlowImageCore(db2, body, deps = {}) {
         });
       }
       lastComposed2.lastImageBase64 = imageBase64;
+      try {
+        const { estimateLocalSoftFaceBox: estimateLocalSoftFaceBox2, stampLocalSoftFaceBoxOnMeta: stampLocalSoftFaceBoxOnMeta2 } = await Promise.resolve().then(() => (init_localSoftFaceBox(), localSoftFaceBox_exports));
+        const softBox = await estimateLocalSoftFaceBox2({ imageBase64 });
+        if (softBox) {
+          stampLocalSoftFaceBoxOnMeta2(lastComposed2, softBox);
+        }
+      } catch {
+      }
       return {
         url: url4,
         savePath,
@@ -294639,6 +304688,9 @@ async function finalizeSuccess(db2, input) {
     }
     if (litAfter.i2vCriticalFacts?.length && input.composed.generationContract) {
       input.composed.generationContract.i2vCriticalFacts = litAfter.i2vCriticalFacts;
+    }
+    if (litAfter.realizationAdaptPack && input.composed.generationContract) {
+      input.composed.generationContract.realizationAdaptPack = litAfter.realizationAdaptPack;
     }
   } catch {
   }
@@ -297035,94 +307087,6 @@ var init_resolveShotIdentity = __esm({
   }
 });
 
-// src/ruleEngine/bundle/warehouseDebtMeta.ts
-var warehouseDebtMeta_exports = {};
-__export(warehouseDebtMeta_exports, {
-  applyWarehouseDebtToPackage: () => applyWarehouseDebtToPackage,
-  extractWarehouseDebtFromBundle: () => extractWarehouseDebtFromBundle,
-  readWarehouseDebtFromPackage: () => readWarehouseDebtFromPackage,
-  warehouseDebtBlocksVideo: () => warehouseDebtBlocksVideo,
-  warehouseDebtStillEnhance: () => warehouseDebtStillEnhance,
-  writeWarehouseDebtToBundle: () => writeWarehouseDebtToBundle
-});
-function extractWarehouseDebtFromBundle(bundle) {
-  const b = bundle;
-  const bMeta = b.meta ?? {};
-  const pdMeta = b.planData?.meta ?? {};
-  const meta4 = { ...pdMeta, ...bMeta };
-  return {
-    importOkNotExitPass: Boolean(meta4.importOkNotExitPass),
-    importDiagnoseOnly: Boolean(meta4.importDiagnoseOnly),
-    lipConfirmRequired: Boolean(meta4.lipConfirmRequired),
-    irdConfirmRequired: Boolean(
-      meta4.irdConfirmRequired || b.irdConfirmRequired || pdMeta.irdConfirmRequired
-    ),
-    importSplitExpanded: Boolean(
-      meta4.importSplitExpanded || b._importSplitExpanded || pdMeta.importSplitExpanded
-    ),
-    expandProvenance: meta4.expandProvenance ?? pdMeta.expandProvenance,
-    designSlotHealSummary: meta4.designSlotHealSummary,
-    designExitIncomplete: Boolean(meta4.designExitIncomplete)
-  };
-}
-function writeWarehouseDebtToBundle(bundle, debt) {
-  const bMeta = bundle.meta ??= {};
-  const pd = bundle.planData ?? (bundle.planData = {});
-  const pdMeta = pd.meta ?? (pd.meta = {});
-  for (const [k, v] of Object.entries(debt)) {
-    if (v === void 0) continue;
-    bMeta[k] = v;
-    pdMeta[k] = v;
-  }
-  if (debt.irdConfirmRequired) {
-    bundle.irdConfirmRequired = true;
-  }
-  if (debt.importSplitExpanded) {
-    bundle._importSplitExpanded = true;
-  }
-}
-function applyWarehouseDebtToPackage(pkg, debt) {
-  const next = {
-    ...pkg,
-    warehouseDebt: { ...pkg.warehouseDebt ?? {}, ...debt },
-    meta: { ...pkg.meta ?? {}, ...debt }
-  };
-  return next;
-}
-function readWarehouseDebtFromPackage(pkg) {
-  if (!pkg) return {};
-  const wd = pkg.warehouseDebt ?? {};
-  const meta4 = pkg.meta ?? {};
-  return {
-    importOkNotExitPass: Boolean(wd.importOkNotExitPass ?? meta4.importOkNotExitPass),
-    importDiagnoseOnly: Boolean(wd.importDiagnoseOnly ?? meta4.importDiagnoseOnly),
-    lipConfirmRequired: Boolean(wd.lipConfirmRequired ?? meta4.lipConfirmRequired),
-    irdConfirmRequired: Boolean(wd.irdConfirmRequired ?? meta4.irdConfirmRequired),
-    importSplitExpanded: Boolean(wd.importSplitExpanded ?? meta4.importSplitExpanded),
-    expandProvenance: wd.expandProvenance ?? meta4.expandProvenance,
-    designSlotHealSummary: wd.designSlotHealSummary ?? meta4.designSlotHealSummary,
-    designExitIncomplete: Boolean(wd.designExitIncomplete ?? meta4.designExitIncomplete)
-  };
-}
-function warehouseDebtBlocksVideo(debt) {
-  return Boolean(debt.lipConfirmRequired || debt.importOkNotExitPass || debt.irdConfirmRequired);
-}
-function warehouseDebtStillEnhance(debt) {
-  if (!warehouseDebtBlocksVideo(debt) && !debt.designExitIncomplete) {
-    return { enhance: false, ctaLabel: "", userMessage: "" };
-  }
-  return {
-    enhance: true,
-    ctaLabel: "\u667A\u80FD\u4FEE\u590D",
-    userMessage: "importOk\u2260designExitPass\uFF1A\u4ED3\u503A\u672A\u95ED\uFF08\u53EF draft\uFF0Cdraft\u2260hq_ok\u2260\u8BBE\u8BA1\u5DF2\u95ED\uFF09\u3002\u8BF7\u70B9\u300C\u667A\u80FD\u4FEE\u590D\u300D\u69FD\u6108/Confirm \u667A\u62C6\u540E\u518D\u5F53 HQ\u3002"
-  };
-}
-var init_warehouseDebtMeta = __esm({
-  "src/ruleEngine/bundle/warehouseDebtMeta.ts"() {
-    "use strict";
-  }
-});
-
 // src/ruleEngine/design/assetStillRunner.ts
 function ensureCodesInRemark(remark, codes) {
   const tags = remark.split(";").map((t) => t.trim()).filter((t) => t && t !== "orphanStub:1");
@@ -297289,11 +307253,23 @@ var init_assetStillRunner = __esm({
 // src/ruleEngine/quality/smartRepairActuators.ts
 var smartRepairActuators_exports = {};
 __export(smartRepairActuators_exports, {
+  burnNextStepForSmartRepairTrigger: () => burnNextStepForSmartRepairTrigger,
   isRedesignOnlyTrigger: () => isRedesignOnlyTrigger,
   routeSmartRepair: () => routeSmartRepair,
   selfHealActuatorsForTriggers: () => selfHealActuatorsForTriggers,
   smartRepairFromLiteraryMisses: () => smartRepairFromLiteraryMisses
 });
+function burnNextStepForSmartRepairTrigger(trigger) {
+  const t = String(trigger ?? "");
+  if (/lang|LANG-01/i.test(t)) return "chat_repair";
+  if (/face_budget_unreachable|dialogue_shot_too_wide|vis_multi_beat|still_cu_cast/i.test(t)) return "split_shot";
+  if (/face_unread|FACE-READABILITY|still_i2v|visualPass|secondary_dominance|mouth/i.test(t)) {
+    return "regen_storyboard_hq";
+  }
+  if (/REALIZATION-MOTION|cam_speak|VIDEO-PROMPT-STALE/i.test(t)) return "soft_patch";
+  if (/confirm_split|split_shot/i.test(t)) return "split_shot";
+  return null;
+}
 function smartRepairFromLiteraryMisses(missingIds) {
   const {
     repairPlanForMissingEffects: repairPlanForMissingEffects2
@@ -297317,8 +307293,11 @@ function routeSmartRepair(trigger, confidence = 0.7) {
   const t = trigger.trim();
   const row = ROUTES.find((r) => r.trigger === t) ?? ROUTES.find((r) => t.includes(r.trigger)) ?? (PHASE1_DEBT.has(t) ? ROUTES.find((r) => r.debtClass === t) : void 0);
   if (!row) return null;
-  const action = repairActionForConfidence(row.trigger, confidence);
-  return { ...row, confidenceAction: action };
+  const industryAuto = /face_budget|dialogue_shot_too_wide|vis_multi_beat|LANG-01|lang_vid|REALIZATION-MOTION|cam_speak|face_unread|FACE-READABILITY/i.test(
+    row.trigger
+  );
+  const action = industryAuto ? row.confidenceAction === "confirm_only" ? "apply_auto" : row.confidenceAction : repairActionForConfidence(row.trigger, confidence);
+  return { ...row, confidenceAction: industryAuto ? "apply_auto" : action };
 }
 function selfHealActuatorsForTriggers(triggers) {
   const actuators = /* @__PURE__ */ new Set();
@@ -297636,6 +307615,79 @@ var init_smartRepairActuators = __esm({
         actuators: ["prompt_inject", "compose_regen", "regen_storyboard_hq"],
         autoStages: ["compose_regen", "regen_storyboard_hq"],
         maxAutoRounds: 3,
+        confidenceAction: "apply_auto"
+      },
+      // L2–L5 homology with burn primaryBlock (LANG / face / split / cam / realization)
+      {
+        trigger: "lang_vid_mismatch",
+        debtClass: "LANG_VID",
+        actuators: ["chat_repair", "prompt_inject"],
+        autoStages: ["handoff_human"],
+        maxAutoRounds: 1,
+        confidenceAction: "apply_auto"
+      },
+      {
+        trigger: "LANG-01",
+        debtClass: "LANG_VID",
+        actuators: ["chat_repair", "prompt_inject"],
+        autoStages: ["handoff_human"],
+        maxAutoRounds: 1,
+        confidenceAction: "apply_auto"
+      },
+      {
+        trigger: "face_budget_unreachable",
+        debtClass: "FACE_BUDGET",
+        actuators: ["confirm_split", "chat_repair"],
+        autoStages: ["handoff_human"],
+        maxAutoRounds: 1,
+        confidenceAction: "apply_auto"
+      },
+      {
+        trigger: "face_unreadability",
+        debtClass: "FACE_BUDGET",
+        actuators: ["regen_storyboard_hq", "confirm_split"],
+        autoStages: ["regen_storyboard_hq", "handoff_human"],
+        maxAutoRounds: 2,
+        confidenceAction: "apply_auto"
+      },
+      {
+        trigger: "REALIZATION-FACE-READABILITY",
+        debtClass: "FACE_BUDGET",
+        actuators: ["regen_storyboard_hq", "confirm_split"],
+        autoStages: ["regen_storyboard_hq"],
+        maxAutoRounds: 2,
+        confidenceAction: "apply_auto"
+      },
+      {
+        trigger: "REALIZATION-MOTION-MISMATCH",
+        debtClass: "REALIZATION_ADAPT",
+        actuators: ["prompt_inject", "chat_repair"],
+        autoStages: ["handoff_human"],
+        maxAutoRounds: 1,
+        confidenceAction: "apply_auto"
+      },
+      {
+        trigger: "cam_speak",
+        debtClass: "CAM_SPEAK",
+        actuators: ["prompt_inject", "chat_repair"],
+        autoStages: ["handoff_human"],
+        maxAutoRounds: 1,
+        confidenceAction: "apply_auto"
+      },
+      {
+        trigger: "dialogue_shot_too_wide",
+        debtClass: "FACE_BUDGET",
+        actuators: ["confirm_split", "chat_repair"],
+        autoStages: ["handoff_human"],
+        maxAutoRounds: 1,
+        confidenceAction: "apply_auto"
+      },
+      {
+        trigger: "vis_multi_beat",
+        debtClass: "SPLIT_SHOT",
+        actuators: ["confirm_split", "chat_repair"],
+        autoStages: ["handoff_human"],
+        maxAutoRounds: 1,
         confidenceAction: "apply_auto"
       }
     ];
@@ -299569,14 +309621,14 @@ ${promptText}`;
 });
 
 // src/routes/production/storyboard/downPreviewImage.ts
-var import_express74, import_sharp6, router74, downPreviewImage_default;
+var import_express74, import_sharp7, router74, downPreviewImage_default;
 var init_downPreviewImage = __esm({
   "src/routes/production/storyboard/downPreviewImage.ts"() {
     "use strict";
     import_express74 = __toESM(require_express2());
     init_utils3();
     init_zod();
-    import_sharp6 = __toESM(require("sharp"));
+    import_sharp7 = __toESM(require("sharp"));
     init_middleware();
     router74 = import_express74.default.Router();
     downPreviewImage_default = router74.post(
@@ -299596,7 +309648,7 @@ var init_downPreviewImage = __esm({
           orderedFilePaths.map(async (filePath) => {
             if (!filePath) return null;
             const buffer2 = await utils_default.oss.getFile(filePath);
-            const metadata = await (0, import_sharp6.default)(buffer2).metadata();
+            const metadata = await (0, import_sharp7.default)(buffer2).metadata();
             return { buffer: buffer2, width: metadata.width || 0, height: metadata.height || 0 };
           })
         );
@@ -299647,7 +309699,7 @@ var init_downPreviewImage = __esm({
             top: y + 4
           });
         }
-        const resultBuffer = await (0, import_sharp6.default)({
+        const resultBuffer = await (0, import_sharp7.default)({
           create: {
             width: canvasWidth,
             height: canvasHeight,
@@ -299750,6 +309802,106 @@ var init_getStoryboardData2 = __esm({
         res.status(200).send(success3({ data, total: totalQuery?.total }));
       }
     );
+  }
+});
+
+// src/ruleEngine/quality/adaptFeedbackWriteback.ts
+var adaptFeedbackWriteback_exports = {};
+__export(adaptFeedbackWriteback_exports, {
+  adaptFeedbackFromHumanRejudge: () => adaptFeedbackFromHumanRejudge,
+  adaptFeedbackPersistSlice: () => adaptFeedbackPersistSlice,
+  applyAdaptFeedbackToPack: () => applyAdaptFeedbackToPack,
+  mergeAdaptFeedback: () => mergeAdaptFeedback,
+  parseAdaptFeedbackFromMeta: () => parseAdaptFeedbackFromMeta,
+  rejudgeOwnerForFeedback: () => rejudgeOwnerForFeedback
+});
+function parseAdaptFeedbackFromMeta(meta4) {
+  const raw = meta4?.adaptFeedback;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((e) => {
+    const o = e;
+    if (!o.kind) return null;
+    return {
+      kind: o.kind,
+      shotIndex: o.shotIndex ?? null,
+      note: o.note,
+      at: o.at ?? ""
+    };
+  }).filter(Boolean);
+}
+function mergeAdaptFeedback(existing, entry) {
+  const next = {
+    ...entry,
+    at: entry.at ?? (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const list2 = [...existing ?? []];
+  const dup = list2.findIndex((e) => e.kind === next.kind && e.shotIndex === next.shotIndex);
+  if (dup >= 0) list2[dup] = next;
+  else list2.push(next);
+  return list2.slice(-12);
+}
+function adaptFeedbackFromHumanRejudge(input) {
+  const out = [];
+  const at = (/* @__PURE__ */ new Date()).toISOString();
+  for (const it of input.items ?? []) {
+    if (it.pass) continue;
+    if (/face|面容|抬脸|低头|景别|近景|dialogue_near/.test(it.id + (it.evidence ?? ""))) {
+      out.push({
+        kind: /景别|wide|过宽|MS|中景/.test(it.id + (it.evidence ?? "")) ? "shot_size_too_wide" : "face_unreadability",
+        shotIndex: input.shotIndex,
+        note: it.evidence,
+        at
+      });
+    } else if (/motion|pose|realization|弯腰|跪/.test(it.id + (it.evidence ?? ""))) {
+      out.push({ kind: "motion_mismatch", shotIndex: input.shotIndex, note: it.evidence, at });
+    } else if (/emotion|情绪/.test(it.id + (it.evidence ?? ""))) {
+      out.push({ kind: "emotion_cliff", shotIndex: input.shotIndex, note: it.evidence, at });
+    } else if (/sfx|音效|摩擦/.test(it.id + (it.evidence ?? ""))) {
+      out.push({ kind: "sfx_overload", shotIndex: input.shotIndex, note: it.evidence, at });
+    }
+  }
+  return out;
+}
+function adaptFeedbackPersistSlice(entries) {
+  return { adaptFeedback: entries };
+}
+function rejudgeOwnerForFeedback(kind) {
+  if (kind === "face_unreadability" || kind === "shot_size_too_wide") return "design";
+  return "realization";
+}
+function applyAdaptFeedbackToPack(pack2, feedback) {
+  const relevant = feedback.filter((f) => f.kind !== "realization_adapt_ok");
+  if (!relevant.length) return pack2;
+  const next = { ...pack2, sources: [...pack2.sources] };
+  for (const f of relevant) {
+    if (f.kind === "motion_mismatch") {
+      next.motionStartHint = `${next.motionStartHint}\uFF1B\u4EBA\u5BA1\uFF1A\u5F3A\u5316\u9996\u5E27\u540C\u6E90`.trim();
+      next.sources.push("adaptFeedback.motion_mismatch");
+    }
+    if (f.kind === "emotion_cliff" && !next.performanceBoost) {
+      next.performanceBoost = "\u60C5\u7EEA\u9012\u8FDB";
+      next.sources.push("adaptFeedback.emotion_cliff");
+    }
+    if (f.kind === "sfx_overload") {
+      next.sfxBeat = void 0;
+      next.sources.push("adaptFeedback.sfx_overload");
+    }
+    if (f.kind === "face_unreadability") {
+      next.motionStartHint = `${next.motionStartHint ?? ""}\uFF1B\u4EBA\u5BA1\uFF1A\u672B\u76F8\u62AC\u8138\u53E3\u578B\u53EF\u8BFB`.trim();
+      next.sources.push("adaptFeedback.face_unreadability");
+      next.sources.push("adaptFeedback.escalate_design_repair");
+    }
+    if (f.kind === "shot_size_too_wide") {
+      next.cameraPolicy = next.cameraPolicy ?? "\u9759\u6B62";
+      next.sources.push("adaptFeedback.shot_size_too_wide");
+      next.sources.push("adaptFeedback.escalate_design_near_promote");
+    }
+  }
+  return next;
+}
+var init_adaptFeedbackWriteback = __esm({
+  "src/ruleEngine/quality/adaptFeedbackWriteback.ts"() {
+    "use strict";
   }
 });
 
@@ -300001,6 +310153,30 @@ var init_humanRejudgeFidelity = __esm({
               } catch {
                 er = {};
               }
+              let adaptFeedback = [];
+              try {
+                const {
+                  adaptFeedbackFromHumanRejudge: adaptFeedbackFromHumanRejudge2,
+                  mergeAdaptFeedback: mergeAdaptFeedback2,
+                  adaptFeedbackPersistSlice: adaptFeedbackPersistSlice2
+                } = await Promise.resolve().then(() => (init_adaptFeedbackWriteback(), adaptFeedbackWriteback_exports));
+                const prevFb = Array.isArray(er.adaptFeedback) ? er.adaptFeedback : [];
+                const shotIdx = Number(prev?.shotIndex ?? prev?.index ?? 0) || null;
+                const newFb = adaptFeedbackFromHumanRejudge2({ items, shotIndex: shotIdx });
+                adaptFeedback = prevFb;
+                for (const fb of newFb) {
+                  adaptFeedback = mergeAdaptFeedback2(adaptFeedback, fb);
+                }
+                if (burnOk && !newFb.length) {
+                  adaptFeedback = mergeAdaptFeedback2(adaptFeedback, {
+                    kind: "realization_adapt_ok",
+                    shotIndex: shotIdx,
+                    note: "human_pass"
+                  });
+                }
+                Object.assign(er, adaptFeedbackPersistSlice2(adaptFeedback));
+              } catch {
+              }
               const now2 = (/* @__PURE__ */ new Date()).toISOString();
               await utils_default.db("o_video").where({ id: videoId }).update({
                 errorReason: JSON.stringify({
@@ -300011,7 +310187,8 @@ var init_humanRejudgeFidelity = __esm({
                   primaryNextStep: burnOk ? "burn" : "human_review",
                   ctaLabel: burnOk ? "\u6210\u7247\u4EBA\u5BA1\u901A\u8FC7" : "SVQ \u672A\u6D4B\u7EF4 \xB7 \u4EBA\u5BA1",
                   humanRejudgeCorpusId: id,
-                  humanOverride: burnOk ? "human_checklist" : void 0
+                  humanOverride: burnOk ? "human_checklist" : void 0,
+                  adaptFeedback
                 }),
                 state: burnOk ? vRow.state : vRow.state
               });
@@ -300104,14 +310281,14 @@ var init_pollingImage2 = __esm({
 });
 
 // src/routes/production/storyboard/previewImage.ts
-var import_express79, import_sharp7, router79, previewImage_default;
+var import_express79, import_sharp8, router79, previewImage_default;
 var init_previewImage = __esm({
   "src/routes/production/storyboard/previewImage.ts"() {
     "use strict";
     import_express79 = __toESM(require_express2());
     init_utils3();
     init_zod();
-    import_sharp7 = __toESM(require("sharp"));
+    import_sharp8 = __toESM(require("sharp"));
     init_responseFormat();
     init_middleware();
     router79 = import_express79.default.Router();
@@ -300132,7 +310309,7 @@ var init_previewImage = __esm({
           orderedFilePaths.map(async (filePath) => {
             if (!filePath) return null;
             const buffer2 = await utils_default.oss.getFile(filePath);
-            const metadata = await (0, import_sharp7.default)(buffer2).metadata();
+            const metadata = await (0, import_sharp8.default)(buffer2).metadata();
             return { buffer: buffer2, width: metadata.width || 0, height: metadata.height || 0 };
           })
         );
@@ -300149,7 +310326,7 @@ var init_previewImage = __esm({
             const scale = maxThumbWidth / img.width;
             const newWidth = maxThumbWidth;
             const newHeight = Math.round(img.height * scale);
-            const buffer2 = await (0, import_sharp7.default)(img.buffer).resize(newWidth, newHeight).toBuffer();
+            const buffer2 = await (0, import_sharp8.default)(img.buffer).resize(newWidth, newHeight).toBuffer();
             return { buffer: buffer2, width: newWidth, height: newHeight };
           })
         );
@@ -300195,7 +310372,7 @@ var init_previewImage = __esm({
             top: y + 4
           });
         }
-        const resultBuffer = await (0, import_sharp7.default)({
+        const resultBuffer = await (0, import_sharp8.default)({
           create: {
             width: canvasWidth,
             height: canvasHeight,
@@ -300851,194 +311028,6 @@ var init_jobQueue = __esm({
   }
 });
 
-// src/ruleEngine/compilers/burnGateEnvelope.ts
-var burnGateEnvelope_exports = {};
-__export(burnGateEnvelope_exports, {
-  BLOCK_TO_TRIGGER_FOR_TEST: () => BLOCK_TO_TRIGGER_FOR_TEST,
-  BURN_NEXT_STEPS: () => BURN_NEXT_STEPS,
-  buildBurnGateEnvelope: () => buildBurnGateEnvelope,
-  triggersFromBurnBlocks: () => triggersFromBurnBlocks
-});
-function triggersFromBurnBlocks(blocks) {
-  const triggers = [];
-  for (const b of blocks) {
-    const t = b.reverseTrigger || BLOCK_TO_TRIGGER[b.id];
-    if (t) triggers.push(t);
-  }
-  return [...new Set(triggers)];
-}
-function buildBurnGateEnvelope(blocks, opts) {
-  const triggers = triggersFromBurnBlocks(blocks);
-  const rePushPlan = triggers.length ? buildRePushPlan(triggers) : [];
-  const catalog = readFixtureJson("repair_hint_catalog.json", { hints: [] });
-  const idSet = /* @__PURE__ */ new Set([...blocks.map((b) => b.id), ...triggers]);
-  const repairHints = (catalog.hints ?? []).filter(
-    (h) => idSet.has(h.ruleId) || idSet.has(h.id) || h.qpId && idSet.has(h.qpId) || (h.checkIds?.some((c) => idSet.has(c)) ?? false)
-  ).map((h) => ({ id: h.id, chatTemplate: h.chatTemplate, ruleId: h.ruleId })).slice(0, 8);
-  let nextStep = opts?.nextStep ?? (triggers.includes("img_cref_missing") ? "batch_still" : triggers.includes("img_still_weak") || triggers.includes("still_firstframe_weak") ? "batch_still" : triggers.includes("still_onebeat_multi") || triggers.includes("still_cu_cast") || triggers.includes("still_firstframe_dirty") ? "split_shot" : triggers.includes("dialogue_hash_mismatch") ? "soft_patch" : triggers.includes("narrative_split_hint") || triggers.includes("pr_lip_duration") || triggers.includes("fx_infeasible") || triggers.includes("cam_fit") ? blocks.some((b) => /拆镜|split|NAR-14|F3|IRD-CONFIRM/i.test(`${b.id} ${b.message}`)) ? triggers.includes("cam_fit") ? "split_shot" : "split_shot" : triggers.includes("pr_lip_duration") ? "raise_duration" : "split_shot" : triggers.some((t) => t.startsWith("lang_") || t === "vp_conflict" || t === "cam_speak" || t === "qf_expr_face") ? "soft_patch" : "chat_repair");
-  if (opts?.decision === "soft_defer" && !opts?.nextStep) nextStep = "retry_shot";
-  if (opts?.decision === "soft_patch" && !opts?.nextStep) nextStep = "soft_patch";
-  if (opts?.decision === "split_shot" && !opts?.nextStep) nextStep = "split_shot";
-  if (opts?.decision === "rePush_design" && triggers.includes("img_cref_missing") && !opts?.nextStep) nextStep = "batch_still";
-  if (opts?.nextStep) nextStep = opts.nextStep;
-  let userMessageOverride = opts?.primary?.userMessage;
-  let ctaOverride = opts?.primary?.ctaLabel;
-  if (!userMessageOverride && triggers.includes("dialogue_hash_mismatch")) {
-    const dcBlock = blocks.find((b) => b.id === "DC-01" || /台词|dialogue/i.test(b.message));
-    const env2 = buildDc01HumanEnvelope({ message: dcBlock?.message });
-    userMessageOverride = env2.userMessage;
-    if (nextStep === "soft_patch") ctaOverride = ctaOverride ?? env2.ctaLabel;
-  }
-  if (!userMessageOverride && triggers.includes("img_cref_missing") && nextStep === "batch_still") {
-    userMessageOverride = "\u89D2\u8272\u5B9A\u5986\u56FE\u8FD8\u6CA1\u6709";
-    ctaOverride = ctaOverride ?? "\u53BB\u751F\u6210\u5B9A\u5986";
-  }
-  if (!userMessageOverride && nextStep === "batch_still" && (triggers.includes("still_firstframe_weak") || triggers.includes("still_firstframe_dirty") || triggers.includes("img_still_weak"))) {
-    const msg = blocks.map((b) => b.message).find((m) => String(m ?? "").trim());
-    if (msg) userMessageOverride = msg;
-    if (!ctaOverride && /拼版|多格|四视/i.test(String(msg))) ctaOverride = "\u7981\u62FC\u7248\u91CD\u62BD";
-    else if (!ctaOverride) ctaOverride = "\u53BB\u751F\u6210\u9759\u7167";
-  }
-  const primary = buildPrimaryBlock(nextStep, {
-    suggestedValue: opts?.suggestedValue ?? opts?.primary?.suggestedValue,
-    fieldPath: opts?.fieldPath ?? opts?.primary?.fieldPath,
-    stage: opts?.stage ?? opts?.primary?.stage ?? "burn",
-    userMessageOverride,
-    ctaLabelOverride: ctaOverride
-  });
-  return {
-    rePushPlan,
-    repairHints,
-    triggers,
-    nextStep,
-    primaryNextStep: primary.primaryNextStep,
-    userMessage: primary.userMessage,
-    ctaLabel: primary.ctaLabel,
-    userMessageKey: primary.userMessageKey,
-    suggestedValue: primary.suggestedValue,
-    fieldPath: primary.fieldPath,
-    stage: primary.stage,
-    decision: opts?.decision,
-    splitHint: opts?.splitHint
-  };
-}
-var BLOCK_TO_TRIGGER, BLOCK_TO_TRIGGER_FOR_TEST, BURN_NEXT_STEPS;
-var init_burnGateEnvelope = __esm({
-  "src/ruleEngine/compilers/burnGateEnvelope.ts"() {
-    "use strict";
-    init_reverseRouteEngine();
-    init_fixturesPath();
-    init_primaryBlock();
-    init_dc01Envelope();
-    BLOCK_TO_TRIGGER = {
-      "LANG-01": "lang_vid_mismatch",
-      "LANG-AUD-01": "lang_aud_mismatch",
-      "LIP-01": "pr_lip_duration",
-      "PR-09": "pr_lip_duration",
-      "CAM-SPEAK": "cam_speak",
-      "FX-GRADE-01": "fx_infeasible",
-      "FX-FALSE-GREEN": "fx_empty",
-      "VP-CONFLICT": "vp_conflict",
-      "DC-09": "cam_whitelist",
-      "PR-CAM-01": "cam_whitelist",
-      "NAR-14": "nar14_split",
-      "NAR-15": "nar15_reaction",
-      "NAR-14-RESIDUAL": "nar14_residual",
-      "DC-16": "dc16_cast",
-      "DG-CD-COVERAGE": "dc16_cast",
-      "DEX-SPEAKER-BARE": "speaker_bare",
-      "DEX-LIP-SPLIT": "nar14_split",
-      "DG-NAR-SELFCHECK": "self_report_mismatch",
-      "FALSE_GREEN_SELFCHECK": "self_report_mismatch",
-      "DEX-LITERARY-STALE": "literary_stale",
-      "DC-01": "dialogue_hash_mismatch",
-      R2: "dialogue_hash_mismatch",
-      H3: "dialogue_hash_mismatch",
-      "DEX-VIS-SPLIT": "visual_multi_beat",
-      "DEX-VIS-TAG-MISSING": "visual_tag_missing",
-      "DEX-VIS-TAG-INCONSISTENT": "visual_tag_inconsistent",
-      "VIS-MULTI-BEAT": "visual_multi_beat",
-      "VIS-BEAT-SCORE": "visual_beat_score",
-      "VIS-SYNC-DRIFT": "visual_sync_drift",
-      "DFW-DURATION": "lip_duration_short",
-      "IMG-CREF": "img_cref_missing",
-      "IMG-STILL-QA": "img_still_weak",
-      "STILL-FIRSTFRAME-DIRTY": "still_firstframe_dirty",
-      "STILL-FIRSTFRAME-STALE": "still_firstframe_stale",
-      "STILL-FIRSTFRAME-WEAK": "still_firstframe_weak",
-      "STILL-FIRSTFRAME-MISSING": "still_firstframe_weak",
-      "DEX-STILL-ONEBEAT": "still_onebeat_multi",
-      "DEX-STILL-CU-CAST": "still_cu_cast",
-      "DEX-LIT-CONTACT": "lit_detail_contact",
-      "DEX-LIT-CONTACT-XOR": "lit_detail_contact_xor",
-      "DEX-LIT-ANCHOR": "lit_detail_anchor",
-      "DEX-LIT-EXPR": "lit_detail_expr",
-      "DEX-PROP-CONT": "prop_continuity",
-      "DEX-PROP-IN-FRAME": "still_prop_missing",
-      "STILL-CONTACT-HANDOFF": "still_video_contact_handoff",
-      "VID-CONTACT-BEATS": "vid_contact_beats",
-      "DEX-STILL-OS-NAME": "still_firstframe_dirty",
-      "DEX-STILL-FILLER": "still_firstframe_dirty",
-      "VID-INHERIT-COMPOSITION": "vid_inherit_composition",
-      "VP-XML-ASK-STUB": "video_prompt_stub",
-      "VP-THIN-SHELL": "video_prompt_stub",
-      "VP-CROSS-SHOT-SIDECAR": "video_prompt_stub",
-      "QP-02": "qp02_visual_short",
-      "CHAT-SB-01": "qp02_visual_short",
-      "DEX-QP-02": "qp02_visual_short",
-      "DEX-CAST-ON-DESC": "cast_on_desc_missing",
-      "DEX-EMPTY-SHOT-CONSISTENCY": "empty_shot_conflict",
-      "DEX-EXPR-SPEAK": "expr_speak_missing",
-      "DEX-ASSET-CREF": "asset_cref",
-      "DEX-SHOT-INTENT": "shot_intent_decay",
-      "DEX-CUT-01": "cut01_adjacent",
-      "DEX-CAM-XSHOT": "cam_xshot",
-      "CUT-01": "cut01_adjacent",
-      "CAM-XSHOT": "cam_xshot",
-      "GEN-01": "expr_speak_missing",
-      "QF-EXPR-01": "expr_speak_missing",
-      "NO-LIP-DIALOGUE": "no_lip_dialogue",
-      "DESIGN-LOSS": "design_loss",
-      "DESIGN-LOSS-DURATION": "design_loss",
-      "DUR-DESYNC": "dur_desync",
-      "PROMPT-FIDELITY": "prompt_fidelity",
-      "VIDEO-PROMPT-STALE": "video_prompt_stale",
-      "DEX-CAM-FIT": "cam_fit",
-      "DC-01-EXTRA": "dialogue_extra",
-      "CHAIN-BEAT": "chain_beat",
-      "CHAT-AUD-01": "audio_missing",
-      "AUD-ORPHAN-SPEECH": "aud_orphan",
-      "IMPORT-SPLIT-SYNC": "import_split_sync",
-      "DEX-INTENT-PIC": "intent_pic",
-      "IRD-CONFIRM": "ird_confirm",
-      "DEX-DIRTY-STILL-PROMPT": "dirty_still_prompt",
-      "DEX-DUP-VD": "dirty_still_prompt",
-      "DEX-HAND-LIP": "dirty_still_prompt",
-      "VID-INHERIT-DIRTY-STILL": "dirty_still_prompt",
-      "SFX-UNBACKED": "sfx_unbacked",
-      "MIRROR-WARP": "svq_motion_fail",
-      "identity_cast": "still_firstframe_dirty",
-      "dialogue_lip": "still_mouth_handoff",
-      "emotion_clarity": "expr_speak_missing",
-      "motion_fidelity": "svq_motion_fail",
-      "audio_mood": "svq_audio_fail",
-      "sfx_unbacked": "sfx_unbacked"
-    };
-    BLOCK_TO_TRIGGER_FOR_TEST = BLOCK_TO_TRIGGER;
-    BURN_NEXT_STEPS = [
-      "chat_repair",
-      "soft_patch",
-      "split_shot",
-      "batch_still",
-      "retry_shot",
-      "burn",
-      "raise_duration",
-      "regen_storyboard_hq",
-      "human_review"
-    ];
-  }
-});
-
 // src/ruleEngine/compilers/qualityDecision.ts
 var qualityDecision_exports = {};
 __export(qualityDecision_exports, {
@@ -301063,7 +311052,10 @@ function longLineNeedsSplit(shot) {
   return { need: false };
 }
 function wrap(decision, burnAllowed, blocks, extra, batchMode) {
-  const effective = batchMode && !burnAllowed && decision !== "auto" ? "soft_defer" : decision;
+  const forceSoft = !burnAllowed && decision !== "auto" && (batchMode || /face_budget|split_shot|still_onebeat|vis_|raise_duration|soft_patch|rePush/i.test(
+    String(decision) + (extra.reasons ?? []).join(",")
+  ));
+  const effective = forceSoft ? "soft_defer" : decision;
   const nextStep = extra.nextStep ?? (effective === "soft_defer" && decision === "split_shot" ? "split_shot" : effective === "soft_defer" ? "retry_shot" : void 0);
   const envelope = buildBurnGateEnvelope(blocks, {
     decision: effective,
@@ -301072,9 +311064,10 @@ function wrap(decision, burnAllowed, blocks, extra, batchMode) {
   });
   return {
     decision: effective,
-    burnAllowed,
-    softDefer: effective === "soft_defer",
-    softDeferRaiseAllowed: effective === "soft_defer",
+    // Soft path may still deliver with debt marks (never hard-block UX)
+    burnAllowed: forceSoft ? true : burnAllowed,
+    softDefer: effective === "soft_defer" || forceSoft,
+    softDeferRaiseAllowed: effective === "soft_defer" || forceSoft,
     reasons: extra.reasons,
     envelope,
     nextStep: envelope.nextStep,
@@ -301161,6 +311154,49 @@ function decideVideoQuality(input) {
         vendorMax: vmax,
         splitHint: void 0
       };
+    }
+  }
+  if (input.shot) {
+    try {
+      const { assessFaceBudget: assessFaceBudget2 } = (init_faceBudgetPolicy(), __toCommonJS(faceBudgetPolicy_exports));
+      const { hasOnCameraDialogue: hasOnCameraDialogue2 } = (init_onCameraDialogue(), __toCommonJS(onCameraDialogue_exports));
+      const shot = input.shot;
+      const vd = String(shot.visualDescription ?? shot.picture ?? "");
+      const onCam = hasOnCameraDialogue2(
+        shot.narrative?.dialogue?.lines
+      );
+      const budget = assessFaceBudget2({
+        visualDescription: vd,
+        shotSize: String(shot.shotSize ?? shot.narrative?.shotSize ?? ""),
+        hasDialogue: onCam,
+        lipSyncPolicy: String(
+          shot.shotDesign?.lipSyncPolicy ?? ""
+        ),
+        realizationOccupancy: String(shot.realizationOccupancy ?? ""),
+        intentOccupancy: String(shot.intentOccupancy ?? ""),
+        videoIntentClass: onCam ? "speak_lip" : void 0
+      });
+      if (budget.unreachable && budget.primaryAction === "confirm_split") {
+        return wrap(
+          "split_shot",
+          true,
+          [
+            ...baseBlocks,
+            {
+              id: "FACE-BUDGET",
+              message: "\u5BF9\u767D+\u4F4E\u5934\u52A8\u4F5C+\u8FC7\u5BBD\u666F\u522B\uFF1A\u5DF2\u6807\u503A\xB7\u53EF\u964D\u7EA7\u51FA\u7247\uFF1B\u667A\u80FD\u4FEE\u590D\u9759\u9ED8\u62C6\u955C\uFF08\u52A8\u4F5C\u2192\u5BF9\u767D\u8FD1\u666F\uFF09",
+              reverseTrigger: "face_budget_unreachable"
+            }
+          ],
+          {
+            reasons: ["face_budget_unreachable", "implementation_degraded"],
+            nextStep: "split_shot",
+            splitHint: budget.splitHint ?? "action_then_dialogue_mcu"
+          },
+          input.batchMode
+        );
+      }
+    } catch {
     }
   }
   if (input.shot && (input.shot.visBeatUnsplittable || input.shot.visBeatExpandedAway || input.shot.burnParentForbidden && !input.shot._stillBeatSplitId && !input.shot._visualSplitId)) {
@@ -301699,8 +311735,8 @@ __export(resolveLipDuration_exports, {
   dedupeBareSeconds: () => dedupeBareSeconds,
   resolveLipDurationSingleSource: () => resolveLipDurationSingleSource
 });
-function lipLineFromPolicy(policy, hasDialogue2) {
-  if (!hasDialogue2) return void 0;
+function lipLineFromPolicy(policy, hasDialogue3) {
+  if (!hasDialogue3) return void 0;
   const p3 = policy.toLowerCase().replace(/-/g, "_");
   if (!p3 || p3 === "none" || p3 === "silent") return "\u65E0\u53E3\u578B\u540C\u6B65";
   if (p3 === "dialogue_native" || p3 === "natural" || p3 === "natural_emphasized" || p3.includes("natural")) {
@@ -301754,14 +311790,14 @@ function dedupeBareSeconds(prompt, preferSec) {
 function resolveLipDurationSingleSource(input) {
   const changes = [];
   let prompt = String(input.prompt ?? "");
-  const hasDialogue2 = Boolean(input.hasDialogue);
+  const hasDialogue3 = Boolean(input.hasDialogue);
   let policy = String(input.lipSyncPolicy ?? "").trim();
-  if (hasDialogue2 && !policy) {
+  if (hasDialogue3 && !policy) {
     policy = DEFAULT_ONCAM_LIP_POLICY;
     changes.push("default_empty_policy_to_subtle");
   }
-  let lipLine = lipLineFromPolicy(policy, hasDialogue2);
-  if (hasDialogue2) {
+  let lipLine = lipLineFromPolicy(policy, hasDialogue3);
+  if (hasDialogue3) {
     const explicitSilent = /^(none|silent)$/i.test(policy);
     if (explicitSilent) {
       if (input.hardBlockNoLipOnDialogue && input.refuseExplicitSilent) {
@@ -301796,7 +311832,7 @@ function resolveLipDurationSingleSource(input) {
       changes.push("strip_no_lip_conflict");
     }
   }
-  if (!hasDialogue2 && (lipLine === "\u65E0\u53E3\u578B\u540C\u6B65" || lipLine === "no lip sync" || /lip-sync\s*active|口型同步开启/i.test(prompt))) {
+  if (!hasDialogue3 && (lipLine === "\u65E0\u53E3\u578B\u540C\u6B65" || lipLine === "no lip sync" || /lip-sync\s*active|口型同步开启/i.test(prompt))) {
     prompt = prompt.replace(/lip-sync\s*active[,]*/gi, "").replace(/natural mouth movement for dialogue[,]*/gi, "").replace(/口型同步开启。?/g, "").replace(/对白嘴型自然[,]*/g, "").replace(/口型轻微同步，嘴型自然[,]*/g, "");
     changes.push("strip_lip_when_silent");
   }
@@ -301820,7 +311856,7 @@ function resolveLipDurationSingleSource(input) {
     }
   }
   const lipAlready = /口型同步开启|口型轻微同步|对白嘴型自然/i.test(prompt) || (lipLine ? new RegExp(lipLine.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(prompt) : false);
-  if (lipLine && hasDialogue2 && lipLine !== "\u65E0\u53E3\u578B\u540C\u6B65" && lipLine !== "no lip sync" && !lipAlready) {
+  if (lipLine && hasDialogue3 && lipLine !== "\u65E0\u53E3\u578B\u540C\u6B65" && lipLine !== "no lip sync" && !lipAlready) {
     if (/\[Audio\]/i.test(prompt)) {
       prompt = prompt.replace(/(\[Audio\][^\[]*)/i, (m) => `${m.trim()}
 ${lipLine}`);
@@ -302164,29 +312200,6 @@ function expandTracksToShots(pkg, tracks) {
 }
 var init_trackShotExpander = __esm({
   "src/ruleEngine/trackShotExpander.ts"() {
-    "use strict";
-  }
-});
-
-// src/ruleEngine/bundle/emptyEpisodeGate.ts
-function assertNonEmptyEpisode(input) {
-  const shotCount2 = Math.max(
-    input.storyboardCount ?? 0,
-    input.preDesignShotCount ?? 0,
-    input.packageShotCount ?? 0
-  );
-  if (shotCount2 <= 0) {
-    return {
-      ok: false,
-      shotCount: 0,
-      code: "EMPTY_EPISODE",
-      message: "\u96C6\u65E0\u53EF\u7528\u5206\u955C\uFF0C\u7981\u6B62\u751F\u6210"
-    };
-  }
-  return { ok: true, shotCount: shotCount2 };
-}
-var init_emptyEpisodeGate = __esm({
-  "src/ruleEngine/bundle/emptyEpisodeGate.ts"() {
     "use strict";
   }
 });
@@ -303129,6 +313142,319 @@ var init_stillDetectRepair = __esm({
   }
 });
 
+// src/ruleEngine/quality/episodeContinuityContract.ts
+function auditEpisodeContinuity(input) {
+  const findings = [];
+  const prev = input.previousShot ?? {};
+  const cur = input.currentShot ?? {};
+  if (prev && cur) {
+    const prevScene = String(prev.sceneCode ?? "");
+    const curScene = String(cur.sceneCode ?? "");
+    if (prevScene && curScene && prevScene !== curScene) findings.push("scene_shift");
+    const prevProp = String(prev.contactStartState ?? "");
+    const curProp = String(cur.contactStartState ?? "");
+    if (prevProp && curProp && prevProp === "at_locus" && curProp === "entering") findings.push("contact_backslide");
+    const prevReal = String(prev.realizationOccupancy ?? "");
+    const curReal = String(cur.realizationOccupancy ?? "");
+    if (prevReal === "held_mid" && curReal === "entering") findings.push("realization_backslide");
+    const prevEmo = Number(prev.emotionIntensity ?? NaN);
+    const curEmo = Number(cur.emotionIntensity ?? NaN);
+    if (Number.isFinite(prevEmo) && Number.isFinite(curEmo) && curEmo - prevEmo >= 4) {
+      findings.push("emotion_cliff");
+    }
+    const axis = auditAxis180Pair(prev, cur);
+    if (!axis.ok && axis.finding) findings.push(axis.finding);
+  }
+  return { ok: findings.length === 0, findings };
+}
+var init_episodeContinuityContract = __esm({
+  "src/ruleEngine/quality/episodeContinuityContract.ts"() {
+    "use strict";
+    init_screenSideAxis();
+  }
+});
+
+// src/ruleEngine/quality/episodeAvEnhanceOrchestrator.ts
+var episodeAvEnhanceOrchestrator_exports = {};
+__export(episodeAvEnhanceOrchestrator_exports, {
+  episodeAvMetricsSummary: () => episodeAvMetricsSummary,
+  runEpisodeAvEnhanceOrchestrator: () => runEpisodeAvEnhanceOrchestrator
+});
+function extractEmotion(shot) {
+  const n = shot.emotionIntensity ?? Number(shot.designShot?.narrative?.emotionIntensity) ?? Number(shot.shotMeta?.emotionIntensity ?? NaN);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+function hasDialogue2(shot) {
+  if (shot.dialoguePresent === true) return true;
+  const lines = shot.designShot?.narrative?.dialogue?.lines ?? shot.shotMeta?.narrative?.dialogue?.lines;
+  return Array.isArray(lines) && lines.length > 0;
+}
+function extractVd(shot) {
+  return String(
+    shot.designShot?.visualDescription ?? shot.shotMeta?.visualDescription ?? shot.shotMeta?.videoDesc ?? ""
+  ).trim();
+}
+function polishSfxCadence(shots) {
+  let count = 0;
+  const seenByScene = /* @__PURE__ */ new Map();
+  for (const s of shots) {
+    const pack2 = s.adaptPack;
+    if (!pack2.sfxBeat || !/纸|摩擦/.test(pack2.sfxBeat)) continue;
+    const scene = String(s.sceneCode ?? "default");
+    const n = seenByScene.get(scene) ?? 0;
+    if (n >= 1) {
+      pack2.sfxBeat = void 0;
+      s.polishNotes.push("sfx_stagger:duplicate_paper_friction");
+      count++;
+    } else {
+      seenByScene.set(scene, n + 1);
+    }
+  }
+  return count;
+}
+function polishCameraGrammar(shots, inputs) {
+  let count = 0;
+  for (let i = 0; i < shots.length; i++) {
+    const inp = inputs[i];
+    if (!hasDialogue2(inp)) continue;
+    if (shots[i].adaptPack.cameraPolicy !== "\u9759\u6B62") {
+      shots[i].adaptPack.cameraPolicy = "\u9759\u6B62";
+      shots[i].polishNotes.push("cam_static:dialogue_shot");
+      count++;
+    }
+  }
+  return count;
+}
+function polishEmotionArc(shots, inputs) {
+  let count = 0;
+  for (let i = 1; i < shots.length; i++) {
+    const prev = extractEmotion(inputs[i - 1]);
+    const cur = extractEmotion(inputs[i]);
+    if (prev == null || cur == null) continue;
+    if (cur - prev >= 4) {
+      shots[i].polishNotes.push("emotion_cliff:warn");
+      if (!shots[i].adaptPack.performanceBoost) {
+        shots[i].adaptPack.performanceBoost = "\u60C5\u7EEA\u9012\u8FDB";
+        count++;
+      }
+    }
+  }
+  return count;
+}
+function readDesignAvBeats(shot) {
+  const narr2 = shot.designShot?.narrative ?? shot.shotMeta?.narrative;
+  return Array.isArray(narr2?.avBeats) ? narr2.avBeats.map(String) : [];
+}
+function polishJlCutContinuity(results, inputs) {
+  let n = 0;
+  let buildJl;
+  let detectJl;
+  let mergeJl;
+  try {
+    const mod = (init_jlCutTimeline(), __toCommonJS(jlCutTimeline_exports));
+    buildJl = mod.buildJlCutTimelineSlice;
+    detectJl = mod.detectJlCutFromAvBeats;
+    mergeJl = mod.mergeJlCutTimeline;
+  } catch {
+    buildJl = () => null;
+    detectJl = () => ({ wantsJ: false, wantsL: false });
+    mergeJl = (_a31, b) => b ?? null;
+  }
+  for (let i = 0; i < inputs.length - 1; i++) {
+    const a = inputs[i];
+    const b = inputs[i + 1];
+    const beatsA = readDesignAvBeats(a);
+    const beatsB = readDesignAvBeats(b);
+    const fromDesignA = detectJl(beatsA);
+    const fromDesignB = detectJl(beatsB);
+    const dialPair = Boolean(a.dialoguePresent && b.dialoguePresent);
+    const wantsL = dialPair || fromDesignA.wantsL || fromDesignB.wantsL;
+    const wantsJ = dialPair || fromDesignA.wantsJ || fromDesignB.wantsJ;
+    if (!wantsL && !wantsJ) continue;
+    const scA = String(a.sceneCode ?? "");
+    const scB = String(b.sceneCode ?? "");
+    if (scA && scB && scA !== scB) continue;
+    if (!results[i] || !results[i + 1]) continue;
+    if (wantsL && !results[i].polishNotes.includes("jl_cut:l_cut")) {
+      results[i].polishNotes.push("jl_cut:l_cut");
+      n += 1;
+    }
+    if (wantsJ && !results[i + 1].polishNotes.includes("jl_cut:j_cut")) {
+      results[i + 1].polishNotes.push("jl_cut:j_cut");
+      n += 1;
+    }
+    const footA = results[i].adaptPack;
+    const footB = results[i + 1].adaptPack;
+    if (wantsL && footA && !String(footA.narrativeFootnote ?? "").includes("\u58F0\u5EF6")) {
+      footA.narrativeFootnote = [footA.narrativeFootnote, "\u672C\u955C\u58F0\u5EF6\u81F3\u4E0B\u753B"].filter(Boolean).join("\uFF1B");
+    }
+    if (wantsJ && footB && !String(footB.narrativeFootnote ?? "").includes("\u58F0\u5148\u5165")) {
+      footB.narrativeFootnote = [footB.narrativeFootnote, "\u4E0B\u53E5\u58F0\u5148\u5165\u518D\u5207\u753B"].filter(Boolean).join("\uFF1B");
+    }
+    if (wantsL) {
+      const slice = buildJl({
+        wantsL: true,
+        source: fromDesignA.wantsL ? "design_avBeats" : "episode_polish"
+      });
+      footA.jlCutTimeline = mergeJl(footA.jlCutTimeline, slice) ?? void 0;
+    }
+    if (wantsJ) {
+      const slice = buildJl({
+        wantsJ: true,
+        source: fromDesignB.wantsJ ? "design_avBeats" : "episode_polish"
+      });
+      footB.jlCutTimeline = mergeJl(footB.jlCutTimeline, slice) ?? void 0;
+    }
+  }
+  return n;
+}
+function runEpisodeAvEnhanceOrchestrator(input) {
+  const started = Date.now();
+  const budget = input.budgetMs ?? episodePreflightBudgetMs();
+  const enabled = input.enable !== false && isEpisodeAvEnhanceEnabled();
+  const continuityFindings = [];
+  const results = [];
+  let adaptHit = 0;
+  let degrade = 0;
+  let mismatch = 0;
+  for (const shot of input.shots) {
+    const idx = shot.shotIndex ?? null;
+    const vd = extractVd(shot);
+    const meta4 = shot.shotMeta ?? {};
+    const trunk = idx != null ? input.trunkBlockersByShot?.[idx] ?? [] : [];
+    const realization = meta4.realizationOccupancy;
+    const intent = meta4.intentOccupancy ?? meta4.poseOccupancy;
+    const pack2 = buildRealizationAdaptPack({
+      visualDescription: vd,
+      durationSec: shot.durationSec ?? Number(meta4.duration) ?? 3,
+      dialoguePresent: hasDialogue2(shot),
+      intentOccupancy: intent,
+      realizationOccupancy: realization,
+      realizationDegraded: meta4.realizationDegraded === true,
+      stillMeta: meta4,
+      emotionIntensity: extractEmotion(shot),
+      sfxIntent: String(meta4.sfxIntent ?? "").trim() || null,
+      avCausality: meta4.avCausality,
+      microExpression: shot.designShot?.shotDesign?.performance?.microExpression,
+      trunkBlockers: trunk,
+      enable: enabled
+    });
+    if (pack2.adapted) adaptHit++;
+    if (pack2.realizationDegraded) degrade++;
+    if (pack2.intentOccupancy !== pack2.realizationOccupancy) mismatch++;
+    results.push({ shotIndex: idx, adaptPack: pack2, polishNotes: [] });
+  }
+  const elapsed = Date.now() - started;
+  let polishCount = 0;
+  let degradedToPerShot = false;
+  if (enabled && elapsed < budget && mayApplyEpisodePolish({ adaptApplied: adaptHit > 0 })) {
+    for (let i = 1; i < input.shots.length; i++) {
+      const cont = auditEpisodeContinuity({
+        previousShot: input.shots[i - 1].shotMeta ?? void 0,
+        currentShot: input.shots[i].shotMeta ?? void 0
+      });
+      continuityFindings.push(...cont.findings);
+    }
+    polishCount += polishCameraGrammar(results, input.shots);
+    polishCount += polishSfxCadence(results);
+    polishCount += polishEmotionArc(results, input.shots);
+  } else if (enabled && elapsed >= budget) {
+    degradedToPerShot = true;
+  }
+  if (enabled && elapsed < budget) {
+    polishCount += polishJlCutContinuity(results, input.shots);
+  }
+  return {
+    shots: results,
+    metrics: {
+      totalShots: input.shots.length,
+      adaptHitCount: adaptHit,
+      degradeCount: degrade,
+      intentRealizationMismatchCount: mismatch,
+      polishAppliedCount: polishCount,
+      continuityFindings: [...new Set(continuityFindings)],
+      elapsedMs: Date.now() - started,
+      budgetExceeded: elapsed >= budget,
+      episodeEnhanceEnabled: enabled
+    },
+    degradedToPerShot
+  };
+}
+function episodeAvMetricsSummary(m) {
+  return [
+    `adapt=${m.adaptHitCount}/${m.totalShots}`,
+    `degrade=${m.degradeCount}`,
+    `mismatch=${m.intentRealizationMismatchCount}`,
+    `polish=${m.polishAppliedCount}`,
+    `${m.elapsedMs}ms`
+  ].join(" ");
+}
+var init_episodeAvEnhanceOrchestrator = __esm({
+  "src/ruleEngine/quality/episodeAvEnhanceOrchestrator.ts"() {
+    "use strict";
+    init_realizationAdapt();
+    init_policyPrecedence();
+    init_realizationAdaptFlags();
+    init_episodeContinuityContract();
+  }
+});
+
+// src/ruleEngine/compilers/persistEpisodeAvEnhance.ts
+var persistEpisodeAvEnhance_exports = {};
+__export(persistEpisodeAvEnhance_exports, {
+  episodeInputsFromPackageShots: () => episodeInputsFromPackageShots,
+  persistEpisodeAvEnhanceToShots: () => persistEpisodeAvEnhanceToShots
+});
+function persistEpisodeAvEnhanceToShots(input) {
+  let persisted = 0;
+  for (const r of input.results) {
+    const sm = input.packageShots.find(
+      (s) => Number(s.shotIndex ?? s.index) === Number(r.shotIndex)
+    );
+    if (!sm) continue;
+    const pack2 = r.adaptPack;
+    if (!shouldPersistRealizationAdapt(pack2) && !r.polishNotes.some((n) => n.startsWith("jl_cut"))) {
+      continue;
+    }
+    Object.assign(sm, realizationAdaptPersistSlice(pack2));
+    if (r.polishNotes.length) {
+      sm.episodePolishNotes = [
+        .../* @__PURE__ */ new Set([
+          ...sm.episodePolishNotes ?? [],
+          ...r.polishNotes
+        ])
+      ].slice(-24);
+    }
+    if (pack2.jlCutTimeline) {
+      mirrorJlCutTimelineToTransitionAudio(sm, pack2.jlCutTimeline);
+    }
+    persisted += 1;
+  }
+  return { persisted };
+}
+function episodeInputsFromPackageShots(shots) {
+  return shots.map((sm) => ({
+    shotIndex: Number(sm.shotIndex ?? sm.index ?? 0) || null,
+    sceneCode: String(sm.sceneCode ?? ""),
+    shotMeta: sm,
+    designShot: sm,
+    durationSec: Number(sm.duration ?? 3) || 3,
+    dialoguePresent: Boolean(
+      sm.narrative?.dialogue?.lines?.length
+    ),
+    emotionIntensity: Number(
+      sm.narrative?.emotionIntensity
+    )
+  }));
+}
+var init_persistEpisodeAvEnhance = __esm({
+  "src/ruleEngine/compilers/persistEpisodeAvEnhance.ts"() {
+    "use strict";
+    init_realizationAdapt();
+    init_transitionAudioStamp();
+  }
+});
+
 // src/ruleEngine/compilers/adaptBurnFromDesign.ts
 var adaptBurnFromDesign_exports = {};
 __export(adaptBurnFromDesign_exports, {
@@ -303236,44 +313562,6 @@ var init_adaptBurnFromDesign = __esm({
   }
 });
 
-// src/ruleEngine/qc/stillMouthVideoHandoff.ts
-var stillMouthVideoHandoff_exports = {};
-__export(stillMouthVideoHandoff_exports, {
-  assertStillMouthVideoHandoff: () => assertStillMouthVideoHandoff
-});
-function assertStillMouthVideoHandoff(input) {
-  const still = `${input.stillPrompt ?? ""} ${input.stillMouthDetail ?? ""}`;
-  const video = String(input.videoPrompt ?? "");
-  const policy = String(input.lipSyncPolicy ?? "").toLowerCase();
-  const closedStill = /neutral_closed|闭口|抿嘴|紧闭|mouth\s*closed/i.test(still) && !/开口|张嘴|speaking|口型|咬|刺|allow_parted/i.test(still);
-  const strongLip = /lip[- ]?sync|对口型|口型同步|mouth\s*movement\s*for\s*dialogue|natural mouth/i.test(video) && !/subtle\s*lip/i.test(video) && !/allow_parted/i.test(video) || /dialogue_native|natural/.test(policy) && !/subtle/.test(policy);
-  if (closedStill && strongLip && input.hasDialogue !== false) {
-    if (input.afterStrengthen) {
-      return {
-        ok: false,
-        severity: "BLOCK",
-        code: "STILL-MOUTH-HANDOFF",
-        reverseTrigger: "still_mouth_handoff",
-        message: "\u9759\u7167\u95ED\u53E3\u2229\u89C6\u9891\u5F3A\u53E3\u578B\uFF1A\u987B\u91CD\u51FA\u5F00\u53E3\u9759\u7167\uFF08MD-IMG\uFF09\u5E76\u540C\u6B65 EN lipSyncPolicy\uFF1B\u7981\u6B62\u53EA soft_patch \u89C6\u9891"
-      };
-    }
-    return {
-      ok: false,
-      severity: "soft_patch",
-      code: "STILL-MOUTH-HANDOFF",
-      reverseTrigger: "still_mouth_handoff",
-      message: "\u9759\u7167\u4E3A\u95ED\u53E3\u610F\u56FE\u4F46\u89C6\u9891\u5F3A\u53E3\u578B\uFF1A\u5148\u5C1D\u8BD5 soft \u964D\u53E3\u578B\uFF1B\u4ECD\u51B2\u7A81\u5219\u91CD\u51FA\u9759\u7167",
-      strengthen: { lipSyncPolicy: "subtle", mouth: "allow_parted_for_dialogue" }
-    };
-  }
-  return { ok: true, severity: "ok" };
-}
-var init_stillMouthVideoHandoff = __esm({
-  "src/ruleEngine/qc/stillMouthVideoHandoff.ts"() {
-    "use strict";
-  }
-});
-
 // src/ruleEngine/compilers/burnAbsorbPolicy.ts
 var burnAbsorbPolicy_exports = {};
 __export(burnAbsorbPolicy_exports, {
@@ -303317,6 +313605,44 @@ var init_burnAbsorbPolicy = __esm({
   }
 });
 
+// src/ruleEngine/qc/stillMouthVideoHandoff.ts
+var stillMouthVideoHandoff_exports = {};
+__export(stillMouthVideoHandoff_exports, {
+  assertStillMouthVideoHandoff: () => assertStillMouthVideoHandoff
+});
+function assertStillMouthVideoHandoff(input) {
+  const still = `${input.stillPrompt ?? ""} ${input.stillMouthDetail ?? ""}`;
+  const video = String(input.videoPrompt ?? "");
+  const policy = String(input.lipSyncPolicy ?? "").toLowerCase();
+  const closedStill = /neutral_closed|闭口|抿嘴|紧闭|mouth\s*closed/i.test(still) && !/开口|张嘴|speaking|口型|咬|刺|allow_parted/i.test(still);
+  const strongLip = /lip[- ]?sync|对口型|口型同步|mouth\s*movement\s*for\s*dialogue|natural mouth/i.test(video) && !/subtle\s*lip/i.test(video) && !/allow_parted/i.test(video) || /dialogue_native|natural/.test(policy) && !/subtle/.test(policy);
+  if (closedStill && strongLip && input.hasDialogue !== false) {
+    if (input.afterStrengthen) {
+      return {
+        ok: false,
+        severity: "BLOCK",
+        code: "STILL-MOUTH-HANDOFF",
+        reverseTrigger: "still_mouth_handoff",
+        message: "\u9759\u7167\u95ED\u53E3\u2229\u89C6\u9891\u5F3A\u53E3\u578B\uFF1A\u987B\u91CD\u51FA\u5F00\u53E3\u9759\u7167\uFF08MD-IMG\uFF09\u5E76\u540C\u6B65 EN lipSyncPolicy\uFF1B\u7981\u6B62\u53EA soft_patch \u89C6\u9891"
+      };
+    }
+    return {
+      ok: false,
+      severity: "soft_patch",
+      code: "STILL-MOUTH-HANDOFF",
+      reverseTrigger: "still_mouth_handoff",
+      message: "\u9759\u7167\u4E3A\u95ED\u53E3\u610F\u56FE\u4F46\u89C6\u9891\u5F3A\u53E3\u578B\uFF1A\u5148\u5C1D\u8BD5 soft \u964D\u53E3\u578B\uFF1B\u4ECD\u51B2\u7A81\u5219\u91CD\u51FA\u9759\u7167",
+      strengthen: { lipSyncPolicy: "subtle", mouth: "allow_parted_for_dialogue" }
+    };
+  }
+  return { ok: true, severity: "ok" };
+}
+var init_stillMouthVideoHandoff = __esm({
+  "src/ruleEngine/qc/stillMouthVideoHandoff.ts"() {
+    "use strict";
+  }
+});
+
 // src/ruleEngine/qc/stillVideoPoseHandoff.ts
 var stillVideoPoseHandoff_exports = {};
 __export(stillVideoPoseHandoff_exports, {
@@ -303324,9 +313650,29 @@ __export(stillVideoPoseHandoff_exports, {
 });
 function assertStillVideoPoseHandoff(input) {
   const vd = String(input.visualDescription ?? "").trim();
+  const meta4 = input.stillMeta ?? {};
+  const motionBlob2 = String(input.videoPrompt ?? "");
+  const motionSection = motionBlob2.match(/\[Motion\]([\s\S]*?)(?=\[Camera\]|$)/i)?.[1] ?? motionBlob2;
+  const realizationOcc = String(meta4.realizationOccupancy ?? "");
+  const realizationDegraded = meta4.realizationDegraded === true;
+  const adaptPack = meta4.realizationAdaptPack;
+  if (motionContradictsRealization({
+    motionBlob: motionSection,
+    realizationOccupancy: realizationOcc,
+    realizationDegraded,
+    adaptPack: adaptPack ?? null
+  })) {
+    return {
+      ok: true,
+      severity: "WARN",
+      code: "REALIZATION-MOTION-MISMATCH",
+      message: `\u59FF\u6001\u503A\uFF1A\u9996\u5E27${realizationOcc || "\u8DEA\u6301/\u7AD9\u6301"}\u4E0E Motion \u5F2F\u8170\u52A8\u8BCD\u4E0D\u4E00\u81F4\uFF1B\u987B\u91CD\u7F16\u8BD1 plate-first Motion`,
+      primaryNextStep: "burn"
+    };
+  }
   if (!isContactEventVd(vd)) return { ok: true, severity: "ok" };
   const declared = input.contactStartState ?? null;
-  const metaAnchor = input.stillMeta?.stillPoseAnchor;
+  const metaAnchor = meta4.stillPoseAnchor;
   const inferred = inferContactStartStateFromStill({
     stillPrompt: input.stillPrompt,
     stillMeta: input.stillMeta,
@@ -303336,7 +313682,6 @@ function assertStillVideoPoseHandoff(input) {
     ...inferred,
     source: metaAnchor?.source ?? "inferred"
   };
-  const motionBlob2 = String(input.videoPrompt ?? "");
   const vdImpliesEnter = /自.*侧进入|进入贴合|甩至|递向|从.*侧/.test(vd) && !/已贴|贴合停|持稳|微划/.test(vd);
   const motionImpliesEnter = /自.*侧进入|进入贴合|甩至|递向|从.*侧/.test(motionBlob2) && !/已贴|贴合停|持稳|微划/.test(motionBlob2);
   const stillAtLocus = anchor.state === "at_locus" || anchor.state === "held_mid";
@@ -303367,6 +313712,7 @@ var init_stillVideoPoseHandoff = __esm({
   "src/ruleEngine/qc/stillVideoPoseHandoff.ts"() {
     "use strict";
     init_contactEventPolicy();
+    init_realizationAdapt();
   }
 });
 
@@ -304481,58 +314827,6 @@ var init_collectPostBurnFlags = __esm({
   }
 });
 
-// src/ruleEngine/design/chatRepairDeeplink.ts
-function resolveTriggerForBlockId(blockId) {
-  const doc = loadSvqDoctrine();
-  const fromFailDim = doc.failDimTriggers[blockId];
-  if (fromFailDim) return fromFailDim;
-  const fromDex = doc.dex[blockId]?.trigger;
-  if (fromDex) return fromDex;
-  return BLOCK_TO_TRIGGER_FOR_TEST[blockId] ?? loadDesignGateMountMatrix().rows.find((r) => r.ruleId === blockId)?.reverseTrigger ?? "chat_repair";
-}
-function buildChatRepairDeeplinks(blockIds) {
-  const routes = readFixtureJson("reverse_route_table.json", { routes: [] }).routes ?? [];
-  const out = [];
-  const seen = /* @__PURE__ */ new Set();
-  for (const id of blockIds) {
-    const trigger = resolveTriggerForBlockId(id);
-    if (seen.has(`${id}:${trigger}`)) continue;
-    seen.add(`${id}:${trigger}`);
-    const row = routes.find((r) => r.trigger === trigger || (r.ruleIds ?? []).includes(id));
-    const plan = buildRePushPlan([trigger])[0];
-    const reverseTarget = String(plan?.reverseTarget ?? row?.reverseTarget ?? "SB");
-    const forwardStages = plan?.forwardRerun ?? row?.forwardStages ?? [reverseTarget];
-    out.push({
-      blockId: id,
-      trigger,
-      reverseTarget,
-      forwardStages,
-      deeplink: `toonflow://stage/${encodeURIComponent(reverseTarget)}?trigger=${encodeURIComponent(trigger)}&rule=${encodeURIComponent(id)}`,
-      authoritativeFields: row?.authoritativeFields
-    });
-  }
-  return out;
-}
-function formatDeeplinkSection(links) {
-  if (!links.length) return "";
-  const lines = ["\u3010\u6DF1\u94FE\xB7\u53CD\u63A8\u821E\u53F0\u3011"];
-  for (const l of links.slice(0, 12)) {
-    const camNote = l.trigger === "cam_fit" || l.blockId === "DEX-CAM-FIT" ? " \u2014 auto\u2192\u670D\u52A1\u7AEF\u667A\u80FD\u62C6\uFF1BConfirm \u4EC5 IRD-CONFIRM\uFF1B\u52FF\u624B\u6539\u955C\u53F7" : "";
-    lines.push(`- ${l.blockId} \u2192 ${l.reverseTarget} (${l.trigger}) ${l.deeplink}${camNote}`);
-  }
-  return lines.join("\n");
-}
-var init_chatRepairDeeplink = __esm({
-  "src/ruleEngine/design/chatRepairDeeplink.ts"() {
-    "use strict";
-    init_reverseRouteEngine();
-    init_burnGateEnvelope();
-    init_gateDiagnose();
-    init_loadSvqDoctrine();
-    init_fixturesPath();
-  }
-});
-
 // src/ruleEngine/quality/failDimRouter.ts
 function triggerForFailDim(dimId) {
   const doc = loadSvqDoctrine();
@@ -305447,13 +315741,13 @@ var init_batchGenerateVideo = __esm({
           for (const track of trackData) {
             const storyboardId = track.uploadData.find((item) => item.sources === "storyboard")?.id;
             const shotMeta = storyboardId != null ? pkg?.shots?.find((s) => s.storyboardId === storyboardId) : void 0;
-            const shotOverride = shotTasks.find((s) => s.trackId === track.trackId);
+            const shotOverride2 = shotTasks.find((s) => s.trackId === track.trackId);
             const { gate: gate2, missingQueue } = await gateIdentityForShot({
               db: utils_default.db,
               projectId,
               storyboardId: storyboardId ?? shotMeta?.storyboardId,
               shot: shotMeta,
-              extraPrompt: shotOverride?.prompt ?? track.prompt,
+              extraPrompt: shotOverride2?.prompt ?? track.prompt,
               failClosedBound: true
             });
             if (!gate2.ok) {
@@ -305480,7 +315774,7 @@ var init_batchGenerateVideo = __esm({
           for (const track of trackData) {
             try {
               const { uploadData, trackId, prompt, duration: duration4 } = track;
-              const shotOverride = shotTasks.find((s) => s.trackId === trackId);
+              const shotOverride2 = shotTasks.find((s) => s.trackId === trackId);
               {
                 const trackRow = await utils_default.db("o_videoTrack").where({ id: trackId }).select("state", "reason").first();
                 let burnAllowedMeta;
@@ -305536,8 +315830,8 @@ var init_batchGenerateVideo = __esm({
                 tasks.push({
                   videoId: videoId2,
                   videoPath: videoPath2,
-                  prompt: shotOverride?.prompt ?? prompt,
-                  duration: shotOverride?.duration ?? duration4,
+                  prompt: shotOverride2?.prompt ?? prompt,
+                  duration: shotOverride2?.duration ?? duration4,
                   images,
                   trackId,
                   storyboardId: uploadData.find((item) => item.sources === "storyboard")?.id,
@@ -305566,8 +315860,8 @@ var init_batchGenerateVideo = __esm({
                 tasks.push({
                   videoId: videoId2,
                   videoPath: videoPath2,
-                  prompt: shotOverride?.prompt ?? prompt,
-                  duration: shotOverride?.duration ?? duration4,
+                  prompt: shotOverride2?.prompt ?? prompt,
+                  duration: shotOverride2?.duration ?? duration4,
                   images,
                   trackId,
                   storyboardId: uploadData.find((item) => item.sources === "storyboard")?.id,
@@ -305680,8 +315974,8 @@ var init_batchGenerateVideo = __esm({
                     tasks.push({
                       videoId: videoId2,
                       videoPath: videoPath2,
-                      prompt: shotOverride?.prompt ?? prompt,
-                      duration: shotOverride?.duration ?? duration4,
+                      prompt: shotOverride2?.prompt ?? prompt,
+                      duration: shotOverride2?.duration ?? duration4,
                       images,
                       trackId,
                       storyboardId,
@@ -305715,8 +316009,8 @@ var init_batchGenerateVideo = __esm({
                         const { buildShotChainContract: buildShotChainContract2, assertChainEgress: assertChainEgress2 } = await Promise.resolve().then(() => (init_shotChainContract(), shotChainContract_exports));
                         const c = buildShotChainContract2(pkgShot);
                         const eg = assertChainEgress2("burn", c, {
-                          videoPrompt: String(shotOverride?.prompt ?? prompt ?? trackRow?.prompt ?? ""),
-                          burnDuration: Number(shotOverride?.duration ?? duration4 ?? c.durationSec),
+                          videoPrompt: String(shotOverride2?.prompt ?? prompt ?? trackRow?.prompt ?? ""),
+                          burnDuration: Number(shotOverride2?.duration ?? duration4 ?? c.durationSec),
                           designContentHashAtCompile: stamped
                         });
                         if (!eg.ok && eg.codes.includes("VIDEO-PROMPT-STALE")) {
@@ -305733,42 +316027,22 @@ var init_batchGenerateVideo = __esm({
                             const c2 = buildShotChainContract2(healedShot);
                             const liveHash = c2.designContentHash;
                             const eg2 = assertChainEgress2("burn", c2, {
-                              videoPrompt: String(shotOverride?.prompt ?? prompt ?? trackRow?.prompt ?? ""),
-                              burnDuration: Number(shotOverride?.duration ?? duration4 ?? c2.durationSec),
+                              videoPrompt: String(shotOverride2?.prompt ?? prompt ?? trackRow?.prompt ?? ""),
+                              burnDuration: Number(shotOverride2?.duration ?? duration4 ?? c2.durationSec),
                               designContentHashAtCompile: liveHash
                             });
                             if (eg2.ok) {
                               stamped = liveHash;
                             } else {
-                              const msg = eg.findings[0]?.message || "\u8BBE\u8BA1/\u5BF9\u767D\u5DF2\u53D8\uFF0C\u987B\u91CD\u7F16\u8BD1\u540E\u518D\u70E7";
-                              const videoPath2 = `/${projectId}/video/${v4_default()}.mp4`;
-                              const [videoId2] = await utils_default.db("o_video").insert({
-                                filePath: videoPath2,
-                                time: Date.now(),
-                                state: "\u751F\u6210\u5931\u8D25",
-                                scriptId,
-                                projectId,
-                                videoTrackId: trackId,
-                                errorReason: JSON.stringify({
-                                  message: msg,
-                                  code: "VIDEO-PROMPT-STALE",
-                                  primaryNextStep: "chat_repair",
-                                  userMessage: msg,
-                                  reverseTrigger: "video_prompt_stale",
-                                  ctaLabel: "\u91CD\u7F16\u8BD1\u89C6\u9891\u63D0\u793A\u8BCD"
-                                })
-                              });
-                              tasks.push({
-                                videoId: videoId2,
-                                videoPath: videoPath2,
-                                prompt: shotOverride?.prompt ?? prompt,
-                                duration: shotOverride?.duration ?? duration4,
-                                images,
-                                trackId,
-                                storyboardId,
-                                skipReason: "VIDEO-PROMPT-STALE"
-                              });
-                              continue;
+                              const msg = eg.findings[0]?.message || eg2.findings[0]?.message || "\u8BBE\u8BA1/\u5BF9\u767D\u5DF2\u53D8\uFF0C\u5DF2\u7528\u6700\u65B0\u6307\u7EB9\u7EED\u70E7";
+                              stamped = liveHash;
+                              const note = `${msg}\uFF08VIDEO-PROMPT-STALE\uFF09\xB7\u94FE\u8DEF\u503A\u5DF2\u6807\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`;
+                              if (shotOverride2 && typeof shotOverride2 === "object") {
+                                shotOverride2.__softDebtNotes = [
+                                  ...shotOverride2.__softDebtNotes ?? [],
+                                  note
+                                ];
+                              }
                             }
                           } catch {
                           }
@@ -305796,8 +316070,8 @@ var init_batchGenerateVideo = __esm({
                   tasks.push({
                     videoId: videoId2,
                     videoPath: videoPath2,
-                    prompt: shotOverride?.prompt ?? prompt,
-                    duration: shotOverride?.duration ?? duration4,
+                    prompt: shotOverride2?.prompt ?? prompt,
+                    duration: shotOverride2?.duration ?? duration4,
                     images,
                     trackId,
                     storyboardId,
@@ -305824,8 +316098,8 @@ var init_batchGenerateVideo = __esm({
               tasks.push({
                 videoId,
                 videoPath,
-                prompt: shotOverride?.prompt ?? prompt,
-                duration: shotOverride?.duration ?? duration4,
+                prompt: shotOverride2?.prompt ?? prompt,
+                duration: shotOverride2?.duration ?? duration4,
                 images,
                 trackId,
                 storyboardId
@@ -305853,6 +316127,31 @@ var init_batchGenerateVideo = __esm({
               });
             }
           }
+          let episodeAvMetrics = null;
+          let episodeAvAdaptSummary;
+          try {
+            const { runEpisodeAvEnhanceOrchestrator: runEpisodeAvEnhanceOrchestrator2, episodeAvMetricsSummary: episodeAvMetricsSummary2 } = await Promise.resolve().then(() => (init_episodeAvEnhanceOrchestrator(), episodeAvEnhanceOrchestrator_exports));
+            const { episodeInputsFromPackageShots: episodeInputsFromPackageShots2, persistEpisodeAvEnhanceToShots: persistEpisodeAvEnhanceToShots2 } = await Promise.resolve().then(() => (init_persistEpisodeAvEnhance(), persistEpisodeAvEnhance_exports));
+            const shotInputs = tasks.filter((t) => !t.skipReason).map((t) => {
+              const sm = pkg?.shots?.find((s) => s.storyboardId === t.storyboardId) ?? {};
+              const base = episodeInputsFromPackageShots2([
+                { ...sm, duration: t.duration ?? sm.duration }
+              ])[0];
+              return base;
+            }).filter((s) => s.shotMeta && Object.keys(s.shotMeta).length > 0);
+            if (shotInputs.length) {
+              const epResult = runEpisodeAvEnhanceOrchestrator2({ shots: shotInputs });
+              episodeAvMetrics = epResult.metrics;
+              episodeAvAdaptSummary = episodeAvMetricsSummary2(epResult.metrics);
+              if (pkg?.shots?.length) {
+                persistEpisodeAvEnhanceToShots2({
+                  packageShots: pkg.shots,
+                  results: epResult.shots
+                });
+              }
+            }
+          } catch {
+          }
           const deferred = tasks.filter((t) => t.skipReason);
           const payload = {
             tasks: tasks.map((t) => ({
@@ -305869,6 +316168,9 @@ var init_batchGenerateVideo = __esm({
               burning: tasks.length - deferred.length,
               softDeferred: deferred.length,
               honestPartial: deferred.length > 0 && deferred.length < tasks.length,
+              adaptedShots: episodeAvMetrics?.adaptHitCount ?? 0,
+              adaptMetrics: episodeAvMetrics ?? void 0,
+              adaptSummary: episodeAvAdaptSummary,
               note: deferred.length === tasks.length ? "\u5168\u90E8 soft_defer / \u95F8\u5931\u8D25 \u2014 \u975E\u6210\u529F" : deferred.length ? "\u90E8\u5206 soft_defer \u2014 \u52FF\u5F53\u6574\u6279\u6210\u529F\u7EFF\u6807" : "\u5168\u90E8\u5165\u70E7"
             }
           };
@@ -305886,28 +316188,28 @@ var init_batchGenerateVideo = __esm({
               modeId: typeof mode === "string" ? mode : void 0
             });
             if (burnAdapt.fidelity && !burnAdapt.fidelity.pass) {
-              const misses = burnAdapt.fidelity.items.filter((i) => !i.pass);
-              await utils_default.db("o_video").where({ id: videoId }).update({
-                state: "\u751F\u6210\u5931\u8D25",
-                errorReason: JSON.stringify({
-                  message: `\u8BBE\u8BA1\u610F\u56FE\u672A\u547D\u4E2D\uFF1A${misses.map((m) => m.id).join(",")}`,
-                  code: "DEX-VID-FIDELITY",
-                  designIntentFidelity: burnAdapt.fidelity,
-                  virdFindings: burnAdapt.fidelity.virdFindings,
-                  primaryNextStep: "chat_repair",
-                  ctaLabel: "\u786E\u8BA4\u89C6\u9891\u8BBE\u8BA1\u4FEE\u590D"
-                })
-              });
+              const { fidelityMissesBlockAbsorb: fidelityMissesBlockAbsorb2 } = (init_burnAbsorbPolicy(), __toCommonJS(burnAbsorbPolicy_exports));
+              const critical = fidelityMissesBlockAbsorb2(burnAdapt.fidelity.items);
+              const misses = burnAdapt.fidelity.items.filter((it) => !it.pass);
+              const note = critical.length ? `\u8BBE\u8BA1\u610F\u56FE\u5173\u952E\u9879\u672A\u5C3D\uFF08\u7981\u5047\u7EFF\uFF09\uFF1A${critical.map((m) => m.id).join(", ")}` : `\u8BBE\u8BA1\u610F\u56FE\u672A\u5C3D\u547D\u4E2D\u5DF2\u964D\u7EA7\u7EE7\u7EED\u70E7\uFF1A${misses.map((m) => m.id).join(", ")}`;
+              const softNote = `${note}\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`;
+              if (shotOverride && typeof shotOverride === "object") {
+                shotOverride.__softDebtNotes = [
+                  ...shotOverride.__softDebtNotes ?? [],
+                  softNote
+                ];
+              }
               await patchVideoTrackReason(utils_default.db, trackId, {
                 state: "\u9700\u5B8C\u5584",
-                burnAllowed: false,
-                decision: "rePush_design",
+                burnAllowed: true,
+                decision: "soft_defer",
                 nextStep: "chat_repair",
                 reasons: misses.map((m) => m.id),
-                ctaLabel: "\u786E\u8BA4\u89C6\u9891\u8BBE\u8BA1\u4FEE\u590D",
-                designIntentFidelity: burnAdapt.fidelity
+                ctaLabel: "\u667A\u80FD\u4FEE\u590D",
+                designIntentFidelity: burnAdapt.fidelity,
+                healThenBurn: true,
+                healThenBurnNotes: [softNote]
               }).catch(() => void 0);
-              continue;
             }
             const burnSeedPrompt = burnAdapt.prompt || prompt;
             const burnDuration = burnAdapt.durationSec > 0 ? burnAdapt.durationSec : duration4;
@@ -305931,11 +316233,29 @@ var init_batchGenerateVideo = __esm({
             let vendorPrompt = soft.hasSensitiveTerms ? soft.softenedPrompt : vendorBase;
             let softenUsed = soft.hasSensitiveTerms;
             const batchHealNotes = [];
+            {
+              const soft2 = shotOverride?.__softDebtNotes;
+              if (Array.isArray(soft2) && soft2.length) batchHealNotes.push(...soft2);
+            }
             const aspectRatio = compiled.aspectRatio ?? ratio?.videoRatio ?? "16:9";
             const capability = resolveVendorCapability2(vendorIdFromModel(model));
             const { literaryDialogueTexts: literaryDialogueTexts2, scrubVideoPromptForBurn: scrubVideoPromptForBurn2 } = await Promise.resolve().then(() => (init_videoDesignContract(), videoDesignContract_exports));
             const litDial = literaryDialogueTexts2(shotMeta?.narrative?.dialogue?.lines);
             const dialLines2 = litDial.length ? litDial : splitDialogueUtterances(shotMeta?.narrative?.dialogue?.lines);
+            if (litDial.length) {
+              try {
+                const { checkLangVid01: checkLangVid012 } = await Promise.resolve().then(() => (init_langAudFxCam(), langAudFxCam_exports));
+                const langHit = checkLangVid012({
+                  dialogueLines: litDial.join("\n"),
+                  videoPrompt: vendorPrompt,
+                  shotIndex: Number(shotMeta?.shotIndex ?? 0) || void 0
+                });
+                if (langHit) {
+                  batchHealNotes.push(langHit.message || "LANG-01 \u5DF2\u6807\u503A\xB7\u667A\u80FD\u4FEE\u590D");
+                }
+              } catch {
+              }
+            }
             const lipMin = dialLines2.length ? Math.ceil(measureDialogue({ text: dialLines2.join("") }).minDurationSec) : 0;
             const bridged = bridgeShotToVendor({
               designFields,
@@ -305957,15 +316277,7 @@ var init_batchGenerateVideo = __esm({
               dialogueLines: dialLines2
             });
             if (scrubB.block) {
-              await utils_default.db("o_video").where({ id: videoId }).update({
-                state: "\u751F\u6210\u5931\u8D25",
-                errorReason: JSON.stringify({
-                  message: scrubB.block.message,
-                  code: scrubB.block.id,
-                  primaryNextStep: "chat_repair"
-                })
-              });
-              continue;
+              batchHealNotes.push(`${scrubB.block.message}\xB7\u8FD0\u955C\u8C03\u89E3\u503A\u5DF2\u6807\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`);
             }
             vendorPrompt = scrubB.prompt;
             let batchStillPrompt = String(
@@ -306042,17 +316354,9 @@ var init_batchGenerateVideo = __esm({
                       softMisses.length ? `\u9996\u5E27\u503A\u5DF2\u5438\u6536\uFF08${softMisses.slice(0, 4).join(",")}\uFF09\xB7\u53EF\u70E7\u89C6\u9891` : "\u9996\u5E27\u503A\u5DF2\u5438\u6536\xB7\u53EF\u70E7\u89C6\u9891\uFF08\u8BBE\u8BA1\u610F\u56FE\u4F18\u5148\uFF09"
                     );
                   } else {
-                    await utils_default.db("o_video").where({ id: videoId }).update({
-                      state: "\u751F\u6210\u5931\u8D25",
-                      errorReason: JSON.stringify({
-                        message: readiness.reason || "\u9759\u7167\u672A\u8FBE\u5230\u89C6\u9891\u8D77\u59CB\u5E27\u6807\u51C6",
-                        code: "STILL-I2V-NOT-READY",
-                        primaryNextStep: "regen_storyboard_hq",
-                        ctaLabel: "\u91CD\u51FAHQ\u9759\u7167",
-                        criticalMisses: hardMisses.length ? hardMisses : readiness.criticalMisses
-                      })
-                    });
-                    continue;
+                    batchHealNotes.push(
+                      `I2V\u5C31\u7EEA\u503A\u5DF2\u5438\u6536\uFF08${(hardMisses.length ? hardMisses : readiness.criticalMisses ?? []).slice(0, 3).join(",") || readiness.reason}\uFF09\xB7\u5DF2\u6807\u503A\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
+                    );
                   }
                 }
               } catch {
@@ -306066,20 +316370,10 @@ var init_batchGenerateVideo = __esm({
                 propMissing: Boolean(batchStillMeta?.propMissing)
               });
               if (!contact.ok && contact.severity === "BLOCK") {
-                await utils_default.db("o_video").where({ id: videoId }).update({
-                  state: "\u751F\u6210\u5931\u8D25",
-                  errorReason: JSON.stringify({
-                    message: contact.message,
-                    code: "STILL-CONTACT-HANDOFF",
-                    primaryNextStep: contact.primaryNextStep ?? "regen_storyboard_hq",
-                    reverseTrigger: contact.reverseTrigger ?? "still_prop_missing",
-                    ctaLabel: "\u91CD\u51FA\u5E26\u9053\u5177\u9759\u7167",
-                    missingSlots: contact.missingSlots
-                  })
-                });
-                continue;
-              }
-              if (contact.severity === "WARN" && contact.message) {
+                batchHealNotes.push(
+                  contact.message || "\u63A5\u89E6\u4EA4\u63A5\u503A\u5DF2\u5438\u6536\xB7\u53EF\u964D\u7EA7\u70E7\xB7\u667A\u80FD\u4FEE\u590D\u91CD\u51FA\u5E26\u9053\u5177\u9759\u7167"
+                );
+              } else if (contact.severity === "WARN" && contact.message) {
                 batchHealNotes.push(contact.message);
               }
               const motionHint = String(
@@ -306113,6 +316407,40 @@ ${motionHint}`.trim();
                 });
                 if (!poseGate.ok && poseGate.severity === "BLOCK") {
                   batchHealNotes.push(poseGate.message || "\u59FF\u6001\u4EA4\u63A5\u503A\u5DF2\u5438\u6536\xB7\u53EF\u70E7\u89C6\u9891");
+                } else if (poseGate.code === "REALIZATION-MOTION-MISMATCH" && poseGate.message) {
+                  batchHealNotes.push(poseGate.message);
+                }
+                try {
+                  const { assertFaceReadableHandoff: assertFaceReadableHandoff2, assessFaceBudget: assessFaceBudget2 } = await Promise.resolve().then(() => (init_faceBudgetPolicy(), faceBudgetPolicy_exports));
+                  const { hasOnCameraDialogue: hasOnCameraDialogue2 } = await Promise.resolve().then(() => (init_onCameraDialogue(), onCameraDialogue_exports));
+                  const onCamFace = hasOnCameraDialogue2(
+                    shotMeta?.narrative?.dialogue?.lines
+                  );
+                  const faceGate = assertFaceReadableHandoff2({
+                    hasDialogue: onCamFace,
+                    stillMeta: batchStillMeta,
+                    visualDescription: vdContact,
+                    shotSize: String(shotMeta?.shotSize ?? "")
+                  });
+                  if (faceGate.severity === "WARN" && faceGate.message) batchHealNotes.push(faceGate.message);
+                  const budget = assessFaceBudget2({
+                    visualDescription: vdContact,
+                    shotSize: String(shotMeta?.shotSize ?? ""),
+                    hasDialogue: onCamFace,
+                    lipSyncPolicy: String(
+                      shotMeta?.shotDesign?.lipSyncPolicy ?? ""
+                    ),
+                    realizationOccupancy: String(
+                      batchStillMeta?.realizationOccupancy ?? ""
+                    ),
+                    videoIntentClass: onCamFace ? "speak_lip" : void 0
+                  });
+                  if (budget.unreachable) {
+                    batchHealNotes.push(
+                      `\u8138\u9884\u7B97\u4E0D\u53EF\u8FBE\uFF1A${budget.reason ?? "\u987B Confirm \u62C6\u955C"}\uFF08${budget.splitHint ?? "action_then_dialogue_mcu"}\uFF09`
+                    );
+                  }
+                } catch {
                 }
               } catch {
               }
@@ -306144,15 +316472,9 @@ ${motionHint}`.trim();
                   videoPrompt: vendorPrompt
                 });
                 if (!audioAssert.ok && audioCfg.requireAudioPassForDialogueBurn !== false) {
-                  await utils_default.db("o_video").where({ id: videoId }).update({
-                    state: "\u751F\u6210\u5931\u8D25",
-                    errorReason: JSON.stringify({
-                      message: `\u97F3\u9891\u6587\u5B66\u4FDD\u771F\u672A\u8FC7\uFF1A\u7F3A ${(audioAssert.missing ?? []).map((m) => m.id).slice(0, 4).join(",")}`,
-                      code: "AUD-LIT-L0",
-                      primaryNextStep: "chat_repair"
-                    })
-                  });
-                  continue;
+                  batchHealNotes.push(
+                    `\u97F3\u8F68\u6587\u5B66\u4FDD\u771F\u7F3A\u9879\u5DF2\u6807\u503A\uFF08${(audioAssert.missing ?? []).map((m) => m.id).slice(0, 4).join(",")}\uFF09\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
+                  );
                 }
                 const roleAssetIds = Array.isArray(
                   shotMeta?.roleAssetIds
@@ -306167,16 +316489,9 @@ ${motionHint}`.trim();
                   )
                 });
                 if (!voiceGate.ok && voiceGate.hard) {
-                  await utils_default.db("o_video").where({ id: videoId }).update({
-                    state: "\u751F\u6210\u5931\u8D25",
-                    errorReason: JSON.stringify({
-                      message: voiceGate.userMessage ?? "\u97F3\u8272\u7ED1\u5B9A\u672A\u8FC7",
-                      code: "AUD-VOICE-BIND",
-                      primaryNextStep: voiceGate.primaryNextStep ?? "chat_repair",
-                      ctaLabel: voiceGate.ctaLabel
-                    })
-                  });
-                  continue;
+                  batchHealNotes.push(
+                    `${voiceGate.userMessage ?? "\u97F3\u8272\u7ED1\u5B9A\u672A\u8FC7"}\xB7\u5DF2\u6807\u503A\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
+                  );
                 }
               }
             } catch {
@@ -306267,12 +316582,32 @@ ${motionHint}`.trim();
               dialogueLines: dialLines2,
               durationSec: packed.duration
             }).prompt;
+            if (litDial.length) {
+              try {
+                const { checkLangVid01: checkLangVid012 } = await Promise.resolve().then(() => (init_langAudFxCam(), langAudFxCam_exports));
+                const langHit2 = checkLangVid012({
+                  dialogueLines: litDial.join("\n"),
+                  videoPrompt: vendorPrompt
+                });
+                if (langHit2) {
+                  batchHealNotes.push(langHit2.message || "LANG-01 egress \u5DF2\u6807\u503A\xB7\u667A\u80FD\u4FEE\u590D");
+                }
+              } catch {
+              }
+            }
             const generateAudio = packed.audio;
             const vendorDuration = packed.duration;
             if (bridged.durationSnapOk === false || packed.warnings.some((w) => /split required/i.test(w))) {
-              const envelope = buildBurnGateEnvelope([
-                { id: "LIP-01", message: packed.warnings.find((w) => /split|lip/i.test(w)) ?? "\u53E3\u578B\u65F6\u957F\u65E0\u6CD5\u843D\u5165\u5382\u5546\u6876", reverseTrigger: "pr_lip_duration" }
-              ], { decision: "soft_defer", nextStep: "split_shot" });
+              const envelope = buildBurnGateEnvelope(
+                [
+                  {
+                    id: "LIP-01",
+                    message: packed.warnings.find((w) => /split|lip/i.test(w)) ?? "\u53E3\u578B\u65F6\u957F\u65E0\u6CD5\u843D\u5165\u5382\u5546\u6876",
+                    reverseTrigger: "pr_lip_duration"
+                  }
+                ],
+                { decision: "soft_defer", nextStep: "split_shot" }
+              );
               await persistSplitHintSuggestion({
                 db: utils_default.db,
                 projectId,
@@ -306280,21 +316615,9 @@ ${motionHint}`.trim();
                 storyboardId,
                 splitHint: "reaction_shot"
               }).catch(() => false);
-              await utils_default.db("o_video").where("id", videoId).update({
-                state: "\u751F\u6210\u5931\u8D25",
-                errorReason: JSON.stringify({
-                  message: "soft_defer: lip/duration budget",
-                  deferred: true,
-                  decision: "soft_defer",
-                  nextStep: "split_shot",
-                  splitHint: "reaction_shot",
-                  rePushPlan: envelope.rePushPlan,
-                  repairHints: envelope.repairHints,
-                  reverseTriggers: envelope.triggers,
-                  warnings: [...bridged.warnings, ...packed.warnings]
-                })
-              });
-              continue;
+              batchHealNotes.push(
+                envelope.userMessage || `\u53E3\u578B\u65F6\u957F\u9884\u7B97\u7D27\u5F20\xB7\u5DF2\u6807\u503A\u5EFA\u8BAE\u62C6\u955C\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7\uFF08${[...bridged.warnings, ...packed.warnings].slice(0, 2).join("; ")}\uFF09`
+              );
             }
             const base644 = await Promise.all(
               images.map(async (item) => {
@@ -306317,10 +316640,15 @@ ${motionHint}`.trim();
               ...batchHealNotes.length ? {
                 healThenBurn: true,
                 healThenBurnNotes: batchHealNotes,
+                implementationDegraded: true,
+                ctaLabel: "\u667A\u80FD\u4FEE\u590D",
                 debtLedger: batchHealNotes.map((n, i) => ({
                   id: `note_${i}`,
                   label: n.length > 36 ? `${n.slice(0, 36)}\u2026` : n
-                }))
+                })),
+                repairChangelog: Array.isArray(
+                  shotMeta?.repairChangelog
+                ) ? shotMeta.repairChangelog.slice(-8) : []
               } : {}
             }).catch(() => void 0);
             await utils_default.db("o_videoTrack").where({ id: trackId }).update({ videoId, duration: vendorDuration }).catch(() => void 0);
@@ -307039,6 +317367,34 @@ var init_generateVideo = __esm({
               }
             };
           }
+          if (pkg?.shots?.length) {
+            try {
+              const { runEpisodeAvEnhanceOrchestrator: runEpisodeAvEnhanceOrchestrator2 } = await Promise.resolve().then(() => (init_episodeAvEnhanceOrchestrator(), episodeAvEnhanceOrchestrator_exports));
+              const { episodeInputsFromPackageShots: episodeInputsFromPackageShots2, persistEpisodeAvEnhanceToShots: persistEpisodeAvEnhanceToShots2 } = await Promise.resolve().then(() => (init_persistEpisodeAvEnhance(), persistEpisodeAvEnhance_exports));
+              const inputs = episodeInputsFromPackageShots2(
+                pkg.shots
+              );
+              if (inputs.length) {
+                const ep = runEpisodeAvEnhanceOrchestrator2({ shots: inputs });
+                persistEpisodeAvEnhanceToShots2({
+                  packageShots: pkg.shots,
+                  results: ep.shots
+                });
+                if (shotMeta) {
+                  const sid = shotMeta.storyboardId;
+                  const idx = Number(shotMeta.shotIndex ?? NaN);
+                  const refreshed = (sid != null ? pkg.shots.find((s) => s.storyboardId === sid) : void 0) ?? (Number.isFinite(idx) ? pkg.shots.find((s) => Number(s.shotIndex) === idx) : void 0);
+                  if (refreshed) shotMeta = { ...shotMeta, ...refreshed };
+                }
+                try {
+                  const { saveEpisodePackage: saveEpisodePackage2 } = await Promise.resolve().then(() => (init_episodePackageStore(), episodePackageStore_exports));
+                  await saveEpisodePackage2(utils_default.db, pkg);
+                } catch {
+                }
+              }
+            } catch {
+            }
+          }
           if (shotMeta && String(shotMeta.promptState ?? "") === "stale") {
             healThenBurnNotes.push("promptState=stale \u5DF2\u6E05 \xB7 \u5B9E\u73B0\u5DF2\u964D\u7EA7\u7EE7\u7EED\u70E7");
             shotMeta.promptState = "composed";
@@ -307259,28 +317615,17 @@ var init_generateVideo = __esm({
             );
             if (qg.blocked) {
               const envelope = buildBurnGateEnvelope(qg.blocks);
-              const chatRepairText = [
-                "\u3010\u95ED\u73AF\u4FEE\u590D\u6E05\u5355 \u2014 \u70E7\u7247\u524D\u8D28\u91CF\u95E8\u3011",
-                `\u5F85\u5904\u7406\uFF1A${qg.blocks.map((b) => b.id).join(", ")}`,
-                "",
-                ...qg.blocks.slice(0, 24).map((b) => `- ${b.id}: ${b.message}`),
-                "",
-                ...envelope.repairHints.map((h) => `[${h.id}] ${h.chatTemplate ?? ""}`).filter(Boolean),
-                "",
-                "\u56DE\u63A8\u821E\u53F0\u4EC5\u8DF3\u8F6C\uFF1B\u8BF7\u6539 JSON \u540E\u91CD\u5BFC/\u91CD\u751F\u3002"
-              ].join("\n");
-              return res.status(400).send(
-                error50(`\u89E6\u8FBE\u524D\u8D28\u91CF\u95E8\u7981\u672A\u901A\u8FC7: ${qg.blocks.map((b) => `${b.id} ${b.message}`).join("; ")}`, {
-                  qualityGate: qg,
-                  blocks: qg.blocks,
-                  rePushPlan: envelope.rePushPlan,
-                  repairHints: envelope.repairHints,
-                  nextStep: envelope.nextStep,
-                  reverseTriggers: envelope.triggers,
-                  chatRepairText,
-                  decision: envelope.decision ?? (envelope.nextStep === "split_shot" ? "split_shot" : envelope.nextStep === "soft_patch" ? "soft_patch" : "rePush_design")
-                })
-              );
+              for (const b of qg.blocks.slice(0, 12)) {
+                healThenBurnNotes.push(`\u89E6\u8FBE\u524D\u8D28\u91CF\u503A\u5DF2\u5438\u6536\uFF08${b.id}\uFF09\xB7${b.message}\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`);
+              }
+              if (envelope.userMessage) healThenBurnNotes.push(envelope.userMessage);
+              req.__qgSoftDebt = {
+                blocks: qg.blocks,
+                rePushPlan: envelope.rePushPlan,
+                repairHints: envelope.repairHints,
+                nextStep: envelope.nextStep,
+                triggers: envelope.triggers
+              };
             }
           } catch {
           }
@@ -307303,29 +317648,22 @@ var init_generateVideo = __esm({
             const lipMin = Number(lip?.lipMin ?? lip?.durationSec) || 0;
             if (onCamDialogue && authorBeat > 0 && lipMin > authorBeat + 0.5) {
               if (Boolean(lip?.needsSplit) || bridge.durationSnapOk === false) {
-                return res.status(400).send(
-                  error50(`\u53E3\u578B\u6700\u77ED ${lipMin}s \u8D85\u8FC7\u4F5C\u8005\u8282\u62CD ${authorBeat}s\uFF0C\u8BF7\u786E\u8BA4\u62AC\u957F\u6216\u62C6\u955C`, {
-                    code: "VID-DUR-LIP",
-                    primaryNextStep: "split_shot",
-                    ctaLabel: "\u786E\u8BA4\u62C6\u955C\u6216\u62AC\u65F6\u957F",
-                    userMessage: `\u53E3\u578B\u6700\u77ED ${lipMin}s > \u4F5C\u8005 ${authorBeat}s`,
-                    reverseTrigger: "pr_lip_duration",
-                    lipMin,
-                    authorBeat
-                  })
+                burnDuration = Math.max(burnDuration, lipMin);
+                healThenBurnNotes.push(
+                  `\u53E3\u578B\u6700\u4F4E ${lipMin}s > \u4F5C\u8005\u8282\u62CD ${authorBeat}s\xB7\u65F6\u957F\u5DF2\u62AC\u5347/\u5EFA\u8BAE\u62C6\u955C\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
                 );
               }
               burnDuration = Math.max(burnDuration, lipMin);
             }
           }
           {
-            const pad = assertNoPadDuration2({
+            const pad4 = assertNoPadDuration2({
               authorBeatSec: authorBeat,
               burnDurationSec: burnDuration,
               hasLiteraryDialogue: onCamDialogue,
               lipMin: lip?.lipMin ?? lip?.durationSec
             });
-            if (pad && authorBeat > 0) {
+            if (pad4 && authorBeat > 0) {
               burnDuration = Math.max(authorBeat, onCamDialogue ? Number(lip?.lipMin ?? lip?.durationSec) || authorBeat : authorBeat);
             }
           }
@@ -307375,33 +317713,24 @@ var init_generateVideo = __esm({
               dialogueLines: litDial
             });
             if (scrub2.block) {
-              return res.status(400).send(
-                error50(scrub2.block.message, {
-                  code: scrub2.block.id,
-                  primaryNextStep: "chat_repair",
-                  ctaLabel: "\u786E\u8BA4\u8FD0\u955C\u8C03\u89E3",
-                  reverseTrigger: "vid_cam_mediate"
-                })
+              healThenBurnNotes.push(
+                `${scrub2.block.message}\xB7\u8FD0\u955C\u8C03\u89E3\u503A\u5DF2\u6807\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
               );
             }
             burnPromptLocal = scrub2.prompt;
-            const pad2 = assertNoPadDuration2({
+            const pad22 = assertNoPadDuration2({
               authorBeatSec: authorBeat,
               burnDurationSec: burnDuration,
               hasLiteraryDialogue: onCamDialogue,
               lipMin: lip?.lipMin ?? lip?.durationSec
             });
-            if (pad2 && authorBeat > 0 && authorBeat <= 2 && !onCamDialogue) {
+            if (pad22 && authorBeat > 0 && authorBeat <= 2 && !onCamDialogue) {
               burnDuration = Math.max(authorBeat, Number(lip?.lipMin ?? 0) || authorBeat);
             }
             const ready = assertVideoPromptReady2(burnPromptLocal, ctx);
             if (!ready.ok && isTrueDesignGap2(ctx)) {
-              return res.status(400).send(
-                error50(ready.reasons.join(", ") || "\u89C6\u9891\u63D0\u793A\u8BCD\u8BBE\u8BA1\u7F3A\u53E3", {
-                  code: ready.code ?? "VP-THIN-SHELL",
-                  primaryNextStep: "chat_repair",
-                  reverseTrigger: "video_prompt_stub"
-                })
+              healThenBurnNotes.push(
+                `${ready.reasons.join(", ") || "\u89C6\u9891\u63D0\u793A\u8BCD\u8BBE\u8BA1\u7F3A\u53E3"}\uFF08${ready.code ?? "VP-THIN-SHELL"}\uFF09\xB7\u5DF2\u6807\u503A\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
               );
             }
             vendorPrompt = burnPromptLocal;
@@ -307453,13 +317782,8 @@ var init_generateVideo = __esm({
               refuseExplicitSilent: false
             });
             if (ss.blocked) {
-              return res.status(400).send(
-                error50(ss.blockMessage || "no lip on dialogue", {
-                  code: ss.blockCode ?? "NO-LIP-DIALOGUE",
-                  primaryNextStep: "chat_repair",
-                  userMessage: ss.blockMessage,
-                  reverseTrigger: "no_lip_dialogue"
-                })
+              healThenBurnNotes.push(
+                `${ss.blockMessage || "no lip on dialogue"}\xB7\u53E3\u578B\u503A\u5DF2\u5438\u6536\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
               );
             }
             burnPrompt = ss.prompt;
@@ -307542,15 +317866,8 @@ var init_generateVideo = __esm({
                 }
               }
               if (!eg.ok) {
-                return res.status(400).send(
-                  error50(eg.findings[0]?.message || "chain egress blocked", {
-                    code: eg.codes[0] ?? "CHAIN-EGRESS",
-                    primaryNextStep: eg.breakAt === "split" || eg.breakAt === "cam_split" ? "split_shot" : "chat_repair",
-                    userMessage: eg.findings.map((f) => f.message).join("\uFF1B"),
-                    reverseTrigger: eg.codes[0] === "DUR-DESYNC" ? "dur_desync" : eg.codes[0] === "PROMPT-FIDELITY" ? "prompt_fidelity" : eg.codes[0] === "VIDEO-PROMPT-STALE" ? "video_prompt_stale" : "design_loss",
-                    breakAt: eg.breakAt,
-                    designDuration: designDur || c.durationSec
-                  })
+                healThenBurnNotes.push(
+                  `${eg.findings[0]?.message || "chain egress"}\uFF08${eg.codes[0] ?? "CHAIN-EGRESS"}\uFF09\xB7\u94FE\u8DEF\u503A\u5DF2\u6807\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
                 );
               }
               if (c.durationTrusted && c.durationSec > burnDuration) {
@@ -307873,14 +318190,8 @@ ${vdCheck}`
               });
             }
             if (dialLines2.length && audioCfg.requireAudioPassForDialogueBurn !== false && !audioAssert.ok) {
-              return res.status(400).send(
-                error50("\u97F3\u8F68\u6587\u5B66\u4FDD\u771F\u672A\u8FC7\uFF1A\u5BF9\u767D\u672A\u5165\u8F68\u6216 Audio XOR \u51B2\u7A81", {
-                  code: "AUD-LIT-L0",
-                  primaryNextStep: "chat_repair",
-                  userMessage: `\u97F3\u8F68\u6587\u5B66\u4FDD\u771F\u7F3A\u9879\uFF1A${audioAssert.missing.map((m) => m.id).join(", ")}`,
-                  ctaLabel: "\u4FEE\u590D\u97F3\u8F68\u540E\u91CD\u8BD5",
-                  audioMissing: audioAssert.missing.map((m) => m.id)
-                })
+              healThenBurnNotes.push(
+                `\u97F3\u8F68\u6587\u5B66\u4FDD\u771F\u7F3A\u9879\u5DF2\u6807\u503A\uFF08${audioAssert.missing.map((m) => m.id).join(", ")}\uFF09\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
               );
             }
             try {
@@ -307897,27 +318208,15 @@ ${vdCheck}`
                 voiceProfilePresent: voicePresent || roleIds.length === 0
               });
               if (!voiceGate.ok && voiceGate.hard) {
-                return res.status(400).send(
-                  error50(voiceGate.userMessage || "\u97F3\u8272\u7ED1\u5B9A\u95E8\u7981\u672A\u8FC7", {
-                    code: "AUD-VOICE-BIND",
-                    primaryNextStep: voiceGate.primaryNextStep,
-                    userMessage: voiceGate.userMessage,
-                    ctaLabel: voiceGate.ctaLabel
-                  })
+                healThenBurnNotes.push(
+                  `${voiceGate.userMessage || "\u97F3\u8272\u7ED1\u5B9A\u95E8\u7981\u672A\u8FC7"}\xB7\u5DF2\u6807\u503A\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
                 );
               }
             } catch {
             }
           } catch (e) {
             const errMsg = utils_default.error(e).message || "audio L0 failed";
-            return res.status(400).send(
-              error50(errMsg, {
-                code: "AUD-LIT-L0",
-                primaryNextStep: "chat_repair",
-                userMessage: errMsg,
-                ctaLabel: "\u4FEE\u590D\u97F3\u8F68\u540E\u91CD\u8BD5"
-              })
-            );
+            healThenBurnNotes.push(`${errMsg}\xB7\u97F3\u8F68\u503A\u5DF2\u6807\xB7\u53EF\u964D\u7EA7\u70E7`);
           }
           try {
             const { assertStillMouthVideoHandoff: assertStillMouthVideoHandoff2 } = await Promise.resolve().then(() => (init_stillMouthVideoHandoff(), stillMouthVideoHandoff_exports));
@@ -307956,13 +318255,7 @@ ${vdCheck}`
             }
           } catch (e) {
             const errMsg = utils_default.error(e).message || "mouth handoff failed";
-            return res.status(400).send(
-              error50(errMsg, {
-                code: "AUD-LIT-MOUTH",
-                primaryNextStep: "chat_repair",
-                userMessage: errMsg
-              })
-            );
+            healThenBurnNotes.push(`${errMsg}\xB7\u53E3\u578B\u4EA4\u63A5\u503A\u5DF2\u6807\xB7\u53EF\u964D\u7EA7\u70E7`);
           }
           try {
             const { assessStillVideoReadiness: assessStillVideoReadiness2 } = await Promise.resolve().then(() => (init_stillVideoReadiness(), stillVideoReadiness_exports));
@@ -308023,48 +318316,12 @@ ${vdCheck}`
                   });
                 } catch {
                 }
-                const envelope = buildBurnGateEnvelope(
-                  [
-                    {
-                      id: "STILL-I2V-NOT-READY",
-                      message: readiness.reason || "\u9759\u7167\u672A\u8FBE\u5230\u89C6\u9891\u8D77\u59CB\u5E27\u6807\u51C6",
-                      reverseTrigger: "still_i2v_not_ready"
-                    }
-                  ],
-                  {
-                    decision: "rePush_design",
-                    nextStep: "regen_storyboard_hq",
-                    primary: {
-                      userMessage: "\u9996\u5E27\u672A\u8FBE I2V \u6807\u51C6\uFF0C\u5DF2\u8F6C\u5165\u667A\u80FD\u4FEE\u590D\uFF08\u91CD\u51FA HQ \u9759\u7167\uFF09",
-                      ctaLabel: "\u4E00\u952E\u91CD\u51FAHQ\u9759\u7167"
-                    }
-                  }
+                healThenBurnNotes.push(
+                  `I2V\u5C31\u7EEA\u503A\u5DF2\u5438\u6536\uFF08${misses.slice(0, 3).join(",") || readiness.reason}\uFF09\xB7\u5DF2\u8F6C\u5165\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
                 );
-                return res.status(400).send(
-                  error50(readiness.reason || "\u9759\u7167\u672A\u8FBE\u5230\u89C6\u9891\u8D77\u59CB\u5E27\u6807\u51C6", {
-                    code: "STILL-I2V-NOT-READY",
-                    primaryNextStep: "regen_storyboard_hq",
-                    ctaLabel: "\u4E00\u952E\u91CD\u51FAHQ\u9759\u7167",
-                    userMessage: `\u9996\u5E27\u786C\u503A\u672A\u5C3D\uFF08${misses.slice(0, 3).join(",") || readiness.reason}\uFF09\uFF0C\u5DF2\u8F6C\u5165\u667A\u80FD\u4FEE\u590D`,
-                    criticalMisses: misses,
-                    hardMisses: misses,
-                    softMisses,
-                    reverseTrigger: "still_i2v_not_ready",
-                    decision: "rePush_design",
-                    autoRepairStage,
-                    actuators,
-                    heal: heal12,
-                    repairHints: envelope.repairHints,
-                    chatRepairText: [
-                      "\u3010\u667A\u80FD\u4FEE\u590D \u2014 \u9759\u5E27\u786C\u503A\u3011",
-                      `\u786C\u503A\uFF1A${misses.join(", ") || readiness.reason}`,
-                      softMisses.length ? `\u8F6F\u503A\uFF08\u5DF2\u53EF\u5438\u6536\uFF09\uFF1A${softMisses.join(", ")}` : "",
-                      "\u52A8\u4F5C\uFF1Acompose_regen \u2192 regen_storyboard_hq",
-                      "",
-                      ...envelope.repairHints.map((h) => `[${h.id}] ${h.chatTemplate ?? ""}`).filter(Boolean)
-                    ].filter(Boolean).join("\n")
-                  })
-                );
+                void actuators;
+                void autoRepairStage;
+                void heal12;
               }
             }
             const { assertStillContactVideoHandoff: assertStillContactVideoHandoff2 } = await Promise.resolve().then(() => (init_stillContactVideoHandoff(), stillContactVideoHandoff_exports));
@@ -308079,18 +318336,10 @@ ${vdCheck}`
               propMissing: Boolean(stillMeta?.propMissing)
             });
             if (!contactGate.ok && contactGate.severity === "BLOCK") {
-              return res.status(400).send(
-                error50(contactGate.message || "\u63A5\u89E6\u4EA4\u63A5\u672A\u8FC7", {
-                  code: "STILL-CONTACT-HANDOFF",
-                  primaryNextStep: contactGate.primaryNextStep ?? "regen_storyboard_hq",
-                  ctaLabel: "\u91CD\u51FA\u5E26\u9053\u5177\u9759\u7167",
-                  userMessage: contactGate.message,
-                  missingSlots: contactGate.missingSlots,
-                  reverseTrigger: contactGate.reverseTrigger ?? "still_contact_handoff"
-                })
+              healThenBurnNotes.push(
+                contactGate.message || "\u63A5\u89E6\u4EA4\u63A5\u503A\u5DF2\u5438\u6536\xB7\u53EF\u964D\u7EA7\u70E7\xB7\u667A\u80FD\u4FEE\u590D\u91CD\u51FA\u5E26\u9053\u5177\u9759\u7167"
               );
-            }
-            if (contactGate.severity === "WARN" && contactGate.message) {
+            } else if (contactGate.severity === "WARN" && contactGate.message) {
               healThenBurnNotes.push(contactGate.message);
             }
             const motionHint = String(
@@ -308123,17 +318372,47 @@ ${motionHint}`.trim();
             });
             if (!poseGate.ok && poseGate.severity === "BLOCK") {
               healThenBurnNotes.push(poseGate.message || "\u59FF\u6001\u4EA4\u63A5\u503A\u5DF2\u5438\u6536\xB7\u53EF\u70E7\u89C6\u9891");
+            } else if (poseGate.code === "REALIZATION-MOTION-MISMATCH" && poseGate.message) {
+              healThenBurnNotes.push(poseGate.message);
+            }
+            try {
+              const { assertFaceReadableHandoff: assertFaceReadableHandoff2, assessFaceBudget: assessFaceBudget2 } = await Promise.resolve().then(() => (init_faceBudgetPolicy(), faceBudgetPolicy_exports));
+              const { hasOnCameraDialogue: hasOnCameraDialogue3 } = await Promise.resolve().then(() => (init_onCameraDialogue(), onCameraDialogue_exports));
+              const onCamFace = hasOnCameraDialogue3(
+                shotMeta?.narrative?.dialogue?.lines
+              );
+              const faceGate = assertFaceReadableHandoff2({
+                hasDialogue: onCamFace,
+                stillMeta,
+                visualDescription: vdForContact,
+                shotSize: String(shotMeta?.shotSize ?? "")
+              });
+              if (faceGate.severity === "WARN" && faceGate.message) {
+                healThenBurnNotes.push(faceGate.message);
+              }
+              const budget = assessFaceBudget2({
+                visualDescription: vdForContact,
+                shotSize: String(shotMeta?.shotSize ?? ""),
+                hasDialogue: onCamFace,
+                lipSyncPolicy: String(
+                  shotMeta?.shotDesign?.lipSyncPolicy ?? ""
+                ),
+                realizationOccupancy: String(
+                  stillMeta?.realizationOccupancy ?? ""
+                ),
+                intentOccupancy: String(stillMeta?.intentOccupancy ?? ""),
+                videoIntentClass: onCamFace ? "speak_lip" : void 0
+              });
+              if (budget.unreachable) {
+                healThenBurnNotes.push(
+                  `\u8138\u9884\u7B97\u4E0D\u53EF\u8FBE\uFF1A${budget.reason ?? "\u987B Confirm \u62C6\u955C"}\uFF08${budget.splitHint ?? "action_then_dialogue_mcu"}\uFF09`
+                );
+              }
+            } catch {
             }
           } catch (e) {
             const errMsg = utils_default.error(e).message || "contact handoff failed";
-            return res.status(400).send(
-              error50(errMsg, {
-                code: "STILL-HANDOFF",
-                primaryNextStep: "regen_storyboard_hq",
-                ctaLabel: "\u91CD\u51FAHQ\u9759\u7167",
-                userMessage: errMsg
-              })
-            );
+            healThenBurnNotes.push(`${errMsg}\xB7\u4EA4\u63A5\u503A\u5DF2\u6807\xB7\u53EF\u964D\u7EA7\u70E7`);
           }
           const qdFx = String(shotMeta?.generation?.fxFeasibility ?? shotMeta?.fxFeasibility ?? shotMeta?.fxLevel ?? "");
           let workingShot = shotMeta;
@@ -308150,13 +318429,8 @@ ${motionHint}`.trim();
               dialogueLines: litDial
             });
             if (scrubQd.block) {
-              return res.status(400).send(
-                error50(scrubQd.block.message, {
-                  code: scrubQd.block.id,
-                  primaryNextStep: "chat_repair",
-                  ctaLabel: "\u786E\u8BA4\u8FD0\u955C\u8C03\u89E3",
-                  reverseTrigger: "vid_cam_mediate"
-                })
+              healThenBurnNotes.push(
+                `${scrubQd.block.message}\xB7\u8FD0\u955C\u8C03\u89E3\u503A\u5DF2\u6807\xB7\u53EF\u667A\u80FD\u4FEE\u590D\xB7\u53EF\u964D\u7EA7\u70E7`
               );
             }
             burnPromptWorking = scrubQd.prompt;
@@ -308202,33 +318476,15 @@ ${motionHint}`.trim();
           }
           if (!qd.burnAllowed) {
             const env2 = qd.envelope ?? buildBurnGateEnvelope([{ id: "LIP-01", message: qd.reasons.join(","), reverseTrigger: "pr_lip_duration" }]);
-            return res.status(400).send(
-              error50(env2.userMessage || `\u8D28\u91CF\u51B3\u7B56\u6321\u70E7: ${qd.decision} \u2014 ${qd.reasons.join("; ")}`, {
-                qualityDecision: serializeQualityDecision(qd, { autoHealed: heal11.autoHealed, duration: heal11.duration }),
-                rePushPlan: env2.rePushPlan,
-                repairHints: env2.repairHints,
-                nextStep: qd.nextStep,
-                primaryNextStep: env2.primaryNextStep ?? qd.nextStep,
-                userMessage: env2.userMessage,
-                ctaLabel: env2.ctaLabel,
-                userMessageKey: env2.userMessageKey,
-                suggestedValue: env2.suggestedValue,
-                splitHint: qd.splitHint,
-                reverseTriggers: env2.triggers,
-                ...heal11.autoHealed?.length ? { autoHealed: heal11.autoHealed } : {},
-                chatRepairText: [
-                  "\u3010\u95ED\u73AF\u4FEE\u590D\u6E05\u5355 \u2014 \u8D28\u91CF\u51B3\u7B56\u6321\u70E7\u3011",
-                  env2.userMessage,
-                  `reasons: ${qd.reasons.join("; ")}`,
-                  qd.reasons.includes("multi_line_one_shot") || qd.reasons.includes("lip_over_vendor") ? "\u987B Confirm \u8BBE\u8BA1\u62C6\u5206\uFF08Orchestrator\uFF09\uFF0C\u4E0D\u53EF\u53EA\u9760\u62AC duration / \u4E0D\u53EF\u628A reactionAction \u5F53 splitHint" : "",
-                  qd.splitHint && /^[a-z][a-z0-9_]*$/i.test(qd.splitHint) ? `splitHint \u5EFA\u8BAE(\u679A\u4E3E): ${qd.splitHint}` : "",
-                  "",
-                  ...env2.repairHints.map((h) => `[${h.id}] ${h.chatTemplate ?? ""}`).filter(Boolean),
-                  "",
-                  "\u56DE\u63A8\u4EC5\u8DF3\u8F6C\uFF1B\u8BF7\u6309\u6E05\u5355\u6539 SB/W3 \u540E\u518D\u5BFC\u51FA\u70E7\u7247\u3002"
-                ].filter((l) => l !== void 0 && l !== "").join("\n")
-              })
+            healThenBurnNotes.push(
+              env2.userMessage || `\u8D28\u91CF\u503A\u8F6F\u5438\u6536: ${qd.decision} \u2014 ${qd.reasons.join("; ")}`
             );
+            qd = {
+              ...qd,
+              burnAllowed: true,
+              softDefer: true,
+              reasons: [...qd.reasons, "heal_then_burn_soft"]
+            };
           }
           const packed = applyVendorPromptPack({
             prompt: burnPrompt,
@@ -308261,15 +318517,7 @@ ${motionHint}`.trim();
                 videoPrompt: burnPrompt
               });
               if (langHit) {
-                return res.status(400).send(
-                  error50(langHit.message || "\u4E2D\u6587\u53F0\u8BCD\u88AB\u5199\u6210\u82F1\u6587", {
-                    code: "VID-LANG-01",
-                    primaryNextStep: "chat_repair",
-                    ctaLabel: "\u56DE\u586B\u6E90\u8BED\u8A00\u53F0\u8BCD",
-                    userMessage: langHit.message,
-                    reverseTrigger: "lang_aud_mismatch"
-                  })
-                );
+                healThenBurnNotes.push(langHit.message || "LANG-01\uFF1A\u4E2D\u6587\u53F0\u8BCD\u82F1\u6587\u58F3\xB7\u5DF2\u6807\u503A\u53EF\u667A\u80FD\u4FEE\u590D");
               }
             } catch {
             }
@@ -308384,9 +318632,21 @@ ${motionHint}`.trim();
                   implementationDegraded: true,
                   userMessage: "\u5DF2\u7EE7\u7EED\u751F\u6210\uFF1B\u7F3A\u503A\u5DF2\u8BB0\u5165\u53F0\u8D26",
                   notes: healThenBurnNotes,
-                  debtLedger
+                  debtLedger,
+                  ctaLabel: "\u667A\u80FD\u4FEE\u590D",
+                  primaryNextStep: "soft_patch",
+                  adaptDiff: (() => {
+                    const m = String(vendorPromptFinal ?? "").match(/adaptDiff:([^\n]+)/);
+                    return m?.[1]?.trim() || null;
+                  })(),
+                  repairChangelog: Array.isArray(
+                    shotMeta?.repairChangelog
+                  ) ? shotMeta.repairChangelog.slice(-8) : []
                 };
-              })() : videoId
+              })() : {
+                videoId,
+                ctaLabel: "\u667A\u80FD\u4FEE\u590D"
+              }
             )
           );
           const relatedObjects = {
@@ -308928,7 +319188,7 @@ var init_generateVideoPrompt = __esm({
             }
           } catch {
           }
-          const { decideVideoQuality: decideVideoQuality2, serializeQualityDecision: serializeQualityDecision2 } = await Promise.resolve().then(() => (init_qualityDecision(), qualityDecision_exports));
+          const { decideVideoQuality: decideVideoQuality2, serializeQualityDecision: serializeQualityDecision3 } = await Promise.resolve().then(() => (init_qualityDecision(), qualityDecision_exports));
           const { applySilentSoftPatches: applySilentSoftPatches2 } = await Promise.resolve().then(() => (init_applySilentSoftPatches(), applySilentSoftPatches_exports));
           const { scrubVideoPromptForBurn: scrubVideoPromptForBurn2 } = await Promise.resolve().then(() => (init_videoDesignContract(), videoDesignContract_exports));
           const { softHealVideoHomologyOnShots: softHealVideoHomologyOnShots2 } = await Promise.resolve().then(() => (init_videoHomologyHeal(), videoHomologyHeal_exports));
@@ -309082,7 +319342,7 @@ var init_generateVideoPrompt = __esm({
                 error50(envelope.userMessage || `\u63D0\u793A\u8BCD\u8D28\u91CF\u95E8\u7981\u672A\u901A\u8FC7: ${qg.blocks.map((b) => b.message).join("; ")}`, {
                   qualityGate: qg,
                   blocks: qg.blocks,
-                  qualityDecision: serializeQualityDecision2(qd),
+                  qualityDecision: serializeQualityDecision3(qd),
                   rePushPlan: envelope.rePushPlan,
                   repairHints: envelope.repairHints,
                   nextStep: envelope.nextStep,
@@ -309325,7 +319585,7 @@ var init_generateVideoPrompt = __esm({
               ...fidelityExtraReason
             });
           }
-          const qdSerialized = serializeQualityDecision2(qd, {
+          const qdSerialized = serializeQualityDecision3(qd, {
             autoHealed,
             duration: healedDuration
           });
@@ -309590,8 +319850,8 @@ var init_getGenerateData = __esm({
           if (!Array.isArray(videoMode)) return 0;
           const item = videoMode.find((v) => v.toLowerCase().startsWith("audioreference:"));
           if (!item) return 0;
-          const num = parseInt(item.split(":")[1], 10);
-          return isNaN(num) ? 0 : num;
+          const num2 = parseInt(item.split(":")[1], 10);
+          return isNaN(num2) ? 0 : num2;
         })();
         if (isRef) {
           const storyIds = storyboardList.map((s) => s.id);
@@ -311105,7 +321365,7 @@ var init_visualManual = __esm({
 });
 
 // src/routes/ruleEngine/applyAutoFix.ts
-function loadRepairHints(ruleIds) {
+function loadRepairHints3(ruleIds) {
   const p3 = import_path29.default.join(process.cwd(), "data", "fixtures", "repair_hint_catalog.json");
   if (!import_fs23.default.existsSync(p3)) return [];
   const hints = JSON.parse(import_fs23.default.readFileSync(p3, "utf-8")).hints ?? [];
@@ -311146,7 +321406,7 @@ var init_applyAutoFix = __esm({
           const dry = await dryRun(utils_default.db, pkg, script ?? "");
           const fix = applyAutoFix(dry.report.issues);
           const rePushPlan = buildRePushPlan(fix.applied.length ? fix.applied : fix.rePushTargets.filter((t) => !/^(SB|EN|MD|AS|CD|GB|W3|INFRA)$/i.test(t)));
-          const repairHints = loadRepairHints(fix.applied);
+          const repairHints = loadRepairHints3(fix.applied);
           const lipish = dry.report.issues.some(
             (i) => /LIP|DEX-LIP|multi_line|NAR-14|DC-01/i.test(String(i.ruleId ?? ""))
           );
@@ -311161,8 +321421,8 @@ var init_applyAutoFix = __esm({
               );
             }
             for (const patch of fix.patches) {
-              const shotId = patch.shotId;
-              const shot = pkg.shots.find((s) => s.id === shotId) ?? pkg.shots[0];
+              const shotId2 = patch.shotId;
+              const shot = pkg.shots.find((s) => s.id === shotId2) ?? pkg.shots[0];
               if (!shot) continue;
               const fp = String(patch.fieldPath ?? "");
               if (/dialogue|lineId|narrative\.dialogue/i.test(fp)) continue;
@@ -311274,12 +321534,12 @@ function runHeuristicAutoDesign(input) {
   scenes.forEach((scene) => {
     scene.lines.forEach((line) => {
       shotIndex++;
-      const hasDialogue2 = /[""]/.test(line);
-      const type = hasDialogue2 ? "CHAR-SCENE" : "PURE-SCENE";
+      const hasDialogue3 = /[""]/.test(line);
+      const type = hasDialogue3 ? "CHAR-SCENE" : "PURE-SCENE";
       const duration4 = estimateDuration(line);
       const char = characters.find((c) => line.includes(c)) ?? characters[0] ?? "\u89D2\u8272";
-      const motion = hasDialogue2 ? "static" : styleMotions.find((m) => m !== "static") ?? styleMotions[0] ?? "static";
-      const shotSize = hasDialogue2 ? "\u8FD1\u666F" : "\u4E2D\u666F";
+      const motion = hasDialogue3 ? "static" : styleMotions.find((m) => m !== "static") ?? styleMotions[0] ?? "static";
+      const shotSize = hasDialogue3 ? "\u8FD1\u666F" : "\u4E2D\u666F";
       tableRows.push(`| ${shotIndex} | ${type} | ${scene.name} | ${line.replace(/\|/g, "\\|")} | ${duration4}s |`);
       panels.push({
         clientId: `sb-${shotIndex}`,
@@ -311543,1445 +321803,6 @@ var init_compileDryRun = __esm({
   }
 });
 
-// src/ruleEngine/bundle/coerceShotStringFields.ts
-function pickString(...vals) {
-  for (const v of vals) {
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
-  return void 0;
-}
-function coerceVisualEffectObject(obj) {
-  const level = pickString(obj.level, obj.type, obj.fxLevel, obj.grade);
-  const desc = pickString(obj.desc, obj.content, obj.description, obj.text, obj.summary);
-  if (level && desc) return { text: `${level}: ${desc}`, fxLevel: level };
-  if (desc) return { text: desc, fxLevel: level };
-  if (level) return { text: level, fxLevel: level };
-  const compact = JSON.stringify(obj);
-  return { text: compact.length > 120 ? compact.slice(0, 117) + "..." : compact };
-}
-function coerceAudioCueObject(obj) {
-  const beat = pickString(obj.beat, obj.audioBeat, obj.desc, obj.type, obj.cue);
-  if (beat) return beat;
-  const compact = JSON.stringify(obj);
-  return compact.length > 120 ? compact.slice(0, 117) + "..." : compact;
-}
-function snapshotChineseSceneKeys(bundle, log) {
-  const lock = bundle.visualLockTable?.sceneColorLock ?? bundle.assetPipeline?.sceneColorLock;
-  if (!lock || typeof lock !== "object") return;
-  for (const key of Object.keys(lock)) {
-    if (/[\u4e00-\u9fff]/.test(key)) {
-      log.push("SH-SCENE-KEY-RAW", `visualLockTable.sceneColorLock.${key}`, "chinese_key_will_rewrite_on_normalize");
-    }
-  }
-}
-function coerceShotStringFields(bundle, log) {
-  snapshotChineseSceneKeys(bundle, log);
-  const pack2 = bundle.preDesignPack;
-  if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) return;
-  const shots = pack2.shots;
-  if (!Array.isArray(shots)) return;
-  for (let i = 0; i < shots.length; i++) {
-    const shot = shots[i];
-    if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
-    const s = shot;
-    const basePath = `preDesignPack.shots[${i}]`;
-    const ve = s.visualEffect;
-    if (ve && typeof ve === "object" && !Array.isArray(ve)) {
-      const { text: text2, fxLevel } = coerceVisualEffectObject(ve);
-      s.visualEffect = text2;
-      if (fxLevel && !s.fxLevel) s.fxLevel = fxLevel;
-      log.push("SH-VISUAL-EFFECT-OBJ", `${basePath}.visualEffect`, `object\u2192string "${text2.slice(0, 40)}${text2.length > 40 ? "\u2026" : ""}"`);
-    }
-    const ac = s.audioCue;
-    if (ac && typeof ac === "object" && !Array.isArray(ac)) {
-      const text2 = coerceAudioCueObject(ac);
-      s.audioCue = text2;
-      log.push("SH-AUDIO-CUE-OBJ", `${basePath}.audioCue`, `object\u2192string "${text2.slice(0, 40)}${text2.length > 40 ? "\u2026" : ""}"`);
-    }
-    for (const field of SHOT_STRING_FIELDS) {
-      const v = s[field];
-      if (v != null && typeof v !== "string") {
-        s[field] = String(v);
-        log.push("SH-SHOT-STR-COERCE", `${basePath}.${field}`, `${typeof v}\u2192string`);
-      }
-    }
-  }
-}
-var SHOT_STRING_FIELDS;
-var init_coerceShotStringFields = __esm({
-  "src/ruleEngine/bundle/coerceShotStringFields.ts"() {
-    "use strict";
-    SHOT_STRING_FIELDS = ["visualEffect", "audioCue"];
-  }
-});
-
-// src/ruleEngine/bundle/normalizeDeepAdaptation.ts
-function splitArrowKey(s) {
-  const parts = s.split(ARROW_RE).map((p3) => p3.trim()).filter(Boolean);
-  if (parts.length < 2) return null;
-  return { from: parts[0], to: parts.slice(1).join("\u2192") };
-}
-function pairFromObject(o) {
-  const from = typeof o.from === "string" ? o.from : typeof o.original === "string" ? o.original : typeof o.source === "string" ? o.source : null;
-  const to = typeof o.to === "string" ? o.to : typeof o.new === "string" ? o.new : typeof o.target === "string" ? o.target : null;
-  if (from && to) {
-    const reason = typeof o.reason === "string" ? o.reason : void 0;
-    return [{ from, to, ...reason ? { reason } : {} }];
-  }
-  const keys2 = Object.keys(o);
-  if (keys2.length === 1) {
-    const k = keys2[0];
-    const arrow = splitArrowKey(k);
-    if (arrow) return [arrow];
-  }
-  const out = [];
-  for (const [k, v] of Object.entries(o)) {
-    if (/^D\d+_/.test(k)) continue;
-    if (typeof v === "string" && CHOICE_LIKE.has(v) && !ARROW_RE.test(k)) continue;
-    const arrowKey = splitArrowKey(k);
-    if (arrowKey) {
-      out.push(arrowKey);
-      continue;
-    }
-    if (typeof v === "string" && v.length > 0) {
-      out.push({ from: k, to: v });
-    }
-  }
-  return out;
-}
-function normalizeRenameMap(input) {
-  if (input == null) return [];
-  if (typeof input === "string") {
-    const p3 = splitArrowKey(input);
-    return p3 ? [p3] : [];
-  }
-  if (Array.isArray(input)) {
-    const out = [];
-    for (const item of input) {
-      if (typeof item === "string") {
-        const p3 = splitArrowKey(item);
-        if (p3) out.push(p3);
-        continue;
-      }
-      if (item && typeof item === "object" && !Array.isArray(item)) {
-        out.push(...pairFromObject(item));
-      }
-    }
-    return out;
-  }
-  if (typeof input === "object") {
-    return pairFromObject(input);
-  }
-  return [];
-}
-function stripPollutionKeys(deep) {
-  const out = {};
-  for (const [k, v] of Object.entries(deep)) {
-    if (/^D\d+_/.test(k)) continue;
-    out[k] = v;
-  }
-  return out;
-}
-function normalizeDeepAdaptation(deep) {
-  if (!deep || typeof deep !== "object" || Array.isArray(deep)) return {};
-  const raw = stripPollutionKeys(deep);
-  const out = { ...raw };
-  for (const field of ["nameMap", "relationMap", "substitutions"]) {
-    if (field in out) {
-      out[field] = normalizeRenameMap(out[field]);
-    }
-  }
-  if (out.settingProfile != null && (typeof out.settingProfile !== "object" || Array.isArray(out.settingProfile))) {
-    delete out.settingProfile;
-  }
-  return out;
-}
-function pairsToB16Record(pairs) {
-  const rec = {};
-  for (const p3 of pairs) {
-    if (p3.from && p3.to) rec[p3.from] = p3.to;
-  }
-  return rec;
-}
-function compileB16FromNameMap(nameMap, existing) {
-  const pairs = normalizeRenameMap(nameMap);
-  if (!pairs.length) {
-    return existing && typeof existing === "object" && !Array.isArray(existing) ? existing : void 0;
-  }
-  const compiled = pairsToB16Record(pairs);
-  if (existing && typeof existing === "object" && !Array.isArray(existing)) {
-    return { ...existing, ...compiled };
-  }
-  return compiled;
-}
-function normalizeDeepAdaptationInBundle(bundle) {
-  const planData2 = bundle.planData;
-  if (planData2 && typeof planData2 === "object" && !Array.isArray(planData2)) {
-    const pd = planData2;
-    const structured = pd.adaptationMatrixStructured;
-    if (structured && typeof structured === "object" && !Array.isArray(structured)) {
-      const st = structured;
-      if (st.deepAdaptation != null) {
-        st.deepAdaptation = normalizeDeepAdaptation(st.deepAdaptation);
-      }
-    }
-    const brief = pd.narrativeBrief;
-    if (brief && typeof brief === "object" && !Array.isArray(brief)) {
-      const nb = brief;
-      if (nb.deepAdaptation != null) {
-        nb.deepAdaptation = normalizeDeepAdaptation(nb.deepAdaptation);
-      }
-    }
-  }
-  const designBrief = bundle.designBrief;
-  if (designBrief && typeof designBrief === "object" && !Array.isArray(designBrief)) {
-    const db2 = designBrief;
-    const nested = db2.B16_adaptationDeepRef;
-    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
-      const nestedNorm = normalizeDeepAdaptation(nested);
-      const pd2 = bundle.planData;
-      const structured = pd2?.adaptationMatrixStructured;
-      if (structured) {
-        const merged = normalizeDeepAdaptation({
-          ...typeof structured.deepAdaptation === "object" && structured.deepAdaptation ? structured.deepAdaptation : {},
-          ...nestedNorm
-        });
-        structured.deepAdaptation = merged;
-      }
-      db2.B16 = compileB16FromNameMap(nestedNorm.nameMap, db2.B16) ?? db2.B16;
-      delete db2.B16_adaptationDeepRef;
-    }
-    let nameMap;
-    const pd = bundle.planData;
-    const st = pd?.adaptationMatrixStructured;
-    const deep = st?.deepAdaptation;
-    nameMap = deep?.nameMap;
-    if (!nameMap) {
-      const nb = pd?.narrativeBrief;
-      nameMap = nb?.deepAdaptation?.nameMap;
-    }
-    if (nameMap) {
-      const compiled = compileB16FromNameMap(nameMap, db2.B16);
-      if (compiled) db2.B16 = compiled;
-    }
-  }
-}
-var ARROW_RE, CHOICE_LIKE;
-var init_normalizeDeepAdaptation = __esm({
-  "src/ruleEngine/bundle/normalizeDeepAdaptation.ts"() {
-    "use strict";
-    ARROW_RE = /\s*(?:→|->|⇒)\s*/;
-    CHOICE_LIKE = /* @__PURE__ */ new Set([
-      "keep",
-      "modernize",
-      "localize",
-      "full_rename",
-      "simplify",
-      "invert",
-      "expand",
-      "partial",
-      "full",
-      "era_shift",
-      "world_shift"
-    ]);
-  }
-});
-
-// src/ruleEngine/bundle/normalizeDesignBrief.ts
-function isPayoffSemanticString(s) {
-  return PAYOFF_SEMANTIC.test(s);
-}
-function coerceFiniteNumber(v) {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
-  return void 0;
-}
-function normalizeInfoLinkageItem(item, path44, log) {
-  const pe = item.payoffEp;
-  if (pe === void 0 || pe === null) return;
-  if (typeof pe === "number" && Number.isFinite(pe)) return;
-  if (typeof pe === "string") {
-    const num = coerceFiniteNumber(pe);
-    if (num !== void 0) {
-      item.payoffEp = num;
-      log.push("SH-B5-PAYOFF", path44, `payoffEp string\u2192number(${num})`);
-      return;
-    }
-    if (isPayoffSemanticString(pe) || pe.trim().length > 0) {
-      item.payoffLabel = pe;
-      delete item.payoffEp;
-      log.push("SH-B5-PAYOFF", path44, `payoffEp\u2192payoffLabel("${pe}")`);
-    }
-  }
-}
-function normalizeLinkageArray(arr, basePath, log) {
-  for (let i = 0; i < arr.length; i++) {
-    const item = arr[i];
-    if (item && typeof item === "object" && !Array.isArray(item)) {
-      normalizeInfoLinkageItem(item, `${basePath}[${i}]`, log);
-    }
-  }
-}
-function normalizeNumberArray(arr, basePath, log, ruleId) {
-  for (let i = 0; i < arr.length; i++) {
-    const v = arr[i];
-    if (typeof v === "string") {
-      const n = coerceFiniteNumber(v);
-      if (n !== void 0) {
-        arr[i] = n;
-        log.push(ruleId, `${basePath}[${i}]`, `string\u2192number(${n})`);
-      }
-    }
-  }
-}
-function defaultBeatsForZone(zone) {
-  if (typeof zone !== "string") return 1;
-  const z3 = zone.trim();
-  if (z3 === "\u627F" || z3 === "\u8F6C") return 2;
-  if (z3 === "\u5408") return 3;
-  return 1;
-}
-function normalizeB12Items(arr, basePath, log) {
-  for (let i = 0; i < arr.length; i++) {
-    const item = arr[i];
-    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
-    const o = item;
-    const beats = o.beats;
-    if (typeof beats === "string") {
-      const n = coerceFiniteNumber(beats);
-      if (n !== void 0) {
-        o.beats = n;
-        log.push("SH-B12-BEATS", `${basePath}[${i}].beats`, `string\u2192number(${n})`);
-      } else if (beats.trim()) {
-        const summary = beats.trim();
-        if (typeof o.summary !== "string" || !String(o.summary).trim()) {
-          o.summary = summary;
-        } else if (typeof o.beatSummary !== "string" || !String(o.beatSummary).trim()) {
-          o.beatSummary = summary;
-        }
-        const def = defaultBeatsForZone(o.zone);
-        o.beats = def;
-        log.push(
-          "SH-B12-BEATS",
-          `${basePath}[${i}].beats`,
-          `narrative\u2192summary+beats=${def} ("${summary.slice(0, 24)}${summary.length > 24 ? "\u2026" : ""}")`
-        );
-      }
-    }
-  }
-}
-function formatSpatialRelationObject(obj) {
-  const parts = [];
-  if (typeof obj.axis === "string" && obj.axis.trim()) {
-    parts.push(`axis=${obj.axis.trim()}`);
-  }
-  if (Array.isArray(obj.anchors)) {
-    const anchors = obj.anchors.filter((a) => typeof a === "string" && a.trim().length > 0).map((a) => a.trim());
-    if (anchors.length) parts.push(`anchors=${anchors.join("|")}`);
-  }
-  if (typeof obj.scene === "string" && obj.scene.trim()) {
-    parts.push(`scene=${obj.scene.trim()}`);
-  }
-  if (parts.length) return parts.join("\uFF1B");
-  try {
-    return JSON.stringify(obj).slice(0, 200);
-  } catch {
-    return "spatial";
-  }
-}
-function normalizeMetaNumbers(meta4, log) {
-  for (const key of META_NUM_KEYS) {
-    const v = meta4[key];
-    if (typeof v === "string") {
-      const n = coerceFiniteNumber(v);
-      if (n !== void 0) {
-        meta4[key] = n;
-        log.push("SH-META-NUM", `meta.${key}`, `string\u2192number(${n})`);
-      }
-    }
-  }
-}
-function normalizeGenerationNulls(bundle, log) {
-  const pack2 = bundle.preDesignPack;
-  if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) return;
-  const shots = pack2.shots;
-  if (!Array.isArray(shots)) return;
-  const slots = ["imagePrompt", "videoPrompt", "audioPrompt", "fxPrompt"];
-  for (let i = 0; i < shots.length; i++) {
-    const shot = shots[i];
-    if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
-    const gen = shot.generation;
-    if (!gen || typeof gen !== "object" || Array.isArray(gen)) continue;
-    const g = gen;
-    for (const slot of slots) {
-      if (g[slot] === null) {
-        delete g[slot];
-        log.push("SH-GEN-NULL", `preDesignPack.shots[${i}].generation.${slot}`, "null\u2192omit");
-      }
-    }
-  }
-}
-function extractInfoId(item) {
-  if (typeof item === "string" && item.trim()) return item.trim();
-  if (!item || typeof item !== "object" || Array.isArray(item)) return void 0;
-  const o = item;
-  if (typeof o.infoId === "string" && o.infoId.trim()) return o.infoId.trim();
-  if (typeof o.id === "string" && o.id.trim()) return o.id.trim();
-  return void 0;
-}
-function normalizeB20(brief, log) {
-  const b20 = brief.B20;
-  if (!Array.isArray(b20)) return;
-  if (b20.every((x) => typeof x === "string")) return;
-  const ids = [];
-  for (let i = 0; i < b20.length; i++) {
-    const id = extractInfoId(b20[i]);
-    if (id) ids.push(id);
-    else if (b20[i] != null) {
-      const fallback = JSON.stringify(b20[i]).slice(0, 80);
-      ids.push(fallback);
-      log.push("SH-B20", `designBrief.B20[${i}]`, `object\u2192fallback string`);
-    }
-  }
-  brief.B20 = ids;
-  log.push("SH-B20", "designBrief.B20", `object[]\u2192string[](${ids.length})`);
-}
-function normalizeB23(brief, log) {
-  const b23 = brief.B23;
-  if (b23 == null) return;
-  if (typeof b23 === "object" && !Array.isArray(b23)) return;
-  if (!Array.isArray(b23)) return;
-  const items = b23.filter((x) => x && typeof x === "object" && !Array.isArray(x));
-  const ids = items.map((x) => extractInfoId(x)).filter((x) => !!x);
-  brief.B23 = {
-    retentionInfoDelivery: ids,
-    items
-  };
-  log.push("SH-B23", "designBrief.B23", `array\u2192record(retentionInfoDelivery=${ids.length},items=${items.length})`);
-}
-function normalizeShotSpatialInBundle(bundle, log) {
-  const pack2 = bundle.preDesignPack;
-  if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) return;
-  const shots = pack2.shots;
-  if (!Array.isArray(shots)) return;
-  for (let i = 0; i < shots.length; i++) {
-    const shot = shots[i];
-    if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
-    const s = shot;
-    const top = s.spatialRelation;
-    if (top == null) continue;
-    let spatialStr;
-    if (typeof top === "string" && top.trim()) {
-      spatialStr = top.trim();
-    } else if (top && typeof top === "object" && !Array.isArray(top)) {
-      spatialStr = formatSpatialRelationObject(top);
-      log.push(
-        "SH-SHOT-SPATIAL",
-        `preDesignPack.shots[${i}].spatialRelation`,
-        `object\u2192string "${spatialStr.slice(0, 48)}${spatialStr.length > 48 ? "\u2026" : ""}"`
-      );
-    } else {
-      continue;
-    }
-    let narrative = s.narrative;
-    if (!narrative || typeof narrative !== "object" || Array.isArray(narrative)) {
-      narrative = {};
-      s.narrative = narrative;
-    }
-    const n = narrative;
-    if (typeof n.spatialRelation !== "string" || !n.spatialRelation.trim()) {
-      n.spatialRelation = spatialStr;
-      log.push("SH-SHOT-SPATIAL", `preDesignPack.shots[${i}].spatialRelation`, "hoist\u2192narrative.spatialRelation");
-    }
-    delete s.spatialRelation;
-  }
-}
-function normalizeDesignBriefInBundle(bundle, log) {
-  const db2 = bundle.designBrief;
-  if (db2 && typeof db2 === "object" && !Array.isArray(db2)) {
-    const brief = db2;
-    if (Array.isArray(brief.B5)) normalizeLinkageArray(brief.B5, "designBrief.B5", log);
-    if (Array.isArray(brief.infoLinkageChain)) normalizeLinkageArray(brief.infoLinkageChain, "designBrief.infoLinkageChain", log);
-    if (Array.isArray(brief.B4)) normalizeNumberArray(brief.B4, "designBrief.B4", log, "SH-B4-NUM");
-    if (Array.isArray(brief.emotionCurveOutline)) {
-      normalizeNumberArray(brief.emotionCurveOutline, "designBrief.emotionCurveOutline", log, "SH-B4-NUM");
-    }
-    const b12 = brief.B12;
-    if (Array.isArray(b12)) normalizeB12Items(b12, "designBrief.B12", log);
-    normalizeB20(brief, log);
-    normalizeB23(brief, log);
-  }
-  const meta4 = bundle.meta;
-  if (meta4 && typeof meta4 === "object" && !Array.isArray(meta4)) {
-    normalizeMetaNumbers(meta4, log);
-  }
-  normalizeGenerationNulls(bundle, log);
-  normalizeShotSpatialInBundle(bundle, log);
-}
-var PAYOFF_SEMANTIC, META_NUM_KEYS;
-var init_normalizeDesignBrief = __esm({
-  "src/ruleEngine/bundle/normalizeDesignBrief.ts"() {
-    "use strict";
-    PAYOFF_SEMANTIC = /本集|current|same.?ep|this.?ep/i;
-    META_NUM_KEYS = ["episodeIndex", "projectId", "scriptId"];
-  }
-});
-
-// src/ruleEngine/bundle/frostShapeSalvage.ts
-function tryParseJsonObject(raw) {
-  const t = String(raw ?? "").trim();
-  if (!t.startsWith("{") && !t.startsWith("[")) return null;
-  try {
-    const v = JSON.parse(t);
-    if (v && typeof v === "object" && !Array.isArray(v)) return v;
-  } catch {
-  }
-  return null;
-}
-function collectCarryInfoIds(bundle, prose) {
-  const fromProse = [...prose.matchAll(INF_RE)].map((m) => m[0].toUpperCase());
-  const brief = bundle.designBrief ?? bundle.planData?.designBrief;
-  const b20 = brief?.B20;
-  const fromB20 = [];
-  if (Array.isArray(b20)) {
-    for (const item of b20) {
-      if (typeof item === "string" && /^INF-/i.test(item)) fromB20.push(item.toUpperCase());
-      else if (item && typeof item === "object" && !Array.isArray(item)) {
-        const id = String(item.infoId ?? item.id ?? "");
-        if (/^INF-/i.test(id)) fromB20.push(id.toUpperCase());
-      }
-    }
-  }
-  return [.../* @__PURE__ */ new Set([...fromProse, ...fromB20])];
-}
-function splitTagString(raw) {
-  return String(raw).split(/[,，;；|/\s]+/).map((s) => s.trim()).filter(Boolean);
-}
-function salvageSeriesContinuity(bundle, log) {
-  const pd = bundle.planData;
-  if (!pd || typeof pd !== "object" || Array.isArray(pd)) return;
-  const plan = pd;
-  let nb = plan.narrativeBrief;
-  if (typeof nb === "string") {
-    const parsed = tryParseJsonObject(nb);
-    if (parsed) {
-      plan.narrativeBrief = parsed;
-      nb = parsed;
-      log.push("SH-BRIEF-STRING", "planData.narrativeBrief", "string\u2192object");
-    } else {
-      plan.narrativeBrief = { storyKernel: nb };
-      nb = plan.narrativeBrief;
-      log.push("SH-BRIEF-STRING", "planData.narrativeBrief", "prose\u2192storyKernel");
-    }
-  }
-  if (!nb || typeof nb !== "object" || Array.isArray(nb)) return;
-  const brief = nb;
-  const sc = brief.seriesContinuity;
-  if (typeof sc !== "string") return;
-  const prose = sc.trim();
-  if (!prose) {
-    delete brief.seriesContinuity;
-    log.push("SH-SERIES-CONT", "planData.narrativeBrief.seriesContinuity", "empty_string\u2192omit");
-    return;
-  }
-  const carryInfoIds = collectCarryInfoIds(bundle, prose);
-  const next = { ep1Summary: prose };
-  if (carryInfoIds.length) next.carryInfoIds = carryInfoIds;
-  brief.seriesContinuity = next;
-  log.push(
-    "SH-SERIES-CONT",
-    "planData.narrativeBrief.seriesContinuity",
-    `string\u2192record;carry=${carryInfoIds.length}`
-  );
-}
-function salvageSceneAvTags(bundle, log) {
-  const pd = bundle.planData;
-  if (!pd || typeof pd !== "object" || Array.isArray(pd)) return;
-  const plan = pd;
-  const meta4 = plan.sceneMeta;
-  const allTags = /* @__PURE__ */ new Set();
-  if (Array.isArray(meta4)) {
-    for (let i = 0; i < meta4.length; i++) {
-      const row = meta4[i];
-      if (!row || typeof row !== "object" || Array.isArray(row)) continue;
-      const m = row;
-      for (const key of ["sceneAvTags", "avTags"]) {
-        const v = m[key];
-        if (typeof v === "string" && v.trim()) {
-          const arr = splitTagString(v);
-          m[key] = arr;
-          for (const t of arr) allTags.add(t);
-          log.push("SH-SCENE-AV-TAGS", `planData.sceneMeta[${i}].${key}`, `string\u2192array(${arr.length})`);
-        } else if (Array.isArray(v)) {
-          for (const t of v) if (typeof t === "string" && t.trim()) allTags.add(t.trim());
-        }
-      }
-    }
-  }
-  const top = plan.sceneAvTags;
-  if (typeof top === "string" && top.trim()) {
-    const arr = splitTagString(top);
-    plan.sceneAvTags = arr;
-    for (const t of arr) allTags.add(t);
-    log.push("SH-SCENE-AV-TAGS", "planData.sceneAvTags", `string\u2192array(${arr.length})`);
-  } else if (Array.isArray(top)) {
-    for (const t of top) if (typeof t === "string" && t.trim()) allTags.add(t.trim());
-  } else if (allTags.size && (top == null || Array.isArray(top) && top.length === 0)) {
-    plan.sceneAvTags = [...allTags];
-    log.push("SH-SCENE-AV-TAGS", "planData.sceneAvTags", `hoist_from_sceneMeta(${allTags.size})`);
-  }
-}
-function looksNamedMicroMap(obj) {
-  const keys2 = Object.keys(obj);
-  if (!keys2.length) return false;
-  if (keys2.every((k) => k === "eyes" || k === "mouthDetail" || k === "byName" || k === "flush" || k === "pupil")) {
-    return false;
-  }
-  return keys2.some((k) => {
-    const v = obj[k];
-    return v && typeof v === "object" && !Array.isArray(v) && ("eyes" in v || "mouthDetail" in v);
-  });
-}
-function salvageMicroExpression(bundle, log) {
-  const packs = [bundle.preDesignPack, bundle.planData?.preDesignPack];
-  for (const pack2 of packs) {
-    if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) continue;
-    const shots = pack2.shots;
-    if (!Array.isArray(shots)) continue;
-    for (let i = 0; i < shots.length; i++) {
-      const shot = shots[i];
-      if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
-      const s = shot;
-      const sd = s.shotDesign;
-      if (!sd || typeof sd !== "object" || Array.isArray(sd)) continue;
-      const design = sd;
-      const perf = design.performance;
-      if (!perf || typeof perf !== "object" || Array.isArray(perf)) continue;
-      const p3 = perf;
-      const micro = p3.microExpression;
-      if (!micro || typeof micro !== "object" || Array.isArray(micro)) continue;
-      const m = micro;
-      if (!looksNamedMicroMap(m)) continue;
-      const byName = {};
-      for (const [name28, val] of Object.entries(m)) {
-        if (!val || typeof val !== "object" || Array.isArray(val)) continue;
-        const row = val;
-        byName[name28] = { eyes: row.eyes, mouthDetail: row.mouthDetail };
-      }
-      const names = Object.keys(byName);
-      if (!names.length) continue;
-      const chars = Array.isArray(s.characters) ? s.characters.map(String) : [];
-      const prefer = names.find((n) => chars.some((c) => c.includes(n) || n.includes(c))) ?? names[0];
-      const pick3 = byName[prefer] ?? byName[names[0]];
-      p3.microExpression = {
-        eyes: pick3.eyes ?? "",
-        mouthDetail: pick3.mouthDetail ?? "",
-        byName,
-        primaryName: prefer
-      };
-      log.push(
-        "SH-MICRO-EXPR",
-        `preDesignPack.shots[${Number(s.shotIndex) || i}].shotDesign.performance.microExpression`,
-        `named_map\u2192compile;primary=${prefer};n=${names.length}`
-      );
-    }
-  }
-}
-function runFrostShapeSalvage(bundle, log) {
-  salvageSeriesContinuity(bundle, log);
-  salvageSceneAvTags(bundle, log);
-  salvageMicroExpression(bundle, log);
-}
-var INF_RE;
-var init_frostShapeSalvage = __esm({
-  "src/ruleEngine/bundle/frostShapeSalvage.ts"() {
-    "use strict";
-    INF_RE = /\bINF-[\w-]+\b/gi;
-  }
-});
-
-// src/ruleEngine/bundle/shapeRegistry.ts
-function runShapeRegistry(bundle, log) {
-  normalizeDeepAdaptationInBundle(bundle);
-  normalizeDesignBriefInBundle(bundle, log);
-  normalizeCharacterDesignInBundle(bundle, log);
-  runFrostShapeSalvage(bundle, log);
-}
-var init_shapeRegistry = __esm({
-  "src/ruleEngine/bundle/shapeRegistry.ts"() {
-    "use strict";
-    init_normalizeCharacterDesign();
-    init_normalizeDeepAdaptation();
-    init_normalizeDesignBrief();
-    init_frostShapeSalvage();
-  }
-});
-
-// src/ruleEngine/bundle/hoistPlanDataPackaging.ts
-function shotCount(pack2) {
-  if (!pack2 || typeof pack2 !== "object") return 0;
-  const shots = pack2.shots;
-  return Array.isArray(shots) ? shots.length : 0;
-}
-function cdAssetCount(cd) {
-  if (!cd || typeof cd !== "object") return 0;
-  if (Array.isArray(cd)) return cd.length;
-  const assets = cd.assets;
-  return Array.isArray(assets) ? assets.length : 0;
-}
-function isTopPdpEmpty(bundle) {
-  return shotCount(bundle.preDesignPack) === 0;
-}
-function isTopCdEmpty(bundle) {
-  return cdAssetCount(bundle.characterDesign) === 0;
-}
-function normalizeCdShape(cd) {
-  if (!cd) return void 0;
-  if (Array.isArray(cd)) return { assets: cd };
-  if (typeof cd === "object") return cd;
-  return void 0;
-}
-function hoistPlanDataPackaging(bundle, log) {
-  const pd = bundle.planData;
-  if (!pd || typeof pd !== "object" || Array.isArray(pd)) return;
-  const plan = pd;
-  const nestedPdp = plan.preDesignPack;
-  const nestedShots = shotCount(nestedPdp);
-  const topShots = shotCount(bundle.preDesignPack);
-  if (nestedShots > 0) {
-    if (isTopPdpEmpty(bundle)) {
-      const nested = nestedPdp;
-      if (typeof nested.scriptPlan !== "string") nested.scriptPlan = "";
-      bundle.preDesignPack = nested;
-      log.push("SH-HOIST-PDP", "preDesignPack", `from_planData:shots=${nestedShots}`);
-    } else if (nestedShots >= topShots * 2 && topShots <= 2) {
-      log.push(
-        "SH-HOIST-CONFLICT",
-        "preDesignPack",
-        `top_shots=${topShots};nested_shots=${nestedShots};kept_top`
-      );
-    }
-  }
-  const nestedCd = normalizeCdShape(plan.characterDesign);
-  if (nestedCd && cdAssetCount(nestedCd) > 0) {
-    if (isTopCdEmpty(bundle)) {
-      bundle.characterDesign = nestedCd;
-      log.push("SH-HOIST-CD", "characterDesign", `from_planData:assets=${cdAssetCount(nestedCd)}`);
-    }
-  } else if (Array.isArray(bundle.characterDesign) && bundle.characterDesign.length) {
-    bundle.characterDesign = { assets: bundle.characterDesign };
-    log.push("SH-HOIST-CD", "characterDesign", "normalize_array_to_assets");
-  }
-  for (const key of HOIST_KEYS) {
-    if (key === "preDesignPack" || key === "characterDesign") continue;
-    const nested = plan[key];
-    if (nested == null) continue;
-    const top = bundle[key];
-    const topEmpty = top == null || typeof top === "object" && !Array.isArray(top) && Object.keys(top).length === 0 || Array.isArray(top) && top.length === 0;
-    if (topEmpty) {
-      bundle[key] = nested;
-      log.push(`SH-HOIST-${key === "visualLockTable" ? "VLT" : key === "designBrief" ? "BRIEF" : "PACK"}`, key, "from_planData");
-    }
-  }
-}
-var HOIST_KEYS;
-var init_hoistPlanDataPackaging = __esm({
-  "src/ruleEngine/bundle/hoistPlanDataPackaging.ts"() {
-    "use strict";
-    HOIST_KEYS = [
-      "preDesignPack",
-      "characterDesign",
-      "visualLockTable",
-      "designBrief",
-      "debutIntroPack",
-      "narrativeCausalityGraph",
-      "fxFeasibilityAudit",
-      "modalityPromptAudit",
-      "narrativeSelfcheck"
-    ];
-  }
-});
-
-// src/ruleEngine/bundle/jsonBraceSalvage.ts
-var jsonBraceSalvage_exports = {};
-__export(jsonBraceSalvage_exports, {
-  JsonIncompleteError: () => JsonIncompleteError,
-  scanJsonBraceState: () => scanJsonBraceState,
-  tryCompleteRootBraces: () => tryCompleteRootBraces
-});
-function scanJsonBraceState(text2) {
-  let depth = 0;
-  let inString = false;
-  let escape2 = false;
-  let lastSignificant = null;
-  for (let i = 0; i < text2.length; i++) {
-    const ch = text2[i];
-    if (inString) {
-      if (escape2) {
-        escape2 = false;
-        continue;
-      }
-      if (ch === "\\") {
-        escape2 = true;
-        continue;
-      }
-      if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') {
-      inString = true;
-      lastSignificant = '"';
-      continue;
-    }
-    if (/\s/.test(ch)) continue;
-    lastSignificant = ch;
-    if (ch === "{" || ch === "[") depth += 1;
-    else if (ch === "}" || ch === "]") depth -= 1;
-  }
-  return { depth, inString, escape: escape2, lastSignificant };
-}
-function tryCompleteRootBraces(text2) {
-  const trimmed = String(text2 ?? "").trimEnd();
-  if (!trimmed) {
-    return {
-      text: trimmed,
-      salvaged: false,
-      bracesAdded: 0,
-      reject: new JsonIncompleteError("\u7A7A JSON", { reason: "empty" })
-    };
-  }
-  try {
-    JSON.parse(trimmed);
-    return { text: trimmed, salvaged: false, bracesAdded: 0 };
-  } catch {
-  }
-  const scan = scanJsonBraceState(trimmed);
-  if (scan.inString || scan.escape) {
-    return {
-      text: trimmed,
-      salvaged: false,
-      bracesAdded: 0,
-      reject: new JsonIncompleteError(
-        "JSON \u622A\u65AD\u5728\u5B57\u7B26\u4E32\u4E2D\u90E8\uFF0C\u7981\u6B62\u778E\u8865\u3002\u8BF7\u91CD\u51FA\u5B8C\u6574 Bundle\uFF08JSON_INCOMPLETE\uFF09\u3002",
-        { depth: scan.depth, inString: true, reason: "mid_string" }
-      )
-    };
-  }
-  if (scan.depth <= 0) {
-    return {
-      text: trimmed,
-      salvaged: false,
-      bracesAdded: 0,
-      reject: new JsonIncompleteError("JSON \u65E0\u6CD5\u89E3\u6790\uFF08\u975E\u7F3A\u6839\u95ED\u5408\uFF09\u3002\u8BF7\u68C0\u67E5\u8BED\u6CD5\uFF08JSON_INCOMPLETE\uFF09\u3002", {
-        depth: scan.depth,
-        reason: "parse_fail"
-      })
-    };
-  }
-  const last = scan.lastSignificant;
-  if (last !== "}" && last !== "]") {
-    return {
-      text: trimmed,
-      salvaged: false,
-      bracesAdded: 0,
-      reject: new JsonIncompleteError(
-        "JSON \u622A\u65AD\u5728\u5BF9\u8C61/\u6570\u7EC4\u4E2D\u90E8\uFF0C\u7981\u6B62\u778E\u8865\u3002\u8BF7\u91CD\u51FA\u5B8C\u6574 preDesignPack\uFF08JSON_INCOMPLETE\uFF09\u3002",
-        { depth: scan.depth, reason: "mid_structure", inString: false }
-      )
-    };
-  }
-  const n = Math.min(scan.depth, 8);
-  const candidate = trimmed + "}".repeat(n);
-  try {
-    JSON.parse(candidate);
-    return {
-      text: candidate,
-      salvaged: true,
-      bracesAdded: n,
-      entry: {
-        ruleId: "SH-JSON-BRACE",
-        path: "$",
-        action: `append_${n}_root_braces`
-      }
-    };
-  } catch {
-    return {
-      text: trimmed,
-      salvaged: false,
-      bracesAdded: 0,
-      reject: new JsonIncompleteError(
-        "JSON \u4E0D\u5B8C\u6574\u4E14\u65E0\u6CD5\u5B89\u5168\u8865\u95ED\u5408\uFF08JSON_INCOMPLETE\uFF09\u3002\u52FF\u5F53\u4F5C\u300C\u96C6\u65E0\u53EF\u7528\u5206\u955C\u300D\u3002",
-        { depth: scan.depth, reason: "brace_still_fail" }
-      )
-    };
-  }
-}
-var JsonIncompleteError;
-var init_jsonBraceSalvage = __esm({
-  "src/ruleEngine/bundle/jsonBraceSalvage.ts"() {
-    "use strict";
-    JsonIncompleteError = class extends Error {
-      constructor(message, detail) {
-        super(message);
-        this.detail = detail;
-        this.name = "JsonIncompleteError";
-      }
-      code = "JSON_INCOMPLETE";
-    };
-  }
-});
-
-// src/ruleEngine/bundle/bundleShapePipeline.ts
-function stripCommentFields(obj) {
-  const { _comment, ...rest } = obj;
-  return rest;
-}
-function tryFixPasteJson(text2) {
-  let out = text2;
-  for (const field of MAP_FIELDS2) {
-    const re2 = new RegExp(`("${field}"\\s*:\\s*)\\{([^{}]*)\\}`, "g");
-    out = out.replace(re2, (full, prefix, body) => {
-      if (/"[^"]+"\s*:/.test(body)) return full;
-      const keys2 = [...body.matchAll(/"([^"\\]*)"/g)].map((m) => m[1]);
-      if (!keys2.length) return full;
-      if (!keys2.some((k) => /→|->|⇒/.test(k))) return full;
-      const pairs = keys2.map((k) => {
-        const parts = k.split(/\s*(?:→|->|⇒)\s*/).map((p3) => p3.trim()).filter(Boolean);
-        if (parts.length < 2) return null;
-        return `{"from":${JSON.stringify(parts[0])},"to":${JSON.stringify(parts.slice(1).join("\u2192"))}}`;
-      }).filter(Boolean);
-      if (!pairs.length) return full;
-      return `${prefix}[${pairs.join(",")}]`;
-    });
-  }
-  out = out.replace(/,\s*([}\]])/g, "$1");
-  return out;
-}
-function stripChatRepairPrefix(text2) {
-  const raw = String(text2 ?? "");
-  const trimmed = raw.trimStart();
-  const looksLikeRepair = trimmed.startsWith("\u3010\u95ED\u73AF\u4FEE\u590D\u6E05\u5355") || trimmed.startsWith("\u5F85\u5904\u7406\u89C4\u5219") || trimmed.includes("\u3010BLOCK \u660E\u7EC6\u3011") || trimmed.includes("SCHEMA_SHAPE_BLOCK");
-  if (!looksLikeRepair) return stripTrailingRepairSuffix(raw);
-  const markers = ['"bundleVersion"', '"bundleType"', '"preDesignPack"', '"designBrief"'];
-  let best = -1;
-  for (const m of markers) {
-    const idx = raw.indexOf(m);
-    if (idx < 0) continue;
-    let i = idx;
-    while (i > 0 && raw[i] !== "{") i--;
-    if (raw[i] === "{" && (best < 0 || i < best)) best = i;
-  }
-  if (best >= 0) return stripTrailingRepairSuffix(raw.slice(best));
-  const firstBrace = raw.indexOf("\n{");
-  if (firstBrace >= 0) return stripTrailingRepairSuffix(raw.slice(firstBrace + 1));
-  const brace = raw.indexOf("{");
-  if (brace >= 0) return stripTrailingRepairSuffix(raw.slice(brace));
-  return stripTrailingRepairSuffix(raw);
-}
-function stripTrailingRepairSuffix(text2) {
-  const raw = String(text2 ?? "");
-  const start = raw.indexOf("{");
-  if (start < 0) return raw;
-  let depth = 0;
-  let inStr = false;
-  let esc3 = false;
-  for (let i = start; i < raw.length; i++) {
-    const ch = raw[i];
-    if (inStr) {
-      if (esc3) esc3 = false;
-      else if (ch === "\\") esc3 = true;
-      else if (ch === '"') inStr = false;
-      continue;
-    }
-    if (ch === '"') {
-      inStr = true;
-      continue;
-    }
-    if (ch === "{") depth++;
-    else if (ch === "}") {
-      depth--;
-      if (depth === 0) {
-        const jsonPart = raw.slice(start, i + 1);
-        const rest = raw.slice(i + 1).trimStart();
-        if (rest.startsWith("\u3010\u95ED\u73AF\u4FEE\u590D\u6E05\u5355") || rest.startsWith("\u5F85\u5904\u7406\u89C4\u5219") || rest.includes("\u3010\u987B\u624B\u6539") || rest.includes("toonflow://stage/")) {
-          return jsonPart;
-        }
-        return jsonPart + raw.slice(i + 1);
-      }
-    }
-  }
-  return raw;
-}
-function parseBundleJsonWithSalvage(text2) {
-  const stripped = stripChatRepairPrefix(text2);
-  try {
-    return { value: JSON.parse(stripped) };
-  } catch {
-  }
-  const fixed = tryFixPasteJson(stripped);
-  try {
-    return { value: JSON.parse(fixed) };
-  } catch {
-  }
-  const braced = tryCompleteRootBraces(fixed);
-  if (braced.salvaged) {
-    return { value: JSON.parse(braced.text), braceEntry: braced.entry };
-  }
-  if (braced.reject) throw braced.reject;
-  throw new JsonIncompleteError("JSON \u65E0\u6CD5\u89E3\u6790\uFF08JSON_INCOMPLETE\uFF09");
-}
-function omitNullLeaves(value) {
-  if (value === null) return void 0;
-  if (Array.isArray(value)) {
-    return value.map(omitNullLeaves).filter((v) => v !== void 0);
-  }
-  if (value && typeof value === "object") {
-    const out = {};
-    for (const [k, v] of Object.entries(value)) {
-      if (v === null) continue;
-      const next = omitNullLeaves(v);
-      if (next === void 0 && v !== void 0 && typeof v !== "object") continue;
-      if (next === void 0 && (v === null || v === void 0)) continue;
-      out[k] = next;
-    }
-    return out;
-  }
-  return value;
-}
-function coerceShotNumbers(bundle) {
-  const pack2 = bundle.preDesignPack;
-  if (!pack2 || typeof pack2 !== "object" || Array.isArray(pack2)) return;
-  const shots = pack2.shots;
-  if (!Array.isArray(shots)) return;
-  for (const shot of shots) {
-    if (!shot || typeof shot !== "object" || Array.isArray(shot)) continue;
-    const s = shot;
-    for (const key of SHOT_NUM_KEYS) {
-      const v = s[key];
-      if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) {
-        s[key] = Number(v);
-      }
-    }
-    const narrative = s.narrative;
-    if (narrative && typeof narrative === "object" && !Array.isArray(narrative)) {
-      const n = narrative;
-      const ei = n.emotionIntensity;
-      if (typeof ei === "string" && ei.trim() !== "" && Number.isFinite(Number(ei))) {
-        n.emotionIntensity = Number(ei);
-      }
-    }
-  }
-}
-function prepareBundleWithLog(raw) {
-  const log = new ShapeSalvageLog();
-  let obj = raw;
-  if (typeof raw === "string") {
-    const parsed = parseBundleJsonWithSalvage(raw);
-    obj = parsed.value;
-    if (parsed.braceEntry) log.push(parsed.braceEntry.ruleId, parsed.braceEntry.path, parsed.braceEntry.action);
-  }
-  if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
-    throw new Error("ScriptBundle \u6839\u8282\u70B9\u5FC5\u987B\u662F object");
-  }
-  const stripped = stripCommentFields(obj);
-  const omitted = omitNullLeaves(stripped);
-  hoistPlanDataPackaging(omitted, log);
-  coerceShotNumbers(omitted);
-  coerceShotStringFields(omitted, log);
-  runShapeRegistry(omitted, log);
-  return { bundle: omitted, shapeSalvageLog: log.entries };
-}
-var MAP_FIELDS2, SHOT_NUM_KEYS;
-var init_bundleShapePipeline = __esm({
-  "src/ruleEngine/bundle/bundleShapePipeline.ts"() {
-    "use strict";
-    init_coerceShotStringFields();
-    init_shapeRegistry();
-    init_hoistPlanDataPackaging();
-    init_jsonBraceSalvage();
-    init_shapeSalvageTypes();
-    init_jsonBraceSalvage();
-    init_hoistPlanDataPackaging();
-    MAP_FIELDS2 = ["nameMap", "relationMap", "substitutions"];
-    SHOT_NUM_KEYS = /* @__PURE__ */ new Set(["shotIndex", "duration", "emotion"]);
-  }
-});
-
-// src/ruleEngine/bundle/shapeResidualAudit.ts
-function isPayoffEpInvalid(v) {
-  if (v === void 0 || v === null) return false;
-  if (typeof v === "number" && Number.isFinite(v)) return false;
-  return true;
-}
-function auditLinkageItems(arr, basePath) {
-  const gaps = [];
-  if (!Array.isArray(arr)) return gaps;
-  for (let i = 0; i < arr.length; i++) {
-    const item = arr[i];
-    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
-    const o = item;
-    if (isPayoffEpInvalid(o.payoffEp)) {
-      gaps.push({
-        id: "SHAPE-RESIDUAL-01",
-        severity: "WARN",
-        message: `${basePath}[${i}].payoffEp \u5F62\u72B6\u6B8B\u7559\uFF1A\u671F\u671B number \u6216\u7701\u7565\uFF08\u8BED\u4E49\u7528 payoffLabel\uFF09`,
-        chainId: "bundle_shape",
-        field: `${basePath}[${i}].payoffEp`
-      });
-    }
-  }
-  return gaps;
-}
-function auditShapeResidualGaps(bundle) {
-  const gaps = [];
-  const db2 = bundle.designBrief;
-  if (db2 && typeof db2 === "object") {
-    if (Array.isArray(db2.B5)) gaps.push(...auditLinkageItems(db2.B5, "designBrief.B5"));
-    if (Array.isArray(db2.infoLinkageChain)) gaps.push(...auditLinkageItems(db2.infoLinkageChain, "designBrief.infoLinkageChain"));
-    if (Array.isArray(db2.B20) && db2.B20.some((x) => typeof x !== "string")) {
-      gaps.push({
-        id: "SHAPE-RESIDUAL-B20",
-        severity: "BLOCK",
-        message: "designBrief.B20 \u5F62\u72B6\u6B8B\u7559\uFF1A\u671F\u671B string[]\uFF08infoId\uFF09\uFF0C\u4ECD\u542B object",
-        chainId: "bundle_shape",
-        field: "designBrief.B20"
-      });
-    }
-    if (Array.isArray(db2.B23)) {
-      gaps.push({
-        id: "SHAPE-RESIDUAL-B23",
-        severity: "BLOCK",
-        message: "designBrief.B23 \u5F62\u72B6\u6B8B\u7559\uFF1A\u671F\u671B record\uFF0C\u4ECD\u4E3A array",
-        chainId: "bundle_shape",
-        field: "designBrief.B23"
-      });
-    }
-  }
-  const pack2 = bundle.preDesignPack;
-  if (pack2?.shots?.length) {
-    for (let i = 0; i < pack2.shots.length; i++) {
-      const shot = pack2.shots[i];
-      for (const field of ["visualEffect", "audioCue"]) {
-        const v = shot[field];
-        if (v != null && typeof v === "object") {
-          gaps.push({
-            id: "SHAPE-RESIDUAL-SHOT",
-            severity: "BLOCK",
-            message: `shots[${i}].${field} \u5F62\u72B6\u6B8B\u7559\uFF1A\u671F\u671B string\uFF0C\u4ECD\u4E3A object`,
-            chainId: "bundle_shape",
-            field: `preDesignPack.shots[${i}].${field}`
-          });
-        }
-      }
-    }
-  }
-  return gaps;
-}
-var init_shapeResidualAudit = __esm({
-  "src/ruleEngine/bundle/shapeResidualAudit.ts"() {
-    "use strict";
-  }
-});
-
-// src/ruleEngine/bundle/schema.ts
-function detectBundleType(raw) {
-  if (!raw || typeof raw !== "object") return "legacy";
-  const o = raw;
-  if (o.bundleType === "script") return "script";
-  if (Array.isArray(o.episodes)) return "series";
-  if (o.flowData && typeof o.flowData === "object") return "episode";
-  if (o.script !== void 0 && !o.bundleType) return "legacy";
-  return "legacy";
-}
-function normalizeLegacyFlowData(raw) {
-  if (raw.flowData) {
-    return { flowData: raw.flowData, meta: raw.meta ?? {} };
-  }
-  return {
-    flowData: raw,
-    meta: { episodeKey: raw.episodeKey, episodeName: raw.episodeName }
-  };
-}
-var nullishStr, nullishRecord, bundleMetaSchema, infoLinkageItemSchema, assetHintsSchema, rhythmZoneItemSchema, spatialAnchorItemSchema, toneLockSchema, platformSpecSchema, audioMoodSchema, designBriefSchema, shotDesignSchema, generationSchema, preDesignShotSchema, preDesignPackSchema, storyboardPanelSchema2, scriptBundleSchema, episodeBundleSchema, seriesBundleSchema;
-var init_schema = __esm({
-  "src/ruleEngine/bundle/schema.ts"() {
-    "use strict";
-    init_zod();
-    init_bundleShapePipeline();
-    init_shapeRegistry();
-    init_shapeResidualAudit();
-    init_normalizeDeepAdaptation();
-    nullishStr = () => external_exports.string().nullish();
-    nullishRecord = () => external_exports.record(external_exports.string(), external_exports.unknown()).nullish();
-    bundleMetaSchema = external_exports.object({
-      episodeKey: external_exports.string().optional(),
-      episodeName: external_exports.string().optional(),
-      episodeIndex: external_exports.number().optional(),
-      projectId: external_exports.number().optional(),
-      scriptId: external_exports.number().optional(),
-      prevEpisodeKey: external_exports.string().nullable().optional(),
-      bundleHash: external_exports.string().optional(),
-      provenance: external_exports.object({
-        source: external_exports.string().optional(),
-        chapterRange: external_exports.string().optional(),
-        novelTitle: external_exports.string().optional(),
-        novelId: external_exports.number().nullable().optional(),
-        eventTrace: external_exports.array(external_exports.object({ novelRef: external_exports.string().optional(), scriptRef: external_exports.string().optional(), shotRef: external_exports.string().optional() })).optional()
-      }).optional()
-    });
-    infoLinkageItemSchema = external_exports.object({
-      type: external_exports.string().optional(),
-      desc: external_exports.string().optional(),
-      payoffEp: external_exports.number().optional(),
-      payoffLabel: external_exports.string().optional()
-    }).passthrough();
-    assetHintsSchema = external_exports.object({
-      characters: external_exports.array(external_exports.string()).optional(),
-      scenes: external_exports.array(external_exports.string()).optional(),
-      props: external_exports.array(external_exports.string()).optional()
-    }).passthrough();
-    rhythmZoneItemSchema = external_exports.object({
-      scene: external_exports.string().optional(),
-      zone: external_exports.string().optional(),
-      beats: external_exports.number().optional()
-    }).passthrough();
-    spatialAnchorItemSchema = external_exports.object({
-      scene: external_exports.string().optional(),
-      axis: external_exports.string().optional(),
-      anchors: external_exports.array(external_exports.string()).optional()
-    }).passthrough();
-    toneLockSchema = external_exports.union([
-      external_exports.string(),
-      external_exports.object({
-        genre: external_exports.string().optional(),
-        ratio: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
-      }).passthrough()
-    ]);
-    platformSpecSchema = external_exports.union([
-      external_exports.string(),
-      external_exports.object({
-        platform: external_exports.string().optional(),
-        duration: external_exports.string().optional(),
-        subtitleStyle: external_exports.string().optional()
-      }).passthrough()
-    ]);
-    audioMoodSchema = external_exports.union([external_exports.string(), external_exports.record(external_exports.string(), external_exports.string())]);
-    designBriefSchema = external_exports.object({
-      B1: external_exports.string().optional(),
-      B2: external_exports.string().optional(),
-      B3: toneLockSchema.optional(),
-      B4: external_exports.array(external_exports.number()).optional(),
-      B5: external_exports.array(external_exports.union([external_exports.string(), infoLinkageItemSchema])).optional(),
-      B6: external_exports.union([assetHintsSchema, external_exports.record(external_exports.string(), external_exports.string())]).optional(),
-      B7: external_exports.string().optional(),
-      B8: external_exports.string().optional(),
-      B9: audioMoodSchema.optional(),
-      B10: platformSpecSchema.optional(),
-      B11: external_exports.array(external_exports.string()).optional(),
-      B12: external_exports.union([external_exports.array(rhythmZoneItemSchema), external_exports.record(external_exports.string(), external_exports.string())]).optional(),
-      B13: external_exports.array(external_exports.union([external_exports.string(), spatialAnchorItemSchema])).optional(),
-      emotionCurveOutline: external_exports.array(external_exports.number()).optional(),
-      rhythmOutline: external_exports.record(external_exports.string(), external_exports.string()).optional(),
-      infoLinkageChain: external_exports.array(external_exports.union([external_exports.string(), infoLinkageItemSchema])).optional(),
-      arcToneMap: external_exports.record(external_exports.string(), external_exports.string()).optional(),
-      visualLockHints: external_exports.array(external_exports.string()).optional(),
-      paypointMarkers: external_exports.array(external_exports.object({ position: external_exports.string(), type: external_exports.string(), desc: external_exports.string().optional() }).passthrough()).optional(),
-      sceneTransitionPlan: external_exports.array(external_exports.object({ from: external_exports.string(), to: external_exports.string(), reason: external_exports.string() }).passthrough()).optional(),
-      emotionCurveType: external_exports.string().optional(),
-      B14: external_exports.array(external_exports.object({ position: external_exports.string(), type: external_exports.string(), desc: external_exports.string().optional() }).passthrough()).optional(),
-      B15: external_exports.array(external_exports.object({ clipHookId: external_exports.string().optional(), hook: external_exports.string().optional(), duration: external_exports.string().optional() }).passthrough()).optional(),
-      B16: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      B17: external_exports.union([external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())), external_exports.record(external_exports.string(), external_exports.unknown())]).optional(),
-      B18: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      B19: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      B20: external_exports.array(external_exports.string()).optional(),
-      B21: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      B22: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      B23: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
-    }).passthrough().optional();
-    shotDesignSchema = external_exports.object({
-      composition: nullishRecord(),
-      blocking: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).nullish(),
-      performance: nullishRecord(),
-      cameraAnchor: nullishRecord(),
-      lipSyncPolicy: nullishStr()
-    }).nullish();
-    generationSchema = external_exports.object({
-      imagePrompt: nullishStr(),
-      videoPrompt: nullishStr(),
-      audioPrompt: nullishStr(),
-      fxPrompt: nullishStr()
-    });
-    preDesignShotSchema = external_exports.object({
-      shotIndex: external_exports.number().optional(),
-      type: nullishStr(),
-      sceneName: nullishStr(),
-      duration: external_exports.number().optional(),
-      shotSize: nullishStr(),
-      emotion: external_exports.number().optional(),
-      visualDescription: nullishStr(),
-      visualEffect: nullishStr(),
-      audioCue: nullishStr(),
-      fxLevel: nullishStr(),
-      charCodes: external_exports.array(external_exports.string()).optional(),
-      /** VisBeat L0 tags — law for conflict_matrix; not inventable by suggestor alone */
-      visualBeatTags: external_exports.array(external_exports.string()).optional(),
-      suggestedVisualBeatTags: external_exports.array(external_exports.string()).optional(),
-      weaponId: nullishStr(),
-      generation: generationSchema.optional(),
-      shotDesign: shotDesignSchema,
-      retentionTier: nullishStr(),
-      clip30sCandidate: external_exports.boolean().optional(),
-      rhythm31545: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      /** legacy top-level; normalize hoists into narrative.spatialRelation */
-      spatialRelation: nullishStr(),
-      narrative: external_exports.object({
-        dialogue: external_exports.object({
-          lines: external_exports.array(
-            external_exports.object({
-              speaker: external_exports.string().optional(),
-              text: external_exports.string().optional(),
-              lineId: external_exports.string().optional(),
-              functions: external_exports.array(external_exports.string()).optional(),
-              causedByActionId: external_exports.string().optional(),
-              subtext: external_exports.string().optional(),
-              /** Chat-confirmed split intent; must survive parse → hydrate → burn */
-              splitHint: external_exports.string().optional(),
-              reactionAction: external_exports.string().optional()
-            })
-          ).optional()
-        }).optional(),
-        markers: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
-        transitionType: external_exports.string().optional(),
-        rhythmZone: external_exports.string().optional(),
-        spatialRelation: external_exports.string().optional(),
-        emotionIntensity: external_exports.number().optional(),
-        sceneName: external_exports.string().optional(),
-        type: external_exports.string().optional()
-      }).passthrough().optional(),
-      markers: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional()
-    }).passthrough();
-    preDesignPackSchema = external_exports.object({
-      scriptPlan: external_exports.string(),
-      shots: external_exports.array(preDesignShotSchema).min(1),
-      externalHashCheck: external_exports.object({ match: external_exports.boolean().optional(), hash: external_exports.string().optional() }).optional(),
-      preDesignQuality: external_exports.object({ overall: external_exports.string().optional(), supervision: external_exports.string().optional() }).optional(),
-      sceneCodeMap: external_exports.record(external_exports.string(), external_exports.string()).optional(),
-      episodeBeat: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
-    }).passthrough().optional();
-    storyboardPanelSchema2 = external_exports.object({
-      id: external_exports.number().optional(),
-      clientId: external_exports.string().optional(),
-      flowId: external_exports.number().optional(),
-      duration: external_exports.number(),
-      prompt: external_exports.string(),
-      videoDesc: external_exports.string().optional(),
-      shouldGenerateImage: external_exports.number().optional(),
-      associateAssetsIds: external_exports.array(external_exports.number()).optional(),
-      track: external_exports.string().optional(),
-      state: external_exports.string().optional(),
-      src: external_exports.string().nullable().optional(),
-      index: external_exports.number().optional()
-    });
-    scriptBundleSchema = external_exports.object({
-      bundleVersion: external_exports.string().optional(),
-      bundleType: external_exports.literal("script"),
-      rulePackVersion: external_exports.string().optional(),
-      meta: bundleMetaSchema,
-      script: external_exports.string().min(1),
-      characters: external_exports.array(external_exports.string()).optional(),
-      scenes: external_exports.array(external_exports.string()).optional(),
-      continuity: external_exports.object({
-        prevEpisodeSummary: external_exports.string().optional(),
-        characterState: external_exports.record(external_exports.string(), external_exports.string()).optional(),
-        unresolvedHooks: external_exports.array(external_exports.string()).optional(),
-        recapHint: external_exports.string().optional()
-      }).optional(),
-      anchors: external_exports.object({
-        visual: external_exports.array(external_exports.string()).optional(),
-        emotionCarry: external_exports.string().optional()
-      }).optional(),
-      planData: external_exports.object({
-        narrativeBrief: external_exports.object({
-          adaptationConstraints: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
-          deepAdaptation: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-          storyKernel: external_exports.string().optional(),
-          mustResolveIssues: external_exports.array(external_exports.string()).optional(),
-          reconstructionTrace: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
-          empathyPlan: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-          densityBudget: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-          retentionBeats: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-          infoDeliveryPlan: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
-          dialogueRules: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-          implementationPlan: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
-          seriesContinuity: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
-        }).passthrough().optional(),
-        sceneMeta: external_exports.array(
-          external_exports.object({
-            sceneRef: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
-            opening5sHook: nullishStr(),
-            avCausality: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-            fxIntent: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-            densityScore: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
-          }).passthrough()
-        ).optional()
-      }).passthrough().optional(),
-      designBrief: designBriefSchema,
-      preDesignPack: preDesignPackSchema,
-      ruleAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      smartDetection: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      fixPlan: external_exports.array(external_exports.unknown()).optional(),
-      linkageRepairPlan: external_exports.array(external_exports.unknown()).optional(),
-      rePushPlan: external_exports.array(external_exports.unknown()).optional(),
-      linkageAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      forwardTrace: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      smartDesignProposals: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).optional(),
-      supervisionReport: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      qualityDiagnostics: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      identityAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      fxFeasibilityAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      videoAudioPolicy: external_exports.union([external_exports.string(), external_exports.record(external_exports.string(), external_exports.unknown())]).optional(),
-      narrativeCausalityGraph: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      debutIntroPack: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      productionReasonableness: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      modalityPromptAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      modalityAudit: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      assetPipeline: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      characterDesign: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      visualLockTable: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      narrativeSelfcheck: external_exports.record(external_exports.string(), external_exports.unknown()).optional(),
-      flowData: external_exports.object({
-        scriptPlan: external_exports.string().optional(),
-        storyboardTable: external_exports.string().optional(),
-        storyboard: external_exports.array(storyboardPanelSchema2).optional()
-      }).passthrough().optional(),
-      _comment: external_exports.string().optional()
-    }).passthrough();
-    episodeBundleSchema = external_exports.object({
-      bundleVersion: external_exports.string().optional(),
-      rulePackVersion: external_exports.string().optional(),
-      meta: bundleMetaSchema,
-      flowData: external_exports.object({
-        script: external_exports.string(),
-        scriptPlan: external_exports.string().optional().default(""),
-        storyboardTable: external_exports.string().optional().default(""),
-        assets: external_exports.array(external_exports.any()).optional().default([]),
-        storyboard: external_exports.array(storyboardPanelSchema2).optional().default([]),
-        workbench: external_exports.object({ videoList: external_exports.array(external_exports.any()).optional() }).optional()
-      }),
-      package: external_exports.any().optional(),
-      validationReport: external_exports.any().nullable().optional(),
-      _comment: external_exports.string().optional()
-    });
-    seriesBundleSchema = external_exports.object({
-      bundleVersion: external_exports.string().optional(),
-      meta: external_exports.object({ projectId: external_exports.number().optional(), seriesName: external_exports.string().optional() }),
-      project: external_exports.any().optional(),
-      episodes: external_exports.array(episodeBundleSchema)
-    });
-  }
-});
-
 // src/ruleEngine/bundle/resolveContext.ts
 async function loadPlanData(db2, projectId) {
   const row = await db2("o_agentWorkData").where({ projectId, key: "scriptAgent" }).first();
@@ -313104,528 +321925,6 @@ var init_resolveContext = __esm({
       adaptationStrategy: "",
       script: ""
     };
-  }
-});
-
-// src/ruleEngine/bundle/generationClosureDryRun.ts
-function runGenerationClosureDryRun(opts) {
-  return runGenerationClosureViaRegistry({
-    genError: opts.error,
-    sfRound: opts.sfRound,
-    hasRePush: opts.hasRePush,
-    probeDuration: opts.probeDuration,
-    sbDuration: opts.sbDuration,
-    probeHasAudio: opts.probeHasAudio,
-    policyNative: opts.policyNative
-  });
-}
-var init_generationClosureDryRun = __esm({
-  "src/ruleEngine/bundle/generationClosureDryRun.ts"() {
-    "use strict";
-    init_registerHandlers();
-  }
-});
-
-// src/ruleEngine/bundle/intelligentClosureDryRun.ts
-function runIntelligentClosureDryRun(bundle) {
-  return runIntelligentClosureViaRegistry(bundle);
-}
-var init_intelligentClosureDryRun = __esm({
-  "src/ruleEngine/bundle/intelligentClosureDryRun.ts"() {
-    "use strict";
-    init_registerHandlers();
-  }
-});
-
-// src/ruleEngine/design/unifiedDryRun.ts
-function runUnifiedClosure(bundle, opts = {}) {
-  const tier = opts.tier ?? "T1";
-  const enriched = enrichBundleForwardTrace(bundle, tier);
-  const dc = runDesignClosureDryRun(enriched);
-  const pc = tier === "T3" ? runProductionClosureDryRunForTier(enriched, "T3") : tier === "T2" ? runProductionClosureDryRunForTier(enriched, "T2") : [];
-  const gc = runGenerationClosureDryRun({
-    error: opts.genError ?? "",
-    sfRound: opts.sfRound
-  });
-  const ic = runIntelligentClosureDryRun(enriched);
-  const blocked = [...dc, ...pc, ...gc, ...ic].some((c) => !c.passed && c.severity === "BLOCK");
-  return { dc, pc, gc, ic, blocked };
-}
-var init_unifiedDryRun = __esm({
-  "src/ruleEngine/design/unifiedDryRun.ts"() {
-    "use strict";
-    init_productionClosureDryRun();
-    init_designClosureDryRun();
-    init_generationClosureDryRun();
-    init_intelligentClosureDryRun();
-    init_forwardTrace();
-  }
-});
-
-// src/ruleEngine/bundle/closureSummary.ts
-function inferTierFromBundle(bundle) {
-  if (bundle.modalityPromptAudit) return "T3";
-  const shots = bundle.preDesignPack?.shots ?? [];
-  if (shots.some((s) => s.generation?.imagePrompt?.trim())) return "T3";
-  if (bundle.flowData?.storyboard?.some((p3) => p3.prompt?.trim())) return "T3";
-  if (bundle.characterDesign || bundle.assetPipeline || bundle.visualLockTable) return "T2";
-  return "T1";
-}
-function episodeToScriptBundle(ep) {
-  const fd = ep.flowData;
-  return {
-    bundleType: "script",
-    bundleVersion: ep.bundleVersion,
-    rulePackVersion: ep.rulePackVersion ?? "2.0.1",
-    meta: ep.meta,
-    script: fd.script ?? "",
-    preDesignPack: void 0,
-    modalityPromptAudit: fd.modalityPromptAudit,
-    identityAudit: fd.identityAudit,
-    fxFeasibilityAudit: fd.fxFeasibilityAudit,
-    debutIntroPack: fd.debutIntroPack,
-    productionReasonableness: fd.productionReasonableness,
-    characterDesign: fd.characterDesign,
-    assetPipeline: fd.assetPipeline
-  };
-}
-function runScriptBundleClosure(bundle, opts = {}) {
-  const tier = opts.tier ?? inferTierFromBundle(bundle);
-  const warnings = [];
-  const enriched = enrichBundleForwardTrace(bundle, tier);
-  const unified = runUnifiedClosure(enriched, { tier, genError: opts.genError, sfRound: opts.sfRound });
-  const pcTier = tier === "T1" && (bundle.identityAudit || bundle.fxFeasibilityAudit || bundle.modalityPromptAudit) ? "T3" : tier === "T1" ? "T2" : tier;
-  const pcDry = tier === "T2" || tier === "T3" || bundle.identityAudit || bundle.fxFeasibilityAudit || bundle.modalityPromptAudit ? runProductionClosureDryRunForTier(enriched, pcTier) : [];
-  const productionClosureChecks = (() => {
-    if (!pcDry.length) return unified.pc;
-    if (!unified.pc.length) return pcDry;
-    const byId2 = new Map(pcDry.map((c) => [c.id, c]));
-    for (const c of unified.pc) byId2.set(c.id, c);
-    return [...byId2.values()];
-  })();
-  const reverseHints = buildReverseHints(enriched, tier);
-  const blocked = unified.blocked || designClosureBlocked(unified.dc) || productionClosureBlocked(productionClosureChecks);
-  if (blocked) {
-    warnings.push("unified_closure_checklist \u5B58\u5728 BLOCK \u9879");
-  }
-  return {
-    tier,
-    blocked,
-    rulePackVersion: getRulePackVersion(),
-    closureChecks: { ...unified, blocked, pc: productionClosureChecks },
-    designClosureChecks: unified.dc,
-    productionClosureChecks,
-    intelligentClosureChecks: unified.ic,
-    forwardTrace: enriched.forwardTrace,
-    reverseHints,
-    warnings
-  };
-}
-function parseScriptBundleRaw(raw) {
-  return scriptBundleSchema.parse(prepareBundleWithLog(raw).bundle);
-}
-function runRawBundleClosure(raw, opts = {}) {
-  const o = raw;
-  if (o?.bundleType === "script" || o?.script && !o?.flowData) {
-    return runScriptBundleClosure(parseScriptBundleRaw(raw), opts);
-  }
-  if (o?.flowData) {
-    const ep = { bundleVersion: o.bundleVersion, meta: o.meta ?? {}, flowData: o.flowData, rulePackVersion: o.rulePackVersion };
-    const sb = episodeToScriptBundle(ep);
-    return runScriptBundleClosure(sb, { ...opts, tier: opts.tier ?? "T2" });
-  }
-  return null;
-}
-var init_closureSummary = __esm({
-  "src/ruleEngine/bundle/closureSummary.ts"() {
-    "use strict";
-    init_forwardTrace();
-    init_bidirectionalTrace();
-    init_unifiedDryRun();
-    init_productionClosureDryRun();
-    init_designClosureDryRun();
-    init_ruleRegistry();
-    init_schema();
-  }
-});
-
-// src/ruleEngine/bundle/chatPromptAudit.ts
-function getShots2(bundle) {
-  return bundle.preDesignPack?.shots ?? [];
-}
-function getGeneration(shot, bundle, idx) {
-  if (shot.generation) return shot.generation;
-  const panel = bundle.flowData?.storyboard?.[idx];
-  if (panel) {
-    return { imagePrompt: panel.prompt, videoPrompt: panel.videoDesc };
-  }
-  return void 0;
-}
-function shotHasDialogue2(shot) {
-  return expandShotDialogueLines([shot]).keys.length > 0;
-}
-function auditChatPromptGaps(bundle, tier = "T3", opts) {
-  const demote = opts?.nonBlocking ?? false;
-  const sev2 = (s) => demote && s === "BLOCK" ? "WARN" : s;
-  const gaps = [];
-  const shots = getShots2(bundle);
-  const coverage = dialogueCoverageReport({
-    script: bundle.script ?? "",
-    shots,
-    planData: bundle.planData
-  });
-  if (!coverage.ok) {
-    const msg = formatDialogueCoverageMessage(coverage);
-    if (coverage.missingCount > 0) {
-      gaps.push({
-        id: "CHAT-DLG-01",
-        severity: sev2("BLOCK"),
-        message: msg.includes("\u4E71\u5165") && coverage.extraCount > 0 ? msg.split("\uFF1B")[0] : msg,
-        field: "dialogue"
-      });
-    }
-    if (coverage.extraCount > 0) {
-      gaps.push({
-        id: "DC-01-EXTRA",
-        severity: sev2("BLOCK"),
-        message: coverage.missingCount > 0 ? msg.split("\uFF1B").find((p3) => p3.includes("\u4E71\u5165")) ?? msg : msg,
-        field: "dialogue"
-      });
-    }
-    if (coverage.missingCount === 0 && coverage.extraCount === 0) {
-      gaps.push({
-        id: "CHAT-DLG-01",
-        severity: sev2("BLOCK"),
-        message: msg,
-        field: "dialogue"
-      });
-    }
-  }
-  shots.forEach((s, i) => {
-    const idx = s.shotIndex ?? i + 1;
-    const qp = checkQp02VisualDescription({
-      visualDescription: s.visualDescription,
-      shotIndex: idx
-    });
-    if (qp && qp.severity === "BLOCK") {
-      gaps.push({
-        id: qp.evidence?.reason === "empty" ? "CHAT-SB-01" : "QP-02",
-        shotIndex: idx,
-        severity: "BLOCK",
-        message: qp.message,
-        field: "visualDescription"
-      });
-      if (qp.evidence?.reason === "empty") {
-        gaps.push({
-          id: "QP-02",
-          shotIndex: idx,
-          severity: "BLOCK",
-          message: qp.message,
-          field: "visualDescription"
-        });
-      }
-    }
-  });
-  {
-    const assets = bundle.characterDesign?.assets ?? [];
-    const knownNames = [];
-    const nameToCodes = {};
-    for (const a of assets) {
-      const name28 = String(a.name ?? "").replace(/（OS）|\(OS\)/g, "").trim();
-      const code = String(a.code ?? "").trim();
-      if (!name28 || !code) continue;
-      knownNames.push(name28);
-      (nameToCodes[name28] ??= []).push(code);
-    }
-    shots.forEach((s, i) => {
-      const idx = s.shotIndex ?? i + 1;
-      const cast = checkCastOnDesc({
-        visualDescription: s.visualDescription,
-        charCodes: s.charCodes,
-        knownNames,
-        nameToCodes,
-        shotIndex: idx
-      });
-      if (cast) {
-        gaps.push({ id: cast.id, shotIndex: idx, severity: sev2(cast.severity), message: cast.message, field: "charCodes" });
-      }
-      const empty = checkEmptyShotConsistency({
-        visualDescription: s.visualDescription,
-        charCodes: s.charCodes,
-        knownNames,
-        shotIndex: idx
-      });
-      if (empty) {
-        gaps.push({ id: empty.id, shotIndex: idx, severity: sev2(empty.severity), message: empty.message, field: "visualDescription" });
-      }
-      const lines = s.narrative?.dialogue?.lines ?? [];
-      const expr = checkSpeakPerformance({
-        hasDialogue: hasOnCameraDialogue(lines),
-        emotionIntensity: s.emotionIntensity,
-        microExpression: s.shotDesign?.performance?.microExpression,
-        lipSyncPolicy: resolveLipSyncPolicyFromShot(s),
-        shotIndex: idx
-      });
-      if (expr) {
-        gaps.push({ id: expr.id, shotIndex: idx, severity: sev2(expr.severity), message: expr.message, field: "shotDesign.performance" });
-      }
-    });
-    {
-      const {
-        collectCharacterAssets: collectCharacterAssets2,
-        buildImagedMaps: buildImagedMaps2,
-        shotAssetCrefSatisfied: shotAssetCrefSatisfied2
-      } = (init_assetCrefBind(), __toCommonJS(assetCrefBind_exports));
-      const planView = {
-        planData: bundle.planData ?? {},
-        characterDesign: bundle.characterDesign,
-        preDesignPack: bundle.preDesignPack
-      };
-      const assetsList = collectCharacterAssets2(planView);
-      const { imagedByCode, imagedByName, codesPresent } = buildImagedMaps2(assetsList);
-      const crefPlan = Array.isArray(bundle.planData?.assetCrefPlan) ? bundle.planData.assetCrefPlan : [];
-      for (const s of shots) {
-        const idx = s.shotIndex ?? 0;
-        if (!shotAssetCrefSatisfied2(s, imagedByCode, imagedByName, crefPlan, {
-          allowStubBind: true,
-          codesPresent
-        })) {
-          const codes = (s.charCodes ?? []).filter((c) => /^CHAR-/i.test(String(c)));
-          const hasCodesNoImg = codes.length > 0;
-          gaps.push({
-            id: "DEX-ASSET-CREF",
-            shotIndex: idx,
-            severity: sev2("BLOCK"),
-            message: hasCodesNoImg ? "\u5DF2\u7ED1 CHAR \u4ECD\u65E0\u6CD5\u8BBE\u8BA1\u95ED\u5408\uFF08\u7F3A\u518C/\u6B67\u4E49\uFF09\uFF1B\u7F3A\u5B9A\u5986\u56FE\u53EF stub \u5EF6\u671F\u2192AS" : "\u51FA\u8138/CHAR \u987B\u672C\u955C\u5B9A\u5986\u7ED1\u5B9A\u6216\u8BBE\u8BA1\u671F stub+assetCrefPlan\uFF08\u6DF1\u94FE asset_cref\uFF09",
-            field: hasCodesNoImg ? "characterDesign.assets" : "assetCrefPlan"
-          });
-        }
-      }
-    }
-  }
-  if (tier === "T2" || tier === "T3") {
-    const cd = bundle.characterDesign;
-    if (!cd?.assets?.length) {
-      gaps.push({ id: "CHAT-CD-01", severity: sev2("BLOCK"), message: "\u7F3A characterDesign.assets", field: "characterDesign" });
-    }
-    if (!bundle.visualLockTable || !Object.keys(bundle.visualLockTable).length) {
-      gaps.push({ id: "CHAT-BP-01", severity: sev2("BLOCK"), message: "\u7F3A visualLockTable", field: "visualLockTable" });
-    }
-  }
-  if (tier === "T3") {
-    shots.forEach((s, i) => {
-      const idx = s.shotIndex ?? i + 1;
-      const gen = getGeneration(s, bundle, i);
-      if (!gen?.imagePrompt?.trim()) {
-        gaps.push({ id: "CHAT-IMG-01", shotIndex: idx, severity: sev2("BLOCK"), message: "\u7F3A imagePrompt", field: "imagePrompt" });
-      }
-      if (!gen?.videoPrompt?.trim()) {
-        gaps.push({ id: "CHAT-VID-01", shotIndex: idx, severity: sev2("BLOCK"), message: "\u7F3A videoPrompt", field: "videoPrompt" });
-      }
-      if (shotHasDialogue2(s) && !gen?.audioPrompt?.trim()) {
-        gaps.push({
-          id: "CHAT-AUD-01",
-          shotIndex: idx,
-          severity: sev2("BLOCK"),
-          message: "\u53F0\u8BCD\u955C\u7F3A audioPrompt\uFF08\u987B seed \u6216\u624B\u8865\uFF09",
-          field: "audioPrompt"
-        });
-      }
-      const fx = s.visualEffect;
-      if (fx?.trim() && !gen?.fxPrompt?.trim()) {
-        gaps.push({ id: "CHAT-FX-01", shotIndex: idx, severity: "WARN", message: "\u7279\u6548\u955C\u7F3A fxPrompt", field: "fxPrompt" });
-      }
-      if (hasOnCameraDialogue(s.narrative?.dialogue?.lines)) {
-        const pol = resolveLipSyncPolicyFromShot(s).toLowerCase();
-        const vp2 = String(gen?.videoPrompt ?? "");
-        if (/^(none|silent)$/.test(pol) || /no\s*lip[- ]*sync/i.test(vp2)) {
-          gaps.push({
-            id: "NO-LIP-DIALOGUE",
-            shotIndex: idx,
-            severity: sev2("BLOCK"),
-            message: "\u6709\u51FA\u955C\u5BF9\u767D\u7981\u6B62 no lip sync\uFF08\u6DF1\u94FE no_lip_dialogue\uFF09",
-            field: "lipSyncPolicy"
-          });
-        }
-      }
-      const vp = String(gen?.videoPrompt ?? "");
-      const cue = String(s.audioCue ?? "").trim();
-      if (/sfx\s*:\s*</i.test(vp) && !cue) {
-        gaps.push({
-          id: "SFX-UNBACKED",
-          shotIndex: idx,
-          severity: "BLOCK",
-          message: "\u5B57\u9762 sfx:<> \u65E0 audioCue \u771F\u6E90\uFF1B\u8BBE\u8BA1\u51FA\u53E3\u987B\u8865 audioCue\uFF08\u4E0D\u7F16\u9020\u97F3\u6548\uFF09",
-          field: "audioCue"
-        });
-      }
-    });
-  }
-  return gaps;
-}
-var init_chatPromptAudit = __esm({
-  "src/ruleEngine/bundle/chatPromptAudit.ts"() {
-    "use strict";
-    init_dialogueCoverage();
-    init_visualQualityAudit();
-    init_shotQualityPredicates();
-    init_onCameraDialogue();
-    init_resolveLipSyncPolicy();
-  }
-});
-
-// src/ruleEngine/portable/inspectBundle.ts
-function loadRepairHints2(ids) {
-  const catalog = readFixtureJson("repair_hint_catalog.json", { hints: [] });
-  const hints = catalog.hints ?? [];
-  const idSet = new Set(ids);
-  return hints.filter(
-    (h) => idSet.has(h.ruleId) || idSet.has(h.id) || h.qpId && idSet.has(h.qpId) || (h.checkIds?.some((c) => idSet.has(c)) ?? false) || h.symptom && ids.some((i) => i.includes(h.symptom) || h.symptom.includes(i))
-  ).map((h) => ({ id: h.id, chatTemplate: h.chatTemplate, ruleId: h.ruleId }));
-}
-function toResult(closure, bundle, opts) {
-  const tier = closure.tier;
-  const gapResult = bundle ? auditAllBundleGaps(bundle, tier) : null;
-  const closureTriggers = closure.reverseHints.map(
-    (h) => h.chainId === "dialogue" ? "dialogue_hash_mismatch" : h.symptom.includes("\u2192") ? h.chainId : h.symptom
-  );
-  const gapTriggers = gapResult?.triggers ?? [];
-  const triggers = [.../* @__PURE__ */ new Set([...closureTriggers, ...gapTriggers])];
-  const rePushPlan = triggers.length ? buildRePushPlan(triggers, ["script", "globalAnchors"]) : [];
-  const failedCheckIds = [
-    ...closure.closureChecks?.dc ?? [],
-    ...closure.closureChecks?.pc ?? [],
-    ...closure.closureChecks?.gc ?? [],
-    ...closure.closureChecks?.ic ?? []
-  ].filter((c) => c && c.passed === false && c.id).map((c) => c.id);
-  const ruleIds = [
-    ...closure.reverseHints.map((h) => h.ruleId).filter(Boolean),
-    ...gapResult?.allGaps.map((g) => g.id) ?? [],
-    ...failedCheckIds
-  ];
-  const repairHints = loadRepairHints2(ruleIds);
-  const chatPromptGaps = bundle ? auditChatPromptGaps(bundle, tier) : [];
-  const gapWarnings = gapResult?.allGaps.map((g) => g.shotIndex != null ? `[\u955C${g.shotIndex}] ${g.id}: ${g.message}` : `${g.id}: ${g.message}`) ?? [];
-  const closureReport = buildClosureReport({
-    allGaps: gapResult?.allGaps ?? [],
-    chatPromptGaps,
-    closureChecks: closure.closureChecks,
-    tier
-  });
-  const linkageRepairPlan = gapResult?.repairMode === "linkageRepair" && gapResult.allGaps.length ? gapResult.allGaps.map((g) => ({ gapId: g.id, chainId: g.chainId, trigger: g.trigger, field: g.field })) : void 0;
-  let qualityGateResult;
-  if (bundle) {
-    qualityGateResult = qualityGate(bundle, { stage: "export", tier });
-  }
-  const chatBlocks = tier === "T3" ? chatPromptGaps.filter((g) => g.severity === "BLOCK") : [];
-  const qgBlocked = Boolean(qualityGateResult?.blocked);
-  const blocked = closure.closureChecks.blocked || qgBlocked || tier === "T3" && chatBlocks.length > 0;
-  const qgWarnings = qualityGateResult?.issues.map(
-    (i) => i.shotIndex != null ? `[\u955C${i.shotIndex}] ${i.id}: ${i.message}` : `${i.id}: ${i.message}`
-  ) ?? [];
-  return {
-    tier,
-    blocked,
-    rulePackVersion: closure.rulePackVersion ?? getRulePackVersion(),
-    closureChecks: { ...closure.closureChecks, blocked },
-    forwardTrace: closure.forwardTrace,
-    reverseHints: closure.reverseHints,
-    repairHints,
-    rePushPlan,
-    linkageRepairPlan,
-    smartDetection: gapResult ? {
-      gapCount: gapResult.allGaps.length,
-      repairMode: gapResult.repairMode,
-      chains: [...new Set(gapResult.allGaps.map((g) => g.chainId).filter(Boolean))]
-    } : void 0,
-    warnings: [
-      ...closure.warnings,
-      ...gapWarnings,
-      ...chatPromptGaps.map((g) => g.shotIndex != null ? `[\u955C${g.shotIndex}] ${g.message}` : g.message),
-      ...qgWarnings
-    ],
-    chatPromptGaps,
-    adaptationGaps: gapResult?.adaptationGaps,
-    retentionGaps: gapResult?.retentionGaps,
-    narrativeDriveGaps: gapResult?.narrativeDriveGaps,
-    packagingGaps: gapResult?.packagingGaps,
-    generationApplyGaps: gapResult?.generationApplyGaps,
-    designSpecGaps: gapResult?.designSpecGaps,
-    scriptViralGaps: gapResult?.scriptViralGaps,
-    modalityGaps: gapResult?.modalityGaps,
-    closureReport,
-    qualityGate: qualityGateResult
-  };
-}
-function inspectBundle(raw, opts = {}) {
-  const closure = runRawBundleClosure(raw, {
-    tier: opts.tier,
-    genError: opts.genError,
-    sfRound: opts.sfRound
-  });
-  if (!closure) {
-    try {
-      const parsed = parseScriptBundleRaw(raw);
-      return toResult(runScriptBundleClosure(parsed, opts), parsed, opts);
-    } catch {
-      throw new Error("Unsupported bundle: expected ScriptBundle or EpisodeBundle");
-    }
-  }
-  let bundle = null;
-  try {
-    bundle = parseScriptBundleRaw(raw);
-  } catch {
-    bundle = null;
-  }
-  return toResult(closure, bundle, opts);
-}
-var init_inspectBundle = __esm({
-  "src/ruleEngine/portable/inspectBundle.ts"() {
-    "use strict";
-    init_ruleRegistry();
-    init_fixturesPath();
-    init_closureSummary();
-    init_chatPromptAudit();
-    init_bundleGapAudits();
-    init_closureReport();
-    init_reverseRouteEngine();
-    init_qualityGate();
-  }
-});
-
-// src/ruleEngine/packager/zPackager.ts
-function buildZ107(pkg) {
-  return { episodeId: pkg.scriptId, shots: pkg.shots.length, meta: pkg.scriptMeta };
-}
-function buildZ108(pkg) {
-  return {
-    scriptId: pkg.scriptId,
-    prompts: pkg.shots.map((s) => ({
-      shotId: s.id,
-      image: s.generation.compiled?.image,
-      video: s.generation.compiled?.video,
-      audio: s.generation.compiled?.audio
-    }))
-  };
-}
-function buildZ109(pkg) {
-  return {
-    tracks: {
-      video: pkg.shots.map((s, i) => ({ shotId: s.id, index: i, duration: s.narrative.duration })),
-      audio: pkg.shots.map((s) => ({ shotId: s.id, sfx: s.narrative.sound?.sfx, bgm: s.narrative.sound?.bgm })),
-      subtitle: pkg.shots.filter((s) => s.narrative.dialogue?.lines).map((s) => ({ shotId: s.id, text: s.narrative.dialogue?.lines, type: s.narrative.dialogue?.type }))
-    }
-  };
-}
-function buildZ110(pkg) {
-  return { preview: buildZ109(pkg), exportReady: false, note: "PostProd P2" };
-}
-function exportPackage(pkg) {
-  return { Z107: buildZ107(pkg), Z108: buildZ108(pkg), Z109: buildZ109(pkg), Z110: buildZ110(pkg) };
-}
-var init_zPackager = __esm({
-  "src/ruleEngine/packager/zPackager.ts"() {
-    "use strict";
   }
 });
 
@@ -313901,152 +322200,6 @@ var init_ruleConsistencyAudit = __esm({
   }
 });
 
-// src/ruleEngine/bundle/bundleIntegrityAudit.ts
-function shotGen(s) {
-  return s.generation ?? {};
-}
-function auditBundleIntegrity(bundle) {
-  const gaps = [];
-  const shots = bundle.preDesignPack?.shots ?? [];
-  const forAudit = shots.map((s, i) => {
-    const g = shotGen(s);
-    return {
-      index: s.shotIndex ?? s.index ?? i + 1,
-      shotIndex: s.shotIndex ?? i + 1,
-      narrative: s.narrative,
-      visualEffect: s.visualEffect ?? g.fxPrompt,
-      generation: {
-        imagePrompt: g.imagePrompt,
-        videoPrompt: g.videoPrompt,
-        audioPrompt: g.audioPrompt,
-        fxPrompt: g.fxPrompt,
-        compiled: {
-          image: g.imagePrompt ?? g.compiled?.image,
-          video: g.videoPrompt ?? g.compiled?.video,
-          audio: g.audioPrompt ?? g.compiled?.audio,
-          fx: g.fxPrompt ?? g.compiled?.fx
-        }
-      }
-    };
-  });
-  const modality = buildModalityPromptAudit(forAudit);
-  for (const item of modality.items) {
-    if (item.severity === "BLOCK" || item.severity === "WARN") {
-      gaps.push({
-        id: `MOD-${item.modality}-${item.ruleId}`,
-        severity: item.severity === "BLOCK" ? "BLOCK" : "WARN",
-        message: item.issue ?? `${item.modality} ${item.severity}`,
-        field: `shots[${item.shotIndex}]`
-      });
-    }
-  }
-  for (const s of shots) {
-    const g = shotGen(s);
-    const fx = (g.fxPrompt ?? "").trim();
-    const idx = s.shotIndex ?? s.index;
-    if (!fx && !(s.visualEffect ?? "").trim()) {
-      gaps.push({
-        id: "INT-FX-EMPTY",
-        severity: "WARN",
-        message: `shot ${idx} fxPrompt empty`,
-        field: "generation.fxPrompt"
-      });
-    }
-  }
-  const cd = new Set(
-    (bundle.characterDesign?.assets ?? []).map((a) => normalizeAssetCode(a.code ?? "") ?? "").filter(Boolean)
-  );
-  const vltChars = new Set(
-    Object.keys(
-      bundle.visualLockTable?.characterAssets ?? {}
-    ).map((k) => normalizeAssetCode(k) ?? "").filter(Boolean)
-  );
-  for (const code of collectReferencedCodes(bundle)) {
-    if (code.startsWith("CHAR-") && !cd.has(code) && !vltChars.has(code)) {
-      gaps.push({
-        id: "INT-CHAR-ORPHAN",
-        severity: "WARN",
-        message: `referenced ${code} missing from characterDesign/visualLock (import may stub o_assets)`,
-        field: "charCodes"
-      });
-    }
-  }
-  const plan = bundle.planData?.narrativeBrief ?? {};
-  const defined = new Set(
-    (plan.infoDeliveryPlan ?? []).map((x) => x.infoId).filter(Boolean)
-  );
-  const beats = bundle.preDesignPack?.episodeBeat?.sceneCausalBeats ?? [];
-  for (const b of beats) {
-    for (const id of b.infoIds ?? []) {
-      if (!defined.has(id)) {
-        gaps.push({
-          id: "INT-INFO-ORPHAN",
-          severity: "WARN",
-          message: `infoId ${id} used in ${b.scene} but not in infoDeliveryPlan`,
-          field: "infoIds"
-        });
-      }
-    }
-  }
-  const sceneMeta = (plan.sceneMeta ?? (bundle.planData?.sceneMeta ?? [])).map((s) => s.sceneRef);
-  const impl = new Set(
-    (plan.implementationPlan ?? []).map((s) => s.sceneRef).filter((n) => n != null)
-  );
-  for (const ref of sceneMeta) {
-    if (ref != null && !impl.has(ref)) {
-      gaps.push({
-        id: "INT-IMPL-GAP",
-        severity: "WARN",
-        message: `sceneRef ${ref} in sceneMeta but missing implementationPlan`,
-        field: "implementationPlan"
-      });
-    }
-  }
-  for (const s of shots) {
-    if (s.sceneName && !resolveSceneCodeByName(bundle, s.sceneName)) {
-      gaps.push({
-        id: "INT-SCENE-UNMAPPED",
-        severity: "INFO",
-        message: `sceneName "${s.sceneName}" not in visualLockTable.sceneColorLock`,
-        field: "sceneName"
-      });
-    }
-  }
-  for (const s of shots) {
-    const lines = s.narrative?.dialogue?.lines?.length ?? 0;
-    const aud = (shotGen(s).audioPrompt ?? "").trim();
-    const idx = s.shotIndex ?? s.index;
-    if (lines > 0 && !aud) {
-      gaps.push({
-        id: "INT-AUD-LINES",
-        severity: "WARN",
-        message: `shot ${idx} has dialogue lines but empty audioPrompt`,
-        field: "audioPrompt"
-      });
-    }
-  }
-  const self2 = bundle.modalityPromptAudit;
-  if (self2?.passRate === 100 && gaps.some((g) => g.id.startsWith("INT-FX") || g.id.startsWith("MOD-FX"))) {
-    gaps.push({
-      id: "INT-FALSE-GREEN",
-      severity: "WARN",
-      message: "Chat modalityPromptAudit passRate=100 but server found FX/modality gaps",
-      field: "modalityPromptAudit"
-    });
-  }
-  void parsePromptRefs;
-  return gaps;
-}
-var init_bundleIntegrityAudit = __esm({
-  "src/ruleEngine/bundle/bundleIntegrityAudit.ts"() {
-    "use strict";
-    init_modalityOrchestrator();
-    init_assetClosureGate();
-    init_assetCodeContract();
-    init_vendorPromptAdapter();
-  }
-});
-
 // src/ruleEngine/bundle/importMutex.ts
 async function withImportLock(projectId, owner, fn) {
   const start = Date.now();
@@ -314075,3559 +322228,6 @@ var init_importMutex = __esm({
       constructor(message) {
         super(message);
         this.name = "ImportLockError";
-      }
-    };
-  }
-});
-
-// src/ruleEngine/bundle/schemaShapeErrors.ts
-function pathTail(path44) {
-  const last = path44[path44.length - 1];
-  return typeof last === "string" ? last : path44.join(".");
-}
-function issueRepairHint(path44, pathStr, expected, received) {
-  const tail = pathTail(path44);
-  if (tail in FIELD_REPAIR) return FIELD_REPAIR[tail].id;
-  for (const rule of PATH_REPAIR) {
-    if (rule.test(pathStr)) return rule.id;
-  }
-  if (expected === "string" && received === "object") return "RH-SHAPE-STRING";
-  return void 0;
-}
-function formatSchemaShapeBlock(err) {
-  const issues = err.issues.map((iss) => {
-    const path44 = iss.path.map(String).join(".");
-    const expected = "expected" in iss ? String(iss.expected) : void 0;
-    const received = "received" in iss ? String(iss.received) : void 0;
-    const repairHintId = issueRepairHint(
-      iss.path.filter((p3) => typeof p3 === "string" || typeof p3 === "number"),
-      path44,
-      expected,
-      received
-    );
-    return {
-      path: path44,
-      code: iss.code,
-      expected,
-      received,
-      message: iss.message,
-      repairHintId
-    };
-  });
-  const hintIds = /* @__PURE__ */ new Set();
-  const repairHints = [];
-  const pushHint = (id, message) => {
-    if (hintIds.has(id)) return;
-    hintIds.add(id);
-    repairHints.push({ id, message });
-  };
-  for (const iss of issues) {
-    const tail = iss.path.split(".").pop() ?? "";
-    const spec = FIELD_REPAIR[tail];
-    if (spec) pushHint(spec.id, spec.template);
-    for (const rule of PATH_REPAIR) {
-      if (rule.test(iss.path)) pushHint(rule.id, rule.template);
-    }
-    if (iss.repairHintId === "RH-SHAPE-STRING") {
-      pushHint("RH-SHAPE-STRING", `\u5B57\u6BB5 ${iss.path} \u671F\u671B string\uFF0C\u6536\u5230 object \u2014 \u8BF7\u6539\u4E3A canonical string \u6216\u7701\u7565 key\u3002`);
-    }
-  }
-  const lines = [
-    "\u3010\u5F62\u6001\u9519\u8BEF SCHEMA_SHAPE_BLOCK \u2014 \u8BF7\u4FEE\u6B63 JSON \u5F62\u72B6\u540E\u518D\u5BFC\u5165\u3011",
-    ...issues.slice(0, 12).map((i) => `- ${i.path}: ${i.message}`),
-    "",
-    ...repairHints.map((h) => `[${h.id}] ${h.message}`)
-  ];
-  return {
-    code: "SCHEMA_SHAPE_BLOCK",
-    issues,
-    repairHints,
-    chatRepairText: lines.join("\n")
-  };
-}
-function parseScriptBundleOrThrowShape(bundle, schema) {
-  try {
-    return schema.parse(bundle);
-  } catch (e) {
-    if (e instanceof ZodError) throw new SchemaShapeBlockError(e);
-    throw e;
-  }
-}
-var FIELD_REPAIR, PATH_REPAIR, SchemaShapeBlockError;
-var init_schemaShapeErrors = __esm({
-  "src/ruleEngine/bundle/schemaShapeErrors.ts"() {
-    "use strict";
-    init_zod();
-    FIELD_REPAIR = {
-      visualEffect: {
-        id: "RH-MOD-01",
-        template: '\u5C06 shots[].visualEffect \u6539\u4E3A string\uFF0C\u5982 "F1: \u70DB\u706B\u6447\u66F3\uFF0C\u5FAE\u5149\u95EA\u70C1"\uFF1B\u53EF\u9009\u540C\u955C fxLevel: "F1"\u3002\u7981\u6B62 object {level,desc}\u3002'
-      },
-      audioCue: {
-        id: "RH-MOD-AV",
-        template: '\u5C06 shots[].audioCue \u6539\u4E3A string\uFF08\u5982 "\u8336\u76CF\u788E\u88C2\u58F0\u9AA4\u505C"\uFF09\uFF0C\u7981\u6B62 object {beat,type}\u3002'
-      },
-      spatialRelation: {
-        id: "RH-SPATIAL-OBJ",
-        template: '\u5C06 shots[].spatialRelation / narrative.spatialRelation \u6539\u4E3A\u7AD9\u4F4D string\uFF0C\u4F8B\u5982 "axis=\u5973\u4E3B-\u7537\u4E3B\uFF1Banchors=\u5973\u4E3B\u5DE6|\u7537\u4E3B\u53F3"\u3002\u7981\u6B62\u76F4\u63A5\u8D34 B13 \u5BF9\u8C61 {axis,anchors}\u3002'
-      },
-      beats: {
-        id: "RH-B12-BEATS",
-        template: 'designBrief.B12[].beats \u5FC5\u987B\u4E3A\u8282\u62CD\u6570\u91CF number\uFF08\u5982 2\uFF09\uFF1B\u53D9\u4E8B\u8BF4\u660E\u5199\u5165 summary\uFF08\u5982 "\u81EA\u6B8B\u53D6\u4F69\uFF0C\u7ACB\u4E0B\u51B3\u610F"\uFF09\uFF0C\u7981\u6B62\u628A\u53D9\u4E8B\u4E32\u5199\u8FDB beats\u3002'
-      }
-    };
-    PATH_REPAIR = [
-      {
-        test: (p3) => /\.B12(\.|$)/.test(p3) || p3.includes("designBrief.B12"),
-        id: "RH-B12-BEATS",
-        template: FIELD_REPAIR.beats.template
-      },
-      {
-        test: (p3) => p3.includes("spatialRelation"),
-        id: "RH-SPATIAL-OBJ",
-        template: FIELD_REPAIR.spatialRelation.template
-      }
-    ];
-    SchemaShapeBlockError = class extends Error {
-      payload;
-      constructor(err) {
-        const payload = formatSchemaShapeBlock(err);
-        super(JSON.stringify(payload));
-        this.name = "SchemaShapeBlockError";
-        this.payload = payload;
-      }
-    };
-  }
-});
-
-// src/ruleEngine/design/migrateMultiBeatStock.ts
-var migrateMultiBeatStock_exports = {};
-__export(migrateMultiBeatStock_exports, {
-  migrateMultiBeatStockShots: () => migrateMultiBeatStockShots,
-  shouldMigrateMultiBeat: () => shouldMigrateMultiBeat
-});
-function shouldMigrateMultiBeat(meta4) {
-  if (!meta4) return false;
-  const flag = meta4.pillarsStillOneBeatMigrate;
-  if (flag === false || flag === "off") return false;
-  if (flag === true || flag === "enforce" || flag === "migrate") return true;
-  return String(meta4.pillarsVisBeatV2 ?? "") === "enforce";
-}
-function migrateMultiBeatStockShots(shots, opts) {
-  if (!shouldMigrateMultiBeat(opts?.meta)) {
-    return { shots, migrated: 0, refused: 0, log: ["migrate_skipped_flag"] };
-  }
-  const dirty = shots.filter((s) => !s._stillBeatSplitId && shouldWarnOneBeat(String(s.visualDescription ?? "")));
-  if (!dirty.length) return { shots, migrated: 0, refused: 0, log: [] };
-  const exp = expandStillOneBeat(shots, { maxExpand: opts?.maxExpand ?? 40 });
-  const recomposed = recomposeChildrenAfterSplit(exp.shots);
-  cascadeForwardStale({ shots: recomposed.shots, forwardStages: ["SB", "MD-IMG", "EN"] });
-  return {
-    shots: recomposed.shots,
-    migrated: exp.expandedCount,
-    refused: exp.refused,
-    log: [...exp.log, `recompose:${recomposed.recomposed}`]
-  };
-}
-var init_migrateMultiBeatStock = __esm({
-  "src/ruleEngine/design/migrateMultiBeatStock.ts"() {
-    "use strict";
-    init_expandStillOneBeat();
-    init_recomposeAfterSplit();
-    init_forwardStaleCascade();
-    init_stillIdentitySsot();
-  }
-});
-
-// src/ruleEngine/design/rePushRunner.ts
-var rePushRunner_exports = {};
-__export(rePushRunner_exports, {
-  executeRePushPlan: () => executeRePushPlan,
-  planRePush: () => planRePush
-});
-function planRePush(items) {
-  const stages = [...new Set(items.flatMap((i) => i.forwardRerun))];
-  const preserved = [...new Set(items.flatMap((i) => i.preserveFields ?? []))];
-  const round = items[0] ? 1 : 0;
-  const designExitRequired = stages.some((s) => {
-    const u = String(s).toUpperCase();
-    return u === "SB" || u === "AS" || u === "W3" || u === "DESIGNBRIEF" || u === "MD-IMG";
-  });
-  return { stagesToRerun: stages, preservedFields: preserved, round, designExitRequired };
-}
-function executeRePushPlan(items, opts) {
-  const planned = planRePush(items);
-  const maxRounds = opts?.maxRounds ?? 3;
-  const round = opts?.currentRound ?? planned.round;
-  if (round > maxRounds) {
-    return {
-      ...planned,
-      round,
-      status: "exhausted",
-      items: items.map((i) => ({ ...i, status: "exhausted" }))
-    };
-  }
-  let shots = opts?.ctx?.shots ? [...opts.ctx.shots] : void 0;
-  const stageResults = [];
-  let designExitRequired = planned.designExitRequired;
-  try {
-    const { isRedesignRequired: isRedesignRequired2 } = (init_redesignContract(), __toCommonJS(redesignContract_exports));
-    const planForDebt = {
-      planData: opts?.ctx?.planData ?? opts?.ctx?.bundle?.planData ?? {}
-    };
-    if (isRedesignRequired2(planForDebt)) {
-      const blocked = planned.stagesToRerun.filter((st) => {
-        const u = String(st).toUpperCase();
-        return u === "MD-IMG" || u === "EN" || u === "MD-VID";
-      });
-      if (blocked.length) {
-        return {
-          ...planned,
-          stagesToRerun: planned.stagesToRerun.filter((st) => !blocked.includes(st)),
-          round,
-          status: "pending",
-          designExitRequired: true,
-          items: items.map((i) => ({ ...i, status: "blocked_redesign_debt" })),
-          stageResults: blocked.map((stage) => ({
-            stage,
-            ok: false,
-            detail: "redesignRequired\uFF1A\u987B W3 redesignPass \u540E\u518D regen"
-          })),
-          shots
-        };
-      }
-    }
-  } catch {
-  }
-  for (const stage of planned.stagesToRerun) {
-    const s = String(stage).toUpperCase();
-    try {
-      if (shots && (s === "SB" || s === "AS" || s === "W3" || s === "DESIGNBRIEF")) {
-        if (opts?.ctx?.bundle || opts?.ctx?.planData) {
-          const bundle = opts.ctx.bundle ?? {
-            preDesignPack: { shots },
-            planData: opts.ctx.planData ?? {},
-            meta: opts.ctx.meta ?? {}
-          };
-          if (bundle.preDesignPack) {
-            bundle.preDesignPack.shots = shots;
-          }
-          const ird = runStillIntentHeal(bundle, {
-            chatStrict: opts.ctx.chatStrict,
-            literaryLocked: opts.ctx.literaryLocked,
-            meta: opts.ctx.meta,
-            planData: opts.ctx.planData
-          });
-          shots = ird.shots;
-          stageResults.push({
-            stage: s,
-            ok: true,
-            detail: `ird_applied=${ird.applied.length};refused=${ird.refused.length}`
-          });
-          if (ird.applied.length) designExitRequired = true;
-        }
-        const mig = migrateMultiBeatStockShots(shots, {
-          meta: opts?.ctx?.meta ?? { pillarsStillOneBeatMigrate: true }
-        });
-        shots = mig.shots;
-        const re2 = runForwardReentryAfterRepair({
-          planData: opts?.ctx?.planData,
-          shots,
-          meta: opts?.ctx?.meta,
-          applyClauseSplit: false
-        });
-        shots = re2.shots;
-        stageResults.push({
-          stage: s,
-          ok: true,
-          detail: `migrate=${mig.migrated};refuse=${mig.refused};reentry_stale=${re2.reentry.staleClientIds.length}`
-        });
-        if (opts?.ctx?.meta) {
-          opts.ctx.meta.designExitRequiredAfterIrd = true;
-        }
-      } else if (shots && (s === "MD-IMG" || s === "MD" || s === "EN" || s === "MD-VID")) {
-        cascadeForwardStale({
-          shots,
-          forwardStages: [s === "MD-VID" ? "EN" : s === "MD" ? "MD-IMG" : s]
-        });
-        stageResults.push({ stage: s, ok: true, detail: "stale_cascade;await_designExit" });
-      } else {
-        stageResults.push({ stage: s, ok: true, detail: "queued" });
-      }
-      if (opts?.runStage) {
-        void opts.runStage(s, {
-          shots: shots ?? [],
-          meta: opts.ctx?.meta,
-          planData: opts.ctx?.planData
-        });
-      }
-    } catch (e) {
-      stageResults.push({ stage: s, ok: false, detail: e instanceof Error ? e.message : "fail" });
-    }
-  }
-  return {
-    ...planned,
-    designExitRequired,
-    round,
-    status: planned.stagesToRerun.length ? "completed" : "pending",
-    items: items.map((i) => ({
-      ...i,
-      status: i.forwardRerun?.length ? "completed" : "pending"
-    })),
-    stageResults,
-    shots
-  };
-}
-var init_rePushRunner = __esm({
-  "src/ruleEngine/design/rePushRunner.ts"() {
-    "use strict";
-    init_migrateMultiBeatStock();
-    init_forwardStaleCascade();
-    init_designSplitLifecycle();
-    init_stillIntentReverse();
-  }
-});
-
-// src/ruleEngine/design/fixPlanApplicator.ts
-function applyFixPlanToBundle(bundle, issues) {
-  const fix = applyAutoFix(issues);
-  const round = (bundle.fixPlan?.round ?? 0) + 1;
-  const next = {
-    ...bundle,
-    fixPlan: {
-      round,
-      items: fix.patches.map((p3, i) => ({
-        id: `fix-${i + 1}`,
-        ruleId: String(p3.ruleId ?? ""),
-        autoApplicable: true,
-        confidence: 0.9,
-        patch: p3
-      }))
-    }
-  };
-  const fieldsWritten = [];
-  if (next.preDesignPack?.shots?.length && fix.patches.length) {
-    const shots = next.preDesignPack.shots.map((s) => ({ ...s }));
-    for (const patch of fix.patches) {
-      const shotId = patch.shotId;
-      const idx = shotId ? shots.findIndex((s) => String(s.id) === shotId) : 0;
-      const target = shots[idx >= 0 ? idx : 0];
-      if (!target) continue;
-      const { shot, applied } = applyPatchesToShot(target, patch);
-      Object.assign(target, shot);
-      fieldsWritten.push(...applied);
-    }
-    next.preDesignPack = { ...next.preDesignPack, shots };
-  }
-  let stagesExecuted = [];
-  if (fix.applied.length) {
-    next.rePushPlan = buildRePushPlan(fix.applied);
-    const shots = next.preDesignPack?.shots ?? [];
-    const executed = executeRePushPlan(next.rePushPlan, {
-      ctx: {
-        shots,
-        meta: next.meta ?? {},
-        planData: next.planData ?? {},
-        bundle: next,
-        chatStrict: false
-      },
-      maxRounds: 3
-    });
-    if (executed.shots?.length && next.preDesignPack) {
-      next.preDesignPack = { ...next.preDesignPack, shots: executed.shots };
-    }
-    stagesExecuted = executed.stagesToRerun;
-    next.rePushExecution = executed;
-  }
-  return {
-    bundle: next,
-    applied: fix.applied,
-    round,
-    patches: fix.patches,
-    rePushPlan: next.rePushPlan ?? [],
-    fieldsWritten: [...new Set(fieldsWritten)],
-    stagesExecuted
-  };
-}
-var init_fixPlanApplicator = __esm({
-  "src/ruleEngine/design/fixPlanApplicator.ts"() {
-    "use strict";
-    init_autoFix();
-    init_rePushRunner();
-    init_reverseRouteEngine();
-    init_patchApplicator();
-  }
-});
-
-// src/ruleEngine/design/smartProposalApplier.ts
-function applySmartProposalsToBundle(bundle, proposals, issues = []) {
-  const merged = mergeConfirmedProposals(bundle, proposals);
-  let next = merged.bundle;
-  if (issues.length) {
-    next = applyFixPlanToBundle(next, issues).bundle;
-  }
-  return next;
-}
-var init_smartProposalApplier = __esm({
-  "src/ruleEngine/design/smartProposalApplier.ts"() {
-    "use strict";
-    init_smartProposalMerger();
-    init_fixPlanApplicator();
-  }
-});
-
-// src/ruleEngine/bundle/packagingMaterialize.ts
-function materializePackaging(bundle) {
-  const patches = [];
-  const shots = [...bundle.preDesignPack?.shots ?? []];
-  if (!shots.length) {
-    return { bundle, report: { debutApplied: false, endHookApplied: false, patches } };
-  }
-  let debutApplied = false;
-  const debut = bundle.debutIntroPack;
-  if (debut && (debut.characters?.length || debut.scenes?.length || debut.beatHint)) {
-    const s0 = { ...shots[0] };
-    const narr2 = { ...s0.narrative ?? {} };
-    if (!narr2.debutBeat) {
-      narr2.debutBeat = debut.beatHint ?? "debut_intro";
-      patches.push("shot1.narrative.debutBeat");
-    }
-    if (!s0.packagingTag) {
-      s0.packagingTag = "debut";
-      patches.push("shot1.packagingTag=debut");
-    }
-    s0.narrative = narr2;
-    shots[0] = s0;
-    debutApplied = true;
-  }
-  let endHookApplied = false;
-  const endHook = bundle.endHookPack ?? bundle.continuity;
-  const hookText = typeof endHook === "object" && endHook && ("hook" in endHook ? endHook.hook : endHook.endHook) || bundle.continuity?.unresolvedHooks?.[0];
-  if (hookText) {
-    const last = { ...shots[shots.length - 1] };
-    const narr2 = { ...last.narrative ?? {} };
-    if (!narr2.endHook) {
-      narr2.endHook = hookText;
-      patches.push(`shot${shots.length}.narrative.endHook`);
-    }
-    if (!last.packagingTag) {
-      last.packagingTag = "endHook";
-      patches.push(`shot${shots.length}.packagingTag=endHook`);
-    }
-    last.narrative = narr2;
-    shots[shots.length - 1] = last;
-    endHookApplied = true;
-  }
-  const next = {
-    ...bundle,
-    preDesignPack: {
-      scriptPlan: bundle.preDesignPack?.scriptPlan ?? "",
-      ...bundle.preDesignPack,
-      shots
-    }
-  };
-  return { bundle: next, report: { debutApplied, endHookApplied, patches } };
-}
-var init_packagingMaterialize = __esm({
-  "src/ruleEngine/bundle/packagingMaterialize.ts"() {
-    "use strict";
-  }
-});
-
-// src/ruleEngine/design/intentGraphPrune.ts
-var intentGraphPrune_exports = {};
-__export(intentGraphPrune_exports, {
-  pruneIntentGraphEdges: () => pruneIntentGraphEdges,
-  pruneIntentGraphOnBundle: () => pruneIntentGraphOnBundle
-});
-function pruneIntentGraphEdges(input) {
-  const keys2 = new Set(
-    input.shots.map((s) => String(s.clientId ?? s.shotIndex ?? "")).filter(Boolean)
-  );
-  const src = input.edges ?? [];
-  const kept = [];
-  let pruned = 0;
-  for (const e of src) {
-    if (!keys2.has(e.fromShotKey) || !keys2.has(e.toShotKey)) {
-      pruned += 1;
-      continue;
-    }
-    kept.push(e);
-  }
-  let rebuilt = 0;
-  const have = new Set(kept.map((e) => `${e.kind}:${e.fromShotKey}->${e.toShotKey}`));
-  for (const s of input.shots) {
-    const parent = String(
-      s._stillBeatSplitId ?? s._visualSplitId ?? s._litXorSplitId ?? s._cuCastSplitId ?? ""
-    );
-    const child = String(s.clientId ?? "");
-    if (!parent || !child || parent === child) continue;
-    if (!keys2.has(parent) && !keys2.has(child)) continue;
-    const fromKey = keys2.has(parent) ? parent : String(s._propContFrom ?? parent);
-    if (!keys2.has(fromKey) || !keys2.has(child)) continue;
-    const isOral = s._contactEventMustProp === false || /__lit_oral$/i.test(child) || String(s.visualSplitRole ?? s.beatRole ?? "") === "reaction";
-    if (isOral) continue;
-    const id = `prop_cont:${fromKey}->${child}`;
-    if (have.has(id)) continue;
-    kept.push({ kind: "prop_cont", fromShotKey: fromKey, toShotKey: child });
-    have.add(id);
-    rebuilt += 1;
-  }
-  const filtered = [];
-  for (const e of kept) {
-    if (e.kind !== "prop_cont") {
-      filtered.push(e);
-      continue;
-    }
-    const toShot = input.shots.find((s) => String(s.clientId ?? "") === e.toShotKey);
-    const oralTo = toShot && (toShot._contactEventMustProp === false || /__lit_oral$/i.test(e.toShotKey) || String(toShot.visualSplitRole ?? toShot.beatRole ?? "") === "reaction");
-    if (oralTo) {
-      pruned += 1;
-      continue;
-    }
-    filtered.push(e);
-  }
-  return { edges: filtered, pruned, rebuilt };
-}
-function pruneIntentGraphOnBundle(bundle) {
-  const shots = bundle.preDesignPack?.shots ?? [];
-  if (!shots.length) return { pruned: 0, rebuilt: 0 };
-  const pd = bundle.planData ?? {};
-  const graph = pd.intentGraph ?? bundle.meta?.intentGraph ?? {};
-  const result = pruneIntentGraphEdges({ shots, edges: graph.edges });
-  const nextGraph = { ...graph, edges: result.edges };
-  if (bundle.planData) {
-    bundle.planData.intentGraph = nextGraph;
-  }
-  if (bundle.meta) {
-    bundle.meta.intentGraph = nextGraph;
-  }
-  return { pruned: result.pruned, rebuilt: result.rebuilt };
-}
-var init_intentGraphPrune = __esm({
-  "src/ruleEngine/design/intentGraphPrune.ts"() {
-    "use strict";
-  }
-});
-
-// src/ruleEngine/design/importDesignSlotHeal.ts
-var importDesignSlotHeal_exports = {};
-__export(importDesignSlotHeal_exports, {
-  importDesignSlotHeal: () => importDesignSlotHeal
-});
-function stampDesignIntentSilentPrefetch(s) {
-  try {
-    const { deriveDesignIntentProfile: deriveDesignIntentProfile2, profileNeedsPropPlate: profileNeedsPropPlate2 } = (init_designIntentProfile(), __toCommonJS(designIntentProfile_exports));
-    const sd = s.shotDesign;
-    const micro = sd?.performance?.microExpression;
-    const microStr = micro ? [micro.eyes, micro.mouthDetail].filter(Boolean).join("/") : void 0;
-    const profile = deriveDesignIntentProfile2({
-      visualDescription: String(s.visualDescription ?? ""),
-      imagePrompt: String(s.generation?.imagePrompt ?? ""),
-      shotSize: String(s.shotSize ?? sd?.cameraAnchor?.shotSize ?? ""),
-      background: sd?.composition?.background,
-      foreground: sd?.composition?.foreground,
-      microExpression: microStr
-    });
-    s.designIntentProfile = {
-      classes: profile.classes,
-      plateMode: profile.plateMode,
-      glyphPolicy: profile.glyphPolicy,
-      glyphText: profile.glyphText,
-      propClassId: profile.propClassId,
-      primaryObjective: profile.primaryObjective,
-      secondaryBudget: profile.secondaryBudget,
-      fragment: profile.fragment,
-      poseOccupancy: profile.poseOccupancy,
-      gripLocus: profile.gripLocus,
-      seatingXorPickup: profile.seatingXorPickup,
-      dofBudget: profile.dofBudget,
-      formScale: profile.formScale
-    };
-    if (profileNeedsPropPlate2(profile)) {
-      s._needsPropPrefetch = true;
-      s._propPlateSoftDefer = true;
-      return true;
-    }
-    try {
-      const { profileNeedsFragmentPlate: profileNeedsFragmentPlate2 } = (init_designIntentProfile(), __toCommonJS(designIntentProfile_exports));
-      if (profileNeedsFragmentPlate2(profile)) {
-        s._needsFragmentPrefetch = true;
-        s._propPlateSoftDefer = true;
-        return true;
-      }
-    } catch {
-    }
-  } catch {
-  }
-  return false;
-}
-function rewriteShotEgress(s) {
-  const vd = String(s.visualDescription ?? "").trim();
-  if (!vd) return false;
-  const gen = s.generation ?? {};
-  const img = String(gen.imagePrompt ?? "").trim();
-  const drift = isSplitChildShot(s) || !img || vd && img && !img.toLowerCase().includes(vd.slice(0, Math.min(4, vd.length)).toLowerCase());
-  if (!drift && !isSplitChildShot(s)) return false;
-  if (isSplitChildShot(s)) clearInheritedGeneration(s);
-  const sd = s.shotDesign;
-  const micro = sd?.performance?.microExpression;
-  const microStr = micro ? [micro.eyes, micro.mouthDetail].filter(Boolean).join("/") : void 0;
-  try {
-    const composed = composeStillPrompt(
-      {
-        visualDescription: vd,
-        shotSize: String(s.shotSize ?? sd?.cameraAnchor?.shotSize ?? ""),
-        foreground: sd?.composition?.foreground,
-        background: sd?.composition?.background,
-        microExpression: microStr,
-        qualityMode: "draft",
-        episodeShot: s
-      },
-      { mode: "full" }
-    );
-    let prompt = String(composed.prompt ?? "").trim() || vd;
-    if (sd?.cameraAnchor?.bgBlur && !/blur|bokeh|景深/i.test(prompt)) {
-      prompt = `${prompt}\uFF0C\u6D45\u666F\u6DF1 bokeh blur`;
-    }
-    const nextGen = { ...s.generation ?? {}, imagePrompt: prompt };
-    s.generation = nextGen;
-    s.promptState = "composed";
-    const fid = healPromptFidelityAnchors({
-      visualDescription: vd,
-      visualBody: prompt,
-      videoPrompt: String(nextGen.videoPrompt ?? "")
-    });
-    if (fid.injected.length) {
-      s.visualDescription = fid.visualDescription;
-      nextGen.imagePrompt = fid.visualBody;
-      s.generation = nextGen;
-    }
-    return true;
-  } catch {
-    const nextGen = { ...s.generation ?? {}, imagePrompt: vd };
-    s.generation = nextGen;
-    s.promptState = "stale";
-    return true;
-  }
-}
-function importDesignSlotHeal(bundle) {
-  const shots = bundle.preDesignPack?.shots ?? [];
-  if (!shots.length) {
-    return {
-      bundle,
-      summary: {
-        healed: 0,
-        fidelityHealed: 0,
-        continuityInherited: 0,
-        recomposed: 0,
-        egressRewritten: 0,
-        genCleared: 0,
-        propPrefetchMarked: 0
-      }
-    };
-  }
-  const cont = inheritContinuityAlongEdges({ shots });
-  const rc = recomposeChildrenAfterSplit(cont.shots);
-  let healed = 0;
-  let fidelityHealed = 0;
-  let genCleared = 0;
-  let propPrefetchMarked = 0;
-  for (const s of rc.shots) {
-    if (isSplitChildShot(s)) genCleared += 1;
-    if (stampDesignIntentSilentPrefetch(s)) propPrefetchMarked += 1;
-    const before = String(s.generation?.imagePrompt ?? "");
-    if (rewriteShotEgress(s)) {
-      healed += 1;
-      const after = String(s.generation?.imagePrompt ?? "");
-      if (after !== before && after.includes(String(s.visualDescription ?? "").slice(0, 2))) {
-      }
-      const fid = healPromptFidelityAnchors({
-        visualDescription: String(s.visualDescription ?? ""),
-        visualBody: after
-      });
-      if (fid.injected.length) {
-        s.visualDescription = fid.visualDescription;
-        const g = { ...s.generation ?? {}, imagePrompt: fid.visualBody };
-        s.generation = g;
-        fidelityHealed += 1;
-      }
-    }
-  }
-  if (bundle.preDesignPack) {
-    bundle.preDesignPack.shots = rc.shots;
-  }
-  try {
-    const { pruneIntentGraphOnBundle: pruneIntentGraphOnBundle2 } = (init_intentGraphPrune(), __toCommonJS(intentGraphPrune_exports));
-    pruneIntentGraphOnBundle2(bundle);
-  } catch {
-  }
-  const summary = {
-    healed,
-    fidelityHealed,
-    continuityInherited: cont.inherited,
-    recomposed: rc.recomposed,
-    egressRewritten: rc.egressRewritten,
-    genCleared,
-    propPrefetchMarked
-  };
-  writeWarehouseDebtToBundle(bundle, {
-    designSlotHealSummary: summary
-  });
-  const meta4 = bundle.meta ??= {};
-  meta4.packageVersion = Number(meta4.packageVersion ?? 0) + 1;
-  meta4.silentPropPrefetch = propPrefetchMarked > 0;
-  meta4.warehouseDebtDecision = "soft_defer";
-  for (const s of rc.shots) {
-    s.packageVersion = Number(s.packageVersion ?? 0) + 1;
-  }
-  return { bundle, summary };
-}
-var init_importDesignSlotHeal = __esm({
-  "src/ruleEngine/design/importDesignSlotHeal.ts"() {
-    "use strict";
-    init_recomposeAfterSplit();
-    init_composeStillPrompt();
-    init_healPromptFidelityAnchors();
-    init_splitContinuityInherit();
-    init_warehouseDebtMeta();
-  }
-});
-
-// src/ruleEngine/bundle/prepareBundleForInspect.ts
-function prepareBundleForInspect(raw, opts = {}) {
-  const prepared = prepareBundleWithLog(raw);
-  const parsed = parseScriptBundleOrThrowShape(prepared.bundle, scriptBundleSchema);
-  let bundle = parsed;
-  const proposals = bundle.smartDesignProposals;
-  if (proposals?.length) {
-    bundle = applySmartProposalsToBundle(bundle, proposals);
-  }
-  const mat = materializePackaging(bundle);
-  bundle = mat.bundle;
-  normalizeVisualLockTableOnBundle(bundle);
-  let speakerOrphans = [];
-  let semanticHealLog = [];
-  let rawShotCount = 0;
-  let authorShotsPresent = false;
-  let expandApplied = false;
-  let diagnoseOnly = false;
-  if (bundle.preDesignPack && hasPreDesignShots(bundle.preDesignPack)) {
-    authorShotsPresent = true;
-    rawShotCount = Array.isArray(bundle.preDesignPack.shots) ? bundle.preDesignPack.shots.length : 0;
-    const normalized = normalizePreDesignPack(bundle, {
-      ingestHeal: opts.ingestHeal !== false,
-      chatStrict: Boolean(bundle.chatStrict)
-    });
-    let shots = normalized.shots;
-    if (opts.ingestHeal !== false) {
-      shots = shots.map((s) => migrateShotVisualBeatTags(s, { confirmSuggested: false }));
-      const meta4 = bundle.planData?.meta ?? bundle.meta ?? {};
-      const chatStrict = Boolean(bundle.chatStrict);
-      const EXPAND_NET_CAP = 8;
-      let allowApplyExpand = Boolean(opts.forceExpand) && !chatStrict;
-      let pressureConfirmOnly = false;
-      if (!allowApplyExpand && !chatStrict && opts.ingestHeal !== false) {
-        try {
-          const { diagnoseStillIntent: diagnoseStillIntent2 } = (init_stillIntentReverse(), __toCommonJS(stillIntentReverse_exports));
-          const { detectLipSplitPressure: detectLipSplitPressure2 } = (init_lipSplit(), __toCommonJS(lipSplit_exports));
-          const diagnose = diagnoseStillIntent2(shots, {
-            chatStrict: true,
-            bundle,
-            planData: bundle.planData ?? {},
-            meta: meta4
-          });
-          const lipP = shots.some((s) => detectLipSplitPressure2(s).mustConfirm);
-          const splitPatches = diagnose.patches.filter(
-            (p3) => p3.op === "split_onebeat" || p3.op === "split_speak_react" || p3.op === "split_cu_cast" || p3.op === "split_lit_xor" || /split/i.test(String(p3.op ?? ""))
-          );
-          const highConf = diagnose.confirmRequired === false && (splitPatches.length > 0 || lipP) && splitPatches.every((p3) => Number(p3.confidence ?? 0.85) >= 0.75);
-          const estimatedNet = Math.max(splitPatches.length, lipP ? 1 : 0);
-          if (highConf && estimatedNet <= EXPAND_NET_CAP) {
-            allowApplyExpand = true;
-          } else if (diagnose.confirmRequired || lipP || splitPatches.length) {
-            pressureConfirmOnly = true;
-            allowApplyExpand = false;
-          }
-        } catch {
-          allowApplyExpand = false;
-        }
-      }
-      diagnoseOnly = !allowApplyExpand;
-      if (!chatStrict || diagnoseOnly) {
-        if (allowApplyExpand && opts.forceExpand) {
-          const { shouldMigrateMultiBeat: shouldMigrateMultiBeat2, migrateMultiBeatStockShots: migrateMultiBeatStockShots2 } = (init_migrateMultiBeatStock(), __toCommonJS(migrateMultiBeatStock_exports));
-          if (shouldMigrateMultiBeat2(meta4)) {
-            const mig = migrateMultiBeatStockShots2(shots, { meta: meta4 });
-            shots = mig.shots;
-            if (mig.migrated > 0) {
-              expandApplied = true;
-              semanticHealLog.push({
-                ruleId: "DEX-STILL-ONEBEAT",
-                path: "preDesignPack.shots",
-                action: `migrate:${mig.migrated};refuse=${mig.refused}`
-              });
-            }
-          }
-        }
-        try {
-          const { runStillIntentHeal: runStillIntentHeal2, diagnoseStillIntent: diagnoseStillIntent2 } = (init_stillIntentReverse(), __toCommonJS(stillIntentReverse_exports));
-          applyNormalizedShotsToBundle(bundle, shots);
-          if (allowApplyExpand && opts.forceExpand) {
-            const ird = runStillIntentHeal2(bundle, {
-              chatStrict: false,
-              meta: meta4,
-              planData: bundle.planData ?? {}
-            });
-            shots = ird.shots;
-            if (ird.applied.length) {
-              expandApplied = true;
-              semanticHealLog.push({
-                ruleId: "IRD-APPLY",
-                path: "preDesignPack.shots",
-                action: `applied:${ird.applied.length};refused:${ird.refused.length}`
-              });
-              bundle._importSplitExpanded = true;
-              const bMeta = bundle.meta ??= {};
-              bMeta.irdProvenance = bundle.meta?.irdProvenance ?? bMeta.irdProvenance;
-              bMeta.importOkNotExitPass = true;
-            }
-            if (ird.diagnose.confirmRequired || ird.refused.length) {
-              semanticHealLog.push({
-                ruleId: "IRD-CONFIRM",
-                path: "preDesignPack.shots",
-                action: `confirmRequired;primary=${ird.diagnose.primaryAction}`
-              });
-              bundle.irdConfirmRequired = true;
-            }
-          } else {
-            const diagnose = diagnoseStillIntent2(shots, {
-              chatStrict: true,
-              bundle,
-              planData: bundle.planData ?? {},
-              meta: meta4
-            });
-            const must = diagnose.confirmRequired || pressureConfirmOnly || diagnose.patches.some((p3) => p3.op === "split_onebeat" || p3.op === "split_speak_react");
-            if (must) {
-              semanticHealLog.push({
-                ruleId: "IRD-DIAGNOSE-ONLY",
-                path: "preDesignPack.shots",
-                action: `mustSplit;primary=${diagnose.primaryAction};patches=${diagnose.patches.length};pressureConfirm=${pressureConfirmOnly}`
-              });
-              bundle.irdConfirmRequired = true;
-              const bMeta = bundle.meta ??= {};
-              bMeta.irdConfirmRequired = true;
-              bMeta.importOkNotExitPass = true;
-              bMeta.importDiagnoseOnly = true;
-            } else {
-              semanticHealLog.push({
-                ruleId: "IRD-DIAGNOSE-ONLY",
-                path: "preDesignPack.shots",
-                action: "ok_no_must_split"
-              });
-            }
-          }
-        } catch (e) {
-          semanticHealLog.push({
-            ruleId: allowApplyExpand ? "IRD-FALLBACK" : "IRD-DIAGNOSE-ONLY",
-            path: "preDesignPack.shots",
-            action: e instanceof Error ? e.message.slice(0, 80) : "ird_fail"
-          });
-        }
-        try {
-          const { runCamFitUntilClear: runCamFitUntilClear2 } = (init_camFitHygiene(), __toCommonJS(camFitHygiene_exports));
-          applyNormalizedShotsToBundle(bundle, shots);
-          const cam = runCamFitUntilClear2(bundle, {
-            chatStrict: !opts.forceExpand,
-            maxRounds: opts.forceExpand ? 5 : 0
-          });
-          shots = bundle.preDesignPack?.shots ?? shots;
-          if (cam.applied) {
-            expandApplied = true;
-            semanticHealLog.push({
-              ruleId: "SH-CAM-FIT-UNTIL-CLEAR",
-              path: "preDesignPack.shots",
-              action: `applied:${cam.applied};rounds:${cam.rounds};remain=${cam.remainingMustSplit}`
-            });
-            bundle._importSplitExpanded = true;
-          }
-          if (cam.confirmRequired) {
-            semanticHealLog.push({
-              ruleId: opts.forceExpand ? "IRD-CONFIRM" : "IRD-DIAGNOSE-ONLY",
-              path: "preDesignPack.shots",
-              action: `cam_fit_remain:${cam.remainingMustSplit}`
-            });
-            bundle.irdConfirmRequired = true;
-            const bMeta = bundle.meta ??= {};
-            bMeta.irdConfirmRequired = true;
-            if (!opts.forceExpand) bMeta.importDiagnoseOnly = true;
-          }
-        } catch (e) {
-          semanticHealLog.push({
-            ruleId: "CAM-FIT-FALLBACK",
-            path: "preDesignPack.shots",
-            action: e instanceof Error ? e.message.slice(0, 80) : "cam_fit_fail"
-          });
-        }
-        if (allowApplyExpand) {
-          const beforeN = shots.length;
-          const expanded = runShotExpanders(shots, {
-            meta: { ...meta4, pillarsVisBeatV2: meta4.pillarsVisBeatV2 || "enforce" },
-            applyClusters: Boolean(opts.forceExpand),
-            applyStillOneBeat: Boolean(opts.forceExpand),
-            applyCuCast: true,
-            applyLitXor: true,
-            forceExpand: Boolean(opts.forceExpand),
-            maxVisualExpand: 40
-          });
-          shots = expanded.shots;
-          const net = shots.length - beforeN;
-          if (net > EXPAND_NET_CAP && !opts.forceExpand) {
-            shots = normalized.shots.slice();
-            expandApplied = false;
-            bundle.irdConfirmRequired = true;
-            const bMeta = bundle.meta ??= {};
-            bMeta.irdConfirmRequired = true;
-            bMeta.importOkNotExitPass = true;
-            semanticHealLog.push({
-              ruleId: "EXPAND-CAP-CONFIRM",
-              path: "preDesignPack.shots",
-              action: `net=${net}>cap=${EXPAND_NET_CAP};rolled_back`
-            });
-          } else if (expanded.log.some((l) => l.expanded) && net > 0) {
-            expandApplied = true;
-            semanticHealLog.push({
-              ruleId: "VIS-MULTI-BEAT",
-              path: "preDesignPack.shots",
-              action: `expand:${expanded.log.map((l) => `${l.expanderId}:${l.count}`).join(",")};net=${net}`
-            });
-            cascadeForwardStale({ shots, forwardStages: ["SB", "MD-IMG", "EN"] });
-            bundle._importSplitExpanded = true;
-            const bAny = bundle;
-            if (!bAny.meta) bAny.meta = {};
-            bAny.meta.importSplitExpanded = true;
-            bAny.meta.packageVersion = Number(bAny.meta.packageVersion ?? 0) + 1;
-            for (const s of shots) {
-              s.packageVersion = Number(s.packageVersion ?? 0) + 1;
-            }
-            if (!bAny.meta.irdProvenance) {
-              semanticHealLog.push({
-                ruleId: "IRD-PROVENANCE-MISSING",
-                path: "meta",
-                action: "silent_expand_without_ird"
-              });
-            }
-          } else if (expanded.log.some((l) => l.expanded) && net === 0) {
-            semanticHealLog.push({
-              ruleId: "VIS-MULTI-BEAT",
-              path: "preDesignPack.shots",
-              action: `expand_noop:${expanded.log.map((l) => `${l.expanderId}:${l.count}`).join(",")};net=0`
-            });
-          }
-        } else {
-          semanticHealLog.push({
-            ruleId: "IMPORT-NO-REEXPAND",
-            path: "preDesignPack.shots",
-            action: `author_shots=${rawShotCount};skip_expanders`
-          });
-        }
-      }
-    }
-    const pack2 = bundle.preDesignPack;
-    if (pack2?.mediaSlots?.length) {
-      pack2.mediaSlots = rebindMediaSlotsByClientId(pack2.mediaSlots, shots) ?? pack2.mediaSlots;
-    }
-    applyNormalizedShotsToBundle(bundle, shots);
-    try {
-      const { sliceChildrenAfterSplit: sliceChildrenAfterSplit2 } = (init_orchestratorTailSlice(), __toCommonJS(orchestratorTailSlice_exports));
-      const sl = sliceChildrenAfterSplit2(shots);
-      if (sl.chainBeatBlocks === 0 && sl.shots !== shots) {
-        shots = sl.shots;
-        applyNormalizedShotsToBundle(bundle, shots);
-      } else if (sl.shots.some((s, i) => s.visualDescription !== shots[i]?.visualDescription)) {
-        shots = sl.shots;
-        applyNormalizedShotsToBundle(bundle, shots);
-        semanticHealLog.push({
-          ruleId: "CHAIN-BEAT-GRAFT",
-          path: "preDesignPack.shots",
-          action: `grafted;remain=${sl.chainBeatBlocks}`
-        });
-      }
-    } catch {
-    }
-    try {
-      const { reindexDerivedTables: reindexDerivedTables2 } = (init_reindexDerivedTables(), __toCommonJS(reindexDerivedTables_exports));
-      const { syncOsPeelToDialoguePlan: syncOsPeelToDialoguePlan2, stubCausedByActionIds: stubCausedByActionIds2 } = (init_osPeelToDialoguePlan(), __toCommonJS(osPeelToDialoguePlan_exports));
-      const ri = reindexDerivedTables2(bundle);
-      if (ri.fxStubbed || ri.fxReindexed || ri.mirrored) {
-        semanticHealLog.push({
-          ruleId: "REINDEX-DERIVED",
-          path: "fxFeasibilityAudit|dialoguePlan|preview",
-          action: `fx=${ri.fxReindexed}+${ri.fxStubbed};mirror=${ri.mirrored};preview=${ri.previewRebound}`
-        });
-      }
-      const os = syncOsPeelToDialoguePlan2(bundle);
-      if (os.added || os.lipStripped) {
-        semanticHealLog.push({
-          ruleId: "OS-PEEL-PLAN",
-          path: "dialoguePlan.lines",
-          action: `added=${os.added};lipStrip=${os.lipStripped}`
-        });
-      }
-      const stubbed = stubCausedByActionIds2(bundle);
-      if (stubbed) {
-        semanticHealLog.push({
-          ruleId: "CAUSAL-STUB",
-          path: "dialoguePlan.lines[].causedByActionId",
-          action: `stubbed=${stubbed}`
-        });
-      }
-    } catch (e) {
-      semanticHealLog.push({
-        ruleId: "REINDEX-DERIVED",
-        path: "post_expand",
-        action: e instanceof Error ? e.message.slice(0, 80) : "fail"
-      });
-    }
-    try {
-      const { healLiteraryBeatCoverage: healLiteraryBeatCoverage2 } = (init_literaryBeatCoverage(), __toCommonJS(literaryBeatCoverage_exports));
-      const { sliceChildrenAfterSplit: sliceChildrenAfterSplit2 } = (init_orchestratorTailSlice(), __toCommonJS(orchestratorTailSlice_exports));
-      const hb = healLiteraryBeatCoverage2(shots);
-      shots = hb.shots;
-      const sl = sliceChildrenAfterSplit2(shots);
-      shots = sl.shots;
-      if (hb.grafted || sl.chainBeatBlocks === 0) {
-        semanticHealLog.push({
-          ruleId: "CHAIN-BEAT-HEAL",
-          path: "preDesignPack.shots",
-          action: `grafted=${hb.grafted};remain=${hb.remaining || sl.chainBeatBlocks}`
-        });
-      }
-      applyNormalizedShotsToBundle(bundle, shots);
-    } catch {
-    }
-    try {
-      const { softHealVideoHomologyOnShots: softHealVideoHomologyOnShots2 } = (init_videoHomologyHeal(), __toCommonJS(videoHomologyHeal_exports));
-      const vh = softHealVideoHomologyOnShots2({ shots });
-      if (vh.changed) {
-        shots = vh.shots;
-        applyNormalizedShotsToBundle(bundle, shots);
-        semanticHealLog.push({
-          ruleId: "SH-VIDEO-HOMOLOGY",
-          path: "preDesignPack.shots",
-          action: `heals=${vh.heals.join(",")};cleared=${vh.cleared}`
-        });
-      }
-    } catch {
-    }
-    for (const s of shots) {
-      const lines = s.narrative?.dialogue?.lines ?? [];
-      const hasDial = Array.isArray(lines) && lines.some((l) => String(l?.text ?? "").trim());
-      const dur = Number(s.duration);
-      if (hasDial && Number.isFinite(dur) && dur > 0 && dur < 2) {
-        s.duration = 2;
-        semanticHealLog.push({
-          ruleId: "DURATION-RAISE",
-          path: `preDesignPack.shots[${s.shotIndex ?? "?"}].duration`,
-          action: `${dur}\u21922`
-        });
-      }
-    }
-    applyNormalizedShotsToBundle(bundle, shots);
-    try {
-      const { importDesignSlotHeal: importDesignSlotHeal2 } = (init_importDesignSlotHeal(), __toCommonJS(importDesignSlotHeal_exports));
-      const healed = importDesignSlotHeal2(bundle);
-      shots = bundle.preDesignPack?.shots ?? shots;
-      if (healed.summary.healed || healed.summary.egressRewritten) {
-        semanticHealLog.push({
-          ruleId: "DESIGN-SLOT-HEAL",
-          path: "preDesignPack.shots",
-          action: `healed=${healed.summary.healed};egress=${healed.summary.egressRewritten};fid=${healed.summary.fidelityHealed};cont=${healed.summary.continuityInherited}`
-        });
-      }
-    } catch (e) {
-      semanticHealLog.push({
-        ruleId: "DESIGN-SLOT-HEAL",
-        path: "preDesignPack.shots",
-        action: e instanceof Error ? e.message.slice(0, 80) : "fail"
-      });
-    }
-    try {
-      const { pruneIntentGraphOnBundle: pruneIntentGraphOnBundle2 } = (init_intentGraphPrune(), __toCommonJS(intentGraphPrune_exports));
-      const pg = pruneIntentGraphOnBundle2(bundle);
-      if (pg.pruned || pg.rebuilt) {
-        semanticHealLog.push({
-          ruleId: "INTENT-GRAPH-PRUNE",
-          path: "planData.intentGraph",
-          action: `pruned=${pg.pruned};rebuilt=${pg.rebuilt}`
-        });
-      }
-    } catch {
-    }
-    try {
-      const { auditGenerationApplyGaps: auditGenerationApplyGaps2 } = (init_generationApplyAudit(), __toCommonJS(generationApplyAudit_exports));
-      const openGen = auditGenerationApplyGaps2(bundle).filter((g) => /^GEN-0[356]$/.test(g.id));
-      if (openGen.length) {
-        const bMeta = bundle.meta ??= {};
-        bMeta.importOkNotExitPass = true;
-        bMeta.designExitIncomplete = true;
-        bundle.irdConfirmRequired = bundle.irdConfirmRequired || openGen.length > 2;
-        semanticHealLog.push({
-          ruleId: "POST-HEAL-DESIGN-EXIT",
-          path: "generation.imagePrompt",
-          action: `gen_open:${openGen.map((g) => g.id).join(",")};importOk\u2260exit`
-        });
-      }
-    } catch {
-    }
-    applyNormalizedShotsToBundle(bundle, shots);
-    speakerOrphans = normalized.speakerOrphans ?? [];
-    semanticHealLog = [...normalized.semanticHealLog ?? [], ...semanticHealLog];
-    bundle._speakerOrphans = speakerOrphans;
-  }
-  const postPrepareCount = bundle.preDesignPack && Array.isArray(bundle.preDesignPack.shots) ? bundle.preDesignPack.shots.length : rawShotCount;
-  const shotCounts = {
-    rawShotCount: rawShotCount || postPrepareCount,
-    postPrepareCount,
-    authorShotsPresent,
-    expandApplied,
-    diagnoseOnly: authorShotsPresent && diagnoseOnly
-  };
-  const bMetaCounts = bundle.meta ??= {};
-  bMetaCounts.prepareShotCounts = shotCounts;
-  if (shotCounts.diagnoseOnly) {
-    bMetaCounts.importDiagnoseOnly = true;
-    bMetaCounts.expandProvenance = {
-      mode: "diagnose_only",
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      forceExpand: false,
-      via: "prepareBundleForInspect"
-    };
-  } else if (expandApplied) {
-    bMetaCounts.expandProvenance = {
-      mode: "force_expand",
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      forceExpand: true,
-      via: "prepareBundleForInspect"
-    };
-  }
-  if (shotCounts.authorShotsPresent && shotCounts.postPrepareCount > shotCounts.rawShotCount && shotCounts.rawShotCount > 0 && shotCounts.postPrepareCount / shotCounts.rawShotCount >= 2) {
-    semanticHealLog.push({
-      ruleId: "IMPORT-EXPAND-RATIO",
-      path: "preDesignPack.shots",
-      action: `${shotCounts.rawShotCount}\u2192${shotCounts.postPrepareCount}`
-    });
-    bundle.irdConfirmRequired = true;
-    bMetaCounts.importOkNotExitPass = true;
-  }
-  if (opts.ingestHeal !== false) {
-    const bMeta = bundle.meta ??= {};
-    if (bMeta.importOkNotExitPass || bundle._importSplitExpanded) {
-      bMeta.importOkNotExitPass = true;
-    }
-    const self2 = bundle.narrativeSelfcheck ?? bundle.planData?.narrativeSelfcheck;
-    if (self2?.passed === true && (Boolean(bundle.irdConfirmRequired) || Boolean(bMeta.importOkNotExitPass))) {
-      const failIds = [
-        .../* @__PURE__ */ new Set([
-          ...self2.failedIds ?? [],
-          ...bundle.irdConfirmRequired ? ["IRD-CONFIRM"] : [],
-          ...bMeta.importOkNotExitPass ? ["IMPORT_OK_NOT_EXIT"] : []
-        ])
-      ];
-      bundle.narrativeSelfcheck = {
-        ...self2,
-        passed: false,
-        failedIds: failIds,
-        serverOverwritten: true,
-        checkedAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      semanticHealLog.push({
-        ruleId: "FALSE-GREEN-SELFCHECK",
-        path: "narrativeSelfcheck",
-        action: `overwrite_pass:${failIds.join(",")}`
-      });
-    }
-    const mod = bundle.modalityPromptAudit ?? bundle.planData?.modalityPromptAudit;
-    if (mod && bMeta.importOkNotExitPass) {
-      if (mod.IMG === "pass" || mod.VID === "pass") {
-        bundle.modalityPromptAudit = {
-          ...mod,
-          IMG: mod.IMG === "pass" ? "import_ok_not_exit" : mod.IMG,
-          VID: mod.VID === "pass" ? "import_ok_not_exit" : mod.VID,
-          _serverNote: "import\u2260designExitPass"
-        };
-        semanticHealLog.push({
-          ruleId: "FALSE-GREEN-MODALITY",
-          path: "modalityPromptAudit",
-          action: "downgrade_pass_to_import_ok_not_exit"
-        });
-      }
-    }
-  }
-  const mergedLog = [...prepared.shapeSalvageLog ?? [], ...semanticHealLog];
-  const tier = inferTierFromBundle(bundle);
-  return {
-    bundle,
-    tier,
-    shapeSalvageLog: mergedLog,
-    shapeSalvageSummary: formatShapeSalvageSummary(mergedLog),
-    speakerOrphans,
-    shotCounts
-  };
-}
-var init_prepareBundleForInspect = __esm({
-  "src/ruleEngine/bundle/prepareBundleForInspect.ts"() {
-    "use strict";
-    init_shapeSalvageTypes();
-    init_schema();
-    init_schemaShapeErrors();
-    init_smartProposalApplier();
-    init_packagingMaterialize();
-    init_normalizePreDesignPack();
-    init_preDesignPackAdapter();
-    init_closureSummary();
-    init_assetLabel();
-    init_expanderRegistry();
-    init_visualBeatPolicy();
-    init_forwardStaleCascade();
-  }
-});
-
-// src/ruleEngine/bundle/sceneCardinality.ts
-function uniqueSceneNameOrder(bundle) {
-  const order = [];
-  for (const s of bundle.preDesignPack?.shots ?? []) {
-    const n = String(s.sceneName ?? "").trim();
-    if (n && !order.includes(n)) order.push(n);
-  }
-  return order;
-}
-function implementationPlanItems(bundle) {
-  const fromRoot = bundle.implementationPlan;
-  const fromBrief = bundle.planData?.narrativeBrief?.implementationPlan;
-  const fromPlan = bundle.planData?.implementationPlan;
-  return fromRoot ?? fromBrief ?? fromPlan ?? [];
-}
-function sceneMetaItems(bundle) {
-  const fromPlan = bundle.planData?.sceneMeta;
-  return fromPlan ?? [];
-}
-function shotsForSceneRef(bundle, ref) {
-  const shots = bundle.preDesignPack?.shots ?? [];
-  const explicit = shots.filter((s) => Number(s.sceneRef) === ref);
-  if (explicit.length) return explicit;
-  const order = uniqueSceneNameOrder(bundle);
-  const name28 = order[ref - 1];
-  if (!name28) return [];
-  return shots.filter((s) => String(s.sceneName ?? "").trim() === name28);
-}
-function isFxIntentF1Plus(level) {
-  const g = String(level ?? "").toUpperCase().replace(/^FX:/, "").trim();
-  return /^F[1-5]$/.test(g);
-}
-function orphanF1SceneRefs(bundle) {
-  const out = [];
-  for (const item of implementationPlanItems(bundle)) {
-    const ref = Number(item.sceneRef);
-    if (!Number.isFinite(ref) || ref < 1) continue;
-    if (!isFxIntentF1Plus(item.fxIntent?.level)) continue;
-    if (shotsForSceneRef(bundle, ref).length > 0) continue;
-    out.push({
-      sceneRef: ref,
-      fxLevel: String(item.fxIntent?.level ?? "F1"),
-      path: `planData.narrativeBrief.implementationPlan[sceneRef=${ref}].fxIntent.level`
-    });
-  }
-  return out;
-}
-function sceneCardinalityIssues(bundle) {
-  const scenes = uniqueSceneNameOrder(bundle);
-  const impl = implementationPlanItems(bundle);
-  const meta4 = sceneMetaItems(bundle);
-  const issues = [];
-  if (impl.length > 0 && scenes.length > 0 && impl.length !== scenes.length) {
-    const orphanRefs = impl.map((p3) => Number(p3.sceneRef)).filter((r) => Number.isFinite(r) && r > scenes.length);
-    const extraNames = scenes.length > impl.length ? scenes.slice(impl.length) : [];
-    if (impl.length > scenes.length) {
-      issues.push({
-        kind: "plan_gt_scenes",
-        message: `\u3010\u573A\u955C\u57FA\u6570\u3011implementationPlan ${impl.length} \u6761 vs \u552F\u4E00 sceneName ${scenes.length} \u4E2A\uFF08${scenes.join("\u3001")}\uFF09\u3002\u591A\u4F59 sceneRef=${orphanRefs.join(",") || "?"} \u65E0\u6620\u5C04\u955C \u2014 \u63A5\u573A\u987B\u72EC\u7ACB sceneName\uFF0C\u6216\u5220\u9664/\u5408\u5E76\u591A\u4F59 plan\uFF0C\u6216\u5C06\u5B64\u513F fxIntent \u6539\u4E3A F0`,
-        field: "planData.narrativeBrief.implementationPlan"
-      });
-    } else {
-      issues.push({
-        kind: "scenes_gt_plan",
-        message: `\u3010\u5E7D\u7075\u573A\u3011\u552F\u4E00 sceneName ${scenes.length} \u4E2A\u591A\u4E8E implementationPlan ${impl.length} \u6761\uFF1B\u672A\u8986\u76D6\uFF1A${extraNames.join("\u3001")} \u2014 \u8BF7\u8865 plan \u9879\u6216\u6539 sceneName \u5F52\u5165\u5DF2\u6709\u573A`,
-        field: "preDesignPack.shots[].sceneName"
-      });
-    }
-  }
-  if (meta4.length > 0 && impl.length > 0 && meta4.length !== impl.length) {
-    issues.push({
-      kind: "meta_mismatch",
-      message: `\u3010\u573A\u955C\u57FA\u6570\u3011sceneMeta ${meta4.length} \u6761 vs implementationPlan ${impl.length} \u6761\u4E0D\u4E00\u81F4 \u2014 \u8BF7\u5BF9\u9F50\u6216\u5220\u9664\u591A\u4F59\u9879`,
-      field: "planData.sceneMeta"
-    });
-  }
-  return issues;
-}
-var init_sceneCardinality = __esm({
-  "src/ruleEngine/bundle/sceneCardinality.ts"() {
-    "use strict";
-  }
-});
-
-// src/ruleEngine/bundle/designPhaseGates.ts
-function runDesignPhaseGates(bundle) {
-  const findings = [];
-  const shots = bundle.preDesignPack?.shots ?? [];
-  const flowPanels = Array.isArray(bundle.flowData?.storyboard) ? bundle.flowData.storyboard.length : 0;
-  const empty = assertNonEmptyEpisode({
-    preDesignShotCount: shots.length,
-    packageShotCount: flowPanels
-  });
-  if (!empty.ok) {
-    const nested = bundle.planData?.preDesignPack?.shots?.length;
-    const msg = nested && nested > 0 ? `\u96C6\u65E0\u53EF\u7528\u5206\u955C\uFF08\u9876\u5C42\u7A7A\uFF0C\u4F46 planData.preDesignPack \u6709 ${nested} \u955C \u2014 \u5E94\u8D70 SH-HOIST-PDP\uFF1B\u82E5\u4ECD\u89C1\u6B64\u6761\u8BF7\u91CD\u5BFC\uFF09` : empty.message ?? "\u65E0\u5206\u955C";
-    findings.push({ id: "DG-EMPTY", severity: "BLOCK", message: msg });
-  } else if (shots.length === 0 && flowPanels > 0) {
-    findings.push({
-      id: "DG-FLOW-ONLY",
-      severity: "WARN",
-      message: `\u65E0 preDesignPack.shots\uFF0C\u4F46 flowData.storyboard \u6709 ${flowPanels} \u6761 \u2014 \u65C1\u8DEF\u8BA1\u6570\u5DF2\u901A\u8FC7\u7A7A\u96C6\u95F8\uFF1B\u8BF7\u5C3D\u5FEB\u5199\u56DE\u9876\u5C42 preDesignPack`,
-      field: "flowData.storyboard"
-    });
-  }
-  const nestedPdpShots = bundle.planData?.preDesignPack?.shots?.length ?? 0;
-  if (nestedPdpShots > 0 && shots.length > 0) {
-    findings.push({
-      id: "NESTED_PACK_ONLY",
-      severity: "WARN",
-      message: "planData.preDesignPack \u4ECD\u6709\u526F\u672C\uFF1B\u95F8\u95E8\u8BA4\u9876\u5C42\u3002\u4E0B\u6B21\u5BFC\u51FA\u8BF7\u628A preDesignPack/characterDesign/designBrief \u5199\u5728 Bundle \u6839\uFF0C\u7981\u6B62\u53EA\u585E planData",
-      field: "planData.preDesignPack"
-    });
-  } else if (nestedPdpShots > 0 && shots.length === 0) {
-    findings.push({
-      id: "NESTED_PACK_ONLY",
-      severity: "WARN",
-      message: "\u5206\u955C\u4EC5\u5728 planData.preDesignPack\uFF1B\u5E94\u5DF2\u88AB SH-HOIST-PDP \u63D0\u5347\u3002\u82E5\u4ECD\u7A7A\u9876\u5C42\u8BF7\u91CD\u5BFC/\u68C0\u67E5 prepare \u7BA1\u9053",
-      field: "planData.preDesignPack"
-    });
-  }
-  const impl = bundle.implementationPlan ?? bundle.planData?.implementationPlan;
-  if (impl == null && !bundle.designBrief?.B14) {
-    findings.push({
-      id: "DG-IMPL-PLAN",
-      severity: "WARN",
-      message: "\u7F3A implementationPlan / B14 \u2014 \u8BBE\u8BA1\u671F\u5EFA\u8BAE\u8865\u9F50",
-      field: "implementationPlan"
-    });
-  }
-  for (let i = 0; i < shots.length; i++) {
-    const s = shots[i];
-    const n = s.narrative ?? {};
-    if (!s.duration && !n.duration) {
-      findings.push({ id: "DG-SB-DURATION", severity: "BLOCK", message: `\u955C ${i + 1} \u7F3A duration`, field: `shots[${i}].duration` });
-    }
-    if (!n.type && !s.type) {
-      findings.push({ id: "DG-SB-TYPE", severity: "WARN", message: `\u955C ${i + 1} \u7F3A narrative.type`, field: `shots[${i}].type` });
-    }
-  }
-  const blob = JSON.stringify(bundle.preDesignPack ?? {});
-  const codes = normalizeAssetCodes([blob]);
-  const bad = [...blob.matchAll(/\bROLE-[\w-]+/gi)].map((m) => m[0]);
-  const cjkCode = [...blob.matchAll(/\b(?:CHAR|SCENE|PROP)-[\u4e00-\u9fff]+/g)].map((m) => m[0]);
-  for (const b of [...bad, ...cjkCode]) {
-    findings.push({ id: "DG-CODE-FORBIDDEN", severity: "BLOCK", message: `\u7981\u7801\u5F62\u6001 ${b}`, field: "charCodes" });
-  }
-  if (codes.length === 0 && /--cref|--sref/.test(blob)) {
-    findings.push({ id: "DG-CODE-PARSE", severity: "WARN", message: "\u63D0\u793A\u8BCD\u542B cref/sref \u4F46\u672A\u80FD\u89E3\u6790\u6807\u51C6\u7801" });
-  }
-  const shotFxDeclared = (s) => {
-    const n = s.narrative ?? {};
-    const gen = s.generation ?? {};
-    const prose = String(s.fxPrompt ?? n.fxPrompt ?? gen.fxPrompt ?? "").trim();
-    if (prose && !/^F[0-5]$/i.test(prose)) return true;
-    const levels = [
-      s.visualEffect,
-      s.fxLevel,
-      s.fxFeasibility,
-      gen.fxFeasibility,
-      n.fxFeasibility,
-      n.fxLevel
-    ];
-    for (const lv of levels) {
-      const t = String(lv ?? "").trim();
-      if (/^F0\b/i.test(t) || /^F0\s*[:：]/i.test(t)) return true;
-    }
-    return false;
-  };
-  const allFxEmpty = shots.length > 0 && shots.every((s) => !shotFxDeclared(s));
-  if (allFxEmpty && shots.length >= 3) {
-    findings.push({
-      id: "DG-FALSE-GREEN-FX",
-      severity: "BLOCK",
-      message: "\u5168\u955C FX \u7A7A \u2014 \u7981\u6B62\u5047\u7EFF PASS \u5BFC\u51FA\uFF08\u6BCF\u955C\u987B\u58F0\u660E F0 \u6216\u5199 fxPrompt \u6563\u6587\uFF09",
-      field: "fxPrompt"
-    });
-  }
-  const dualViolations = fxDualTrackViolations(bundle);
-  if (dualViolations.length > 0) {
-    const sample = dualViolations.slice(0, 8).map((v) => `${v.shotIndex}(${v.reason})`).join("\u3001");
-    findings.push({
-      id: "DG-FX-DUAL-TRACK",
-      severity: "BLOCK",
-      message: `FX \u53CC\u8F68\u8FDD\u89C4 ${dualViolations.length} \u955C\uFF1A${sample} \u2014 \u65E0\u7279\u6548\u58F0\u660E F0\uFF0C\u6709\u7279\u6548\u5199\u6563\u6587 fxPrompt`,
-      field: "fxFeasibility"
-    });
-  }
-  for (const issue3 of sceneCardinalityIssues(bundle)) {
-    findings.push({
-      id: "DG-SCENE-CARDINALITY",
-      severity: "BLOCK",
-      message: issue3.message,
-      field: issue3.field
-    });
-  }
-  for (const o of orphanF1SceneRefs(bundle)) {
-    findings.push({
-      id: "DG-SCENE-ORPHAN-FX",
-      severity: "BLOCK",
-      message: `\u3010\u5B64\u513F\u573A\u3011sceneRef=${o.sceneRef} fxIntent ${o.fxLevel} \u65E0\u5BF9\u5E94\u552F\u4E00 sceneName \u6620\u5C04\u955C \u2014 \u8BF7\u5220\u9664\u8BE5 plan \u9879\uFF0C\u6216 fxIntent\u2192F0\uFF0C\u6216\u7ED9\u63A5\u573A\u72EC\u7ACB sceneName \u5E76\u6302\u955C+\u6563\u6587\u3002\u7981\u6B62\u53EA\u7ED9\u5176\u4ED6\u573A\u8865 fxPrompt\u3002path: ${o.path}`,
-      field: o.path
-    });
-  }
-  const tier = inferTierFromBundle(bundle);
-  for (const key of sceneColorLockHasChineseKeys(bundle)) {
-    findings.push({
-      id: "DG-SCENE-KEY",
-      severity: "BLOCK",
-      message: `sceneColorLock \u7981\u6B62\u4E2D\u6587 key\u300C${key}\u300D\u2014 \u8BF7\u7528 SCENE-* code`,
-      field: `visualLockTable.sceneColorLock.${key}`
-    });
-  }
-  const narSelf = bundle.narrativeSelfcheck;
-  const serverNarFails = serverNarrativeSelfcheckFails(bundle);
-  if (serverNarFails.length > 0) {
-    bundle.narrativeSelfcheck = {
-      ...narSelf ?? {},
-      passed: false,
-      failedIds: [.../* @__PURE__ */ new Set([...narSelf?.failedIds ?? [], ...serverNarFails.map((f) => f.id)])],
-      serverOverwritten: true,
-      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-  }
-  if (narSelf?.passed === true && serverNarFails.length > 0) {
-    findings.push({
-      id: "DG-NAR-SELFCHECK",
-      severity: "BLOCK",
-      message: `narrativeSelfcheck \u81EA\u62A5 passed \u4F46\u670D\u52A1\u5668\u68C0\u51FA ${serverNarFails.map((f) => f.id).join(", ")}\uFF08\u5DF2\u8986\u5199 passed=false\uFF09`,
-      field: "narrativeSelfcheck"
-    });
-  } else if (serverNarFails.length > 0) {
-    for (const f of serverNarFails) {
-      const elevate = f.id === "NAR-14" || f.id === "NAR-15" || tier === "T3";
-      findings.push({
-        id: f.id,
-        severity: elevate ? "BLOCK" : "WARN",
-        message: f.message,
-        field: "dialoguePlan.lines"
-      });
-    }
-  }
-  try {
-    const { auditCamShootableFit: auditCamShootableFit2 } = (init_camShootableFit(), __toCommonJS(camShootableFit_exports));
-    const shots2 = bundle.preDesignPack?.shots ?? [];
-    const camHits = shots2.filter(
-      (s) => auditCamShootableFit2(s).findings.some((f) => f.id === "DEX-CAM-FIT" && f.severity === "BLOCK")
-    );
-    if (camHits.length) {
-      const self2 = bundle.narrativeSelfcheck;
-      if (self2?.passed === true) {
-        bundle.narrativeSelfcheck = {
-          ...self2 ?? {},
-          passed: false,
-          failedIds: [.../* @__PURE__ */ new Set([...self2?.failedIds ?? [], "DEX-CAM-FIT"])],
-          serverOverwritten: true,
-          checkedAt: (/* @__PURE__ */ new Date()).toISOString()
-        };
-        findings.push({
-          id: "DG-CAM-FIT-FALSE-GREEN",
-          severity: "BLOCK",
-          message: `narrativeSelfcheck \u5047\u7EFF\uFF1A\u4ECD\u6709 ${camHits.length} \u955C\u672A\u62C6 DEX-CAM-FIT\uFF08\u987B\u6743\u5A01\u53CC\u955C\u6216 untilClear\uFF09`,
-          field: "narrativeSelfcheck"
-        });
-      } else if (Boolean(bundle.chatStrict)) {
-        findings.push({
-          id: "DEX-CAM-FIT",
-          severity: "BLOCK",
-          message: `chatStrict\uFF1A${camHits.length} \u955C\u53E3\u64AD+\u53CD\u5E94\u672A\u7269\u7406\u62C6\uFF0C\u4E0D\u5F97\u5047\u7EFF\u51FA\u7AD9`,
-          field: "preDesignPack.shots"
-        });
-      }
-    }
-  } catch {
-  }
-  if (linkageAssetChainFalseGreen(bundle)) {
-    const miss = speakersMissingFromCd(bundle);
-    findings.push({
-      id: "DG-LINKAGE-FALSE-GREEN",
-      severity: "BLOCK",
-      message: `linkageAudit.\u8D44\u4EA7=pass \u4F46\u5BF9\u767D\u8BF4\u8BDD\u4EBA\u672A\u5165 characterDesign\uFF1A${miss.join("\u3001")}`,
-      field: "linkageAudit.chains"
-    });
-  }
-  const cast = auditCastCoverage(bundle);
-  if (cast.block) {
-    findings.push({
-      id: "DG-CD-COVERAGE",
-      severity: "BLOCK",
-      message: `characterDesign \u914D\u89D2\u5165\u518C\u7F3A\u53E3\uFF08DC-16\uFF09\uFF1A${cast.labels.join("\u3001")} \u2014 \u987B\u8865\u771F\u5B9E CD\uFF08code/name/L0.identity\uFF09\uFF0C\u7981\u6B62\u4EC5 L0.stub`,
-      field: "characterDesign.assets"
-    });
-    findings.push({
-      id: "DC-16",
-      severity: "BLOCK",
-      message: `\u8BF4\u8BDD\u4EBA/\u4E0A\u955C\u7801\u672A\u5165 CD \u6216\u4EC5\u4E3A stub\uFF1A${cast.labels.join("\u3001")}`,
-      field: "characterDesign.assets"
-    });
-  } else if (cast.genderWarn.length && (tier === "T2" || tier === "T3")) {
-    findings.push({
-      id: "DG-CD-GENDER",
-      severity: "WARN",
-      message: `\u8BF4\u8BDD\u4EBA\u7F3A L0.gender\uFF1A${cast.genderWarn.join("\u3001")}`,
-      field: "characterDesign.assets"
-    });
-  }
-  if (modalityAuditFalseGreen(bundle)) {
-    const undeclared = undeclaredEmptyFxShotIndexes(bundle);
-    findings.push({
-      id: "DG-MODALITY-MISMATCH",
-      severity: "BLOCK",
-      message: `modalityPromptAudit.FX=pass \u4F46\u955C ${undeclared.slice(0, 8).join(",")} \u7A7A\u672A\u58F0\u660E F0\uFF08\u6DF7\u5408\u5047\u7EFF\uFF09`,
-      field: "modalityPromptAudit.FX"
-    });
-  }
-  const blocked = findings.some((f) => f.severity === "BLOCK");
-  return { ok: !blocked, findings, allowFalseGreenExport: false };
-}
-var init_designPhaseGates = __esm({
-  "src/ruleEngine/bundle/designPhaseGates.ts"() {
-    "use strict";
-    init_assetCodeContract();
-    init_emptyEpisodeGate();
-    init_closureSummary();
-    init_designExportHelpers();
-    init_sceneCardinality();
-  }
-});
-
-// src/ruleEngine/bundle/auditImplementationFieldWalk.ts
-function isFxProse2(text2) {
-  const t = text2.trim();
-  if (!t) return false;
-  return !/^F[0-5]$/i.test(t);
-}
-function shotsForSceneRef2(shots, ref) {
-  const explicit = shots.filter((s) => s.sceneRef === ref);
-  if (explicit.length) return explicit;
-  const order = [];
-  const byName = /* @__PURE__ */ new Map();
-  for (const s of shots) {
-    const name29 = String(s.sceneName ?? "").trim() || `__idx_${s.shotIndex ?? order.length + 1}`;
-    if (!byName.has(name29)) {
-      byName.set(name29, []);
-      order.push(name29);
-    }
-    byName.get(name29).push(s);
-  }
-  const name28 = order[ref - 1];
-  if (name28) return byName.get(name28) ?? [];
-  return shots.filter((s) => s.shotIndex === ref);
-}
-function hasDialogue(shot) {
-  const lines = shot.narrative?.dialogue?.lines ?? [];
-  return lines.some((l) => (l.text ?? "").trim().length > 0);
-}
-function genSlot(shot, slot) {
-  const gen = shot.generation ?? {};
-  return String(gen[SLOT_MAP[slot].slot] ?? "").trim();
-}
-function pushGap(gaps, rows, gap) {
-  gaps.push({
-    id: gap.id,
-    severity: gap.severity,
-    message: gap.message,
-    field: gap.field,
-    shotIndex: gap.shotIndex,
-    sceneRef: gap.sceneRef,
-    fieldId: gap.fieldId,
-    repairHintId: gap.repairHintId
-  });
-  rows.push({
-    id: gap.id,
-    severity: gap.severity,
-    message: gap.message,
-    sceneRef: gap.sceneRef,
-    shotIndex: gap.shotIndex,
-    sourcePath: gap.sourcePath,
-    targetPath: gap.targetPath,
-    fieldId: gap.fieldId,
-    repairHintId: gap.repairHintId
-  });
-}
-function auditImplPlanSlots(bundle, shots, gaps, rows) {
-  const plan = bundle.planData?.narrativeBrief ?? {};
-  const impl = plan.implementationPlan ?? [];
-  if (!impl.length) return;
-  for (const item of impl) {
-    const ref = item.sceneRef;
-    if (ref == null) continue;
-    const sceneShots = shotsForSceneRef2(shots, ref);
-    if (!sceneShots.length) {
-      pushGap(gaps, rows, {
-        id: "DFW-IMPL-SHOT",
-        severity: "WARN",
-        message: `implementationPlan sceneRef ${ref} \u65E0\u5BF9\u5E94\u5206\u955C`,
-        field: "implementationPlan",
-        sceneRef: ref,
-        sourcePath: `planData.narrativeBrief.implementationPlan[sceneRef=${ref}]`,
-        targetPath: `preDesignPack.shots[]`
-      });
-      continue;
-    }
-    const anchors = item.promptAnchors ?? {};
-    for (const key of ["img", "vid"]) {
-      if (!anchors[key]?.length) continue;
-      const anyFilled = sceneShots.some((s) => genSlot(s, key).length > 0);
-      if (!anyFilled) {
-        pushGap(gaps, rows, {
-          id: SLOT_MAP[key].id,
-          severity: "BLOCK",
-          message: `\u573A${ref} promptAnchors.${key} \u6709\u951A\u70B9\u4F46\u5206\u955C\u7F3A ${SLOT_MAP[key].label}`,
-          field: `shots[].generation.${SLOT_MAP[key].slot}`,
-          sceneRef: ref,
-          sourcePath: `implementationPlan[sceneRef=${ref}].promptAnchors.${key}`,
-          targetPath: `shots[].generation.${SLOT_MAP[key].slot}`,
-          fieldId: key === "img" ? "composition" : "camera",
-          repairHintId: SLOT_MAP[key].repair
-        });
-      }
-    }
-    const needsAud = Boolean(item.avCausality?.audioBeat || item.voiceIntent?.speaker);
-    if (needsAud && (anchors.aud?.length || item.voiceIntent)) {
-      for (const s of sceneShots.filter(hasDialogue)) {
-        if (!genSlot(s, "aud")) {
-          pushGap(gaps, rows, {
-            id: "MOD-03",
-            severity: "BLOCK",
-            message: `\u955C${s.shotIndex ?? "?"} \u6709\u53F0\u8BCD/\u58F0\u753B\u610F\u56FE\u4F46\u7F3A audioPrompt`,
-            field: `shots[].generation.audioPrompt`,
-            shotIndex: s.shotIndex,
-            sceneRef: ref,
-            sourcePath: `implementationPlan[sceneRef=${ref}].avCausality.audioBeat`,
-            targetPath: `shots[${s.shotIndex ?? "?"}].generation.audioPrompt`,
-            fieldId: "dialogue",
-            repairHintId: "RH-MOD-03"
-          });
-        }
-      }
-    }
-    const fxLevel = item.fxIntent?.level ?? "F0";
-    if (fxLevel !== "F0" && fxLevel !== "NONE") {
-      if (sceneShots.length === 0) {
-        pushGap(gaps, rows, {
-          id: "MOD-02",
-          severity: "BLOCK",
-          message: `\u3010\u5B64\u513F\u573A\u3011sceneRef=${ref} fxIntent ${fxLevel} \u65E0\u6620\u5C04\u955C\uFF08\u552F\u4E00 sceneName \u5E8F\u65E0\u7B2C ${ref} \u573A\uFF09\u2014 \u5220\u9664 plan \u9879\u6216 fxIntent\u2192F0\uFF0C\u6216\u63A5\u573A\u72EC\u7ACB sceneName \u5E76\u6302\u955C\uFF1B\u7981\u6B62\u53EA\u7ED9\u5176\u4ED6\u573A\u8865 fxPrompt`,
-          field: "implementationPlan.fxIntent",
-          sceneRef: ref,
-          sourcePath: `implementationPlan[sceneRef=${ref}].fxIntent.level`,
-          targetPath: `planData.narrativeBrief.implementationPlan[sceneRef=${ref}]`,
-          fieldId: "fx",
-          repairHintId: "RH-MOD-02-ORPHAN"
-        });
-      } else {
-        const anyFxProse = sceneShots.some((s) => isFxProse2(genSlot(s, "fx")));
-        if (!anyFxProse) {
-          const idxs = sceneShots.map((s) => s.shotIndex).filter((n) => n != null).slice(0, 6);
-          pushGap(gaps, rows, {
-            id: "MOD-02",
-            severity: "BLOCK",
-            message: `\u573A${ref} fxIntent ${fxLevel} \u4F46\u6620\u5C04\u955C ${idxs.join(",") || "?"} \u65E0 generation.fxPrompt \u6563\u6587 \u2014 \u5199 shots[shotIndex].generation.fxPrompt \u6216 fxIntent\u2192F0\uFF08\u7981\u5B57\u6BCD F1\u2013F5\uFF09`,
-            field: "generation.fxPrompt",
-            sceneRef: ref,
-            sourcePath: `implementationPlan[sceneRef=${ref}].fxIntent.level`,
-            targetPath: `shots[].generation.fxPrompt`,
-            fieldId: "fx",
-            repairHintId: "RH-MOD-02"
-          });
-        }
-      }
-    }
-  }
-}
-function auditRegistryPerShot(shots, gaps, rows) {
-  const registry4 = loadDesignFieldRegistry();
-  for (const shot of shots) {
-    const idx = shot.shotIndex;
-    const ctx = buildExtractContext({
-      modality: "video",
-      mode: "text",
-      charCodes: shot.charCodes,
-      episodeShot: {
-        id: `shot-${idx ?? 0}`,
-        storyboardId: idx ?? 0,
-        index: (idx ?? 1) - 1,
-        narrative: {
-          type: "CHAR-SCENE",
-          sceneName: shot.sceneName,
-          duration: shot.duration,
-          emotionIntensity: shot.narrative?.emotionIntensity,
-          dialogue: shot.narrative?.dialogue,
-          lipSyncPolicy: shot.narrative?.lipSyncPolicy ?? shot.shotDesign?.lipSyncPolicy
-        },
-        generation: shot.generation ?? {}
-      }
-    });
-    const fields = extractDesignFields(ctx);
-    const dialogue = hasDialogue(shot);
-    for (const reg of registry4) {
-      const rw = reg.requiredWhen ?? "hasValue";
-      if (rw === "alwaysOptional") continue;
-      let required3 = false;
-      if (rw === "hasDialogue") required3 = dialogue;
-      else if (rw === "charOrSingleImage") required3 = (shot.charCodes ?? []).some((c) => /^CHAR-/i.test(c));
-      else if (rw === "hasValue") {
-        const val = fields[reg.id];
-        required3 = val != null && val !== "" && val !== false;
-      }
-      if (!required3) continue;
-      const gen = shot.generation ?? {};
-      const slotChecks = [
-        { fieldId: "dialogue", genKey: "audioPrompt", label: "audioPrompt" },
-        { fieldId: "fx", genKey: "fxPrompt", label: "fxPrompt" }
-      ];
-      for (const sc of slotChecks) {
-        if (reg.id !== sc.fieldId && !reg.sources?.some((s) => s.includes(sc.label))) continue;
-        if (!String(gen[sc.genKey] ?? "").trim() && required3) {
-          const gapId = sc.fieldId === "fx" ? "MOD-02" : "MOD-03";
-          if (gaps.some((g) => g.id === gapId && g.shotIndex === idx)) continue;
-          pushGap(gaps, rows, {
-            id: gapId,
-            severity: "WARN",
-            message: `\u955C${idx ?? "?"} registry.${reg.id} \u8981\u6C42 ${sc.label} \u4F46 generation \u69FD\u7A7A`,
-            field: `shots[].generation.${sc.label}`,
-            shotIndex: idx,
-            sourcePath: `design_field_registry.${reg.id}`,
-            targetPath: `shots[${idx ?? "?"}].generation.${sc.label}`,
-            fieldId: reg.id,
-            repairHintId: FIELD_REPAIR2[reg.id] ?? FIELD_REPAIR2[sc.fieldId]
-          });
-        }
-      }
-    }
-    if (dialogue) {
-      const minDur = Math.ceil(
-        (shot.narrative?.dialogue?.lines ?? []).reduce((n, l) => n + (l.text?.length ?? 0), 0) / 4
-      );
-      if ((shot.duration ?? 0) < minDur && minDur > 0) {
-        pushGap(gaps, rows, {
-          id: "DFW-DURATION",
-          severity: "WARN",
-          message: `\u955C${idx ?? "?"} duration ${shot.duration}s < \u53F0\u8BCD\u6717\u8BFB\u7EA6 ${minDur}s`,
-          field: `shots[].duration`,
-          shotIndex: idx,
-          sourcePath: `shots[${idx ?? "?"}].narrative.dialogue`,
-          targetPath: `shots[${idx ?? "?"}].duration`,
-          fieldId: "duration",
-          repairHintId: "RH-PR-09"
-        });
-      }
-    }
-  }
-}
-function auditImplementationFieldWalk(bundle) {
-  const { rows } = buildMissingFieldReport(bundle);
-  return rows.map((r) => ({
-    id: r.id,
-    severity: r.severity,
-    message: r.message,
-    field: r.targetPath,
-    shotIndex: r.shotIndex,
-    sceneRef: r.sceneRef,
-    fieldId: r.fieldId,
-    repairHintId: r.repairHintId
-  }));
-}
-function buildMissingFieldReport(bundle) {
-  const gaps = [];
-  const rows = [];
-  const shots = bundle.preDesignPack?.shots ?? [];
-  auditImplPlanSlots(bundle, shots, gaps, rows);
-  auditRegistryPerShot(shots, gaps, rows);
-  const dedup = /* @__PURE__ */ new Map();
-  for (const r of rows) {
-    const k = `${r.id}:${r.shotIndex ?? ""}:${r.sceneRef ?? ""}:${r.targetPath}`;
-    if (!dedup.has(k)) dedup.set(k, r);
-  }
-  const unique = [...dedup.values()];
-  const lines = unique.slice(0, 20).map((r) => {
-    const loc = r.shotIndex != null ? `\u955C${r.shotIndex}` : r.sceneRef != null ? `\u573A${r.sceneRef}` : "bundle";
-    return `- ${loc} \u2192 ${r.targetPath} (${r.id})\uFF1A${r.message}`;
-  });
-  const summary = unique.length === 0 ? "\uFF08\u65E0 implementationPlan\u2192generation \u7F3A\u53E3\uFF09" : `\u7F3A\u5931\u5B57\u6BB5 ${unique.length} \u9879\uFF1A
-${lines.join("\n")}${unique.length > 20 ? `
-\u2026\u53E6\u6709 ${unique.length - 20} \u9879` : ""}`;
-  return { rows: unique, summary };
-}
-var SLOT_MAP, FIELD_REPAIR2;
-var init_auditImplementationFieldWalk = __esm({
-  "src/ruleEngine/bundle/auditImplementationFieldWalk.ts"() {
-    "use strict";
-    init_designFieldRegistry();
-    SLOT_MAP = {
-      img: { slot: "imagePrompt", id: "DFW-IMG", repair: "RH-MOD-07", label: "imagePrompt" },
-      vid: { slot: "videoPrompt", id: "DFW-VID", repair: "RH-MOD-07", label: "videoPrompt" },
-      aud: { slot: "audioPrompt", id: "MOD-03", repair: "RH-MOD-03", label: "audioPrompt" },
-      fx: { slot: "fxPrompt", id: "MOD-02", repair: "RH-MOD-02", label: "fxPrompt" }
-    };
-    FIELD_REPAIR2 = {
-      dialogue: "RH-MOD-03",
-      lipSync: "RH-QP-15",
-      fx: "RH-MOD-02",
-      voice: "RH-MOD-04",
-      duration: "RH-PR-09",
-      emotion: "RH-QP-06"
-    };
-  }
-});
-
-// src/ruleEngine/design/importLitDebtHygiene.ts
-var importLitDebtHygiene_exports = {};
-__export(importLitDebtHygiene_exports, {
-  runImportLitDebtHygiene: () => runImportLitDebtHygiene
-});
-function runImportLitDebtHygiene(input) {
-  const out = {
-    softFilled: [],
-    splitCount: 0,
-    confirmRequired: false,
-    missingSlots: []
-  };
-  let shots = input.shots;
-  if (!shots.length) return out;
-  try {
-    const { getEnhancementFillPolicy: getEnhancementFillPolicy2, auditLiteraryDetailQuality: auditLiteraryDetailQuality2 } = (init_stillLiteraryDetailQuality(), __toCommonJS(stillLiteraryDetailQuality_exports));
-    const { applyLitFillToShots: applyLitFillToShots2, buildLitFillSuggestions: buildLitFillSuggestions2 } = (init_literaryDetailLlmFill(), __toCommonJS(literaryDetailLlmFill_exports));
-    const { diagnoseStillIntent: diagnoseStillIntent2 } = (init_stillIntentReverse(), __toCommonJS(stillIntentReverse_exports));
-    const { expandLitContactXor: expandLitContactXor2 } = (init_expandLitContactXor(), __toCommonJS(expandLitContactXor_exports));
-    const { sliceFieldsAfterIrdSplit: sliceFieldsAfterIrdSplit2 } = (init_sliceFieldsAfterIrdSplit(), __toCommonJS(sliceFieldsAfterIrdSplit_exports));
-    const hasLitDebt = shots.some((s) => {
-      const a = auditLiteraryDetailQuality2({
-        visualDescription: String(s.visualDescription ?? ""),
-        shotSize: String(s.shotSize ?? "")
-      });
-      return a.findings.some(
-        (f) => f.severity === "BLOCK" && (/^DEX-LIT-/.test(f.id) || f.id === "DEX-PROP-CONT")
-      );
-    });
-    const hasFaceDual = !hasLitDebt && shots.some((s) => {
-      const vd = String(s.visualDescription ?? "");
-      const sz = String(s.shotSize ?? "");
-      const faceCu = /特写|近景|CU/i.test(sz) || /侧脸|正脸|特写/.test(vd);
-      return faceCu && /划过|贴/.test(vd) && /咬|渗血|血珠/.test(vd) && !s._litXorSplitId;
-    });
-    if (!hasLitDebt && !hasFaceDual) return out;
-    const lx = expandLitContactXor2(shots, { forceExpand: true, chatStrict: false });
-    if (lx.expandedCount > 0) {
-      shots = lx.shots;
-      try {
-        shots = sliceFieldsAfterIrdSplit2(shots).shots;
-      } catch {
-      }
-      out.splitCount = lx.expandedCount;
-      out.shots = shots;
-      for (const s of shots) {
-        if (s._litXorSplitId) {
-          s.promptState = "stale";
-          s.composeHash = void 0;
-          s.stillQuality = void 0;
-          s.visualPass = false;
-          s.visualPassAt = void 0;
-        }
-      }
-      try {
-        const { cascadeForwardStale: cascadeForwardStale2 } = (init_forwardStaleCascade(), __toCommonJS(forwardStaleCascade_exports));
-        cascadeForwardStale2({
-          shots,
-          forwardStages: ["SB", "MD-IMG", "EN"]
-        });
-      } catch {
-      }
-      input.shots.length = 0;
-      input.shots.push(...shots);
-      input.meta.importOkNotExitPass = true;
-      input.meta.litImportSmartSplit = lx.expandedCount;
-      input.meta.importSplitExpanded = true;
-      (input.shapeSalvageLog ??= []).push({
-        ruleId: "SH-LIT-IMPORT-SMART-SPLIT",
-        path: "preDesignPack.shots",
-        action: `expanded=${lx.expandedCount};log=${lx.log.slice(0, 4).join("|")}`
-      });
-    } else if (lx.confirmRequired) {
-      out.confirmRequired = true;
-      out.primaryAction = "confirm_split";
-      out.ctaLabel = "\u786E\u8BA4\u62C6\u955C\uFF08\u988A\u89E6\u4E0E\u53E3\u521B\u5206\u955C\uFF09";
-      input.meta.irdConfirmRequired = true;
-      input.meta.litDebtPrimaryAction = "confirm_split";
-      input.meta.litDebtCta = out.ctaLabel;
-      input.meta.importOkNotExitPass = true;
-      input.meta.litDebtImportPending = true;
-    }
-    const residual = shots.filter((s) => {
-      if (s._litXorSplitId) return false;
-      const a = auditLiteraryDetailQuality2({
-        visualDescription: String(s.visualDescription ?? ""),
-        shotSize: String(s.shotSize ?? "")
-      });
-      return a.findings.some(
-        (f) => f.severity === "BLOCK" && (f.id === "DEX-LIT-CONTACT" || f.id === "DEX-LIT-ANCHOR" || f.id === "DEX-LIT-EXPR")
-      );
-    });
-    if (residual.length && getEnhancementFillPolicy2().allowImportStructureSoftFill) {
-      const meta4 = { ...input.meta, importTrack: true };
-      const sug = buildLitFillSuggestions2({
-        shots: residual,
-        literaryDetailLlmFill: true,
-        intentVisualEnhance: true,
-        importTrack: true,
-        confidence: 0.85,
-        meta: meta4
-      });
-      if (sug.suggestions.length) {
-        const filled = applyLitFillToShots2({
-          shots,
-          fills: sug.suggestions.map((s) => ({ shotIndex: s.shotIndex, append: s.suggestedAppend })),
-          literaryDetailLlmFill: true,
-          intentVisualEnhance: true,
-          importTrack: true,
-          confidence: 0.85,
-          forceApply: true,
-          meta: meta4
-        });
-        if (filled.applied.length) {
-          out.softFilled = filled.applied;
-          input.meta.litImportSoftFilled = filled.applied;
-          input.meta.importOkNotExitPass = true;
-          (input.shapeSalvageLog ??= []).push({
-            ruleId: "SH-LIT-IMPORT-SOFT-FILL",
-            path: "preDesignPack.shots[].visualDescription",
-            action: `filled=${filled.applied.join(",")}`
-          });
-        }
-      }
-    }
-    const ird = diagnoseStillIntent2(shots, { meta: { ...input.meta, importTrack: true } });
-    out.primaryAction = out.splitCount ? "apply_auto" : out.primaryAction || ird.primaryAction;
-    out.ctaLabel = out.splitCount ? `\u5DF2\u667A\u80FD\u62C6\u988A\u89E6/\u53E3\u521B\uFF08${out.splitCount}\uFF09` : out.ctaLabel || ird.ctaLabel;
-    out.missingSlots = ird.missingSlots ?? [];
-    if (!out.splitCount && (ird.primaryAction === "confirm_split" || ird.primaryAction === "confirm_enhance")) {
-      out.confirmRequired = true;
-      input.meta.irdConfirmRequired = true;
-      input.meta.litDebtPrimaryAction = ird.primaryAction;
-      input.meta.litDebtCta = ird.ctaLabel;
-      input.meta.litDebtImportPending = true;
-      input.meta.importOkNotExitPass = true;
-    }
-    if (out.confirmRequired && !(input.shapeSalvageLog ?? []).some((e) => e.ruleId === "SH-LIT-IMPORT-CONFIRM")) {
-      (input.shapeSalvageLog ??= []).push({
-        ruleId: "SH-LIT-IMPORT-CONFIRM",
-        path: "meta.litDebtPrimaryAction",
-        action: `action=${out.primaryAction};cta=${out.ctaLabel ?? ""}`
-      });
-    }
-    out.warnMessage = out.splitCount ? `\u3010\u53EF\u5BFC\u5165 \xB7 \u5DF2\u667A\u80FD\u62C6\u6587\u5B66\u53CC\u63A5\u89E6\u3011\u6269 ${out.splitCount} \u7EC4\u988A\u89E6/\u53E3\u521B\uFF1BimportOk\u2260designExitPass\uFF0C\u987B\u8BBE\u8BA1 Exit \u590D\u68C0` : out.confirmRequired ? `\u3010\u53EF\u5BFC\u5165 \xB7 \u6587\u5B66\u503A\u987B\u8BBE\u8BA1\u786E\u8BA4\u3011${out.ctaLabel || out.primaryAction || "confirm"}\uFF1BimportOk\u2260designExitPass` : out.softFilled.length ? `\u3010\u53EF\u5BFC\u5165 \xB7 \u5DF2\u6587\u5B66\u7ED3\u6784\u8F6F\u586B\u3011\u955C ${out.softFilled.join(",")}\uFF1B\u4ECD\u987B\u8BBE\u8BA1 Exit \u590D\u68C0` : void 0;
-  } catch {
-  }
-  return out;
-}
-var init_importLitDebtHygiene = __esm({
-  "src/ruleEngine/design/importLitDebtHygiene.ts"() {
-    "use strict";
-  }
-});
-
-// src/ruleEngine/exportGate.ts
-function loadRepairHints3(ids) {
-  const catalog = readFixtureJson("repair_hint_catalog.json", { hints: [] });
-  const idSet = new Set(ids);
-  return (catalog.hints ?? []).filter(
-    (h) => idSet.has(h.ruleId) || idSet.has(h.id) || h.qpId && idSet.has(h.qpId) || (h.checkIds?.some((c) => idSet.has(c)) ?? false)
-  ).map((h) => ({ id: h.id, chatTemplate: h.chatTemplate, ruleId: h.ruleId }));
-}
-function aggregateRepairHints(inspected, designFindings, fieldWalk) {
-  const ids = /* @__PURE__ */ new Set();
-  for (const c of [
-    ...inspected.closureChecks?.dc ?? [],
-    ...inspected.closureChecks?.pc ?? [],
-    ...inspected.closureChecks?.gc ?? [],
-    ...inspected.closureChecks?.ic ?? []
-  ]) {
-    if (!c.passed && c.id) ids.add(c.id);
-  }
-  for (const i of inspected.qualityGate?.issues ?? []) {
-    if (i.id) ids.add(i.id);
-  }
-  for (const g of inspected.chatPromptGaps ?? []) {
-    if (g.id) ids.add(g.id);
-  }
-  for (const f of designFindings) {
-    ids.add(f.id);
-  }
-  for (const f of fieldWalk) {
-    ids.add(f.id);
-  }
-  const fromInspect = inspected.repairHints ?? [];
-  const loaded = loadRepairHints3([...ids]);
-  const byId2 = /* @__PURE__ */ new Map();
-  for (const h of [...fromInspect, ...loaded]) {
-    if (!byId2.has(h.id)) byId2.set(h.id, h);
-  }
-  return [...byId2.values()];
-}
-function loadRepairLayerSets() {
-  try {
-    const matrix = readFixtureJson("semantic_gate_dual_track_matrix.json", {});
-    const untilClearAuto = new Set(
-      (matrix.importSalvageRegistry ?? []).filter(
-        (e) => e.untilClear === true && e.confirmOnly !== true && e.ruleId && e.ruleId !== "IRD-CONFIRM" && !String(e.ruleId).startsWith("DEX-LIT-") && e.ruleId !== "DEX-DUP-VD" && e.ruleId !== "DEX-QP-02"
-      ).map((e) => String(e.ruleId))
-    );
-    untilClearAuto.add("FALSE_GREEN_SELFCHECK");
-    untilClearAuto.add("DG-CAM-FIT-FALSE-GREEN");
-    untilClearAuto.add("DG-NAR-SELFCHECK");
-    return {
-      mustEdit: /* @__PURE__ */ new Set([...matrix.mustEditBlockIds ?? [], ...DEFAULT_MUST_EDIT]),
-      autoAdapt: new Set(
-        [...matrix.autoAdaptBlockIds ?? [], ...DEFAULT_AUTO_ADAPT, ...untilClearAuto].filter(
-          (id) => id !== "NAR-14" && id !== "DEX-VIS-SPLIT" && id !== "LIP-01"
-        )
-      ),
-      untilClearAuto
-    };
-  } catch {
-    return { mustEdit: DEFAULT_MUST_EDIT, autoAdapt: DEFAULT_AUTO_ADAPT, untilClearAuto: DEFAULT_AUTO_ADAPT };
-  }
-}
-function classifyBlockId(id, layers, ctx) {
-  if (id === "NAR-14" || id.startsWith("NAR-14")) {
-    if (ctx?.nar14Class === "auto") return "auto";
-    return "must";
-  }
-  if (id === "LIP-01" || id === "PR-09" || id === "DEX-LIP-SPLIT") {
-    if (ctx?.lipClass === "auto") return "auto";
-    return "must";
-  }
-  if (id === "DFW-DURATION") {
-    if (ctx?.lipMustPresent || ctx?.lipRaiseOnly) return "must";
-    return "auto";
-  }
-  if (id === "DEX-VIS-SPLIT" || id.startsWith("VIS-MULTI")) return "must";
-  if (id === "DEX-LITERARY-STALE") return "must";
-  if (id === "DEX-DUP-VD" || id === "DEX-QP-02" || id === "QP-02") return "must";
-  if (layers.untilClearAuto?.has(id) || layers.autoAdapt.has(id)) return "auto";
-  if (layers.mustEdit.has(id) || id.startsWith("NAR-15") || id.startsWith("DC-16")) return "must";
-  if (id.startsWith("DFW-") || id.startsWith("MOD-")) return "auto";
-  if (/^(DG-.*FALSE-GREEN|.*SELFCHECK)/i.test(id)) return "auto";
-  return "other";
-}
-function buildAggregatedChatRepairText(hints, blockIds, missingSummary, blocks, opts) {
-  const layers = loadRepairLayerSets();
-  const nar14Class = classifyNar14ForChatRepair({
-    planLines: opts?.planLines,
-    shots: opts?.shots,
-    blockHasNar14: blockIds.some((id) => id === "NAR-14" || id.startsWith("NAR-14"))
-  });
-  const lipDetail = classifyLipForChatRepairDetailed({
-    shots: opts?.shots,
-    blockHasLip01: blockIds.some((id) => id === "LIP-01" || id === "PR-09" || id === "DEX-LIP-SPLIT")
-  });
-  const lipClass = lipDetail.pack;
-  const lipMustPresent = lipDetail.mustShotIndexes.length > 0;
-  const lipRaiseOnly = lipDetail.raiseShotIndexes.length > 0 && !lipMustPresent;
-  const mustPending = [];
-  const autoPending = [];
-  const clearedSet = new Set(opts?.autoClosedClearedIds ?? []);
-  for (const id of [...new Set(blockIds)]) {
-    if (clearedSet.has(id)) continue;
-    const kind = classifyBlockId(id, layers, {
-      nar14Class,
-      lipClass,
-      lipMustPresent,
-      lipRaiseOnly
-    });
-    if (kind === "must") mustPending.push(id);
-    else if (kind === "auto") autoPending.push(id);
-    else mustPending.push(id);
-  }
-  const lines = [
-    "\u3010\u95ED\u73AF\u4FEE\u590D\u6E05\u5355 \u2014 \u8BF7\u6309\u9879\u4FEE\u6539 JSON \u5B57\u6BB5\uFF0C\u52FF\u53EA\u6539 audit \u81EA\u62A5 / modalityPromptAudit\u3011",
-    `\u5F85\u5904\u7406\u89C4\u5219\uFF1A${mustPending.join(", ") || "\uFF08\u65E0\u987B\u624B\u6539 BLOCK\uFF09"}`,
-    autoPending.length ? `\u670D\u52A1\u7AEF untilClear / \u81EA\u52A8\u9002\u914D\uFF1A${autoPending.join(", ")}\uFF08\u52FF\u624B\u6539\u81EA\u62A5\u5B57\u6BB5\uFF09` : "",
-    ""
-  ].filter((l, i, arr) => !(l === "" && arr[i - 1] === ""));
-  if (lipDetail.mixed) {
-    lines.push(
-      `\u3010LIP \u9010\u955C\u3011\u8D85\u9650/\u591A\u53E5\u987B Confirm\uFF1A\u955C ${lipDetail.mustShotIndexes.join(",") || "\u2014"}\uFF1B\u53EF\u62AC\u77ED\u955C\u5E94\u7531\u8BBE\u8BA1\u62AC\u65F6\uFF08\u52FF\u4E0E DFW\u300C\u5BFC\u5165\u53EF\u6108\u300D\u6DF7\u79F0\uFF09\uFF1A\u955C ${lipDetail.raiseShotIndexes.join(",") || "\u2014"}`,
-      ""
-    );
-  } else if (lipRaiseOnly) {
-    lines.push(
-      "\u3010LIP \u62AC\u65F6\u3011\u77ED\u955C\u53EF\u62AC\uFF1A\u8BBE\u8BA1\u4FA7\u8C03 duration\uFF08autoClose/export \u4F1A\u62AC\uFF09\uFF1B\u5BFC\u5165\u4EC5\u515C\u5E95\u6108\uFF0C\u4E0D\u62E6\u5BFC\u5165\u3002",
-      ""
-    );
-  } else if (lipMustPresent) {
-    lines.push(
-      "\u3010\u53CD\u63A8\u8BBE\u8BA1 \xB7 \u8D85\u9650/\u591A\u53E5\u53E3\u578B\u3011\u53F0\u8BCD\u6240\u9700 > \u5382\u5546\u4E0A\u9650\u6216\u540C\u955C\u591A\u53E5\uFF1A\u8BBE\u8BA1\u4E0D\u8FC7\u7EFF\uFF0C\u987B SB Confirm \u8BED\u4E49\u62C6\uFF08confirmClusterSplit\uFF09\u6216\u6539\u77ED\u3002\u5BFC\u5165\u4E0D\u9759\u9ED8\u540C\u6587\u62C6\u3001\u4EA6\u4E0D\u56E0\u672C\u9879\u786C\u62E6\uFF08importOk\u2260designExitPass\uFF09\u3002",
-      ""
-    );
-  }
-  if (blockIds.includes("DEX-LITERARY-STALE")) {
-    lines.push(
-      "\u3010\u987B\u91CD\u8BBE\u8BA1\u3011\u516C\u5F0F\u5DF2\u66F4\u6362\u3002\u8BF7\u6309\u65B0\u89C4\u8303\u91CD\u8D70\u8BBE\u8BA1\uFF0C\u52FF\u53EA\u6539\u65E7\u5B57\u6BB5\u3002",
-      "\u9009\u9879\uFF1AA \u6309\u65B0\u89C4\u8303\u91CD\u8BBE\u8BA1\uFF08\u63A8\u8350\uFF09 / B \u4FDD\u7559\u65E7\u7A3F\u7EE7\u7EED\u8865\u6D1E\uFF08\u987B acknowledgeKeepLegacy\uFF09",
-      ""
-    );
-  }
-  if (opts?.designExitIncomplete) {
-    if (mustPending.length === 0) {
-      lines.push(
-        "\u3010\u53EF\u5BFC\u5165 \xB7 \u8BBE\u8BA1\u672A\u5B8C\u5168\u95ED\u5408\u3011\u5269\u4F59 CAM-FIT \u7B49\u53EF\u7531\u670D\u52A1\u7AEF\u8BCA\u6108\uFF1B\u65F6\u957F\u77ED\u955C\u987B\u8BBE\u8BA1\u4FA7\u62AC\u65F6\u6216 Confirm\u3002importOk\u2260designExitPass\u3002\u7CBE\u54C1\u8BF7\u56DE SB Confirm/\u5199\u6743\u5A01\u53CC\u955C\u5F62\u540E\u518D export\u3002",
-        ""
-      );
-    } else {
-      lines.push(
-        "\u3010\u8BBE\u8BA1\u672A\u95ED\u5408 \xB7 \u53CD\u63A8 SB/W3\u3011\u672C\u9879\u5C5E\u8BBE\u8BA1\u5951\u7EA6\uFF08\u975E\u5BFC\u5165\u53E3\u786C\u62E6\uFF09\u3002\u8BF7 Confirm/\u6539\u77ED\u540E forwardReentry \u518D export\uFF1B\u5BFC\u5165\u53EA\u6108\u53EF\u6108\u9879\uFF0CimportOk\u2260designExitPass\u3002",
-        ""
-      );
-    }
-  }
-  if (blockIds.includes("NAR-15") || blocks?.some((b) => b.id === "NAR-15")) {
-    lines.push(
-      "\u3010NAR-15\u3011\u4ECD\u6709 emotion_hit \u7F3A reactionAction\uFF08\u670D\u52A1\u7AEF\u5DF2\u5C1D\u8BD5\u5360\u4F4D RA\uFF1B\u82E5\u672C\u6761\u4ECD\u5728=\u5199\u56DE\u5931\u8D25\u6216\u9501\u7A3F\u8DEF\u5F84\u672A\u89E6\u8FBE\uFF09\u3002\u987B\u5728 dialoguePlan.lines \u540C\u5199\u542C\u8005\u53EF\u89C1\u53CD\u5E94\uFF0C\u7981\u53EA\u6539 narrativeSelfcheck.passed\u3002",
-      ""
-    );
-  } else if (opts?.autoClosedClearedIds?.includes("NAR-15")) {
-    lines.push(
-      "\u3010NAR-15\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1A\u670D\u52A1\u7AEF\u5DF2\u8865\u5360\u4F4D reactionAction\uFF08raSource=heal_placeholder\uFF09\u3002\u82E5\u8981\u7CBE\u54C1\u53CD\u5E94\u8BF7\u56DE W3 \u624B\u6539\u540E\u518D forwardReentry\u3002"
-    );
-    if (mustPending.some((id) => id === "LIP-01" || id === "DEX-LIP-SPLIT" || id === "DFW-DURATION")) {
-      lines.push("\u6CE8\u610F\uFF1ANAR \u95ED\u5408\u2260\u8BBE\u8BA1\u5B8C\u6210\uFF1B\u4ECD\u6709\u53E3\u578B\u8D85\u9650\u987B Confirm \u8BED\u4E49\u62C6\uFF08\u6216\u53EF\u62AC\u77ED\u955C\u987B\u8BBE\u8BA1\u62AC\u65F6\uFF09\u3002");
-    }
-    lines.push("");
-  }
-  if (blockIds.includes("DEX-SHOT-INTENT") || blocks?.some((b) => b.id === "DEX-SHOT-INTENT")) {
-    lines.push(
-      "\u3010DEX-SHOT-INTENT\u3011shotDesignIntent \u4ECD\u7F3A picture/durationSec\uFF08\u670D\u52A1\u7AEF\u5DF2\u5C1D\u8BD5\u4ECE peak/\u5206\u955C VD \u6D3E\u751F\uFF1B\u82E5\u672C\u6761\u4ECD\u5728=\u65E0\u955C\u53EF\u6D3E\u751F\u6216\u9501\u7A3F\u672A\u5199\u56DE\uFF09\u3002reverseTarget=W3\u3002",
-      ""
-    );
-  } else if (opts?.autoClosedClearedIds?.includes("DEX-SHOT-INTENT")) {
-    lines.push(
-      "\u3010DEX-SHOT-INTENT\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1A\u5DF2\u4ECE peakLedger \u6216\u5206\u955C VD/\u65F6\u957F\u8865 sidecar intents\u3002",
-      ""
-    );
-  }
-  if (blockIds.includes("DEX-PROP-CONT") || blocks?.some((b) => b.id === "DEX-PROP-CONT")) {
-    lines.push(
-      "\u3010DEX-PROP-CONT\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1Adeclare-only propState \u987A\u5EF6\u5DF2\u5199\u5165\uFF08\u672A\u53D1\u660E VD\uFF09\u3002\u7CBE\u54C1\u4EA4\u5F85\u53EF\u56DE SB\u3002",
-      ""
-    );
-  } else if (opts?.autoClosedClearedIds?.includes("DEX-PROP-CONT")) {
-    lines.push(
-      "\u3010DEX-PROP-CONT\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1A\u5DF2 declare-only \u5199\u5165 propState \u987A\u5EF6\uFF08\u672A\u53D1\u660E VD \u9053\u5177\uFF09\u3002\u7CBE\u54C1\u4EA4\u5F85\u53EF\u56DE SB\u3002",
-      ""
-    );
-  }
-  if (blockIds.includes("DEX-INTENT-PIC") || blocks?.some((b) => b.id === "DEX-INTENT-PIC")) {
-    lines.push(
-      "\u3010DEX-INTENT-PIC\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1Apicture\u2194VD \u540C\u6838\uFF08sidecar 1:1\uFF09\u3002",
-      ""
-    );
-  } else if (opts?.autoClosedClearedIds?.includes("DEX-INTENT-PIC")) {
-    lines.push(
-      "\u3010DEX-INTENT-PIC\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF1A\u5DF2\u5C06 shotDesignIntent.picture \u4E0E visualDescription \u540C\u6838\u3002",
-      ""
-    );
-  }
-  if (blockIds.includes("DG-CAM-FIT-FALSE-GREEN") || blockIds.includes("FALSE_GREEN_SELFCHECK") || blocks?.some((b) => b.id === "DG-CAM-FIT-FALSE-GREEN" || b.id === "FALSE_GREEN_SELFCHECK")) {
-    lines.push(
-      "\u3010\u5047\u7EFF\u6D3E\u751F\u3011DG-CAM-FIT-FALSE-GREEN / FALSE_GREEN_SELFCHECK\uFF1A\u670D\u52A1\u7AEF\u5DF2\u8986\u5199 narrativeSelfcheck.passed=false\uFF1B\u6839\u56E0\u8D70 DEX-CAM-FIT untilClear / Confirm \u62C6\uFF0C\u52FF\u624B\u6539\u81EA\u62A5\u5B57\u6BB5\u3002",
-      ""
-    );
-  }
-  if (blockIds.includes("DEX-ASSET-CREF") || blocks?.some((b) => b.id === "DEX-ASSET-CREF")) {
-    const crefMsgs = (blocks ?? []).filter((b) => b.id === "DEX-ASSET-CREF").map((b) => b.message);
-    const needAs = crefMsgs.some((m) => /缺定妆图|needsAsStill|已绑码缺/.test(m));
-    lines.push(
-      needAs ? "\u3010DEX-ASSET-CREF\u3011\u7F3A\u5B9A\u5986\u771F\u56FE\uFF1A\u8BBE\u8BA1\u671F\u53EF stub \u5EF6\u671F\uFF1B\u56DE AS \u51FA\u56FE\u540E\u518D\u70E7\u3002\u5BFC\u5165\u4E0D\u53D1\u660E\u5047 --cref\u3002" : "\u3010DEX-ASSET-CREF\u3011\u51FA\u8138\u672A\u5B8C\u6210\u8BBE\u8BA1\u7ED1\uFF1A\u670D\u52A1\u7AEF\u5C06\u5C1D\u8BD5 stub+assetCrefPlan\uFF1B\u4ECD\u7EA2\u5219\u56DE SB/AS\u3002",
-      ""
-    );
-  } else if (opts?.autoClosedClearedIds?.includes("DEX-ASSET-CREF")) {
-    lines.push(
-      "\u3010DEX-ASSET-CREF\u3011\u5DF2\u81EA\u52A8\u95ED\u5408\uFF08\u8BBE\u8BA1\u671F\uFF09\uFF1A\u5DF2 stub/\u7ED1 charCodes+assetCrefPlan\uFF1B\u5B9A\u5986\u771F\u56FE\u5EF6\u671F AS \u8865\uFF0C\u751F\u6210\u524D\u4ECD\u987B\u5E26\u56FE\u3002",
-      ""
-    );
-  }
-  if (autoPending.length) {
-    lines.push(
-      `\u3010\u670D\u52A1\u7AEF\u5C06\u6108 \xB7 \u52FF\u6539 JSON\u3011${autoPending.join(", ")} \u2014 \u542B DEX-CAM-FIT \u7B49 auto\uFF1B\u52FF\u624B\u62C6\u955C\u53F7/\u5220 reactionAction\uFF1B\u4E0B\u6B21\u4ECD\u987B\u5199\u6743\u5A01\u53CC\u955C\u5F62`,
-      ""
-    );
-  }
-  const salvage = opts?.shapeSalvageLog ?? [];
-  const struct = salvage.filter((e) => /SH-JSON-BRACE|SH-HOIST-/.test(e.ruleId));
-  if (struct.length) {
-    const ids = [...new Set(struct.map((e) => e.ruleId))].join("\uFF0C");
-    lines.push(
-      `\u3010\u5DF2\u7ED3\u6784 salvage\u3011${ids} \u2014 \u4E0B\u5217\u4E3A\u5269\u4F59\u771F\u95F8\uFF1B\u52FF\u518D\u628A preDesignPack/characterDesign \u53EA\u5199\u8FDB planData\uFF0C\u52FF\u56E0\u5047\u7A7A\u96C6\u91CD\u5199\u6574\u5305\u3002`,
-      ""
-    );
-  }
-  if (blockIds.includes("JSON_INCOMPLETE")) {
-    lines.push(
-      "\u3010\u4E3B\u56E0\xB7JSON \u4E0D\u5B8C\u6574\u3011\u89E3\u6790\u5931\u8D25\uFF08\u622A\u65AD/\u4E2D\u6BB5\u635F\u574F\uFF09\u3002\u7981\u6B62\u5F53\u6210\u300C\u96C6\u65E0\u53EF\u7528\u5206\u955C / DG-EMPTY\u300D\u3002\u8BF7\u91CD\u51FA\u53EF JSON.parse \u7684\u5B8C\u6574\u6839\u5BF9\u8C61\u3002",
-      ""
-    );
-  }
-  const orphanBlocks = (blocks ?? []).filter((b) => /孤儿场|场镜基数|幽灵场/.test(b.message));
-  if (orphanBlocks.length) {
-    lines.push("\u3010\u4E3B\u56E0\xB7\u7ED3\u6784\u3011\u52FF\u53EA\u8865\u5176\u4ED6\u573A\u7684 fxPrompt\uFF1A");
-    for (const b of orphanBlocks.slice(0, 8)) {
-      lines.push(`- ${b.id}: ${b.message}`);
-    }
-    lines.push("");
-  }
-  const healInducedShots = (opts?.shots ?? []).filter((s) => s._healInducedVd || /听者反应特写/.test(String(s.visualDescription ?? "")));
-  const qp02Blocks = (blocks ?? []).filter((b) => b.id === "QP-02" || /too_short|画面描述过短/.test(b.message));
-  if (qp02Blocks.length && healInducedShots.length) {
-    lines.push(
-      "\u3010\u81EA\u6108\u81EA\u4F24 \xB7 \u975E\u6587\u5B66\u7A7A\u6D1E\u3011\u4E0B\u5217 QP-02 \u7591\u4F3C IRD/lip \u62C6\u955C\u77ED\u5360\u4F4D\uFF1B\u8BF7 Confirm/\u91CD\u5207\u7236 VD\uFF0C\u52FF\u6574\u5305\u91CD\u5199\uFF1A"
-    );
-    for (const b of qp02Blocks.slice(0, 8)) {
-      const loc = b.shotIndex != null ? `\u955C${b.shotIndex}` : b.field?.trim() ? b.field : "";
-      lines.push(`- ${b.id}${loc ? ` (${loc})` : ""}: ${b.message}`);
-    }
-    lines.push("[RH-QP-02-HEAL] \u670D\u52A1\u7AEF\u5E94\u91CD\u5207\u6216 Confirm\uFF1B\u7981\u6B62\u53EA\u6539 audit / \u6574\u96C6\u91CD\u8BBE\u8BA1\u3002", "");
-  }
-  const mustBlocks = [];
-  const autoBlocks = [];
-  const otherBlocks = [];
-  const lipCtx = { nar14Class, lipClass, lipMustPresent, lipRaiseOnly };
-  for (const b of blocks ?? []) {
-    if ((b.id === "DFW-DURATION" || b.id === "LIP-01" || b.id === "PR-09" || b.id === "DEX-LIP-SPLIT") && b.shotIndex != null && opts?.shots?.length) {
-      const p3 = detectLipSplitPressure(
-        opts.shots.find((s) => Number(s.shotIndex) === Number(b.shotIndex)) ?? {}
-      );
-      if (p3.mustConfirm) {
-        mustBlocks.push(b);
-        continue;
-      }
-      if (p3.canSilentRaise && (b.id === "DFW-DURATION" || b.id === "LIP-01")) {
-        mustBlocks.push(b);
-        continue;
-      }
-    }
-    const kind = classifyBlockId(b.id, layers, lipCtx);
-    if (kind === "must") mustBlocks.push(b);
-    else if (kind === "auto") autoBlocks.push(b);
-    else otherBlocks.push(b);
-  }
-  const { dedupeChatRepairBlocks: dedupeChatRepairBlocks2 } = (init_planFromBundleForDesignExit(), __toCommonJS(planFromBundleForDesignExit_exports));
-  let mustDeduped = dedupeChatRepairBlocks2(mustBlocks);
-  const hasDc01 = mustDeduped.some((b) => b.id === "DC-01" || b.id === "DC-01-EXTRA") || blockIds.includes("DC-01") || blockIds.includes("DC-01-EXTRA");
-  const dc13Secondary = hasDc01 ? mustDeduped.filter((b) => b.id === "DC-13") : [];
-  if (dc13Secondary.length) {
-    mustDeduped = mustDeduped.filter((b) => b.id !== "DC-13");
-  }
-  const pushBlockSection = (title, list2) => {
-    if (!list2.length) return;
-    lines.push(title);
-    for (const b of list2.slice(0, CHAT_REPAIR_BLOCK_CAP)) {
-      const loc = b.shotIndex != null ? `\u955C${b.shotIndex}` : b.field?.trim() ? b.field : "";
-      lines.push(`- ${b.id}${loc ? ` (${loc})` : ""}: ${b.message}`);
-    }
-    if (list2.length > CHAT_REPAIR_BLOCK_CAP) {
-      lines.push(`\u2026\u53E6\u6709 ${list2.length - CHAT_REPAIR_BLOCK_CAP} \u9879`);
-    }
-    lines.push("");
-  };
-  pushBlockSection(
-    "\u3010\u987B\u624B\u6539 \xB7 Chat \u5951\u7EA6\u3011NAR \u6B8B\u53E5/\u91CD\u8BBE\u8BA1\u3001DC\u3001\u771F\u7F3A F0\xB7\u6563\u6587/\u5047 audit\u3001\u8D85\u9650\u53E3\u578B Confirm\u3001\u8BBE\u8BA1\u4FA7\u62AC\u65F6 \u2014 \u5BFC\u5165\u4E0D\u4F1A\u66FF\u4F60\u7F16\u9020\uFF1B\u6B8B\u53E5\u987B\u6539\u77ED/\u663E\u5F0F splitHint/Confirm \u62C6\u955C",
-    mustDeduped
-  );
-  if (dc13Secondary.length) {
-    pushBlockSection("\u3010\u9644\u4ECE \xB7 \u968F DC-01 \u4FEE\u3011", dc13Secondary);
-  }
-  pushBlockSection(
-    "\u3010\u5BFC\u5165\u5C06\u81EA\u52A8\u9002\u914D \xB7 \u53EF\u4E0D\u624B\u6539 / \u52FF\u6539 JSON\u3011\u7A7A prompt / sceneKey / \u5F62\u6001 salvage / DEX-CAM-FIT \u667A\u80FD\u62C6\uFF08untilClear\uFF09\uFF1B\u65F6\u957F\u4EC5\u5386\u53F2\u6B8B\u7559\u515C\u5E95\uFF08\u8BBE\u8BA1\u4E3B\u8D23\u5DF2\u62AC\uFF09\uFF1BNAR-14 \u4EC5\u6807\u70B9 A \u62C6\u51C0 \u2014 \u6B8B\u53E5\u2260\u53EF\u4E0D\u624B\u6539",
-    autoBlocks
-  );
-  pushBlockSection("\u3010\u5176\u4ED6 BLOCK\u3011", otherBlocks);
-  if ((blocks?.length ?? 0) > 0 && autoBlocks.length === 0) {
-    lines.push(
-      "\u3010\u5BFC\u5165\u5C06\u81EA\u52A8\u9002\u914D \xB7 \u53EF\u4E0D\u624B\u6539\u3011\uFF08\u672C\u5305\u6682\u65E0\u6B64\u7C7B BLOCK\uFF1B\u82E5\u4EC5\u6709 duration/\u7A7A prompt/sceneKey\uFF0CdryRun\xB7\u843D\u5E93\u4F1A\u4FEE\uFF09",
-      ""
-    );
-  }
-  if ((blocks?.length ?? 0) > 0 && mustDeduped.length === 0 && dc13Secondary.length === 0) {
-    lines.push("\u3010\u987B\u624B\u6539 \xB7 Chat \u5951\u7EA6\u3011\uFF08\u672C\u5305\u6682\u65E0 NAR/DC \u7B49\u987B\u624B\u6539\u9879\uFF09", "");
-  }
-  if (missingSummary?.trim()) {
-    const missLines = missingSummary.trim().split("\n");
-    const autoMiss = missLines.filter((l) => {
-      if (/DFW-DURATION|duration/i.test(l) && (lipMustPresent || lipRaiseOnly)) return false;
-      return /MOD-03|MOD-IMG|MOD-VID|DFW-DURATION|audioPrompt|imagePrompt|videoPrompt|duration/i.test(l);
-    });
-    const mustMiss = missLines.filter((l) => !autoMiss.includes(l));
-    if (mustMiss.length) {
-      lines.push("\u3010\u7F3A\u5931\u5B57\u6BB5 \xB7 \u987B\u624B\u6539\u3011", ...mustMiss, "");
-    }
-    if (autoMiss.length) {
-      lines.push("\u3010\u7F3A\u5931\u5B57\u6BB5 \xB7 \u5BFC\u5165\u5C06\u81EA\u52A8\u9002\u914D\u3011", ...autoMiss, "");
-    }
-  }
-  const blockSet = new Set(blockIds);
-  const hintPrimary = [];
-  const hintSecondary = [];
-  for (const h of hints) {
-    const hit = blockSet.size === 0 || blockSet.has(h.id) || (h.ruleId ? blockSet.has(h.ruleId) : false) || blockSet.has(String(h.id).replace(/^RH-/, "")) || [...blockSet].some((bid) => h.id.includes(bid) || h.ruleId && h.ruleId.includes(bid));
-    if (hit) hintPrimary.push(h);
-    else hintSecondary.push(h);
-  }
-  for (const h of hintPrimary) {
-    if (h.chatTemplate) lines.push(`[${h.id}] ${h.chatTemplate}`);
-  }
-  if (hintSecondary.length && blockSet.size > 0) {
-    lines.push("", "\u3010\u53C2\u8003 RH \xB7 \u975E\u672C\u5305\u4E3B\u56E0 BLOCK\u3011\u4E0B\u5217\u975E\u5F53\u524D\u5F85\u5904\u7406\u89C4\u5219\uFF0C\u52FF\u5F53\u4F5C\u672C\u5305\u5168\u7EA2\uFF1A");
-    for (const h of hintSecondary.slice(0, 4)) {
-      if (h.chatTemplate) lines.push(`[${h.id}] ${h.chatTemplate}`);
-    }
-  } else if (blockSet.size === 0) {
-    for (const h of hintSecondary) {
-      if (h.chatTemplate) lines.push(`[${h.id}] ${h.chatTemplate}`);
-    }
-  }
-  const deeplinkSec = formatDeeplinkSection(buildChatRepairDeeplinks(blockIds));
-  if (deeplinkSec) lines.push("", deeplinkSec);
-  const visBlocks = (blocks ?? []).filter((b) => /DEX-VIS|VIS-MULTI|VIS-BEAT|VIS-TAG|VIS-SYNC/i.test(b.id));
-  if (visBlocks.length || blockIds.some((id) => /DEX-VIS|VIS-MULTI|VIS-BEAT|VIS-TAG/i.test(id))) {
-    lines.push(
-      "",
-      "\u3010VisBeat \xB7 \u987B\u624B\u6539 Confirm\u3011DEX-VIS-SPLIT / VIS-MULTI-BEAT \u4E0D\u8FDB\u300C\u53EF\u4E0D\u624B\u6539\u300D\uFF1B\u987B Confirm \u62C6\u955C\uFF08confirmClusterSplit|VisBeatConfirmBar\uFF09\u6216\u827A\u672F override\uFF0C\u7981\u6B62\u53EA\u9760 suggestor \u9759\u9ED8\u62C6\u3002",
-      "\u5141\u8BB8 visualBeatTags\uFF1Areveal,prop_insert,reaction,face_cu,establish,action,speak,os_vo",
-      "\u6DF1\u94FE\uFF1Atoonflow://stage/SB?trigger=visual_multi_beat \u2192 EN\uFF1BSuggestor \u4E0D\u5F97\u76F4\u63A5\u7ACB\u6CD5"
-    );
-    for (const b of visBlocks.slice(0, 6)) {
-      lines.push(`- ${b.id}: ${b.message}`);
-    }
-  }
-  const stillIds = [.../* @__PURE__ */ new Set([...blockIds, ...opts?.warnIds ?? []])].filter(
-    (id) => /DEX-STILL|STILL-FIRSTFRAME/i.test(id)
-  );
-  const stillWarns = (opts?.warnRows ?? []).filter((w) => /DEX-STILL|STILL-FIRSTFRAME/i.test(w.id));
-  if (stillIds.length || stillWarns.length) {
-    const pickTrigger = () => {
-      if (stillIds.includes("DEX-STILL-CU-CAST")) return "still_cu_cast";
-      if (stillIds.includes("DEX-STILL-ONEBEAT")) return "still_onebeat_multi";
-      if (stillIds.some((id) => /STILL-FIRSTFRAME-STALE|DEX-STILL-STALE/i.test(id))) return "still_firstframe_stale";
-      if (stillIds.some((id) => /STILL-FIRSTFRAME-WEAK|MISSING/i.test(id))) return "still_firstframe_weak";
-      if (stillIds.some((id) => /DIRTY|OS-NAME|FILLER|HAND/i.test(id))) return "dirty_still_prompt";
-      return "still_firstframe_dirty";
-    };
-    const trig = pickTrigger();
-    lines.push(
-      "",
-      "\u3010\u9759\u5E27 Identity \xB7 Chat \u987B\u6539\u3011DEX-STILL-*\uFF1A\u8BBE\u8BA1\u671F\u5F3A\u5951\u7EA6\uFF1B\u5BFC\u5165\u4E0D\u786C\u62E6\u3002\u4F18\u5148\u667A\u80FD\u62C6/Confirm\uFF0C\u7981\u6B62\u53EA regen\u3002",
-      `\u6DF1\u94FE\uFF1Atoonflow://stage/SB?trigger=${trig}`
-    );
-    for (const id of stillIds.slice(0, 8)) lines.push(`- ${id}`);
-    for (const w of stillWarns.slice(0, 6)) lines.push(`- ${w.id}: ${w.message}`);
-  }
-  lines.push(
-    "",
-    "\u987B\u624B\u6539\u9879\u6539\u6B63\u540E\u91CD\u65B0 exportGate\uFF1B\u4EC5\u81EA\u52A8\u9002\u914D\u9879\u53EF\u76F4\u63A5 dryRun/\u5BFC\u5165\u3002merge \u4FDD\u6301 preserveMedia\u3002\u56DE\u63A8\u821E\u53F0\u4EC5\u8DF3\u8F6C\uFF0C\u4E0D\u6539\u6570\u636E\u3002"
-  );
-  return lines.join("\n");
-}
-function buildExportPreviewStatusLine(input) {
-  const tier = input.tier ?? "T3";
-  const ids = [...new Set((input.blocks ?? []).map((b) => b.id))].slice(0, 8);
-  const salvageN = input.shapeSalvageLog?.length ?? 0;
-  const closed = (input.autoClosedClearedIds ?? []).filter(Boolean);
-  const closedNote = closed.length ? `\u5DF2\u81EA\u52A8\u95ED\u5408 ${closed.slice(0, 4).join(",")}` : "";
-  const deferred = (input.deferredStill ?? 0) > 0 ? `\u5B9A\u5986\u5EF6\u671F ${input.deferredStill}` : "";
-  const lipNote = input.lipConfirmRequired ? "\u53E3\u578B\u987BConfirm\u8BED\u4E49\u62C6" : "";
-  const litNote = input.litSmartSplit ? "\u6587\u5B66\u53CC\u63A5\u89E6\u5DF2\u667A\u80FD\u62C6" : input.litConfirmRequired ? input.litDebtCta ? `\u6587\u5B66\u503A\u987BConfirm\uFF1A${input.litDebtCta}` : "\u6587\u5B66\u503A\u987BConfirm\u62C6\u955C/\u589E\u5F3A" : "";
-  const dupNote = typeof input.illegalSameVdRatio === "number" && input.illegalSameVdRatio >= 0.2 ? `\u975E\u6CD5\u540C\u6587\u5360\u6BD4${Math.round(input.illegalSameVdRatio * 100)}%` : "";
-  const extrasBase = [closedNote, deferred, lipNote, litNote, dupNote].filter(Boolean);
-  if (input.exportAllowed) {
-    const head2 = input.litSmartSplit ? "\u53EF\u5BFC\u5165\xB7\u5DF2\u667A\u80FD\u62C6\u6587\u5B66\u503A" : input.litConfirmRequired ? "\u53EF\u5BFC\u5165\xB7\u6587\u5B66\u503A\u672A\u95ED\u5408" : input.designExitIncomplete ? "\u53EF\u5BFC\u5165\xB7\u672A\u5B8C\u5168\u95ED\u5408" : "\u53EF\u5BFC\u5165";
-    const extras = [...extrasBase, salvageN ? `\u5F62\u6001\u5DF2\u9002\u914D ${salvageN}` : ""].filter(Boolean).join(" \xB7 ");
-    return `\u9884\u89C8\u66F4\u65B0\u5B8C\u6210 \xB7 ${tier} \xB7 ${head2}${extras ? ` \xB7 ${extras}` : ""}`;
-  }
-  const literaryStale = ids.includes("DEX-LITERARY-STALE");
-  const head = literaryStale ? "\u987B\u91CD\u8BBE\u8BA1" : input.designExitIncomplete && ids.length === 0 ? "\u53EF\u5BFC\u5165\xB7\u672A\u5B8C\u5168\u95ED\u5408" : input.designExitIncomplete ? "\u8BBE\u8BA1\u672A\u95ED\u5408" : "\u963B\u65AD";
-  const rules = ids.length ? `\u89C4\u5219 ${ids.join(",")}` : input.designExitIncomplete ? "\u65E0\u786C BLOCK\xB7\u53EF dryRun" : "\u6709\u987B\u624B\u6539 BLOCK";
-  const mid = extrasBase.length ? ` \xB7 ${extrasBase.join(" \xB7 ")}` : "";
-  return `\u9884\u89C8\u66F4\u65B0\u5B8C\u6210 \xB7 ${tier} \xB7 ${head}${mid} \xB7 ${rules}\uFF08\u5F62\u6001\u9002\u914D\u2260\u5951\u7EA6\u5DF2\u4FEE\uFF09`;
-}
-function formatExportGateBlockPayload(result) {
-  const chatRepairText = result.chatRepairText || buildAggregatedChatRepairText(
-    result.repairHints,
-    result.closureSnapshot.blockIds,
-    result.missingFieldSummary,
-    result.blocks,
-    {
-      warnIds: result.closureSnapshot.warnIds,
-      warnRows: result.warns,
-      shapeSalvageLog: result.shapeSalvageLog,
-      designExitIncomplete: result.designExitIncomplete
-    }
-  );
-  return {
-    code: "EXPORT_GATE_BLOCK",
-    exportAllowed: false,
-    tier: result.tier,
-    blocks: result.blocks,
-    warns: result.warns,
-    repairHints: result.repairHints,
-    chatRepairText,
-    designExitIncomplete: result.designExitIncomplete,
-    previewStatusLine: result.previewStatusLine,
-    autoClosed: result.autoClosed,
-    missingFieldReport: result.missingFieldReport,
-    missingFieldSummary: result.missingFieldSummary,
-    closureSnapshot: result.closureSnapshot,
-    coverage: result.coverage,
-    fieldWalkGaps: result.fieldWalkGaps,
-    designFindings: result.designFindings,
-    shapeSalvageLog: result.shapeSalvageLog,
-    rePushPlan: result.inspected?.rePushPlan ?? []
-  };
-}
-function loadImportSalvageRegistry() {
-  try {
-    const matrix = readFixtureJson(
-      "semantic_gate_dual_track_matrix.json",
-      {}
-    );
-    return matrix.importSalvageRegistry ?? [];
-  } catch {
-    return [];
-  }
-}
-function importSalvageDemoteIds() {
-  return new Set(
-    loadImportSalvageRegistry().filter((e) => {
-      const soft = e.importSoftBanner === true;
-      if (soft) return true;
-      return e.demoteAfterHeal === true && e.untilClear !== true;
-    }).map((e) => e.ruleId)
-  );
-}
-function runExportGate(raw, opts = {}) {
-  try {
-    return runExportGateInner(raw, opts);
-  } catch (e) {
-    const { JsonIncompleteError: JsonIncompleteError2 } = (init_jsonBraceSalvage(), __toCommonJS(jsonBraceSalvage_exports));
-    if (e instanceof JsonIncompleteError2 || e?.code === "JSON_INCOMPLETE") {
-      const msg = e instanceof Error ? e.message : "JSON_INCOMPLETE";
-      const blocks = [{ id: "JSON_INCOMPLETE", message: msg, field: "$" }];
-      const repairHints = [
-        {
-          id: "RH-JSON-INCOMPLETE",
-          ruleId: "JSON_INCOMPLETE",
-          chatTemplate: "\u3010JSON_INCOMPLETE\u3011Bundle JSON \u622A\u65AD\u6216\u4E0D\u5B8C\u6574\uFF0C\u7981\u6B62\u778E\u8865\u4E2D\u6BB5\u3002\u8BF7\u91CD\u51FA\u5B8C\u6574\u53EF parse \u7684\u6839\u5BF9\u8C61\uFF08\u542B\u9876\u5C42 preDesignPack/characterDesign\uFF09\u3002\u52FF\u5F53\u4F5C DG-EMPTY\u3002"
-        }
-      ];
-      const emptyBundle = { preDesignPack: { shots: [] } };
-      return {
-        exportAllowed: false,
-        tier: "T1",
-        bundle: emptyBundle,
-        inspected: {
-          blocked: true,
-          tier: "T1",
-          rulePackVersion: "2.1.0",
-          qualityGate: { issues: [{ id: "JSON_INCOMPLETE", severity: "BLOCK", message: msg }] }
-        },
-        designFindings: [{ id: "JSON_INCOMPLETE", severity: "BLOCK", message: msg }],
-        integrityGaps: [],
-        fieldWalkGaps: [],
-        missingFieldReport: [],
-        missingFieldSummary: msg,
-        repairHints,
-        closureSnapshot: {
-          tier: "T1",
-          blocked: true,
-          blockIds: ["JSON_INCOMPLETE"],
-          warnIds: [],
-          checkedAt: (/* @__PURE__ */ new Date()).toISOString()
-        },
-        coverage: { matrixTotal: 0, blocks: 1, warns: 0, softPatchEligible: 0 },
-        blocks,
-        warns: [],
-        shapeSalvageLog: [],
-        chatRepairText: buildAggregatedChatRepairText(repairHints, ["JSON_INCOMPLETE"], msg, blocks, {}),
-        designExitIncomplete: false,
-        previewStatusLine: buildExportPreviewStatusLine({
-          exportAllowed: false,
-          tier: "T1",
-          blocks,
-          shapeSalvageLog: []
-        })
-      };
-    }
-    throw e;
-  }
-}
-function runExportGateInner(raw, opts = {}) {
-  const prep = opts.alreadyPrepared && opts.bundle ? {
-    bundle: opts.bundle,
-    tier: opts.tier ?? inferTier2(opts.bundle),
-    shapeSalvageLog: opts.shapeSalvageLog ?? prepareBundleWithLog(raw).shapeSalvageLog,
-    shapeSalvageSummary: void 0
-  } : prepareBundleForInspect(raw, { ingestHeal: false });
-  const bundle = prep.bundle;
-  const tier = opts.tier ?? prep.tier;
-  try {
-    const { raiseDurationHygieneOnly: raiseDurationHygieneOnly2 } = (init_durationHygiene(), __toCommonJS(durationHygiene_exports));
-    const vendorId = bundle.meta?.vendorId ?? bundle.planData?.vendorId ?? null;
-    const hy = raiseDurationHygieneOnly2(bundle, { vendorId, respectEpisodeCap: false });
-    if (hy.raised || hy.skippedCap || hy.skippedOverVendor || hy.skippedNeedsSplit) {
-      (prep.shapeSalvageLog ??= []).push({
-        ruleId: "SH-DURATION-ALIGN",
-        path: "preDesignPack.shots[].duration",
-        action: `export_raise:${hy.raised};over_vendor=${hy.skippedOverVendor};cap=${hy.skippedCap};split_note=${hy.skippedNeedsSplit}`
-      });
-    }
-  } catch {
-  }
-  try {
-    const { applyCamFitHygieneOnExport: applyCamFitHygieneOnExport2, runCamFitUntilClear: runCamFitUntilClear2 } = (init_camFitHygiene(), __toCommonJS(camFitHygiene_exports));
-    const alreadyExpanded = Boolean(
-      bundle._importSplitExpanded || bundle.meta?.importSplitExpanded
-    );
-    const camDiagnoseOnly = !opts.forceExpand || alreadyExpanded;
-    const cam = (runCamFitUntilClear2 ?? applyCamFitHygieneOnExport2)(bundle, {
-      chatStrict: camDiagnoseOnly,
-      maxRounds: camDiagnoseOnly ? 0 : 5,
-      autoMinConfidence: 0.7
-    });
-    if (cam.applied) {
-      (prep.shapeSalvageLog ??= []).push({
-        ruleId: "SH-CAM-FIT-UNTIL-CLEAR",
-        path: "preDesignPack.shots",
-        action: `export_cam_split:${cam.applied};rounds=${cam.rounds};remain=${cam.remainingMustSplit}`
-      });
-    } else if (camDiagnoseOnly && cam.remainingMustSplit > 0) {
-      (prep.shapeSalvageLog ??= []).push({
-        ruleId: "SH-CAM-FIT-DIAGNOSE-ONLY",
-        path: "preDesignPack.shots",
-        action: `no_expand;remain=${cam.remainingMustSplit}`
-      });
-    }
-    if (cam.confirmRequired) {
-      bundle.irdConfirmRequired = true;
-      const meta4 = bundle.meta ??= {};
-      meta4.irdConfirmRequired = true;
-    }
-    const metaCam = bundle.meta ??= {};
-    metaCam.camFitUntilClear = {
-      remainingMustSplit: cam.remainingMustSplit,
-      applied: cam.applied,
-      rounds: cam.rounds
-    };
-  } catch {
-  }
-  let autoClosed;
-  try {
-    const { applyDesignAutoCloseToBundle: applyDesignAutoCloseToBundle2 } = (init_designAutoClose(), __toCommonJS(designAutoClose_exports));
-    const ac = applyDesignAutoCloseToBundle2(bundle, {
-      stageId: "SB",
-      // Dirty/DUP heals often need merge then re-audit
-      maxRounds: opts.allowShapeSalvage === true ? 5 : 4,
-      // 语义扩仅 opts.forceExpand；prepare 已扩则禁二次增产
-      forceExpand: Boolean(opts.forceExpand) && !Boolean(
-        bundle._importSplitExpanded || bundle.meta?.importSplitExpanded
-      )
-    });
-    autoClosed = ac.autoClosed;
-    if (ac.autoClosed.applied) {
-      (prep.shapeSalvageLog ??= []).push({
-        ruleId: "SH-DESIGN-AUTO-CLOSE",
-        path: "planData.dialoguePlan|preDesignPack.shots",
-        action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"};ops=${ac.autoClosed.changes.length}`
-      });
-      try {
-        const { auditGenerationApplyGaps: auditGenerationApplyGaps2 } = (init_generationApplyAudit(), __toCommonJS(generationApplyAudit_exports));
-        const openGen = auditGenerationApplyGaps2(bundle).filter((g) => /^GEN-0[356]$/.test(g.id));
-        if (openGen.length) {
-          const bMeta = bundle.meta ??= {};
-          bMeta.importOkNotExitPass = true;
-          bMeta.designExitIncomplete = true;
-          (prep.shapeSalvageLog ??= []).push({
-            ruleId: "FALSE-GREEN-GEN",
-            path: "generation.imagePrompt",
-            action: `gen_open:${openGen.map((g) => g.id).join(",")}`
-          });
-        }
-      } catch {
-      }
-    }
-  } catch {
-  }
-  try {
-    const { sealThemeGlueUntilClear: sealThemeGlueUntilClear2 } = (init_sealThemeGlueUntilClear(), __toCommonJS(sealThemeGlueUntilClear_exports));
-    const seal = sealThemeGlueUntilClear2(bundle);
-    if (seal.sealedIds.length || seal.propMutated || seal.intentSynced) {
-      (prep.shapeSalvageLog ??= []).push({
-        ruleId: "SH-THEME-GLUE-SEAL",
-        path: "preDesignPack.shots|planData.shotDesignIntent",
-        action: `sealed=${seal.sealedIds.join(",") || "none"};propMut=${seal.propMutated};propLeft=${seal.propBlocksLeft};intentSync=${seal.intentSynced};intentLeft=${seal.intentBlocksLeft}`
-      });
-      if (!autoClosed) {
-        autoClosed = {
-          applied: true,
-          clearedIds: seal.sealedIds,
-          remainingFailedIds: [],
-          changes: seal.sealedIds.map((id) => ({
-            ruleId: id,
-            detail: "theme_glue_seal",
-            path: "sealThemeGlueUntilClear"
-          })),
-          chatRetryRequired: false
-        };
-      } else {
-        autoClosed = {
-          ...autoClosed,
-          applied: true,
-          clearedIds: [.../* @__PURE__ */ new Set([...autoClosed.clearedIds ?? [], ...seal.sealedIds])],
-          remainingFailedIds: (autoClosed.remainingFailedIds ?? []).filter(
-            (id) => !seal.sealedIds.includes(id)
-          ),
-          changes: [
-            ...autoClosed.changes ?? [],
-            ...seal.sealedIds.map((id) => ({
-              ruleId: id,
-              detail: "theme_glue_seal",
-              path: "sealThemeGlueUntilClear"
-            }))
-          ]
-        };
-      }
-    }
-  } catch {
-  }
-  if (opts.allowShapeSalvage === true) {
-    try {
-      const { collapseCloneVdOnBundle: collapseCloneVdOnBundle2 } = (init_designAutoClose(), __toCommonJS(designAutoClose_exports));
-      const col = collapseCloneVdOnBundle2(bundle);
-      if (col.merged > 0) {
-        (prep.shapeSalvageLog ??= []).push({
-          ruleId: "SH-CLONE-VD-COLLAPSE",
-          path: "preDesignPack.shots",
-          action: `${col.before}\u2192${col.after};merged=${col.merged};empty_only`
-        });
-      }
-    } catch {
-    }
-  }
-  {
-    const author = Number(
-      bundle.meta?.prepareShotCounts?.rawShotCount ?? prep.shotCounts?.rawShotCount ?? 0
-    );
-    const postHeal = (bundle.preDesignPack?.shots ?? []).length;
-    const bMeta = bundle.meta ??= {};
-    const prepCounts = bMeta.prepareShotCounts ?? prep.shotCounts ?? {};
-    bMeta.shotCounts = {
-      ...prepCounts,
-      author: author || prepCounts.rawShotCount || postHeal,
-      postPrepare: prepCounts.postPrepareCount ?? postHeal,
-      postHeal
-    };
-    bMeta.prepareShotCounts = {
-      ...prepCounts,
-      postHeal
-    };
-  }
-  const designGates = runDesignPhaseGates(bundle);
-  const integrityGaps = auditBundleIntegrity(bundle);
-  const fieldWalkReport = buildMissingFieldReport(bundle);
-  const fieldWalkGaps = auditImplementationFieldWalk(bundle);
-  const inspected = inspectBundle(bundle, { tier, alreadyParsed: true });
-  const blocks = [];
-  const warns = [];
-  for (const f of designGates.findings) {
-    const row = { id: f.id, message: f.message, field: f.field };
-    if (f.severity === "BLOCK") blocks.push(row);
-    else warns.push(row);
-  }
-  {
-    const hasCamDebt = blocks.some(
-      (b) => /DEX-CAM-FIT|DG-CAM-FIT-FALSE-GREEN|IRD-CONFIRM/.test(b.id)
-    ) || Boolean(bundle.meta?.camFitChatStrictBlocked);
-    const narSelf = bundle.narrativeSelfcheck ?? {};
-    if (hasCamDebt && narSelf.passed === true) {
-      bundle.narrativeSelfcheck = {
-        ...narSelf,
-        passed: false,
-        failedIds: [.../* @__PURE__ */ new Set([...narSelf.failedIds ?? [], "DEX-CAM-FIT"])],
-        serverOverwritten: true,
-        checkedAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-    }
-  }
-  for (const g of integrityGaps) {
-    const row = { id: g.id, message: g.message, field: g.field };
-    if (g.severity === "BLOCK") blocks.push(row);
-    else if (g.severity === "WARN") warns.push(row);
-  }
-  for (const g of fieldWalkGaps) {
-    const row = { id: g.id, message: g.message, field: g.field };
-    if (g.severity === "BLOCK") blocks.push(row);
-    else warns.push(row);
-  }
-  for (const i of inspected.qualityGate?.issues ?? []) {
-    const row = { id: i.id, message: i.message, field: i.evidence ? JSON.stringify(i.evidence) : void 0 };
-    if (i.severity === "BLOCK") blocks.push(row);
-    else warns.push(row);
-  }
-  if (inspected.blocked && tier === "T3") {
-    for (const c of [
-      ...inspected.closureChecks?.dc ?? [],
-      ...inspected.closureChecks?.pc ?? []
-    ]) {
-      if (!c.passed && c.severity === "BLOCK" && c.id) {
-        if (!blocks.some((b) => b.id === c.id)) {
-          blocks.push({ id: c.id, message: c.message ?? c.id });
-        }
-      }
-    }
-  }
-  const salvageLog = prep.shapeSalvageLog ?? [];
-  const chatShapeBlocks = salvageLog.filter(
-    (e) => /SH-VISUAL-EFFECT-OBJ|SH-AUDIO-CUE-OBJ/.test(e.ruleId)
-  );
-  if (opts.allowShapeSalvage !== true && chatShapeBlocks.length) {
-    const veN = chatShapeBlocks.filter((e) => e.ruleId === "SH-VISUAL-EFFECT-OBJ").length;
-    blocks.push({
-      id: "DG-CHAT-SHAPE-VE",
-      message: `Chat \u5BFC\u51FA\u5F62\u6001\u8FDD\u89C4\uFF1A\u9700\u5C06 visualEffect/audioCue \u5199\u6210 string\uFF08\u68C0\u6D4B\u5230 ${chatShapeBlocks.length} \u5904\u5BF9\u8C61\u5F62\u6001\uFF0C\u542B visualEffect\xD7${veN}\uFF09\u3002\u8BF7\u6309 RH-MOD-01 \u4FEE\u6539 JSON\uFF0C\u52FF\u4F9D\u8D56\u670D\u52A1\u5668 salvage\u3002`,
-      field: "preDesignPack.shots[].visualEffect"
-    });
-  }
-  const microSalvage = salvageLog.filter((e) => e.ruleId === "SH-MICRO-EXPR");
-  if (opts.allowShapeSalvage !== true && microSalvage.length) {
-    warns.push({
-      id: "DG-CHAT-SHAPE-MICRO",
-      message: `Chat microExpression \u540D\u952E map \u5DF2 salvage\uFF08\xD7${microSalvage.length}\uFF09\uFF1B\u4E0B\u6B21\u8BF7\u5199 {eyes,mouthDetail}\uFF08\u591A\u89D2 byName\uFF09\uFF0C\u52FF\u540D\u952E\u6839\u5BF9\u8C61`,
-      field: "preDesignPack.shots[].shotDesign.performance.microExpression"
-    });
-  }
-  try {
-    const { shouldWarnOneBeat: shouldWarnOneBeat2, hasOsInNameDisplay: hasOsInNameDisplay2, hasDesignFiller: hasDesignFiller2 } = (init_stillIdentitySsot(), __toCommonJS(stillIdentitySsot_exports));
-    const { detectCuCastConflict: detectCuCastConflict2 } = (init_detectCuCastConflict(), __toCommonJS(detectCuCastConflict_exports));
-    const shotsForStill = bundle.preDesignPack?.shots ?? [];
-    for (const s of shotsForStill) {
-      const vd = String(s.visualDescription ?? "").trim();
-      if (vd && shouldWarnOneBeat2(vd) && !blocks.some((b) => b.id === "DEX-STILL-ONEBEAT")) {
-        blocks.push({
-          id: "DEX-STILL-ONEBEAT",
-          message: "visualDescription \u591A\u62CD\u987B\u667A\u80FD\u62C6\u955C\u540E\u518D\u5BFC\u51FA",
-          field: "visualDescription"
-        });
-      }
-      const cu = detectCuCastConflict2({
-        shotSize: String(s.shotSize ?? s.narrative?.shotSize ?? ""),
-        charCodes: Array.isArray(s.charCodes) ? s.charCodes : [],
-        characterNames: Array.isArray(s.characterNames) ? s.characterNames : [],
-        visualDescription: vd,
-        alreadySplit: Boolean(s._cuCastSplitId || s._stillBeatSplitId || s._visualSplitId || s._cuCastSliced)
-      });
-      if (cu.conflict && cu.healMode === "slice_cast" && cu.primaryName) {
-        const { sliceShotCastToPrimary: sliceShotCastToPrimary2 } = (init_detectCuCastConflict(), __toCommonJS(detectCuCastConflict_exports));
-        sliceShotCastToPrimary2(s, cu.primaryName);
-      } else if (cu.conflict && !blocks.some((b) => b.id === "DEX-STILL-CU-CAST")) {
-        blocks.push({
-          id: "DEX-STILL-CU-CAST",
-          message: cu.message,
-          field: "shotSize"
-        });
-      }
-      if (vd && hasOsInNameDisplay2(vd) && !blocks.some((b) => b.id === "DEX-STILL-OS-NAME")) {
-        blocks.push({ id: "DEX-STILL-OS-NAME", message: "\u753B\u9762\u63CF\u5199\u542B\uFF08OS\uFF09\u987B\u88F8\u540D", field: "visualDescription" });
-      }
-      if (vd && hasDesignFiller2(vd) && !blocks.some((b) => b.id === "DEX-STILL-FILLER")) {
-        blocks.push({ id: "DEX-STILL-FILLER", message: "\u7981\u5BF9\u767D\u77AC\u95F4\u795E\u6001\u7B49\u65E0\u753B\u9762\u586B\u6599", field: "visualDescription" });
-      }
-    }
-    const cdAssets = bundle.characterDesign?.assets ?? [];
-    for (const a of cdAssets) {
-      if (hasOsInNameDisplay2(String(a.name ?? "")) && !blocks.some((b) => b.id === "DEX-STILL-OS-NAME")) {
-        blocks.push({ id: "DEX-STILL-OS-NAME", message: "CD.name \u542B\uFF08OS\uFF09\u987B\u88F8\u540D", field: "characterDesign.assets.name" });
-      }
-    }
-  } catch {
-  }
-  try {
-    const shotsChain = bundle.preDesignPack?.shots ?? [];
-    const meta4 = bundle.meta ?? bundle.planData?.meta;
-    const { chainContractEnabled: chainContractEnabled2, buildShotChainContract: buildShotChainContract2, assertChainEgress: assertChainEgress2 } = (init_shotChainContract(), __toCommonJS(shotChainContract_exports));
-    const { auditLiteraryBeatCoverage: auditLiteraryBeatCoverage2 } = (init_literaryBeatCoverage(), __toCommonJS(literaryBeatCoverage_exports));
-    const { auditCamShootableFit: auditCamShootableFit2 } = (init_camShootableFit(), __toCommonJS(camShootableFit_exports));
-    const { auditDesignLoss: auditDesignLoss2 } = (init_designLossSupplement(), __toCommonJS(designLossSupplement_exports));
-    if (chainContractEnabled2(meta4) && shotsChain.length) {
-      for (const f of auditLiteraryBeatCoverage2(shotsChain)) {
-        if (f.severity === "BLOCK" && !blocks.some((b) => b.id === f.id)) {
-          blocks.push({ id: f.id, message: f.message, field: "visualDescription" });
-        }
-      }
-      for (const f of auditDesignLoss2(bundle)) {
-        if (f.severity === "BLOCK" && !blocks.some((b) => b.id === f.id)) {
-          blocks.push({ id: f.id, message: f.message, field: "visualDescription" });
-        }
-      }
-      for (const s of shotsChain) {
-        const cam = auditCamShootableFit2(s);
-        for (const f of cam.findings) {
-          if (f.severity === "BLOCK" && !blocks.some((b) => b.id === f.id)) {
-            blocks.push({ id: f.id, message: f.message, field: "camera" });
-          }
-        }
-        const eg = assertChainEgress2("exit", buildShotChainContract2(s));
-        for (const f of eg.findings.filter((x) => x.severity === "BLOCK")) {
-          if (!blocks.some((b) => b.id === f.id)) {
-            blocks.push({ id: f.id, message: f.message, field: "shotChainContract" });
-          }
-        }
-      }
-    }
-    {
-      const camCleared = (prep.shapeSalvageLog ?? []).some(
-        (e) => (e.ruleId === "SH-CAM-FIT-UNTIL-CLEAR" || e.ruleId === "SH-CAM-FIT-HYGIENE") && /remain=0/.test(String(e.action ?? ""))
-      );
-      const remain = bundle.meta?.camFitUntilClear?.remainingMustSplit;
-      if (remain === 0 || camCleared) {
-        for (let i = blocks.length - 1; i >= 0; i--) {
-          if (blocks[i].id === "DEX-CAM-FIT") blocks.splice(i, 1);
-        }
-      } else if (blocks.some((b) => b.id === "DEX-CAM-FIT")) {
-        for (let i = blocks.length - 1; i >= 0; i--) {
-          if (blocks[i].id === "DEX-CAM-FIT") blocks.splice(i, 1);
-        }
-        if (!blocks.some((b) => b.id === "IRD-CONFIRM")) {
-          blocks.push({
-            id: "IRD-CONFIRM",
-            message: "DEX-CAM-FIT \u6B8B\u7559\u4F4E\u7F6E\u4FE1\u987B Confirm \u667A\u80FD\u62C6\uFF1B\u52FF\u624B\u6539\u955C\u53F7\uFF08IRD-CONFIRM\uFF09",
-            field: "stillIntentOps"
-          });
-        }
-        bundle.irdConfirmRequired = true;
-      }
-    }
-    if (bundle.importSplitSyncFailed) {
-      blocks.push({
-        id: "IMPORT-SPLIT-SYNC",
-        message: "\u62C6\u955C\u540E storyboard \u5199\u5E93\u5931\u8D25\uFF0C\u987B\u91CD\u8BD5\u540C\u6B65",
-        field: "o_storyboard"
-      });
-    }
-    const metaIrd = bundle.meta ?? bundle.planData?.meta ?? {};
-    if (bundle.irdConfirmRequired || metaIrd.irdConfirmRequired) {
-      if (!blocks.some((b) => b.id === "IRD-CONFIRM")) {
-        blocks.push({
-          id: "IRD-CONFIRM",
-          message: "IRD \u4F4E\u7F6E\u4FE1\u8865\u4E01\u5F85 Confirm\uFF1Bimport\u2260designExitPass\uFF0C\u7981\u6B62\u5047\u7EFF\u51FA\u7AD9",
-          field: "stillIntentOps"
-        });
-      }
-    }
-    const expandedSilent = Boolean(metaIrd.importSplitExpanded) && !metaIrd.irdProvenance;
-    if (expandedSilent) {
-      warns.push({
-        id: "IRD-PROVENANCE-MISSING",
-        message: "\u9759\u9ED8 expand \u65E0 irdProvenance\uFF1B\u4E0D\u5F97\u5BA3\u79F0\u667A\u80FD\u8BBE\u8BA1\u5B8C\u6210",
-        field: "meta.irdProvenance"
-      });
-    }
-    if (blocks.length === 0 && (prep.shapeSalvageLog ?? []).some((e) => /F0|fxPrompt|sceneAvTags|causedByActionId/i.test(e.ruleId + e.action))) {
-      warns.push({
-        id: "HYGIENE-ONLY",
-        message: "hygiene_only\u2260still_ok\uFF1A\u7ED3\u6784\u8F68\u4FEE\u590D\u4E0D\u4EE3\u8868\u9759\u5E27\u9996\u5E27\u8D28\u91CF\u901A\u8FC7",
-        field: "exportGate"
-      });
-    }
-    if (metaIrd.importOkNotExitPass && !warns.some((w) => w.id === "IMPORT_OK_NOT_EXIT")) {
-      warns.push({
-        id: "IMPORT_OK_NOT_EXIT",
-        message: "importOk\u2260designExitPass\uFF1BChat selfcheck/modality \u4E0D\u5F97\u5355\u72EC\u51FA\u7AD9",
-        field: "meta.importOkNotExitPass"
-      });
-    }
-  } catch {
-  }
-  let designExitIncomplete = false;
-  try {
-    const { runDesignExitGate: runDesignExitGate2 } = (init_designExitGate(), __toCommonJS(designExitGate_exports));
-    const {
-      planFromBundleForDesignExit: planFromBundleForDesignExit2,
-      deepCloneJson: deepCloneJson2,
-      dedupeChatRepairBlocks: dedupeChatRepairBlocks2
-    } = (init_planFromBundleForDesignExit(), __toCommonJS(planFromBundleForDesignExit_exports));
-    try {
-      const { sealThemeGlueUntilClear: sealThemeGlueUntilClear2 } = (init_sealThemeGlueUntilClear(), __toCommonJS(sealThemeGlueUntilClear_exports));
-      const seal2 = sealThemeGlueUntilClear2(bundle);
-      if (seal2.sealedIds.length && autoClosed) {
-        autoClosed.clearedIds = [.../* @__PURE__ */ new Set([...autoClosed.clearedIds ?? [], ...seal2.sealedIds])];
-        autoClosed.remainingFailedIds = (autoClosed.remainingFailedIds ?? []).filter(
-          (id) => !seal2.sealedIds.includes(id)
-        );
-      }
-    } catch {
-    }
-    const planView = deepCloneJson2(planFromBundleForDesignExit2(bundle));
-    const exit = runDesignExitGate2("SB", planView, { chatStrict: false });
-    if (!exit.ok && exit.failedIds.length) {
-      const themeGlue = /* @__PURE__ */ new Set([
-        "DEX-PROP-CONT",
-        "DEX-INTENT-PIC",
-        "DEX-SHOT-INTENT",
-        "DEX-EXPR-SPEAK",
-        "CHAT-AUD-01",
-        "FX-GRADE-01",
-        "FALSE_GREEN_SELFCHECK",
-        "DG-CAM-FIT-FALSE-GREEN",
-        "DG-NAR-SELFCHECK"
-      ]);
-      const sealed = new Set(autoClosed?.clearedIds ?? []);
-      let failedIds = opts.acknowledgeKeepLegacy ? exit.failedIds.filter((id) => id !== "DEX-LITERARY-STALE") : exit.failedIds;
-      for (const id of [...failedIds]) {
-        if (themeGlue.has(id) && (sealed.has(id) || id === "DEX-PROP-CONT" || id === "DEX-INTENT-PIC")) {
-          failedIds = failedIds.filter((x) => x !== id);
-          if (!warns.some((w) => w.id === id)) {
-            warns.push({
-              id,
-              message: `\u3010\u4E3B\u9898\u80F6\u6C34\u5DF2 seal / \u4E0D\u963B\u65AD\u3011${id}\uFF08declare-only / sidecar \u540C\u6E90\uFF1B\u7CBE\u54C1\u53EF\u56DE SB\uFF09`,
-              field: "designExitGate.SB"
-            });
-          }
-          if (autoClosed) {
-            autoClosed.clearedIds = [.../* @__PURE__ */ new Set([...autoClosed.clearedIds ?? [], id])];
-            autoClosed.remainingFailedIds = (autoClosed.remainingFailedIds ?? []).filter((x) => x !== id);
-          }
-        }
-      }
-      if (failedIds.length) {
-        designExitIncomplete = true;
-        const checklist = readFixtureJson("design_exit_checklist.json", {});
-        for (const id of failedIds) {
-          const msg = checklist.checks?.[id]?.message ?? exit.warnings.find((w) => w.includes(id)) ?? id;
-          if (!blocks.some((b) => b.id === id && b.message === msg)) {
-            blocks.push({ id, message: String(msg), field: "designExitGate.SB" });
-          }
-        }
-        const deduped = dedupeChatRepairBlocks2(blocks);
-        blocks.length = 0;
-        blocks.push(...deduped);
-      }
-    }
-    for (const w of exit.warnings) {
-      if (w.startsWith("UNIMPLEMENTED_DEX:") && !warns.some((x) => x.message === w)) {
-        warns.push({ id: "UNIMPLEMENTED_DEX", message: w, field: "designExitGate.SB" });
-      }
-    }
-  } catch {
-  }
-  const autoCleared = /* @__PURE__ */ new Set([...autoClosed?.clearedIds ?? []]);
-  for (const id of autoCleared) {
-    if (id === "NAR-15" || id === "DEX-SHOT-INTENT" || id === "DEX-INTENT-PIC" || id === "DEX-ASSET-CREF" || id === "DC-01" || id === "DC-01-EXTRA" || id === "DEX-DIRTY-STILL-PROMPT" || id === "DEX-HAND-LIP" || id === "DEX-PROP-CONT" || id === "DEX-EXPR-SPEAK" || id === "CHAT-AUD-01" || id === "FX-GRADE-01" || id === "NO-LIP-DIALOGUE") {
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        if (blocks[i]?.id === id) blocks.splice(i, 1);
-      }
-    }
-  }
-  {
-    const camCleared = (prep.shapeSalvageLog ?? []).some(
-      (e) => (e.ruleId === "SH-CAM-FIT-UNTIL-CLEAR" || e.ruleId === "SH-CAM-FIT-HYGIENE") && /remain=0/.test(String(e.action ?? ""))
-    );
-    const remain = bundle.meta?.camFitUntilClear?.remainingMustSplit;
-    if (blocks.some((b) => b.id === "DEX-CAM-FIT")) {
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        if (blocks[i].id === "DEX-CAM-FIT") blocks.splice(i, 1);
-      }
-      if (!(remain === 0 || camCleared)) {
-        if (!blocks.some((b) => b.id === "IRD-CONFIRM")) {
-          blocks.push({
-            id: "IRD-CONFIRM",
-            message: "DEX-CAM-FIT \u6B8B\u7559\u4F4E\u7F6E\u4FE1\u987B Confirm \u667A\u80FD\u62C6\uFF1B\u52FF\u624B\u6539\u955C\u53F7\uFF08IRD-CONFIRM\uFF09",
-            field: "stillIntentOps"
-          });
-        }
-        bundle.irdConfirmRequired = true;
-      }
-    }
-    const self2 = bundle.narrativeSelfcheck;
-    const honestyDone = self2?.serverOverwritten === true || self2?.passed === false || remain === 0 || camCleared;
-    if (honestyDone) {
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        const id = blocks[i]?.id;
-        if (id === "DG-CAM-FIT-FALSE-GREEN" || id === "FALSE_GREEN_SELFCHECK" || id === "DG-NAR-SELFCHECK") {
-          blocks.splice(i, 1);
-        }
-      }
-      for (let i = designGates.findings.length - 1; i >= 0; i--) {
-        const id = designGates.findings[i]?.id;
-        if (id === "DG-CAM-FIT-FALSE-GREEN" || id === "FALSE_GREEN_SELFCHECK" || id === "DG-NAR-SELFCHECK") {
-          designGates.findings.splice(i, 1);
-        }
-      }
-    }
-  }
-  if (opts.allowShapeSalvage === true) {
-    const demoteSet = importSalvageDemoteIds();
-    const demoted = [];
-    for (let i = blocks.length - 1; i >= 0; i--) {
-      const id = blocks[i]?.id;
-      if (!id || !demoteSet.has(id)) continue;
-      const row = blocks[i];
-      blocks.splice(i, 1);
-      if (!warns.some((w) => w.id === id && w.message === row.message)) {
-        const isDirtySoft = id === "DEX-DIRTY-STILL-PROMPT" || id === "DEX-HAND-LIP";
-        warns.push({
-          ...row,
-          message: isDirtySoft ? `\u3010\u5BFC\u5165\u4E0D\u62E6 \xB7 \u53CD\u63A8\u8BBE\u8BA1 Confirm\u3011${row.message}\uFF08\u624B+\u8138\u771F\u810F\u987B SB \u6539 VD \u6216 VisBeat Confirm \u62C6\uFF1B\u7981\u5BFC\u5165\u9759\u9ED8\u62C6\uFF1B\u914D\u65B9\u9002\u914D\u2260\u6539 VD\uFF1BimportOk\u2260designExitPass\uFF09` : `\u3010\u5BFC\u5165\u667A\u80FD\u6108/\u52FF\u5F53 designExitPass\u3011${row.message}`
-        });
-      }
-      demoted.push(id);
-    }
-    if (demoted.length) {
-      designExitIncomplete = true;
-      const bMeta = bundle.meta ??= {};
-      bMeta.importOkNotExitPass = true;
-      if (demoted.includes("IRD-CONFIRM") || demoted.includes("DEX-CAM-FIT") || demoted.includes("DEX-LIP-SPLIT")) {
-        bMeta.importDiagnoseOnly = true;
-        bundle.irdConfirmRequired = true;
-      }
-      if (demoted.some((id) => /^DEX-LIT-|^DEX-PROP-CONT/.test(id))) {
-        bMeta.litDebtImportPending = true;
-      }
-      (prep.shapeSalvageLog ??= []).push({
-        ruleId: "SH-IMPORT-SALVAGE-DEMOTE",
-        path: "exportGate.blocks",
-        action: `demoted=${[...new Set(demoted)].join(",")}`
-      });
-    }
-    {
-      const bMeta = bundle.meta ??= {};
-      const shots = bundle.preDesignPack?.shots ?? [];
-      if (shots.length) {
-        try {
-          const { runImportLitDebtHygiene: runImportLitDebtHygiene2 } = (init_importLitDebtHygiene(), __toCommonJS(importLitDebtHygiene_exports));
-          const lit = runImportLitDebtHygiene2({
-            shots,
-            meta: bMeta,
-            shapeSalvageLog: prep.shapeSalvageLog ??= []
-          });
-          if ((lit.splitCount > 0 || lit.softFilled.length) && bundle.preDesignPack) {
-            bundle.preDesignPack.shots = shots;
-            if (bundle.planData && typeof bundle.planData === "object") {
-              const pd = bundle.planData;
-              if (pd.preDesignPack) pd.preDesignPack.shots = shots;
-            }
-          }
-          try {
-            const { declareF0OnBundle: declareF0OnBundle2 } = (init_declareF0(), __toCommonJS(declareF0_exports));
-            const f0 = declareF0OnBundle2(bundle);
-            if (f0.declared.length) {
-              (prep.shapeSalvageLog ??= []).push({
-                ruleId: "SH-FX-F0-AFTER-LIT-SPLIT",
-                path: "fxFeasibilityAudit.items",
-                action: `declared=${f0.declared.join(",")}`
-              });
-              if (!warns.some((w) => w.id === "FX-F0-IMPORT")) {
-                warns.push({
-                  id: "FX-F0-IMPORT",
-                  message: `\u3010\u53EF\u5BFC\u5165 \xB7 \u5DF2\u58F0\u660E\u65E0\u7279\u6548 F0\u3011\u955C ${f0.declared.slice(0, 8).join(",")}\uFF08\u65E0\u7279\u6548\u4E0D\u5199 fxPrompt\uFF09`,
-                  field: "fxFeasibility"
-                });
-              }
-            }
-          } catch {
-          }
-          try {
-            const { softHealTouchHomology: softHealTouchHomology2 } = (init_touchHomologyHeal(), __toCommonJS(touchHomologyHeal_exports));
-            const heal11 = softHealTouchHomology2(bundle);
-            if (heal11.absorbed > 0 || heal11.strippedNoise > 0 || heal11.f0Declared.length) {
-              (prep.shapeSalvageLog ??= []).push({
-                ruleId: "SH-DC01-ABSORB-EXTRA",
-                path: "planData.dialoguePlan.lines",
-                action: `cleared=${heal11.cleared};noise=${heal11.strippedNoise};absorb=${heal11.absorbed};left=${heal11.extrasLeft};f0=${heal11.f0Declared.join(",")}`
-              });
-              if (!warns.some((w) => w.id === "DC-01-ABSORB-EXTRA")) {
-                warns.push({
-                  id: "DC-01-ABSORB-EXTRA",
-                  message: heal11.cleared ? `\u3010\u53EF\u5BFC\u5165 \xB7 \u53F0\u8BCD/FX \u540C\u6838\u5DF2\u6E05\u96F6\u3011\u5265\u79BB\u566A\u70B9 ${heal11.strippedNoise} \xB7 \u5438\u6536\u6587\u5B66 ${heal11.absorbed} \xB7 F0 ${heal11.f0Declared.length}` : `\u3010\u53EF\u5BFC\u5165 \xB7 \u540C\u6838\u672A\u5B8C\u5168\u6E05\u96F6\u3011\u6B8B\u7559 EXTRA ${heal11.extrasLeft} / \u672A\u58F0\u660E FX ${heal11.undeclaredFxLeft} \u2014 \u987B\u8BBE\u8BA1\u91CD\u505A`,
-                  field: "planData.dialoguePlan"
-                });
-              }
-            }
-            if (heal11.extrasLeft === 0) {
-              for (let i = blocks.length - 1; i >= 0; i--) {
-                const id = String(blocks[i]?.id ?? "");
-                if (id === "DC-01-EXTRA" || id === "DC-01" || id === "H3" || id === "R2") {
-                  if (/乱入|EXTRA|台词覆盖/.test(String(blocks[i]?.message ?? "")) || id === "DC-01-EXTRA") {
-                    blocks.splice(i, 1);
-                  }
-                }
-              }
-            }
-            if (heal11.undeclaredFxLeft === 0) {
-              for (let i = blocks.length - 1; i >= 0; i--) {
-                const id = String(blocks[i]?.id ?? "");
-                if (id === "FX-GRADE-01" || id === "DG-FALSE-GREEN-FX" || id === "DG-FX-DUAL-TRACK") {
-                  if (/未声明|F0|空/.test(String(blocks[i]?.message ?? "")) || id !== "FX-GRADE-01") {
-                    const msg = String(blocks[i]?.message ?? "");
-                    if (/未声明|空未声明|须在 fxFeasibility/.test(msg) || id === "DG-FALSE-GREEN-FX") {
-                      blocks.splice(i, 1);
-                    }
-                  }
-                }
-              }
-            }
-            if (!heal11.cleared && (heal11.extrasLeft > 0 || heal11.undeclaredFxLeft > 0)) {
-              designExitIncomplete = true;
-              bMeta.importOkNotExitPass = true;
-            }
-          } catch {
-          }
-          if (lit.splitCount > 0) {
-            designExitIncomplete = true;
-            bMeta.importSplitExpanded = true;
-            bundle._importSplitExpanded = true;
-            if (!warns.some((w) => w.id === "LIT-IMPORT-SMART-SPLIT")) {
-              warns.push({
-                id: "LIT-IMPORT-SMART-SPLIT",
-                message: lit.warnMessage || `\u3010\u53EF\u5BFC\u5165 \xB7 \u5DF2\u667A\u80FD\u62C6\u6587\u5B66\u53CC\u63A5\u89E6\u3011\u6269 ${lit.splitCount} \u7EC4\uFF1BimportOk\u2260designExitPass`,
-                field: "preDesignPack.shots"
-              });
-            }
-          } else if (lit.confirmRequired) {
-            designExitIncomplete = true;
-            bundle.irdConfirmRequired = true;
-            if (!warns.some((w) => w.id === "LIT-IMPORT-CONFIRM")) {
-              warns.push({
-                id: "LIT-IMPORT-CONFIRM",
-                message: lit.warnMessage || `\u3010\u53EF\u5BFC\u5165 \xB7 \u6587\u5B66\u503A\u987B\u8BBE\u8BA1\u786E\u8BA4\u3011${lit.ctaLabel || "\u786E\u8BA4\u62C6\u955C/\u6279\u51C6\u589E\u5F3A"}\uFF1BimportOk\u2260designExitPass`,
-                field: "meta.litDebtPrimaryAction"
-              });
-            }
-          } else if (lit.warnMessage && !warns.some((w) => w.id === "LIT-IMPORT-SOFT")) {
-            warns.push({
-              id: "LIT-IMPORT-SOFT",
-              message: lit.warnMessage,
-              field: "preDesignPack.shots"
-            });
-          }
-        } catch {
-        }
-      }
-    }
-    {
-      const lipImportSoft = /* @__PURE__ */ new Set(["LIP-01", "PR-09", "DFW-DURATION", "DEX-LIP-SPLIT"]);
-      const softDemoted = [];
-      const bMeta = bundle.meta ??= {};
-      try {
-        if (!bMeta.importSplitExpanded && bundle.preDesignPack?.shots?.length) {
-          const { healMisboundDialoguePlacement: healMisboundDialoguePlacement2 } = (init_dialoguePlacementMatch(), __toCommonJS(dialoguePlacementMatch_exports));
-          const place = healMisboundDialoguePlacement2(
-            bundle.preDesignPack.shots.slice()
-          );
-          if (opts.forceExpand) {
-            const { runSplitOrchestrator: runSplitOrchestrator2 } = (init_splitOrchestrator(), __toCommonJS(splitOrchestrator_exports));
-            const beforeN = place.shots.length;
-            const orch = runSplitOrchestrator2({
-              planData: bundle.planData ?? {},
-              shots: place.shots,
-              meta: bMeta,
-              applyClauseSplit: true,
-              applyVisBeatExpanders: true,
-              applySemanticSplit: true
-            });
-            bundle.preDesignPack.shots = orch.shots;
-            bundle.planData = orch.planData;
-            (prep.shapeSalvageLog ??= []).push({
-              ruleId: "SH-IMPORT-SMART-SPLIT",
-              path: "exportGate.preLipSoft",
-              action: `shots=${orch.shots.length};steps=${orch.log.map((l) => l.step).join(",")}`
-            });
-            if (orch.shots.length > beforeN) {
-              bMeta.importSplitExpanded = true;
-              bundle._importSplitExpanded = true;
-            }
-          } else {
-            bundle.preDesignPack.shots = place.shots;
-            (prep.shapeSalvageLog ??= []).push({
-              ruleId: "SH-IMPORT-SMART-SPLIT",
-              path: "exportGate.preLipSoft",
-              action: `placement_only;shots=${place.shots.length};no_clause_inflate`
-            });
-          }
-        }
-      } catch {
-      }
-      const shotsForLip = bundle.preDesignPack?.shots ?? [];
-      let anyLipConfirm = false;
-      for (const s of shotsForLip) {
-        try {
-          const { detectLipSplitPressure: detectLipSplitPressure2 } = (init_lipSplit(), __toCommonJS(lipSplit_exports));
-          if (detectLipSplitPressure2(s).mustConfirm) anyLipConfirm = true;
-        } catch {
-        }
-      }
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        const row = blocks[i];
-        if (!lipImportSoft.has(row.id)) continue;
-        blocks.splice(i, 1);
-        const msg = anyLipConfirm ? `\u3010\u5BFC\u5165\u5DF2\u667A\u80FD\u62C6 \xB7 \u6B8B\u7559\u987B Confirm\u3011${row.message}\uFF08confirmClusterSplit\uFF1BimportOk\u2260designExitPass\uFF09` : `\u3010\u5BFC\u5165\u5DF2\u667A\u80FD\u62C6/\u62AC\u65F6\u3011${row.message}`;
-        if (!warns.some((w) => w.id === row.id && w.message === msg)) {
-          warns.push({ ...row, message: msg });
-        }
-        softDemoted.push(row.id);
-      }
-      if (softDemoted.length) {
-        if (anyLipConfirm) designExitIncomplete = true;
-        bMeta.importOkNotExitPass = anyLipConfirm ? true : bMeta.importOkNotExitPass;
-        if (anyLipConfirm) {
-          bMeta.lipConfirmRequired = true;
-          bundle.lipConfirmRequired = true;
-        } else {
-          bMeta.lipConfirmRequired = false;
-        }
-        (prep.shapeSalvageLog ??= []).push({
-          ruleId: anyLipConfirm ? "SH-IMPORT-LIP-RESIDUAL" : "SH-IMPORT-LIP-HEALED",
-          path: "exportGate.blocks",
-          action: `soft=${[...new Set(softDemoted)].join(",")};confirm=${anyLipConfirm}`
-        });
-      }
-    }
-    {
-      const dirtyImportSoft = /* @__PURE__ */ new Set(["DEX-DIRTY-STILL-PROMPT", "DEX-HAND-LIP"]);
-      const softDemoted = [];
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        const row = blocks[i];
-        if (!dirtyImportSoft.has(row.id)) continue;
-        blocks.splice(i, 1);
-        const msg = `\u3010\u5BFC\u5165\u4E0D\u62E6 \xB7 \u53CD\u63A8\u8BBE\u8BA1 Confirm\u3011${row.message}\uFF08\u624B+\u8138\u771F\u810F\u987B SB \u6539 VD \u6216 VisBeat Confirm \u62C6\uFF1B\u7981\u5BFC\u5165\u9759\u9ED8\u62C6\uFF1BimportOk\u2260designExitPass\uFF09`;
-        if (!warns.some((w) => w.id === row.id && w.message === msg)) {
-          warns.push({ ...row, message: msg });
-        }
-        softDemoted.push(row.id);
-      }
-      if (softDemoted.length) {
-        designExitIncomplete = true;
-        const bMeta = bundle.meta ??= {};
-        bMeta.importOkNotExitPass = true;
-        bMeta.dirtyStillConfirmRequired = true;
-        (prep.shapeSalvageLog ??= []).push({
-          ruleId: "SH-IMPORT-DIRTY-NONBLOCK",
-          path: "exportGate.blocks",
-          action: `soft=${[...new Set(softDemoted)].join(",")}`
-        });
-      }
-    }
-  }
-  try {
-    const {
-      isBundleLiteraryStale: isBundleLiteraryStale2,
-      LITERARY_STALE_USER_MESSAGE: LITERARY_STALE_USER_MESSAGE2
-    } = (init_viralDoctrine(), __toCommonJS(viralDoctrine_exports));
-    const { setKeepLegacyAck: setKeepLegacyAck2 } = (init_redesignContract(), __toCommonJS(redesignContract_exports));
-    if (opts.acknowledgeKeepLegacy && isBundleLiteraryStale2(bundle)) {
-      const planView = { planData: bundle.planData ?? {} };
-      setKeepLegacyAck2(planView, "acknowledgeKeepLegacy");
-      bundle.planData = { ...bundle.planData, ...planView.planData };
-    }
-    if (isBundleLiteraryStale2(bundle) && !opts.acknowledgeKeepLegacy) {
-      if (!blocks.some((b) => b.id === "DEX-LITERARY-STALE")) {
-        blocks.push({
-          id: "DEX-LITERARY-STALE",
-          message: LITERARY_STALE_USER_MESSAGE2,
-          field: "planData.genreTemplate"
-        });
-      }
-    } else if (opts.acknowledgeKeepLegacy) {
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        if (blocks[i]?.id === "DEX-LITERARY-STALE") blocks.splice(i, 1);
-      }
-    }
-  } catch {
-  }
-  const matrix = readFixtureJson("quality_matrix.json", { entries: [] });
-  const matrixTotal = matrix.entries?.length ?? 0;
-  const blockIds = [...new Set(blocks.map((b) => b.id))];
-  const warnIds = [...new Set(warns.map((w) => w.id))];
-  const softPatchEligible = (matrix.entries ?? []).filter((e) => e.softPatch && blockIds.includes(e.id)).length;
-  const exportAllowed = blocks.length === 0 && !(tier === "T3" && inspected.blocked && blockIds.length > 0);
-  let repairHints = aggregateRepairHints(inspected, designGates.findings, fieldWalkGaps);
-  if (blocks.some((b) => b.id === "DG-CHAT-SHAPE-VE") && !repairHints.some((h) => h.id === "RH-MOD-01")) {
-    const mod = loadRepairHints3(["RH-MOD-01"]);
-    repairHints = [...repairHints, ...mod];
-  }
-  if (blocks.some((b) => b.id === "JSON_INCOMPLETE") && !repairHints.some((h) => h.id === "RH-JSON-INCOMPLETE")) {
-    repairHints = [...repairHints, ...loadRepairHints3(["RH-JSON-INCOMPLETE", "JSON_INCOMPLETE"])];
-  }
-  if (blocks.some((b) => b.id === "DEX-LITERARY-STALE") && !repairHints.some((h) => h.id === "RH-LITERARY-STALE")) {
-    repairHints = [...repairHints, ...loadRepairHints3(["RH-LITERARY-STALE", "DEX-LITERARY-STALE"])];
-  }
-  if (warnIds.some((id) => id === "NESTED_PACK_ONLY") && !repairHints.some((h) => h.id === "RH-HOIST-NEST")) {
-    repairHints = [...repairHints, ...loadRepairHints3(["RH-HOIST-NEST", "NESTED_PACK_ONLY"])];
-  }
-  if (warnIds.some((id) => id.startsWith("DEX-STILL")) && !repairHints.some((h) => h.id === "RH-STILL-FIRSTFRAME")) {
-    repairHints = [...repairHints, ...loadRepairHints3(["RH-STILL-FIRSTFRAME"])];
-  }
-  if ((prep.shapeSalvageLog ?? []).some((e) => e.ruleId === "SH-SERIES-CONT" || e.ruleId === "SH-BRIEF-STRING") && !repairHints.some((h) => h.id === "RH-SERIES-CONT")) {
-    repairHints = [...repairHints, ...loadRepairHints3(["RH-SERIES-CONT"])];
-  }
-  const cast = auditCastCoverage(bundle);
-  const planLines = bundle.planData?.dialoguePlan?.lines ?? [];
-  const shotRows = bundle.preDesignPack?.shots ?? [];
-  if (blockIds.includes("QP-02") && shotRows.some((s) => s._healInducedVd || /听者反应特写/.test(String(s.visualDescription ?? ""))) && !repairHints.some((h) => h.id === "RH-QP-02-HEAL")) {
-    repairHints = [...repairHints, ...loadRepairHints3(["RH-QP-02-HEAL"])];
-  }
-  const serverNar = designGates.findings.filter((f) => f.id === "NAR-14" || f.id === "NAR-15" || f.id === "DG-NAR-SELFCHECK");
-  if (serverNar.length || blockIds.some((id) => /^NAR-1[45]$/.test(id) || id === "DG-NAR-SELFCHECK")) {
-    const narSelf = bundle.narrativeSelfcheck ?? {};
-    const failIds = [
-      .../* @__PURE__ */ new Set([
-        ...narSelf.failedIds ?? [],
-        ...designGates.findings.filter((f) => f.id === "NAR-14" || f.id === "NAR-15").map((f) => f.id)
-      ])
-    ];
-    bundle.narrativeSelfcheck = {
-      ...narSelf,
-      passed: false,
-      failedIds: failIds.length ? failIds : ["NAR-14"],
-      serverOverwritten: true,
-      checkedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-  }
-  if (blockIds.includes("IRD-CONFIRM") || blockIds.includes("DEX-CAM-FIT") || Boolean(bundle.meta?.camFitChatStrictBlocked)) {
-    const narSelf = bundle.narrativeSelfcheck ?? {};
-    if (narSelf.passed === true || blockIds.includes("DEX-CAM-FIT") || blockIds.includes("IRD-CONFIRM")) {
-      bundle.narrativeSelfcheck = {
-        ...narSelf,
-        passed: false,
-        failedIds: [.../* @__PURE__ */ new Set([...narSelf.failedIds ?? [], "DEX-CAM-FIT"])],
-        serverOverwritten: true,
-        checkedAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-    }
-    const mod = bundle.modalityPromptAudit ?? {};
-    if (mod.IMG === "pass" || mod.VID === "pass" || mod.FX === "pass") {
-      bundle.modalityPromptAudit = {
-        ...mod,
-        ...mod.IMG === "pass" ? { IMG: "fail" } : {},
-        ...mod.VID === "pass" ? { VID: "fail" } : {},
-        ...mod.FX === "pass" ? { FX: "fail" } : {},
-        serverOverwritten: "DEX-CAM-FIT"
-      };
-    }
-  }
-  const closureSnapshot = {
-    tier,
-    blocked: !exportAllowed,
-    blockIds,
-    warnIds,
-    checkedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    rulePackVersion: inspected.rulePackVersion,
-    speakerOrphans: cast.missingSpeakers,
-    stubCodes: cast.stubOrIncomplete,
-    castGapLabels: cast.labels
-  };
-  const castRows = cast.labels.map((label, i) => ({
-    id: `DC-16-${i + 1}`,
-    severity: "BLOCK",
-    sourcePath: "dialogue.speaker|charCodes|B6.characters",
-    targetPath: "characterDesign.assets",
-    fieldId: label,
-    message: `\u914D\u89D2\u5165\u518C\u7F3A\u53E3: ${label}\uFF08\u987B code/name/L0.identity\uFF0C\u7981\u6B62\u4EC5 stub\uFF09`,
-    repairHintId: "RH-DC-16"
-  }));
-  const missingFieldReport = [...fieldWalkReport.rows, ...castRows];
-  const missingFieldSummary = [fieldWalkReport.summary, cast.block ? `DC-16: ${cast.labels.join("\u3001")}` : ""].filter(Boolean).join("\n");
-  try {
-    const { stampSmartDesignProposals: stampSmartDesignProposals2 } = (init_smartProposalMerger(), __toCommonJS(smartProposalMerger_exports));
-    if (blockIds.length) {
-      stampSmartDesignProposals2(bundle, blockIds, {
-        reverseTarget: "SB"
-      });
-    }
-  } catch {
-  }
-  return {
-    exportAllowed,
-    tier,
-    bundle,
-    inspected,
-    designFindings: designGates.findings,
-    integrityGaps,
-    fieldWalkGaps,
-    missingFieldReport,
-    missingFieldSummary,
-    repairHints,
-    closureSnapshot,
-    coverage: {
-      matrixTotal,
-      blocks: blockIds.length,
-      warns: warnIds.length,
-      softPatchEligible
-    },
-    blocks,
-    warns,
-    shapeSalvageLog: prep.shapeSalvageLog,
-    shapeSalvageSummary: prep.shapeSalvageSummary,
-    designExitIncomplete,
-    autoClosed,
-    chatRepairText: buildAggregatedChatRepairText(repairHints, blockIds, missingFieldSummary, blocks, {
-      planLines,
-      shots: shotRows,
-      warnIds,
-      warnRows: warns,
-      shapeSalvageLog: salvageLog,
-      designExitIncomplete,
-      autoClosedClearedIds: autoClosed?.clearedIds
-    }),
-    previewStatusLine: buildExportPreviewStatusLine({
-      exportAllowed,
-      tier,
-      blocks,
-      shapeSalvageLog: prep.shapeSalvageLog,
-      designExitIncomplete,
-      autoClosedClearedIds: autoClosed?.clearedIds,
-      deferredStill: Number(
-        bundle.meta?.deferredStill ?? bundle.planData?.assetCrefPlan?.filter(
-          (e) => e.deferredStill
-        ).length ?? 0
-      ),
-      lipConfirmRequired: Boolean(bundle.meta?.lipConfirmRequired),
-      litConfirmRequired: Boolean(
-        bundle.meta?.irdConfirmRequired || bundle.meta?.litDebtImportPending || bundle.irdConfirmRequired
-      ),
-      litDebtCta: String(
-        bundle.meta?.litDebtCta ?? ""
-      ) || void 0,
-      litSmartSplit: Boolean(
-        bundle.meta?.litImportSmartSplit || (prep.shapeSalvageLog ?? []).some((e) => e.ruleId === "SH-LIT-IMPORT-SMART-SPLIT")
-      ),
-      illegalSameVdRatio: (() => {
-        try {
-          const shots = bundle.preDesignPack?.shots ?? [];
-          if (shots.length < 3) return 0;
-          const { findDupVdStreaks: findDupVdStreaks2, normalizeVdKey: normalizeVdKey2 } = (init_dirtyStillPromptGate(), __toCommonJS(dirtyStillPromptGate_exports));
-          const dups = findDupVdStreaks2(
-            shots.map((s) => ({
-              shotIndex: Number(s.shotIndex),
-              visualDescription: String(s.visualDescription ?? "")
-            })),
-            3
-          );
-          if (!dups.length) return 0;
-          const keys2 = /* @__PURE__ */ new Map();
-          for (const s of shots) {
-            const k = normalizeVdKey2(String(s.visualDescription ?? ""));
-            if (k.length >= 6) keys2.set(k, (keys2.get(k) ?? 0) + 1);
-          }
-          let max = 0;
-          for (const n of keys2.values()) max = Math.max(max, n);
-          return max / shots.length;
-        } catch {
-          return 0;
-        }
-      })()
-    })
-  };
-}
-function inferTier2(bundle) {
-  if (bundle.modalityPromptAudit) return "T3";
-  const shots = bundle.preDesignPack?.shots ?? [];
-  if (shots.some((s) => s.generation?.imagePrompt?.trim())) return "T3";
-  if (bundle.characterDesign || bundle.visualLockTable) return "T2";
-  return "T1";
-}
-var CHAT_REPAIR_BLOCK_CAP, DEFAULT_MUST_EDIT, DEFAULT_AUTO_ADAPT, ExportGateBlockError;
-var init_exportGate = __esm({
-  "src/ruleEngine/exportGate.ts"() {
-    "use strict";
-    init_inspectBundle();
-    init_fixturesPath();
-    init_prepareBundleForInspect();
-    init_schema();
-    init_designPhaseGates();
-    init_bundleIntegrityAudit();
-    init_auditImplementationFieldWalk();
-    init_chatRepairDeeplink();
-    init_nar14Residual();
-    init_lipSplit();
-    init_designExportHelpers();
-    CHAT_REPAIR_BLOCK_CAP = 24;
-    DEFAULT_MUST_EDIT = /* @__PURE__ */ new Set([
-      "DEX-LITERARY-STALE",
-      "NAR-15",
-      "DC-16",
-      "DG-CD-COVERAGE",
-      "DG-FALSE-GREEN-FX",
-      "DG-NAR-SELFCHECK",
-      "DG-FX-DUAL-TRACK",
-      "DG-SCENE-ORPHAN-FX",
-      "DG-CHAT-SHAPE-VE",
-      "DEX-VIS-SPLIT",
-      "DEX-LIP-SPLIT",
-      "LIP-01",
-      "QP-02",
-      "DEX-QP-02",
-      "CHAT-SB-01"
-    ]);
-    DEFAULT_AUTO_ADAPT = /* @__PURE__ */ new Set([
-      "DFW-DURATION",
-      "MOD-03",
-      "MOD-IMG-M1",
-      "MOD-VID-M1",
-      "MOD-AUD-M1",
-      "DG-SCENE-KEY",
-      "DEX-CAM-FIT",
-      // Theme-glue untilClear (G14) — 勿诱手改 JSON
-      "DEX-PROP-CONT",
-      "DEX-INTENT-PIC",
-      "DEX-SHOT-INTENT",
-      "FALSE_GREEN_SELFCHECK",
-      "DG-CAM-FIT-FALSE-GREEN",
-      "DG-NAR-SELFCHECK",
-      "FX-GRADE-01",
-      "DEX-EXPR-SPEAK",
-      "CHAT-AUD-01",
-      "PROMPT-FIDELITY",
-      "PROMPT_FIDELITY"
-      // NAR-14 / DEX-VIS-SPLIT are NOT blanket auto — see classifyBlockId
-    ]);
-    ExportGateBlockError = class extends Error {
-      details;
-      constructor(result) {
-        const ids = result.blocks.map((b) => b.id).join(", ");
-        super(`EXPORT_GATE_BLOCK: ${ids}`);
-        this.name = "ExportGateBlockError";
-        this.details = result;
       }
     };
   }
@@ -319144,15 +323744,50 @@ var init_exportPackage = __esm({
       "/",
       validateFields({
         projectId: external_exports.number(),
-        scriptId: external_exports.number()
+        scriptId: external_exports.number(),
+        stubFormat: external_exports.enum(["edl", "fcp", "premiere", "json", "otio", "resolve", "manifest", "srt", "all"]).optional()
       }),
       async (req, res) => {
-        const { projectId, scriptId } = req.body;
+        const { projectId, scriptId, stubFormat } = req.body;
         try {
           const pkg = await loadEpisodePackage(utils_default.db, projectId, scriptId);
           if (!pkg) return res.status(404).send(error50("EpisodePackage \u4E0D\u5B58\u5728"));
           const data = exportPackage(pkg);
-          return res.status(200).send(success3(data));
+          if (stubFormat) {
+            const { pickZ110HandoffStub: pickZ110HandoffStub2, listZ110HandoffStubs: listZ110HandoffStubs2 } = await Promise.resolve().then(() => (init_handoffStubSelect(), handoffStubSelect_exports));
+            const z110 = data.Z110;
+            if (stubFormat === "all") {
+              const stubs = listZ110HandoffStubs2(z110, scriptId);
+              if (!stubs.length) return res.status(404).send(error50("\u65E0\u53EF\u7528\u4EA4\u63A5\u8349\u7A3F"));
+              return res.status(200).send(
+                success3({
+                  stubs,
+                  handoff: data.handoff,
+                  note: "Wave-17 handoff stub list \u2014 not production NLE"
+                })
+              );
+            }
+            const pick3 = pickZ110HandoffStub2(z110, stubFormat, scriptId);
+            if (!pick3) return res.status(404).send(error50(`stubFormat=${stubFormat} \u65E0\u53EF\u7528\u8349\u7A3F`));
+            return res.status(200).send(
+              success3({
+                stub: pick3,
+                handoff: data.handoff,
+                note: "Wave-17 handoff stub \u2014 not production NLE"
+              })
+            );
+          }
+          return res.status(200).send(
+            success3({
+              ...data,
+              handoff: data.handoff ?? {
+                transitionCount: data.Z110?.timeline?.transitions?.length ?? 0,
+                hasEdl: Boolean(data.Z110?.edlStub),
+                hasFcpXml: Boolean(data.Z110?.fcpXmlStub),
+                exportReady: false
+              }
+            })
+          );
         } catch (e) {
           return res.status(500).send(error50(utils_default.error(e).message));
         }
@@ -319283,10 +323918,10 @@ var init_generationFeedback2 = __esm({
       async (req, res) => {
         try {
           const { storyboardId, trackId, error: errMsg, vendor, modality = "image", prompt } = req.body;
-          const shotId = String(storyboardId ?? trackId ?? "unknown");
+          const shotId2 = String(storyboardId ?? trackId ?? "unknown");
           const result = await generationFeedbackPort.classifyFailure({
             modality,
-            shotId,
+            shotId: shotId2,
             error: errMsg,
             vendorCode: vendor,
             prompt
@@ -319359,10 +323994,11 @@ var init_getReport = __esm({
         projectId: external_exports.number(),
         scriptId: external_exports.number(),
         script: external_exports.string().optional(),
-        includeExport: external_exports.boolean().optional()
+        includeExport: external_exports.boolean().optional(),
+        includeHandoff: external_exports.boolean().optional()
       }),
       async (req, res) => {
-        const { projectId, scriptId, script, includeExport } = req.body;
+        const { projectId, scriptId, script, includeExport, includeHandoff } = req.body;
         try {
           const pkg = await loadEpisodePackage(utils_default.db, projectId, scriptId);
           if (!pkg) return res.status(404).send(error50("EpisodePackage \u4E0D\u5B58\u5728"));
@@ -319375,6 +324011,46 @@ var init_getReport = __esm({
             skipped: cov.skipped ?? Math.max(0, (cov.registered ?? cov.total) - (cov.executed ?? cov.hit))
           };
           if (includeExport) payload.export = exportPackage(pkg);
+          else if (includeHandoff !== false) {
+            try {
+              const { buildZ110: buildZ1102 } = await Promise.resolve().then(() => (init_zPackager(), zPackager_exports));
+              const z110 = buildZ1102(pkg);
+              payload.z110Handoff = {
+                timeline: z110.timeline,
+                edlStub: z110.edlStub,
+                fcpXmlStub: z110.fcpXmlStub,
+                premiereXmlStub: z110.premiereXmlStub,
+                otioStub: z110.otioStub,
+                resolveXmlStub: z110.resolveXmlStub,
+                handoffManifest: z110.handoffManifest,
+                srtStub: z110.srtStub,
+                exportReady: false,
+                nleFormat: z110.nleFormat,
+                note: z110.note
+              };
+              payload.handoff = {
+                transitionCount: z110.timeline.transitions.length,
+                hasEdl: Boolean(z110.edlStub),
+                hasFcpXml: Boolean(z110.fcpXmlStub),
+                hasPremiereXml: Boolean(z110.premiereXmlStub),
+                hasOtio: Boolean(
+                  z110.otioStub && String(z110.otioStub).includes("OTIO_SCHEMA")
+                ),
+                hasResolveXml: Boolean(
+                  z110.resolveXmlStub && String(z110.resolveXmlStub).includes("resolveProject")
+                ),
+                hasSrt: Boolean(z110.srtStub),
+                axisPairFindings: Number(
+                  z110.timeline.axisAudit?.pairCount ?? 0
+                ),
+                framingTight: Number(
+                  (z110.timeline.framingAudit?.headroomTight ?? 0) + (z110.timeline.framingAudit?.lookingRoomTight ?? 0)
+                ),
+                exportReady: false
+              };
+            } catch {
+            }
+          }
           return res.status(200).send(success3(payload));
         } catch (e) {
           return res.status(500).send(error50(utils_default.error(e).message));
@@ -319543,13 +324219,14 @@ function captureApplier() {
   };
 }
 function collectChatMustFixIds(exportGate, salvagedRuleIds) {
+  const { filterAuthorMustFixIds: filterAuthorMustFixIds2 } = (init_exportGate(), __toCommonJS(exportGate_exports));
   const ids = /* @__PURE__ */ new Set();
   for (const b of exportGate.blocks) ids.add(b.id);
   for (const id of exportGate.closureSnapshot.blockIds) ids.add(id);
   for (const id of [...ids]) {
     if (salvagedRuleIds.has(id)) ids.delete(id);
   }
-  return [...ids].filter(Boolean).sort();
+  return filterAuthorMustFixIds2([...ids].filter(Boolean)).sort();
 }
 function runImportHeal(input) {
   const prep = prepareBundleForInspect(input.raw, { ingestHeal: true });
@@ -319626,6 +324303,21 @@ function runImportHeal(input) {
           path: "planData.shotDesignIntent|assetCrefPlan|dialoguePlan",
           action: `cleared=${ac.autoClosed.clearedIds.join(",") || "none"}`
         });
+        if (Array.isArray(ac.repairChangelog) && ac.repairChangelog.length) {
+          const bMeta = working.meta ??= {};
+          bMeta.repairChangelog = ac.repairChangelog;
+          healLog.push({
+            at: now2(),
+            ruleId: "INDUSTRY-AV-SILENT",
+            action: "repair_changelog",
+            detail: `entries=${ac.repairChangelog.length}`
+          });
+        }
+        if (ac.industryResidualDebts?.length) {
+          const bMeta = working.meta ??= {};
+          bMeta.industryResidualDebts = ac.industryResidualDebts;
+          bMeta.designExitIncomplete = true;
+        }
       }
       try {
         const { auditGenerationApplyGaps: auditGenerationApplyGaps2 } = (init_generationApplyAudit(), __toCommonJS(generationApplyAudit_exports));
@@ -319905,6 +324597,11 @@ function runImportHeal(input) {
     primary = buildPrimaryBlock("split_shot", { stage: "import" });
   } else if (chatMustFixIds.length) {
     primary = buildPrimaryBlock("chat_repair", { stage: "import" });
+  } else if (exportGateFull.laneDiagnostics?.autoIds?.length || exportGateFull.designExitIncomplete && exportGateFull.exportAllowed) {
+    primary = buildPrimaryBlock("soft_patch", {
+      stage: "import",
+      userMessageOverride: exportGateFull.exportAllowed ? `\u53EF\u5BFC\u5165\uFF08\u8BBE\u8BA1\u672A\u5B8C\u5168\u95ED\u5408\xB7\u670D\u52A1\u7AEF\u5C06\u6108 ${exportGateFull.laneDiagnostics?.autoIds?.length ?? 0} \u9879\uFF09` : "\u8BBE\u8BA1\u503A\u672A\u5C3D\xB7\u8BF7 Confirm \u6216\u667A\u80FD\u4FEE\u590D"
+    });
   } else if (serverFixedIds.length) {
     primary = buildPrimaryBlock("burn", {
       stage: "import",
@@ -319991,8 +324688,12 @@ function runImportHeal(input) {
       previewStatusLine: exportGateFull.previewStatusLine,
       blocks: exportGateFull.blocks,
       warns: exportGateFull.warns,
-      repairHints: exportGateFull.repairHints
+      repairHints: exportGateFull.repairHints,
+      repairChangelog: exportGateFull.repairChangelog ?? working.meta?.repairChangelog,
+      industryResidualDebts: exportGateFull.industryResidualDebts ?? working.meta?.industryResidualDebts
     },
+    repairChangelog: working.meta?.repairChangelog,
+    industryResidualDebts: working.meta?.industryResidualDebts,
     inspected: exportGateFull.inspected,
     serverFixedIds: [...new Set(serverFixedIds)],
     chatMustFixIds,
@@ -320687,6 +325388,9 @@ var init_selfHeal = __esm({
         round: external_exports.number().optional(),
         dryRun: external_exports.boolean().optional(),
         apply: external_exports.boolean().optional(),
+        /** Wave-2: restore last silent-repair before/after on target shot (cross-session) */
+        undoIndustryRepair: external_exports.boolean().optional(),
+        undoCount: external_exports.number().optional(),
         identityGaps: external_exports.array(external_exports.object({ code: external_exports.string(), reason: external_exports.string(), kind: external_exports.string().optional() })).optional(),
         issues: external_exports.array(
           external_exports.object({
@@ -320701,9 +325405,33 @@ var init_selfHeal = __esm({
       }),
       async (req, res) => {
         try {
-          const { projectId, scriptId, shotId, apply, dryRun: dryRun2 } = req.body;
+          const { projectId, scriptId, shotId: shotId2, apply, dryRun: dryRun2, undoIndustryRepair, undoCount } = req.body;
           const pkg = await loadEpisodePackage(utils_default.db, projectId, scriptId);
-          const shotRow = shotId != null ? pkg?.shots?.find((s) => s.storyboardId === shotId || String(s.id) === String(shotId)) : pkg?.shots?.[0];
+          const shotRow = shotId2 != null ? pkg?.shots?.find((s) => s.storyboardId === shotId2 || String(s.id) === String(shotId2)) : pkg?.shots?.[0];
+          if (undoIndustryRepair && pkg?.shots?.length && shotRow) {
+            const { undoLastIndustryRepairs: undoLastIndustryRepairs2, collectRepairChangelog: collectRepairChangelog2 } = (init_industryAvSilentRepair(), __toCommonJS(industryAvSilentRepair_exports));
+            const idx = pkg.shots.findIndex(
+              (s) => s === shotRow || s.storyboardId === shotRow.storyboardId || String(s.id) === String(shotRow.id)
+            );
+            const target = idx >= 0 ? pkg.shots[idx] : shotRow;
+            const undid = undoLastIndustryRepairs2(target, Math.max(1, Number(undoCount ?? 1) || 1));
+            if (idx >= 0) pkg.shots[idx] = target;
+            if (!dryRun2 && apply !== false && undid.undone > 0) {
+              await saveEpisodePackage(utils_default.db, pkg);
+            }
+            return res.status(200).send(
+              success3({
+                ok: undid.undone > 0,
+                message: undid.undone > 0 ? `\u5DF2\u64A4\u9500 ${undid.undone} \u6761\u9759\u9ED8\u4FEE\u590D` : undid.residuals[0] || "\u65E0\u53EF\u64A4\u9500\u7684\u9759\u9ED8\u4FEE\u590D",
+                undone: undid.undone,
+                residuals: undid.residuals,
+                ctaLabel: "\u667A\u80FD\u4FEE\u590D",
+                primaryNextStep: "soft_patch",
+                repairChangelog: collectRepairChangelog2([target]),
+                appliedToDb: !dryRun2 && apply !== false && undid.undone > 0
+              })
+            );
+          }
           const blueprint = await loadProjectBlueprint(utils_default.db, projectId) ?? {};
           const rawCa = blueprint.characterAssets;
           const cdAssets = Array.isArray(rawCa) ? rawCa : rawCa && typeof rawCa === "object" ? Object.entries(rawCa).map(
@@ -320748,7 +325476,7 @@ var init_selfHeal = __esm({
           const result = await runSelfHeal({
             projectId,
             scriptId,
-            shotId,
+            shotId: shotId2,
             errorText: req.body.errorText,
             category: req.body.category,
             jobKind: req.body.jobKind,
@@ -320868,17 +325596,53 @@ var init_selfHeal = __esm({
             trackAbsorbed ? `\u5DF2\u5438\u6536 ${trackAbsorbed} \u6761\u8F68\u9700\u5B8C\u5584` : null,
             stillContamAbsorbed ? "\u5DF2\u5438\u6536\u9759\u5E27\u6C61\u67D3\u6807\u8BB0\uFF08contact_zombie/beatIsolation\uFF09" : null
           ].filter(Boolean).join("\uFF1B") : result.message;
+          let primaryNextStep = result.nextStep === "batch_still" ? "batch_still" : "soft_patch";
+          let repairChangelog = [];
+          try {
+            const { burnNextStepForSmartRepairTrigger: burnNextStepForSmartRepairTrigger2 } = (init_smartRepairActuators(), __toCommonJS(smartRepairActuators_exports));
+            const triggers = [
+              ...result.triggers ?? [],
+              ...(result.findings ?? []).map(
+                (f) => f.reverseTrigger || f.ruleId || ""
+              ),
+              String(result.reverseTrigger ?? ""),
+              String(result.debtKind ?? "")
+            ].filter(Boolean);
+            for (const t of triggers) {
+              const mapped = burnNextStepForSmartRepairTrigger2(t);
+              if (mapped) {
+                primaryNextStep = mapped;
+                break;
+              }
+            }
+          } catch {
+          }
+          try {
+            if (pkg?.shots?.length) {
+              const { runIndustryAvSilentRepair: runIndustryAvSilentRepair2, collectRepairChangelog: collectRepairChangelog2 } = (init_industryAvSilentRepair(), __toCommonJS(industryAvSilentRepair_exports));
+              const ind = runIndustryAvSilentRepair2(pkg.shots, { maxMs: 4e3 });
+              if (ind.changed > 0) {
+                pkg.shots = ind.shots;
+                await saveEpisodePackage(utils_default.db, pkg);
+                appliedToDb = true;
+                repairChangelog = collectRepairChangelog2(ind.shots);
+                primaryNextStep = ind.diffs.some((d) => d.startsWith("face_split") || d.startsWith("reaction_expand")) ? "split_shot" : primaryNextStep;
+              }
+            }
+          } catch {
+          }
           return res.status(200).send(
             success3({
               ...result,
-              ok: result.ok || trackAbsorbed > 0 || stillContamAbsorbed,
+              ok: result.ok || trackAbsorbed > 0 || stillContamAbsorbed || repairChangelog.length > 0,
               message: healMsg,
               appliedToDb,
               cdHydrated,
               trackAbsorbed,
               stillContamAbsorbed,
-              ctaLabel: result.ok || trackAbsorbed || stillContamAbsorbed ? healMsg : "\u667A\u80FD\u4FEE\u590D",
-              primaryNextStep: result.nextStep === "batch_still" ? "batch_still" : "soft_patch",
+              ctaLabel: "\u667A\u80FD\u4FEE\u590D",
+              primaryNextStep,
+              repairChangelog,
               implementationDegraded: trackAbsorbed > 0 || stillContamAbsorbed || void 0
             })
           );
@@ -321565,9 +326329,9 @@ var require_buffer_crc32 = __commonJS({
         throw new Error("input must be buffer, number, or string, received " + typeof input);
       }
     }
-    function bufferizeInt(num) {
+    function bufferizeInt(num2) {
       var tmp = ensureBuffer(4);
-      tmp.writeInt32BE(num, 0);
+      tmp.writeInt32BE(num2, 0);
       return tmp;
     }
     function _crc32(buf, previous) {
@@ -325228,9 +329992,9 @@ var require_headers = __commonJS({
       }
       return 0;
     };
-    var indexOf = function(block, num, offset, end) {
+    var indexOf = function(block, num2, offset, end) {
       for (; offset < end; offset++) {
-        if (block[offset] === num) return offset;
+        if (block[offset] === num2) return offset;
       }
       return end;
     };
@@ -333280,42 +338044,63 @@ var init_setStepStatus = __esm({
               }
             }
             if (!exitGate.ok) {
-              const meta4 = plan.planData?.meta ?? plan.meta ?? {};
-              const litCta = String(meta4.litDebtCta ?? "");
-              const litAct = String(meta4.litDebtPrimaryAction ?? "");
-              let smartDesignProposals;
-              try {
-                const { stampSmartDesignProposals: stampSmartDesignProposals2 } = (init_smartProposalMerger(), __toCommonJS(smartProposalMerger_exports));
-                smartDesignProposals = stampSmartDesignProposals2(plan, exitGate.failedIds, {
-                  reverseTarget: stageId
+              const { filterAuthorMustFixIds: filterAuthorMustFixIds2 } = (init_exportGate(), __toCommonJS(exportGate_exports));
+              const mustFail = filterAuthorMustFixIds2(exitGate.failedIds);
+              const confirmResidual = exitGate.failedIds.some(
+                (id) => id === "IRD-CONFIRM" || /CONFIRM/i.test(id)
+              );
+              if (mustFail.length === 0 && !confirmResidual) {
+                try {
+                  const metaSoft = plan.planData?.meta ?? plan.meta ?? {};
+                  metaSoft.designExitIncomplete = true;
+                  metaSoft.laneSoftResidual = exitGate.failedIds;
+                  if (plan.planData) plan.planData.meta = metaSoft;
+                  else plan.meta = metaSoft;
+                } catch {
+                }
+              } else {
+                const meta4 = plan.planData?.meta ?? plan.meta ?? {};
+                const litCta = String(meta4.litDebtCta ?? "");
+                const litAct = String(meta4.litDebtPrimaryAction ?? "");
+                let smartDesignProposals;
+                try {
+                  const { stampSmartDesignProposals: stampSmartDesignProposals2 } = (init_smartProposalMerger(), __toCommonJS(smartProposalMerger_exports));
+                  smartDesignProposals = stampSmartDesignProposals2(plan, exitGate.failedIds, {
+                    reverseTarget: stageId
+                  });
+                  const payloadStamp = JSON.stringify(plan);
+                  if (row) {
+                    await utils_default.db("o_agentWorkData").where({ id: row.id }).update({ data: payloadStamp, updateTime: Date.now() });
+                  }
+                } catch {
+                }
+                const isAuthorMust = mustFail.length > 0;
+                return res.status(400).send({
+                  code: 400,
+                  message: exitGate.userMessage,
+                  data: {
+                    designExitGate: exitGate,
+                    smartDesignProposals,
+                    redesignRequired: isRedesignRequired(plan),
+                    heal: healResult ? {
+                      rounds: healResult.rounds,
+                      changeDiff: healResult.changeDiff,
+                      needsUserConfirm: healResult.needsUserConfirm,
+                      rollbackTo: healResult.rollbackTo
+                    } : void 0,
+                    litDebtPrimaryAction: litAct || void 0,
+                    litDebtCta: litCta || void 0,
+                    irdConfirmRequired: Boolean(meta4.irdConfirmRequired || exitGate.failedIds.includes("IRD-CONFIRM")),
+                    cta: litCta ? litCta : isRedesignRequired(plan) ? "\u8BF7\u6309\u65B0\u89C4\u8303\u91CD\u8BBE\u8BA1\u81F3 W3 \u9A8C\u6536" : !isAuthorMust && confirmResidual ? "\u8BF7 Confirm \u667A\u80FD\u62C6/\u589E\u5F3A\u540E\u518D setStepStatus" : exitGate.failedIds.some((id) => /^DEX-LIT-|^DEX-PROP-CONT/.test(id)) ? "\u6587\u5B66\u7EC6\u8282\u503A\uFF1A\u8BF7\u6279\u51C6\u589E\u5F3A\u4E92\u65A5\u53E5\u6216\u667A\u80FD\u62C6\u955C\u540E\u518D setStepStatus" : exitGate.userMessage ? "\u6309\u5931\u8D25\u6E05\u5355\u540C\u8F6E\u91CD\u5199 JSON \u540E\u518D setStepStatus\uFF08\u7981\u6B62\u53EA\u6539 passed\uFF09" : "\u672C\u9636\u6BB5\u4F18\u5316",
+                    forbidProductionRework: true,
+                    chatRetryRequired: isAuthorMust,
+                    laneDiagnostics: {
+                      mustIds: mustFail,
+                      residual: exitGate.failedIds
+                    }
+                  }
                 });
-                const payloadStamp = JSON.stringify(plan);
-                if (row) {
-                  await utils_default.db("o_agentWorkData").where({ id: row.id }).update({ data: payloadStamp, updateTime: Date.now() });
-                }
-              } catch {
               }
-              return res.status(400).send({
-                code: 400,
-                message: exitGate.userMessage,
-                data: {
-                  designExitGate: exitGate,
-                  smartDesignProposals,
-                  redesignRequired: isRedesignRequired(plan),
-                  heal: healResult ? {
-                    rounds: healResult.rounds,
-                    changeDiff: healResult.changeDiff,
-                    needsUserConfirm: healResult.needsUserConfirm,
-                    rollbackTo: healResult.rollbackTo
-                  } : void 0,
-                  litDebtPrimaryAction: litAct || void 0,
-                  litDebtCta: litCta || void 0,
-                  irdConfirmRequired: Boolean(meta4.irdConfirmRequired || exitGate.failedIds.includes("IRD-CONFIRM")),
-                  cta: litCta ? litCta : isRedesignRequired(plan) ? "\u8BF7\u6309\u65B0\u89C4\u8303\u91CD\u8BBE\u8BA1\u81F3 W3 \u9A8C\u6536" : exitGate.failedIds.some((id) => /^DEX-LIT-|^DEX-PROP-CONT/.test(id)) ? "\u6587\u5B66\u7EC6\u8282\u503A\uFF1A\u8BF7\u6279\u51C6\u589E\u5F3A\u4E92\u65A5\u53E5\u6216\u667A\u80FD\u62C6\u955C\u540E\u518D setStepStatus" : exitGate.userMessage ? "\u6309\u5931\u8D25\u6E05\u5355\u540C\u8F6E\u91CD\u5199 JSON \u540E\u518D setStepStatus\uFF08\u7981\u6B62\u53EA\u6539 passed\uFF09" : "\u672C\u9636\u6BB5\u4F18\u5316",
-                  forbidProductionRework: true,
-                  chatRetryRequired: true
-                }
-              });
             }
             if (stageId === "W3" && exitGate.ok && !isLiteraryLocked(plan)) {
               setLiteraryLocked(plan, true);
@@ -337528,8 +342313,8 @@ ${list2}` }]
     for (const key of keys2) {
       const raw = dbMap[key];
       if (raw == null) continue;
-      const num = Number(raw);
-      result[key] = Number.isNaN(num) ? raw : num;
+      const num2 = Number(raw);
+      result[key] = Number.isNaN(num2) ? raw : num2;
     }
     return result;
   }
