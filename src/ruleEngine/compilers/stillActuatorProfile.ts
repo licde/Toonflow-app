@@ -83,6 +83,7 @@ export function compressStillEgressForActuator(input: {
   /** Sealed occupancy — never hard-prepend bend for all action_primary */
   poseOccupancy?: string | null;
   primaryIntentSeal?: { poseOccupancy?: string } | null;
+  stillPhase?: string | null;
 }): { positive: string; negative: string; strippedChars: number } {
   const raw = String(input.prompt ?? "").trim();
   const maxPos = Math.max(120, Number(input.maxPosChars ?? 480));
@@ -185,7 +186,9 @@ export function compressStillEgressForActuator(input: {
     try {
       const { occupancyCompressLead } =
         require("./primaryIntentSeal") as typeof import("./primaryIntentSeal");
-      occLead = occupancyCompressLead(occ as import("./designIntentProfile").PoseOccupancy | null);
+      occLead = occupancyCompressLead(occ as import("./designIntentProfile").PoseOccupancy | null, {
+        stillPhase: input.stillPhase ?? null,
+      });
     } catch {
       /* keep generic */
     }
@@ -239,6 +242,7 @@ export function compressStillEgressForSeedream(input: {
   keepSoftEnvRef?: boolean | null;
   softEnvHung?: boolean | null;
   bgSceneMust?: boolean | null;
+  stillPhase?: string | null;
 }): { prompt: string; strippedChars: number } {
   const raw = String(input.prompt ?? "").trim();
   let defaultMax = 720;
@@ -260,6 +264,7 @@ export function compressStillEgressForSeedream(input: {
     maxNegChars: Math.floor(max * 0.35),
     poseOccupancy: occ,
     primaryIntentSeal: input.primaryIntentSeal,
+    stillPhase: input.stillPhase,
   });
   const hardNegParts = [
     "手持卡片挡脸",
@@ -315,6 +320,7 @@ export function compressStillEgressForSeedream(input: {
         require("./primaryIntentSeal") as typeof import("./primaryIntentSeal");
       const lead = occupancyCompressLead(
         (bendOccSeed ? "bend_pickup" : occ) as import("./designIntentProfile").PoseOccupancy | null,
+        { stillPhase: input.stillPhase ?? null },
       );
       geomLead = sceneFirst
         ? `${lead.replace(/。$/, "")}；背景：主场景殿内浅景深可辨，禁止灰棚白棚；裙摆虚化为加强项。`
@@ -350,6 +356,7 @@ export function compressStillEgressForSeedream(input: {
     bend: bendOccSeed,
     occupancyLead: geomLead || undefined,
     extraMustSurvive: input.extraMustSurvive,
+    stillPhase: input.stillPhase,
   });
   try {
     const { guardStillPromptFoundations } =
@@ -366,6 +373,7 @@ export function compressStillEgressForSeedream(input: {
       bend: bendOccSeed,
       occupancyLead: geomLead || undefined,
       extraMustSurvive: input.extraMustSurvive,
+      stillPhase: input.stillPhase,
     });
   } catch {
     /* optional */
@@ -420,7 +428,9 @@ export function protectEgressHeadAfterCompress(
         try {
           const { occupancyCompressLead } =
             require("./primaryIntentSeal") as typeof import("./primaryIntentSeal");
-          lead = occupancyCompressLead("bend_pickup");
+          lead = occupancyCompressLead("bend_pickup", {
+            stillPhase: (opts as { stillPhase?: string } | undefined)?.stillPhase ?? null,
+          });
         } catch {
           lead = "占位：弯腰捡拾，道具在主手。";
         }
@@ -428,11 +438,17 @@ export function protectEgressHeadAfterCompress(
       lead = lead.replace(/。$/, "");
       next = `${lead}。${next}`.replace(/。{2,}/g, "。").trim();
     }
-    // L1 mustSurvive: knuckles + ground paper (bend) — mere「休书」不够，须触地锚
+    // L1 mustSurvive: knuckles + ground paper (bend) — skip grip when approaching
+    const phaseOpt = String((opts as { stillPhase?: string } | undefined)?.stillPhase ?? "");
+    const approachingOpt = phaseOpt === "approaching" || phaseOpt === "mid_contact";
     const mustSurvive: string[] = [];
-    if (!/指节|捏紧/.test(next)) mustSurvive.push("握持：指尖捏紧指节泛白");
+    if (!approachingOpt && !/指节|捏紧/.test(next)) mustSurvive.push("握持：指尖捏紧指节泛白");
     if (/弯腰|捡拾|捡起|触地/.test(next)) {
-      if (!/薄纸|近地触地|主手触地|休书薄纸/.test(next.slice(0, 160))) {
+      if (approachingOpt) {
+        if (!/伸向|接近|尚未捏紧/.test(next.slice(0, 160))) {
+          mustSurvive.push("主手伸向纸缘（尚未捏紧）");
+        }
+      } else if (!/薄纸|近地触地|主手触地|休书薄纸/.test(next.slice(0, 160))) {
         mustSurvive.push("休书薄纸主手近地触地");
       }
     } else if (!/休书|字形|题名|字迹/.test(next) && /休书|婚书|信笺/.test(String(opts?.occupancyLead ?? "") + next)) {

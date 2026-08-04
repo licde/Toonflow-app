@@ -6,7 +6,7 @@ import { stripVendorTokens } from "../compilers/vendorPromptAdapter";
 
 /** 四模态修复优先级：VID/IMG → AUD → FX → SB（P0-P3） */
 const REPAIR_PRIORITY: { pattern: RegExp; layer: string; suggestion: string; fieldPath: string; priority: number; category?: string }[] = [
-  { pattern: /is not a function|TypeError|Cannot read propert/i, layer: "INFRA", suggestion: "运行时异常（勿当台词保真）；检查分镜台词结构后重试", fieldPath: "generation.runtime", priority: 0, category: "runtime_type_error" },
+  { pattern: /is not a function|TypeError|Cannot read propert|is not defined|ReferenceError/i, layer: "INFRA", suggestion: "运行时异常（勿当台词保真）；检查分镜台词结构后重试", fieldPath: "generation.runtime", priority: 0, category: "runtime_type_error" },
   { pattern: /Client network socket disconnected before secure TLS|socket disconnected before secure TLS|network socket disconnected|TLS connection was established|ECONNRESET|ETIMEDOUT/i, layer: "INFRA", suggestion: "网络/TLS 中断，检查代理与上游连通（勿改提示词）", fieldPath: "generation.network", priority: 0, category: "tls_socket" },
   { pattern: /queue is full|rate.?limit|retry later|429|RPM|upstream.?busy/i, layer: "INFRA", suggestion: "上游繁忙，稍后重试（勿改提示词）", fieldPath: "generation.vendor", priority: 0, category: "vendor_passthrough" },
   { pattern: /DERIVE_PARENT_REF_MISSING|衍生图缺少父图/i, layer: "AS", suggestion: "先生成父资产图再衍生", fieldPath: "assets.parent.src", priority: 0, category: "derive_parent_ref_missing" },
@@ -29,7 +29,7 @@ const REPAIR_PRIORITY: { pattern: RegExp; layer: string; suggestion: string; fie
 ];
 
 function inferRuleId(error: string, layer: string): string | undefined {
-  if (/is not a function|TypeError|Cannot read propert/i.test(error)) return "runtime_type_error";
+  if (/is not a function|TypeError|Cannot read propert|is not defined|ReferenceError/i.test(error)) return "runtime_type_error";
   if (/Client network socket disconnected before secure TLS|socket disconnected before secure TLS|TLS connection|ECONNRESET|ETIMEDOUT/i.test(error)) return "tls_socket";
   if (/queue is full|rate.?limit|retry later/i.test(error)) return "vendor_passthrough";
   if (/DERIVE_PARENT_REF_MISSING|衍生图缺少父图/i.test(error)) return "derive_parent_ref_missing";

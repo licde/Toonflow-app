@@ -139,6 +139,8 @@ export function assertEgressObeysPrimarySeal(input: {
   prompt: string;
   seal?: PrimaryIntentCarrierSet | null;
   ensureBendLead?: boolean;
+  /** LGIA stillPhase — approaching lead ≠ grip-complete; don't strip phase atoms */
+  stillPhase?: string | null;
 }): {
   prompt: string;
   ok: boolean;
@@ -149,6 +151,8 @@ export function assertEgressObeysPrimarySeal(input: {
   const hints: ContaminationClass[] = [];
   let prompt = String(input.prompt ?? "").trim();
   const seal = input.seal;
+  const phase = String(input.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
 
   if (seal?.sealHash) {
     const gated = gatePromptThroughPrimarySeal({ prompt, seal });
@@ -158,21 +162,29 @@ export function assertEgressObeysPrimarySeal(input: {
   }
 
   if (isBendSealed(seal)) {
-    const cheek = stripHostileCheekLegislation(prompt, seal, {
-      currentVisualDescription: undefined,
-    });
-    prompt = cheek.prompt;
-    if (cheek.stripped.length) {
-      sources.push("seal.gate.strip:contact_zombie");
-      if (cheek.stripped.some((s) => /oral_cu|blood/.test(s))) {
-        sources.push("seal.gate.strip:off_beat_oral");
-        hints.push("off_beat_cu");
-      } else {
-        hints.push("contact_zombie");
+    // Preserve LGIA phase approach atoms — not contact_zombie cheek legislation
+    const hasPhaseAtom = /尚未捏紧|接近地面薄纸|手伸向纸面|刚触及/.test(prompt.slice(0, 160));
+    if (!approaching && !hasPhaseAtom) {
+      const cheek = stripHostileCheekLegislation(prompt, seal, {
+        currentVisualDescription: undefined,
+      });
+      prompt = cheek.prompt;
+      if (cheek.stripped.length) {
+        sources.push("seal.gate.strip:contact_zombie");
+        if (cheek.stripped.some((s) => /oral_cu|blood/.test(s))) {
+          sources.push("seal.gate.strip:off_beat_oral");
+          hints.push("off_beat_cu");
+        } else {
+          hints.push("contact_zombie");
+        }
       }
+    } else if (approaching || hasPhaseAtom) {
+      sources.push("seal.gate.preserve:lgia_stillPhase_atoms");
     }
     if (input.ensureBendLead !== false) {
-      const lead = occupancyCompressLead(seal?.poseOccupancy ?? "bend_pickup");
+      const lead = occupancyCompressLead(seal?.poseOccupancy ?? "bend_pickup", {
+        stillPhase: phase || (hasPhaseAtom ? "approaching" : null),
+      });
       if (!/弯腰|捡拾|捡起|俯身/.test(prompt.slice(0, 120))) {
         prompt = `${lead}${prompt}`.replace(/。{2,}/g, "。").trim();
         sources.push("seal.gate.ensure:bend_lead");
@@ -205,15 +217,29 @@ export function classifyStillContamination(input: {
   composeSources?: string[] | null;
   propPlateMissing?: boolean | null;
   previousDroppedOffBeat?: boolean | null;
+  /** LGIA: approaching bend atoms must not be misread as contact_zombie / kneel */
+  stillPhase?: string | null;
 }): ContaminationClass {
   const prompt = String(input.promptUsed ?? "");
   const sources = input.composeSources ?? [];
+  const phase = String(input.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
   if (input.previousDroppedOffBeat || sources.some((s) => /previous\.dropped_off_beat|off_beat/.test(s))) {
     return "off_beat_cu";
   }
   if (isBendSealed(input.seal)) {
     const head = prompt.slice(0, 100);
-    if (CHEEK_CONTACT_POS.test(head) || /接触几何：/.test(head)) return "contact_zombie";
+    // Phase atoms:「尚未捏紧」「占位：弯腰俯身接近」are not cheek-contact zombies
+    const phaseApproachAtom =
+      approaching ||
+      /尚未捏紧|接近地面薄纸|手伸向纸面|刚触及/.test(head) ||
+      sources.some((s) => /lgia\.stillPhase:approaching|lgia\.stillPhase:mid_contact/.test(s));
+    if (
+      !phaseApproachAtom &&
+      (CHEEK_CONTACT_POS.test(head) || /接触几何：/.test(head))
+    ) {
+      return "contact_zombie";
+    }
     if (PURPLE_ROBE_LOCUS.test(prompt)) return "locus_mangled";
     if (input.propPlateMissing && HOLD_CARD.test(prompt) === false) {
       /* missing plate alone → plate_geometry when bend */
@@ -221,7 +247,11 @@ export function classifyStillContamination(input: {
     }
   }
   if (PURPLE_ROBE_LOCUS.test(prompt)) return "locus_mangled";
-  if (sources.some((s) => /contact_zombie|foundation\.restore:.*contact_geom/.test(s)) && isBendSealed(input.seal)) {
+  if (
+    !approaching &&
+    sources.some((s) => /contact_zombie|foundation\.restore:.*contact_geom/.test(s)) &&
+    isBendSealed(input.seal)
+  ) {
     return "contact_zombie";
   }
   return "none";

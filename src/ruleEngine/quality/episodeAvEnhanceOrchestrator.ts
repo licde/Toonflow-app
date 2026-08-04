@@ -108,6 +108,17 @@ function polishCameraGrammar(shots: EpisodeShotAdaptResult[], inputs: EpisodeSho
 function polishEmotionArc(shots: EpisodeShotAdaptResult[], inputs: EpisodeShotAdaptInput[]): number {
   let count = 0;
   for (let i = 1; i < shots.length; i++) {
+    // LGIA: don't inflate emotion cliff against process-freeze stillPhase
+    const phase = String(
+      inputs[i].shotMeta?.stillPhase ??
+        (inputs[i].designShot as { narrative?: { stillPhase?: string } } | undefined)?.narrative
+          ?.stillPhase ??
+        "",
+    );
+    if (phase === "approaching" || phase === "mid_contact" || phase === "held") {
+      shots[i].polishNotes.push(`emotion_cliff:skip_stillPhase_${phase}`);
+      continue;
+    }
     const prev = extractEmotion(inputs[i - 1]);
     const cur = extractEmotion(inputs[i]);
     if (prev == null || cur == null) continue;
@@ -126,36 +137,84 @@ function polishEmotionArc(shots: EpisodeShotAdaptResult[], inputs: EpisodeShotAd
  * Run episode preflight: per-shot adapt + cross-shot polish.
  * On budget exceed → returns per-shot adapt only (no cross polish).
  */
-/** Wave-3: consecutive dialogue → realization polish notes for L/J-cut (design SSOT untouched). */
+function readDesignAvBeats(shot: EpisodeShotAdaptInput): string[] {
+  const narr = (shot.designShot?.narrative ?? shot.shotMeta?.narrative) as
+    | { avBeats?: string[] }
+    | undefined;
+  return Array.isArray(narr?.avBeats) ? narr!.avBeats!.map(String) : [];
+}
+
+/**
+ * Wave-3/5: consecutive dialogue OR design avBeats → L/J-cut polish + timeline ms offsets.
+ * Design SSOT untouched; realization footnotes / jlCutTimeline only.
+ */
 function polishJlCutContinuity(
   results: EpisodeShotAdaptResult[],
   inputs: EpisodeShotAdaptInput[],
 ): number {
   let n = 0;
+  let buildJl: typeof import("../compilers/jlCutTimeline").buildJlCutTimelineSlice;
+  let detectJl: typeof import("../compilers/jlCutTimeline").detectJlCutFromAvBeats;
+  let mergeJl: typeof import("../compilers/jlCutTimeline").mergeJlCutTimeline;
+  try {
+    const mod = require("../compilers/jlCutTimeline") as typeof import("../compilers/jlCutTimeline");
+    buildJl = mod.buildJlCutTimelineSlice;
+    detectJl = mod.detectJlCutFromAvBeats;
+    mergeJl = mod.mergeJlCutTimeline;
+  } catch {
+    buildJl = () => null;
+    detectJl = () => ({ wantsJ: false, wantsL: false });
+    mergeJl = (_a, b) => b ?? null;
+  }
+
   for (let i = 0; i < inputs.length - 1; i++) {
     const a = inputs[i]!;
     const b = inputs[i + 1]!;
-    if (!a.dialoguePresent || !b.dialoguePresent) continue;
+    const beatsA = readDesignAvBeats(a);
+    const beatsB = readDesignAvBeats(b);
+    const fromDesignA = detectJl(beatsA);
+    const fromDesignB = detectJl(beatsB);
+    const dialPair = Boolean(a.dialoguePresent && b.dialoguePresent);
+    const wantsL = dialPair || fromDesignA.wantsL || fromDesignB.wantsL;
+    const wantsJ = dialPair || fromDesignA.wantsJ || fromDesignB.wantsJ;
+    if (!wantsL && !wantsJ) continue;
     const scA = String(a.sceneCode ?? "");
     const scB = String(b.sceneCode ?? "");
     if (scA && scB && scA !== scB) continue;
     if (!results[i] || !results[i + 1]) continue;
-    if (!results[i]!.polishNotes.includes("jl_cut:l_cut")) {
+
+    if (wantsL && !results[i]!.polishNotes.includes("jl_cut:l_cut")) {
       results[i]!.polishNotes.push("jl_cut:l_cut");
       n += 1;
     }
-    if (!results[i + 1]!.polishNotes.includes("jl_cut:j_cut")) {
+    if (wantsJ && !results[i + 1]!.polishNotes.includes("jl_cut:j_cut")) {
       results[i + 1]!.polishNotes.push("jl_cut:j_cut");
       n += 1;
     }
-    // Realization footnote only — never rewrite design shotSize / VD
-    const footA = results[i]!.adaptPack as RealizationAdaptPack & { narrativeFootnote?: string };
-    const footB = results[i + 1]!.adaptPack as RealizationAdaptPack & { narrativeFootnote?: string };
-    if (footA && !String(footA.narrativeFootnote ?? "").includes("声延")) {
+
+    const footA = results[i]!.adaptPack as RealizationAdaptPack;
+    const footB = results[i + 1]!.adaptPack as RealizationAdaptPack;
+    if (wantsL && footA && !String(footA.narrativeFootnote ?? "").includes("声延")) {
       footA.narrativeFootnote = [footA.narrativeFootnote, "本镜声延至下画"].filter(Boolean).join("；");
     }
-    if (footB && !String(footB.narrativeFootnote ?? "").includes("声先入")) {
+    if (wantsJ && footB && !String(footB.narrativeFootnote ?? "").includes("声先入")) {
       footB.narrativeFootnote = [footB.narrativeFootnote, "下句声先入再切画"].filter(Boolean).join("；");
+    }
+
+    // Wave-5C: soft timeline offsets (not full NLE)
+    if (wantsL) {
+      const slice = buildJl({
+        wantsL: true,
+        source: fromDesignA.wantsL ? "design_avBeats" : "episode_polish",
+      });
+      footA.jlCutTimeline = mergeJl(footA.jlCutTimeline as never, slice) ?? undefined;
+    }
+    if (wantsJ) {
+      const slice = buildJl({
+        wantsJ: true,
+        source: fromDesignB.wantsJ ? "design_avBeats" : "episode_polish",
+      });
+      footB.jlCutTimeline = mergeJl(footB.jlCutTimeline as never, slice) ?? undefined;
     }
   }
   return n;
@@ -192,7 +251,13 @@ export function runEpisodeAvEnhanceOrchestrator(input: {
       intentOccupancy: intent as import("../compilers/designIntentProfile").PoseOccupancy | undefined,
       realizationOccupancy: realization as import("../compilers/designIntentProfile").PoseOccupancy | undefined,
       realizationDegraded: meta.realizationDegraded === true,
-      stillMeta: meta,
+      stillMeta: {
+        ...meta,
+        stillPhase:
+          meta.stillPhase ??
+          (shot.designShot as { narrative?: { stillPhase?: string } } | undefined)?.narrative?.stillPhase ??
+          (shot as { narrative?: { stillPhase?: string } }).narrative?.stillPhase,
+      },
       emotionIntensity: extractEmotion(shot),
       sfxIntent: String(meta.sfxIntent ?? "").trim() || null,
       avCausality: meta.avCausality as { audioBeat?: string } | undefined,
@@ -202,6 +267,16 @@ export function runEpisodeAvEnhanceOrchestrator(input: {
       trunkBlockers: trunk,
       enable: enabled,
     });
+
+    // LGIA: episode polish must not fight design stillPhase (realization layer only)
+    const designPhase = String(
+      meta.stillPhase ??
+        (shot.designShot as { narrative?: { stillPhase?: string } } | undefined)?.narrative?.stillPhase ??
+        "",
+    );
+    if (designPhase === "approaching" || designPhase === "mid_contact" || designPhase === "held") {
+      pack.sources = [...(pack.sources ?? []), `episodeAv.respect_stillPhase:${designPhase}`];
+    }
 
     if (pack.adapted) adaptHit++;
     if (pack.realizationDegraded) degrade++;

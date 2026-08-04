@@ -171,6 +171,8 @@ export interface ComposeStillResult {
   refsSig?: string;
   /** Recipe policy self-heal ids (FE / reverse audit) */
   recipeHeals?: string[];
+  /** First-frame literary stillPhase SSOT */
+  stillPhase?: string | null;
 }
 
 export function stripIdentityTokens(prompt: string): { body: string; tokenTail: string } {
@@ -576,41 +578,170 @@ function layerDesignConsume(ctx: ComposeStillContext, parts: string[], sources: 
 }
 
 function layerShootableExtras(ctx: ComposeStillContext, parts: string[], sources: string[], mode: ComposeMode): void {
-  const fg = String(ctx.foreground ?? "").trim();
-  const bg = String(ctx.background ?? "").trim();
-  if (fg || bg) {
-    parts.push([fg && `前景：${fg}`, bg && `背景：${bg}`].filter(Boolean).join("；"));
-    sources.push("shotDesign.composition");
+  // First-frame literary SSOT via unique reader — stamp preferred over re-extract
+  let ffPhase: string | null = null;
+  let ffIntent: string | undefined;
+  try {
+    const { resolveStillFirstFrameSsot } =
+      require("./stillSsotRead") as typeof import("./stillSsotRead");
+    const names = (ctx.characters ?? [])
+      .filter((c) => c.kind !== "scene")
+      .map((c) => c.name || c.code)
+      .filter(Boolean) as string[];
+    const resolved = resolveStillFirstFrameSsot({
+      shotOrCtx: {
+        narrative: (ctx as { narrative?: Record<string, unknown> }).narrative,
+        visualDescription: ctx.visualDescription,
+        emotionIntensity: (ctx as { emotionIntensity?: number }).emotionIntensity,
+        bgBlur: (ctx as { bgBlur?: boolean }).bgBlur,
+        episodeShot: (ctx as { episodeShot?: Record<string, unknown> }).episodeShot,
+        stillPhase: (ctx as { stillPhase?: string }).stillPhase,
+      },
+      visualDescription: ctx.visualDescription,
+      narrative: (ctx as { narrative?: Record<string, unknown> }).narrative,
+      videoPrompt: String((ctx as { videoPrompt?: string }).videoPrompt ?? ""),
+      characterNames: names,
+      shotSize: String(ctx.shotSize ?? ""),
+      emotionIntensity:
+        (ctx as { emotionIntensity?: number }).emotionIntensity ??
+        (Number.isFinite(Number(ctx.emotion)) ? Number(ctx.emotion) : null),
+      bgBlur:
+        typeof (ctx as { bgBlur?: boolean }).bgBlur === "boolean"
+          ? (ctx as { bgBlur: boolean }).bgBlur
+          : null,
+    });
+    const ff = resolved.extract;
+    ffPhase = ff.stillPhase;
+    ffIntent = ff.intentClass;
+    (ctx as { stillPhase?: string }).stillPhase = ff.stillPhase;
+    (ctx as { firstFrameExtract?: typeof ff }).firstFrameExtract = ff;
+    (ctx as { _ssotOnlyEgress?: boolean })._ssotOnlyEgress = true;
+    for (const line of ff.positiveSpine) {
+      if (line && !parts.some((p) => p.includes(line.slice(0, Math.min(10, line.length))))) {
+        parts.push(line);
+        sources.push(resolved.fromStamp ? "ff.spine.stamp" : "ff.spine");
+      }
+    }
+    for (const n of ff.necessaryNegatives) {
+      if (n && !parts.some((p) => p.includes(n.slice(0, 8)))) {
+        parts.push(n);
+        sources.push("ff.neg");
+      }
+    }
+    sources.push(...ff.sources, ...resolved.sources);
+  } catch {
+    /* optional */
+  }
+  // When SSOT spine present, skip conflicting composition FG/BG soup (design refine owns freeze)
+  const approaching = ffPhase === "approaching" || ffPhase === "mid_contact";
+  if (!(ctx as { _ssotOnlyEgress?: boolean })._ssotOnlyEgress) {
+    const fg = String(ctx.foreground ?? "").trim();
+    const bg = String(ctx.background ?? "").trim();
+    if (fg || bg) {
+      parts.push([fg && `前景：${fg}`, bg && `背景：${bg}`].filter(Boolean).join("；"));
+      sources.push("shotDesign.composition");
+    }
+  } else if (approaching && ctx.foreground && /手捏|捏紧|持纸/.test(String(ctx.foreground))) {
+    sources.push("ssot.skip:fg_grip_conflict");
   }
   const shotZh = formatShotSizeZh(ctx.shotSize);
-  if (shotZh) {
+  if (shotZh && !parts.some((p) => /^景别：/.test(p))) {
     parts.push(`景别：${shotZh}`);
     sources.push("shot.shotSize");
   }
-  // Industry soft framing (headroom / looking-room) — non-destructive
+  // Industry soft framing — NormGate compatible add-on only
   try {
-    const { softGrammarHints } =
-      require("./cinematicShotGrammar") as typeof import("./cinematicShotGrammar");
-    const hints = softGrammarHints(["headroom", "lookingRoom", "axis", "axis180"]);
-    for (const h of hints) {
+    const { resolveGatedSoftHints } =
+      require("./industryNormGate") as typeof import("./industryNormGate");
+    const { readStillPhase } =
+      require("./stillPhasePlan") as typeof import("./stillPhasePlan");
+    const metaBag = (ctx as { shotMeta?: Record<string, unknown>; stillMeta?: Record<string, unknown> }).shotMeta
+      ?? (ctx as { stillMeta?: Record<string, unknown> }).stillMeta
+      ?? (ctx as unknown as Record<string, unknown>);
+    const phase =
+      (ctx as { stillPhase?: string }).stillPhase ??
+      ffPhase ??
+      readStillPhase(metaBag) ??
+      readStillPhase({ narrative: (ctx as { narrative?: Record<string, unknown> }).narrative }) ??
+      null;
+    const gated = resolveGatedSoftHints({
+      stillIntentClass: String((ctx as { stillIntentClass?: string }).stillIntentClass ?? "") || String(ffIntent ?? ""),
+      stillPhase: phase,
+      shotSize: String(ctx.shotSize ?? ""),
+      visualDescription: ctx.visualDescription,
+      otsLike: ffIntent === "ots",
+      faceish: ffIntent === "face",
+      speakLike: ffIntent === "speak",
+    });
+    for (const h of gated.hints) {
       if (h && !parts.some((p) => p.includes(h))) {
         parts.push(h);
-        sources.push("cinematic.softHints");
+        sources.push("cinematic.softHints.gated");
       }
     }
-      const { assessCompositionSoftNoKey, injectCompositionSoftHints } = require("./compositionSoftNoKey") as typeof import("./compositionSoftNoKey");
-    const softComp = assessCompositionSoftNoKey({
-      visualDescription: ctx.visualDescription,
-      promptUsed: parts.join("\n"),
-      shotSize: String(ctx.shotSize ?? ""),
-      spatialRelation: typeof ctx.spatialRelation === "string" ? ctx.spatialRelation : undefined,
-      faceBudget: String((ctx as { faceBudget?: string }).faceBudget ?? ""),
-    });
-    const nextParts = injectCompositionSoftHints(parts, softComp.findings);
-    if (nextParts.length !== parts.length) {
-      parts.length = 0;
-      parts.push(...nextParts);
-      sources.push("composition.softNoKey");
+    if (gated.skipped.length) sources.push(`cinematic.softHints.skip:${gated.skipped.join("+")}`);
+    // Skip face geometry soft-hints for action×approaching (noise → false debts)
+    const skipFaceAssess = approaching && (ffIntent === "action_primary" || /弯腰|捡/.test(String(ctx.visualDescription ?? "")));
+    if (!skipFaceAssess) {
+      const { assessComposition, injectCompositionSoftHints } =
+        require("./compositionAssess") as typeof import("./compositionAssess");
+      const { readFaceBoxNormFromMeta, keyOrAdapterPresentFromMeta } =
+        require("./faceBoxNormFromMeta") as typeof import("./faceBoxNormFromMeta");
+      const { resolveFaceBoxForCompose } =
+        require("./softFaceBoxHeuristic") as typeof import("./softFaceBoxHeuristic");
+      const metaBox = readFaceBoxNormFromMeta(metaBag);
+      const { readProvisionalFaceBoxFromMeta } =
+        require("./faceBoxNormFromMeta") as typeof import("./faceBoxNormFromMeta");
+      const localSoft = readProvisionalFaceBoxFromMeta(metaBag);
+      const resolved = resolveFaceBoxForCompose({
+        metaBox,
+        localSoftBox: localSoft,
+        shotSize: String(ctx.shotSize ?? ""),
+        faceBudget: String((ctx as { faceBudget?: string }).faceBudget ?? ""),
+        visualDescription: ctx.visualDescription,
+      });
+      // Provisional soft box never upgrades to measured — Key+real meta box only;
+      // Wave-13: provisional geometry still soft-assesses headroom/looking-room.
+      // LGIA: only inject composition soft hints when NormGate allows those keys
+      const softComp = assessComposition({
+        keyOrAdapterPresent: keyOrAdapterPresentFromMeta(metaBag) && !resolved.provisional && Boolean(metaBox),
+        faceBoxNorm: resolved.provisional ? null : resolved.box,
+        provisionalFaceBoxNorm: resolved.provisional ? resolved.box : null,
+        visualDescription: ctx.visualDescription,
+        promptUsed: parts.join("\n"),
+        shotSize: String(ctx.shotSize ?? ""),
+        spatialRelation: typeof ctx.spatialRelation === "string" ? ctx.spatialRelation : undefined,
+        faceBudget: String((ctx as { faceBudget?: string }).faceBudget ?? ""),
+      });
+      const findingsForInject =
+        gated.keys.length === 0
+          ? []
+          : softComp.findings.filter((f) => {
+              if (f.id.startsWith("headroom") && !gated.keys.includes("headroom")) return false;
+              if (f.id.startsWith("looking_room") && !gated.keys.includes("lookingRoom")) return false;
+              if (f.id.startsWith("axis") && !gated.keys.includes("axis180") && !gated.keys.includes("axis")) {
+                return false;
+              }
+              return true;
+            });
+      const nextParts = injectCompositionSoftHints(parts, findingsForInject);
+      if (nextParts.length !== parts.length) {
+        parts.length = 0;
+        parts.push(...nextParts);
+        sources.push(
+          softComp.measured
+            ? "composition.measured"
+            : softComp.provisionalSoft
+              ? "composition.provisionalSoft"
+              : "composition.softNoKey",
+        );
+      }
+      if (resolved.provisional && resolved.reason) {
+        sources.push(`composition.softFaceBox:${resolved.reason}`);
+      }
+      if (softComp.pixelDimStatus) {
+        (ctx as { pixelDimStatus?: string }).pixelDimStatus = softComp.pixelDimStatus;
+      }
     }
   } catch {
     /* optional */
@@ -636,8 +767,10 @@ function layerShootableExtras(ctx: ComposeStillContext, parts: string[], sources
   }
   // Still first-frame: narrative over reference collage (hq_update + fidelity)
   if (mode === "fidelity" || ctx.qualityMode === "hq_update") {
-    parts.push("叙事场面优先于参考图拼贴，画面必须体现上述描写中的动作与物件");
-    sources.push("fidelity.narrativeFirst");
+    if (!parts.some((p) => /叙事场面优先/.test(p))) {
+      parts.push("叙事场面优先于参考图拼贴，画面必须体现上述描写中的动作与物件");
+      sources.push("fidelity.narrativeFirst");
+    }
   }
 }
 
@@ -1077,6 +1210,16 @@ export function composeStillPrompt(
       const { homologizePreviousVisualBody } =
         require("./stillPromptHomology") as typeof import("./stillPromptHomology");
       prevClean = homologizePreviousVisualBody(prevClean) || prevClean;
+    } catch {
+      /* optional */
+    }
+    try {
+      const { peelCompiledAgainstSsot, readStillSsotFromShot } =
+        require("./stillSsotRead") as typeof import("./stillSsotRead");
+      const ph =
+        ((ctx as { stillPhase?: string }).stillPhase as import("./stillPhasePlan").StillPhase | null) ??
+        readStillSsotFromShot(ctx as unknown as Record<string, unknown>).stillPhase;
+      prevClean = peelCompiledAgainstSsot(prevClean, ph);
     } catch {
       /* optional */
     }
@@ -1617,17 +1760,23 @@ export function composeStillPrompt(
       (modality as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = true;
       (modality as { softEnvContinuity?: string }).softEnvContinuity = "must";
       sources.push("seal.sample.bg.scene_soft");
+      const noShallow = (ctx as { bgBlur?: boolean }).bgBlur === false;
       if (
-        !supportParts.some((p) => /主场景浅景深|殿内轮廓|禁止灰棚/.test(p)) &&
-        !/主场景浅景深/.test(String(bgPolicyResult.bgGuidance ?? ""))
+        !supportParts.some((p) => /主场景|殿内轮廓|禁止灰棚/.test(p)) &&
+        !/主场景/.test(String(bgPolicyResult.bgGuidance ?? ""))
       ) {
-        supportParts.push("背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化");
+        supportParts.push(
+          noShallow
+            ? "背景：主场景环境轮廓可辨（木作/烛光），禁止浅景深抢戏，禁止香案/佛像升为主构图；裙摆/衣角可为加强虚化"
+            : "背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化",
+        );
         sources.push("seal.sample.bg.scene_soft.guidance");
       }
       // compress-readable: never leave skirt-only as sole bg when scene Must
       if (/背景仅次角裙摆|仅裙摆\/衣角碎片虚化浅景深/.test(String(bgPolicyResult.bgGuidance ?? ""))) {
-        bgPolicyResult.bgGuidance =
-          "背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化，禁止次角完整正脸抢戏";
+        bgPolicyResult.bgGuidance = noShallow
+          ? "背景：主场景环境轮廓可辨（木作/烛光），禁止浅景深抢戏，禁止香案/佛像升为主构图；裙摆/衣角可为加强虚化，禁止次角完整正脸抢戏"
+          : "背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化，禁止次角完整正脸抢戏";
         bgPolicyResult.reason = `${bgPolicyResult.reason}|seal_scene_soft_must`;
       }
     }
@@ -1673,18 +1822,25 @@ export function composeStillPrompt(
   } catch {
     /* optional */
   }
-  // Action-primary lead: prepend 弯腰/捡/捏紧 when declared
+  // Action-primary lead: first-frame extract already owns action — skip VD grip-complete prepend
   try {
-    const { ACTION_PRIMARY_SURVIVE_STEMS } =
-      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
-    const vdAct = String(ctx.visualDescription ?? primary?.text ?? "");
-    if (ACTION_PRIMARY_SURVIVE_STEMS.test(vdAct)) {
-      const head =
-        vdAct.match(/[^。；;\n]*(?:弯腰|捡起|捡|捏紧|指节)[^。；;\n]{0,40}/)?.[0]?.trim() ||
-        "";
-      if (head && !descParts.some((p) => p.includes(head.slice(0, 8)))) {
-        descParts.unshift(`动作主导：${head.slice(0, 80)}`);
-        sources.push("action.primary.lead");
+    const ff = (ctx as { firstFrameExtract?: { stillPhase?: string; actionLine?: string } }).firstFrameExtract;
+    const phase = String(ff?.stillPhase ?? (ctx as { stillPhase?: string }).stillPhase ?? "");
+    if (phase === "approaching" || phase === "mid_contact") {
+      sources.push("action.primary.lead:skip_ff_owns");
+    } else {
+      const { ACTION_PRIMARY_SURVIVE_STEMS } =
+        require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+      const vdAct = String(ctx.visualDescription ?? primary?.text ?? "");
+      if (ACTION_PRIMARY_SURVIVE_STEMS.test(vdAct)) {
+        const head =
+          vdAct.match(/[^。；;\n]*(?:弯腰|捡起|捡|俯身)[^。；;\n]{0,40}/)?.[0]?.trim() ||
+          "";
+        // Never pull 捏紧/指节 into still lead when process VD
+        if (head && !/捏紧|指节/.test(head) && !descParts.some((p) => p.includes(head.slice(0, 8)))) {
+          descParts.unshift(`动作主导：${head.slice(0, 80)}`);
+          sources.push("action.primary.lead");
+        }
       }
     }
   } catch {
@@ -1852,11 +2008,28 @@ export function composeStillPrompt(
       (predPack.hasSeatingOrKneel || castForCard.length >= 2)
     ) {
       try {
+        const skirt =
+          String((ctx as { narrative?: { secondaryBudget?: string } }).narrative?.secondaryBudget ?? "") ===
+            "skirt_blur" ||
+          /裙摆|衣角虚化/.test(String(ctx.visualDescription ?? "") + String(ctx.background ?? ""));
+        if (skirt && castForCard.length >= 2) {
+          // Secondary is fragment-only — do not legislate full 2-person cast
+          const heroName =
+            String((ctx as { narrative?: { literaryPrimary?: string } }).narrative?.literaryPrimary ?? "") ||
+            (typeof castForCard[0] === "string"
+              ? castForCard[0]
+              : String((castForCard[0] as { name?: string })?.name ?? "主角"));
+          supportParts.push(
+            `出镜人数：仅1人主体（${heroName}）；次角仅裙摆/衣角虚化，禁止完整正脸立像`,
+          );
+          sources.push("identity.castCardinality.skirt_blur");
+        } else {
         const { buildCastCardinalityLine } = require("./stillRefSlotContract") as typeof import("./stillRefSlotContract");
         const cardLine = buildCastCardinalityLine(castForCard);
         if (cardLine && !supportParts.some((p) => /出镜人数/.test(p)) && !descParts.some((p) => /出镜人数/.test(p))) {
           supportParts.push(cardLine);
           sources.push("identity.castCardinality");
+        }
         }
       } catch {
         /* optional */
@@ -2823,7 +2996,7 @@ export function composeStillPrompt(
     };
   }
 
-  // Final seal gate: strip contact zombie / face recipe; never throw (non-block generate)
+  // Final seal gate + first-frame strip (no second bend_lead when FF spine present)
   try {
     const { assertEgressObeysPrimarySeal, classifyStillContamination } =
       require("./stillSealGate") as typeof import("./stillSealGate");
@@ -2832,13 +3005,77 @@ export function composeStillPrompt(
         ._activePrimarySeal ??
       ((generationContract as { primaryIntentSeal?: import("./primaryIntentSeal").PrimaryIntentCarrierSet })
         .primaryIntentSeal as import("./primaryIntentSeal").PrimaryIntentCarrierSet | undefined);
-    const gated = assertEgressObeysPrimarySeal({ prompt, seal: activeSeal });
+    const ff = (ctx as { firstFrameExtract?: import("./stillFirstFrameExtract").StillFirstFrameExtract })
+      .firstFrameExtract;
+    const stillPhase =
+      (ctx as { stillPhase?: string }).stillPhase ??
+      ff?.stillPhase ??
+      ((ctx as { episodeShot?: { narrative?: { stillPhase?: string } } }).episodeShot?.narrative
+        ?.stillPhase) ??
+      null;
+    const hasFfSpine = sources.some((s) => s === "ff.spine" || /^ff\./.test(s));
+    const gated = assertEgressObeysPrimarySeal({
+      prompt,
+      seal: activeSeal,
+      stillPhase,
+      // First-frame spine already carries occupancy — do not stack bend_lead
+      ensureBendLead: !hasFfSpine && stillPhase !== "approaching" && stillPhase !== "mid_contact",
+    });
     prompt = gated.prompt;
     sources.push(...gated.sources);
+    if (ff) {
+      const { stripInterferenceAgainstFirstFrame } =
+        require("./stillFirstFrameExtract") as typeof import("./stillFirstFrameExtract");
+      const stripped = stripInterferenceAgainstFirstFrame(prompt, ff);
+      prompt = stripped.text;
+      for (const s of stripped.stripped) sources.push(`ff.strip:${s}`);
+      // Sole spine egress: rebuild from SSOT + identity token tail
+      try {
+        const { buildSsotOnlyEgress } =
+          require("./stillSsotRead") as typeof import("./stillSsotRead");
+        const { resolveGatedSoftHints } =
+          require("./industryNormGate") as typeof import("./industryNormGate");
+        const gated = resolveGatedSoftHints({
+          stillIntentClass: String(ff.intentClass ?? ""),
+          stillPhase: ff.stillPhase,
+          shotSize: String(ctx.shotSize ?? ""),
+          visualDescription: ctx.visualDescription,
+          otsLike: ff.intentClass === "ots",
+          faceish: ff.intentClass === "face",
+          speakLike: ff.intentClass === "speak",
+        });
+        prompt = buildSsotOnlyEgress(ff, gated.hints, prompt, {
+          colorTempLine: (() => {
+            try {
+              const t = resolveColorTempFromCtx(ctx);
+              return t ? ( /色温：/.test(t) ? t : `色温：${t}`) : null;
+            } catch {
+              return null;
+            }
+          })(),
+          envLine: (() => {
+            const scene =
+              String((ctx as { sceneName?: string }).sceneName ?? ctx.sceneCode ?? "").trim();
+            if (!scene || /^SCENE-/i.test(scene) || /CHAR-SCENE/i.test(scene)) return null;
+            if (/寝殿|殿内|厅|厢|廊|庭/.test(scene) || scene.length <= 8) {
+              return `环境：${scene.replace(/^SCENE-/i, "")}轮廓可辨`;
+            }
+            return null;
+          })(),
+        });
+        sources.push("ff.ssot_only_egress");
+      } catch (sealErr) {
+        sources.push(`ff.ssot_only_egress:fail:${String((sealErr as Error)?.message ?? "err").slice(0, 40)}`);
+        /* keep stripped */
+      }
+    }
+    (generationContract as { stillPhase?: string }).stillPhase = stillPhase ?? undefined;
+    (ctx as { stillPhase?: string }).stillPhase = stillPhase ?? undefined;
     const contam = classifyStillContamination({
       promptUsed: prompt,
       seal: activeSeal,
       composeSources: sources,
+      stillPhase,
     });
     if (contam !== "none") {
       sources.push(`contaminationClass:${contam}`);
@@ -2867,21 +3104,26 @@ export function composeStillPrompt(
   }
 
   // SingleShotClosed: final egress strip undeclared beat atoms
-  try {
-    const { stripForeignBeatAtomsFromEgress, oralEcuMouthNegatives, isOralMicroNotActionPrimary } =
-      require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
-    const vdFinal = String(primary?.text ?? ctx.visualDescription ?? "");
-    const scrubbedFinal = stripForeignBeatAtomsFromEgress(prompt, vdFinal);
-    if (scrubbedFinal.stripped.length) {
-      prompt = scrubbedFinal.text;
-      sources.push(...scrubbedFinal.stripped.map((s) => `closed.strip.final:${s}`));
+  // Skip when SSOT-only egress already sealed — closed.strip can fight approach freeze
+  if (!(ctx as { _ssotOnlyEgress?: boolean })._ssotOnlyEgress) {
+    try {
+      const { stripForeignBeatAtomsFromEgress, oralEcuMouthNegatives, isOralMicroNotActionPrimary } =
+        require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
+      const vdFinal = String(primary?.text ?? ctx.visualDescription ?? "");
+      const scrubbedFinal = stripForeignBeatAtomsFromEgress(prompt, vdFinal);
+      if (scrubbedFinal.stripped.length) {
+        prompt = scrubbedFinal.text;
+        sources.push(...scrubbedFinal.stripped.map((s) => `closed.strip.final:${s}`));
+      }
+      if (isOralMicroNotActionPrimary(vdFinal) && !/禁止半身|禁止手持纸/.test(prompt)) {
+        prompt = `${prompt}。${oralEcuMouthNegatives()}`.replace(/。。+/g, "。");
+        sources.push("closed.oralEcuNegatives.final");
+      }
+    } catch {
+      /* optional */
     }
-    if (isOralMicroNotActionPrimary(vdFinal) && !/禁止半身|禁止手持纸/.test(prompt)) {
-      prompt = `${prompt}。${oralEcuMouthNegatives()}`.replace(/。。+/g, "。");
-      sources.push("closed.oralEcuNegatives.final");
-    }
-  } catch {
-    /* optional */
+  } else {
+    sources.push("closed.strip.skipped:ssot_only");
   }
 
   return {
@@ -2901,7 +3143,6 @@ export function composeStillPrompt(
     dirtyInput,
     descCoverageOk: coverageForGate.ok,
     descCoverageMissing: coverageForGate.missing,
-    orderedCrefCodes: identityBind.orderedCodes,
     bgPolicy: bgPolicyResult.policy,
     excludeScene: bgPolicyResult.excludeScene,
     keepSoftEnvRef: keepSoftEnvSealed,
@@ -2913,6 +3154,22 @@ export function composeStillPrompt(
     generationContract,
     bgPolicyReason: bgPolicyResult.reason,
     recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : undefined,
+    stillPhase:
+      (ctx as { stillPhase?: string }).stillPhase ??
+      (generationContract as { stillPhase?: string } | undefined)?.stillPhase ??
+      null,
+    firstFrameExtract: (ctx as { firstFrameExtract?: unknown }).firstFrameExtract ?? null,
+    orderedCrefCodes: (() => {
+      const skirt =
+        String((ctx as { narrative?: { secondaryBudget?: string } }).narrative?.secondaryBudget ?? "") ===
+          "skirt_blur" ||
+        (ctx as { firstFrameExtract?: { secondaryBudget?: string } }).firstFrameExtract?.secondaryBudget ===
+          "skirt_blur";
+      if (skirt && identityBind.orderedCodes.length > 1) {
+        return identityBind.orderedCodes.slice(0, 1);
+      }
+      return identityBind.orderedCodes;
+    })(),
   };
 }
 

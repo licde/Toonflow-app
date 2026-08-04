@@ -27,6 +27,13 @@ export type RealizationAdaptPack = {
   sfxBeat?: string;
   performanceBoost?: string;
   narrativeFootnote?: string;
+  /** Wave-5C: soft J/L-cut ms offsets (not full NLE) */
+  jlCutTimeline?: {
+    jCutAudioLeadMs?: number;
+    lCutAudioLagMs?: number;
+    note: string;
+    source?: string;
+  };
   i2vCriticalFacts: string[];
   forbiddenMotionTokens: string[];
   sources: string[];
@@ -68,13 +75,31 @@ function fillPhaseTemplate(tmpl: string, dur: number): string {
     .replace(/\{dur\}/g, String(dur));
 }
 
-function vdBendPhases(vd: string, dur: number): string[] {
+function vdBendPhases(
+  vd: string,
+  dur: number,
+  stillPhase?: string | null,
+): string[] {
   const d = Math.max(2, dur);
   const a = Math.max(0.5, Math.round((d / 3) * 10) / 10);
   const b = Math.max(a + 0.5, Math.round(((2 * d) / 3) * 10) / 10);
+  const phase = String(stillPhase ?? "");
+  // Held plate: do not re-enter bend→touch soup — hold/read from still
+  if (phase === "held") {
+    if (/捏|攥|握|持/.test(vd)) return [`0s-${d}s: 保持持纸/捏缘可读，禁止再弯腰触及`];
+    return [`0s-${d}s: 静帧持态连续，禁止再进入弯腰触及`];
+  }
   const phases: string[] = [];
-  if (/弯腰|俯身/.test(vd)) phases.push(`0s-${a}s: 弯腰俯身`);
-  if (/捡|拾|触及/.test(vd)) phases.push(`${phases.length ? a : 0}s-${b}s: 指尖触及物件`);
+  if (phase === "mid_contact") {
+    phases.push(`0s-${a}s: 指尖已触纸缘`);
+    if (/捏|攥|握/.test(vd)) phases.push(`${a}s-${d}s: 捏紧纸缘`);
+    return phases;
+  }
+  // approaching (default process): may progress bend → touch → grip in Motion
+  if (/弯腰|俯身/.test(vd) || phase === "approaching") phases.push(`0s-${a}s: 弯腰俯身`);
+  if (/捡|拾|触及/.test(vd) || phase === "approaching") {
+    phases.push(`${phases.length ? a : 0}s-${b}s: 指尖触及物件`);
+  }
   if (/捏|攥|握/.test(vd)) phases.push(`${phases.length ? b : a}s-${d}s: 捏紧纸缘`);
   return phases;
 }
@@ -118,6 +143,18 @@ export function buildRealizationAdaptPack(input: {
   const dur = Math.max(1, Math.round(Number(input.durationSec) || 3));
   const fixture = loadRealizationMotionAdaptFixture();
   const sources: string[] = ["realizationAdapt.build"];
+  let stillPhase: string | null = null;
+  try {
+    const { readStillPhase } =
+      require("./stillPhasePlan") as typeof import("./stillPhasePlan");
+    stillPhase =
+      readStillPhase(input.stillMeta as Record<string, unknown>) ??
+      (typeof input.stillMeta?.stillPhase === "string" ? input.stillMeta.stillPhase : null);
+  } catch {
+    stillPhase =
+      typeof input.stillMeta?.stillPhase === "string" ? String(input.stillMeta.stillPhase) : null;
+  }
+  if (stillPhase) sources.push(`realizationAdapt.stillPhase:${stillPhase}`);
 
   const realization =
     input.realization ??
@@ -138,7 +175,7 @@ export function buildRealizationAdaptPack(input: {
     input.enable !== false && isRealizationAdaptEnabled() && mayApplyRealizationAdapt({ trunkBlockers: input.trunkBlockers });
 
   if (!enabled || !mapping) {
-    const phases = vdBendPhases(vd, dur);
+    const phases = vdBendPhases(vd, dur, stillPhase);
     return {
       intentOccupancy: intent,
       realizationOccupancy: real,
@@ -147,17 +184,20 @@ export function buildRealizationAdaptPack(input: {
       mappingKey: key,
       motionPhases: phases,
       motionBody: phases.join("\n"),
-      motionStartHint: "",
+      motionStartHint: stillPhase === "held" ? "从静帧持态起，禁止再弯腰触及" : "",
       cameraPolicy: input.dialoguePresent ? "静止" : "轻微运镜",
-      i2vCriticalFacts: [],
-      forbiddenMotionTokens: [],
+      i2vCriticalFacts: stillPhase === "held" ? ["起态=静帧持态", "禁止再进入弯腰触及"] : [],
+      forbiddenMotionTokens: stillPhase === "held" ? ["弯腰俯身", "弯腰捡拾", "俯身捡", "指尖触及"] : [],
       sources: [...sources, "realizationAdapt.disabled_or_no_mapping"],
     };
   }
 
   let motionPhases: string[] = [];
-  if (mapping.useVdPhases) {
-    motionPhases = vdBendPhases(vd, dur);
+  if (stillPhase === "held") {
+    motionPhases = vdBendPhases(vd, dur, "held");
+    sources.push("realizationAdapt.held_plate_no_reenter_bend");
+  } else if (mapping.useVdPhases) {
+    motionPhases = vdBendPhases(vd, dur, stillPhase);
     sources.push("realizationAdapt.vd_phases");
   } else if (mapping.phases?.length) {
     motionPhases = mapping.phases.map((p) => fillPhaseTemplate(p, dur));
@@ -182,15 +222,20 @@ export function buildRealizationAdaptPack(input: {
       ? mapping.narrativeFootnote ?? realizationDegradedUserNote(realization)
       : undefined;
 
-  const motionStartHint = String(mapping.motionStartHint ?? "").trim();
+  const motionStartHint =
+    stillPhase === "held"
+      ? "从静帧持态起，禁止再弯腰触及"
+      : String(mapping.motionStartHint ?? "").trim();
   const i2vFacts = [...(mapping.i2vCriticalFacts ?? [])];
   if (degraded) i2vFacts.push("起态与静帧一致");
+  if (stillPhase === "held") i2vFacts.push("起态=静帧持态", "禁止再进入弯腰触及");
+  if (stillPhase === "approaching") i2vFacts.push("起态=接近未握", "Motion可递进至触及捏紧");
 
   return {
     intentOccupancy: intent,
     realizationOccupancy: real,
     realizationDegraded: degraded,
-    adapted: degraded || real !== intent,
+    adapted: degraded || real !== intent || stillPhase === "held",
     mappingKey: key,
     motionPhases,
     motionBody: motionPhases.join("\n"),
@@ -201,7 +246,10 @@ export function buildRealizationAdaptPack(input: {
     performanceBoost: perf,
     narrativeFootnote: footnote,
     i2vCriticalFacts: [...new Set(i2vFacts)],
-    forbiddenMotionTokens: mapping.forbiddenMotionTokens ?? [],
+    forbiddenMotionTokens:
+      stillPhase === "held"
+        ? [...new Set([...(mapping.forbiddenMotionTokens ?? []), "弯腰俯身", "弯腰捡拾", "俯身捡", "指尖触及"])]
+        : mapping.forbiddenMotionTokens ?? [],
     sources,
   };
 }
@@ -243,6 +291,7 @@ export function realizationAdaptPersistSlice(pack: RealizationAdaptPack): Record
       sfxBeat: pack.sfxBeat,
       performanceBoost: pack.performanceBoost,
       narrativeFootnote: pack.narrativeFootnote,
+      jlCutTimeline: pack.jlCutTimeline,
       i2vCriticalFacts: pack.i2vCriticalFacts,
       sources: pack.sources,
     },
@@ -251,5 +300,14 @@ export function realizationAdaptPersistSlice(pack: RealizationAdaptPack): Record
     realizationDegraded: pack.realizationDegraded,
     videoMotionStartHint: pack.motionStartHint || undefined,
     i2vCriticalFacts: pack.i2vCriticalFacts.length ? pack.i2vCriticalFacts : undefined,
+    jlCutTimeline: pack.jlCutTimeline || undefined,
   };
+}
+
+/** Persist when adapt hit OR Wave-5 polish left footnotes / jl timeline. */
+export function shouldPersistRealizationAdapt(pack: RealizationAdaptPack): boolean {
+  if (pack.adapted) return true;
+  if (String(pack.narrativeFootnote ?? "").trim()) return true;
+  if (pack.jlCutTimeline?.note) return true;
+  return false;
 }

@@ -38,11 +38,12 @@ export async function applyLiteraryRepairDeltas(input: {
   glyphText?: string | null;
   /** SCENE softEnv bytes to re-hang on keep_softEnv (from prior hung plate / FE salvage). */
   softEnvBase64?: string | null;
+  stillPhase?: string | null;
 }): Promise<LiteraryRepairDeltaResult> {
   const misses = input.missingEffects ?? [];
   const plan =
     misses.length > 0
-      ? repairPlanForMissingEffects(misses)
+      ? repairPlanForMissingEffects(misses, { stillPhase: input.stillPhase })
       : {
           injectLines: input.injectLines ?? [],
           forceFull: true,
@@ -258,7 +259,9 @@ export async function applyLiteraryRepairDeltas(input: {
           const softIdx = roles.indexOf("softEnv");
           const softB64 = softIdx >= 0 ? refs[softIdx]?.base64 : undefined;
           const fromScene = await composeBendPropSoftFromScene({ sceneBase64: softB64 });
-          if (fromScene?.base64) {
+          const { isPoseCueNoPaperProp } =
+            require("../compilers/stillFirstFrameExtract") as typeof import("../compilers/stillFirstFrameExtract");
+          if (fromScene?.base64 && !isPoseCueNoPaperProp(fromScene.reason)) {
             synth = {
               base64: fromScene.base64,
               kind: fromScene.kind,
@@ -266,6 +269,8 @@ export async function applyLiteraryRepairDeltas(input: {
               plateMode: "object_inset",
             };
             sources.push(`delta.propSoft_scene_floor:${fromScene.reason}`);
+          } else if (fromScene && isPoseCueNoPaperProp(fromScene.reason)) {
+            sources.push(`delta.propSoft.reject_pose_cue:${fromScene.reason}`);
           }
         } catch {
           /* keep SVG */
@@ -404,20 +409,38 @@ export async function applyLiteraryRepairDeltas(input: {
   };
 }
 
-/** True only when propSoft slot has non-empty base64 (skipSynth honesty). */
+/** Min decoded bytes for propSoft to count as hung (soft debt otherwise — never hard-block). */
+export const PROP_SOFT_MIN_BYTES = 64;
+
+/** Decode length of propSoft base64 (0 if missing). */
+export function propSoftSlotByteLength(input: {
+  refsRoles?: string[] | null;
+  referenceList?: Array<{ base64?: string; role?: string }> | null;
+}): number {
+  const roles = input.refsRoles ?? [];
+  const refs = input.referenceList ?? [];
+  const rawOf = (b64: string) => String(b64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim();
+  const idx = roles.indexOf("propSoft");
+  const candidates: string[] = [];
+  if (idx >= 0) candidates.push(rawOf(String(refs[idx]?.base64 ?? "")));
+  for (const r of refs) {
+    if (r.role === "propSoft") candidates.push(rawOf(String(r.base64 ?? "")));
+  }
+  let max = 0;
+  for (const raw of candidates) {
+    if (!raw) continue;
+    // Approximate decoded bytes without Buffer alloc of full image
+    const approx = Math.floor((raw.length * 3) / 4);
+    if (approx > max) max = approx;
+  }
+  return max;
+}
+
+/** True only when propSoft slot has enough bytes (skipSynth honesty). Short/empty → soft debt CTA. */
 export function propSoftSlotActuallyPresent(input: {
   refsRoles?: string[] | null;
   referenceList?: Array<{ base64?: string; role?: string }> | null;
+  minBytes?: number;
 }): boolean {
-  const roles = input.refsRoles ?? [];
-  const refs = input.referenceList ?? [];
-  const idx = roles.indexOf("propSoft");
-  if (idx >= 0) {
-    return Boolean(String(refs[idx]?.base64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim());
-  }
-  return refs.some(
-    (r) =>
-      r.role === "propSoft" &&
-      Boolean(String(r.base64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim()),
-  );
+  return propSoftSlotByteLength(input) >= (input.minBytes ?? PROP_SOFT_MIN_BYTES);
 }

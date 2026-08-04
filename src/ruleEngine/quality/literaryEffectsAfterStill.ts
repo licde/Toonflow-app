@@ -170,7 +170,19 @@ export async function reassertLiteraryEffectsAfterStill(input: {
     modernAttireSuspected?: boolean;
     grayStudioSuspected?: boolean;
   } | null;
+  /** LGIA stillPhase SSOT — approaching must not require completed grip */
+  stillPhase?: string | null;
 }): Promise<LiteraryEffectsAfterStill> {
+  let stillPhase = input.stillPhase ?? null;
+  if (!stillPhase && input.episodeShot) {
+    try {
+      const { readStillPhase } =
+        require("../compilers/stillPhasePlan") as typeof import("../compilers/stillPhasePlan");
+      stillPhase = readStillPhase(input.episodeShot);
+    } catch {
+      /* optional */
+    }
+  }
   let localHeuristicOk: boolean | undefined;
   let localPoseSignals: LocalPoseSignals = {};
   if (!input.skipLocalHeuristic) {
@@ -223,6 +235,7 @@ export async function reassertLiteraryEffectsAfterStill(input: {
     localHeuristicOk,
     softEnvHung: (input.refsRoles ?? []).includes("softEnv") && input.droppedSoftEnv !== true,
     droppedSoftEnv: input.droppedSoftEnv,
+    stillPhase,
   });
 
   const sample = resolveSample(input);
@@ -300,7 +313,9 @@ export async function reassertLiteraryEffectsAfterStill(input: {
     }
   }
 
-  const planFromLit = repairPlanForMissingEffects([...missingEffects, ...shouldMisses.slice(0, 2)]);
+  const planFromLit = repairPlanForMissingEffects([...missingEffects, ...shouldMisses.slice(0, 2)], {
+    stillPhase: stillPhase ?? input.stillPhase ?? null,
+  });
   let repairInjectLines = planFromLit.injectLines;
   let repairDeltaHints = planFromLit.deltaHints;
   let forceFull = planFromLit.forceFull;

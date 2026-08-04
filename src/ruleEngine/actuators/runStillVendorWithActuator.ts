@@ -46,6 +46,8 @@ export async function runStillVendorWithActuatorCore(input: {
   visualDescription?: string | null;
   poseOccupancy?: string | null;
   primaryIntentSeal?: { poseOccupancy?: string; sealHash?: string } | null;
+  /** LGIA stillPhase — must reach compress so approaching does not grip-lead */
+  stillPhase?: string | null;
 }): Promise<StillVendorRunResult> {
   const {
     selectStillActuatorProfile,
@@ -111,6 +113,7 @@ export async function runStillVendorWithActuatorCore(input: {
       propClassId: input.propClassId,
       poseOccupancy: input.poseOccupancy,
       primaryIntentSeal: input.primaryIntentSeal,
+      stillPhase: input.stillPhase,
     });
     egressCompressed = true;
     let identityB64 = input.referenceList[0].base64;
@@ -199,6 +202,7 @@ export async function runStillVendorWithActuatorCore(input: {
     keepSoftEnvRef: input.keepSoftEnvRef === true,
     softEnvHung,
     bgSceneMust: input.softEnvContinuity === "must",
+    stillPhase: input.stillPhase,
   });
   egressCompressed = true;
   vendorPromptUsed = seedCompressed.prompt;

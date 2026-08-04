@@ -1491,7 +1491,11 @@ export function buildEventRefOrdinalBinding(input: {
   plateMode?: string | null;
   /** When true, later propSoft slots bind as skirt/hem fragment (not SCENE) */
   fragmentPlateHung?: boolean;
+  /** LGIA stillPhase — approaching ≠ grip-complete bind copy */
+  stillPhase?: string | null;
 }): string {
+  const phase = String(input.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
   const bend =
     String(input.poseOccupancy ?? "") === "bend_pickup" ||
     String(input.plateMode ?? "") === "object_inset";
@@ -1519,6 +1523,8 @@ export function buildEventRefOrdinalBinding(input: {
       parts.push(
         asFragment
           ? `图${n}=裙摆/衣角碎片浅景深（非整殿 SCENE，禁止建立镜头抢戏）`
+          : bend && approaching
+            ? `图${n}=本镜触地单纸软板（地面唯一一张休书/薄纸，主手伸向纸缘尚未捏紧；纸面墨迹题名可辨；禁止第二张散落纸、禁止胸前标牌/手提袋/浮空贴纸、禁止举卡展示）`
           : bend
             ? `图${n}=本镜触地单纸软板（地面唯一一张休书/薄纸于主手近地捡拾；纸面墨迹题名可辨；禁止第二张散落纸、禁止胸前标牌/手提袋/浮空贴纸、禁止举卡展示）`
             : cheek

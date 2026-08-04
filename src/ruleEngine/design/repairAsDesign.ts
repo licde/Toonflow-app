@@ -106,11 +106,32 @@ export function planIndustryAvRepair(input: {
   if (/sfx|纸摩擦/i.test(kind + String(input.hint ?? ""))) {
     writes.push({ slot: "sfx", value: "纸页摩擦", reason: "sfx_beat" });
   }
-  if (/spatial|eyeline|站位/i.test(kind)) {
+  if (/spatial|eyeline|站位|axis180|axis_180/i.test(kind)) {
     writes.push({
       slot: "visualDescription",
       value: `${vd}${vd.endsWith("。") ? "" : "。"}保持站位轴线连续。`,
       reason: "axis_hint",
+    });
+  }
+  if (/headroom|looking_room|composition_|构图/i.test(kind)) {
+    const hint = String(input.hint ?? "");
+    const add =
+      /looking/i.test(kind) || /视线/.test(hint)
+        ? "视线前方留白。"
+        : "保留头上空间。";
+    if (!vd.includes(add.slice(0, 4))) {
+      writes.push({
+        slot: "visualDescription",
+        value: `${vd}${vd.endsWith("。") ? "" : "。"}${add}`,
+        reason: "composition_soft",
+      });
+    }
+  }
+  if (/jl_cut|j_cut|l_cut|transition_audio|声先入|声延/i.test(kind)) {
+    writes.push({
+      slot: "narrative.avBeats" as RepairWriteSlot,
+      value: /j_cut|声先入/i.test(kind) ? "下句声先入再切画" : "本镜声延至下画",
+      reason: "jl_cut_avbeat",
     });
   }
   return buildRepairAsDesignPlan({ writes, blocksBurn: false, vendorConstraint: "seedream_multiref" });
@@ -126,7 +147,25 @@ export function applyRepairAsDesignToShot(
   const log: RepairChangelogEntry[] = Array.isArray(shot.repairChangelog)
     ? [...(shot.repairChangelog as RepairChangelogEntry[])]
     : [];
+  const phase = String(
+    ((shot.narrative as { stillPhase?: string } | undefined)?.stillPhase) ?? "",
+  );
+  const approaching = phase === "approaching" || phase === "mid_contact";
+  const bendVd = /弯腰|捡起|捡拾|俯身|休书/.test(String(shot.visualDescription ?? ""));
   for (const w of plan.writes) {
+    let value = w.value;
+    // Approaching bend: do not poison VD with grip-complete / kneel language
+    if (
+      (approaching || bendVd) &&
+      (w.slot === "visualDescription" || w.slot === "propPose") &&
+      /捏紧|指节泛白|触地捡拾|跪坐|蹲跪持纸/.test(String(value))
+    ) {
+      value = String(value)
+        .replace(/指尖捏紧纸张边缘[^。；]*/g, "主手伸向纸缘尚未捏紧")
+        .replace(/捏紧[^。；]*/g, "伸向纸缘尚未捏紧")
+        .replace(/触地捡拾/g, "伸向纸缘")
+        .replace(/跪坐|蹲跪/g, "弯腰俯身");
+    }
     const field = SLOT_FIELD[w.slot] ?? w.slot;
     const before = String(
       field === "sfx"
@@ -136,34 +175,52 @@ export function applyRepairAsDesignToShot(
           : (shot[field] as string) ?? "",
     );
     if (field === "sfx") {
-      const sound = { ...((shot.sound as Record<string, unknown>) ?? {}), sfx: w.value };
+      const sound = { ...((shot.sound as Record<string, unknown>) ?? {}), sfx: value };
       shot.sound = sound;
       applied.push("sfx");
     } else if (field === "avCausality") {
       const narr = { ...((shot.narrative as Record<string, unknown>) ?? {}) };
-      narr.avCausality = typeof w.value === "string" ? { visualPeak: w.value } : w.value;
+      narr.avCausality = typeof value === "string" ? { visualPeak: value } : value;
       shot.narrative = narr;
       applied.push("avCausality");
     } else if (field === "visualDescription") {
-      shot.visualDescription = w.value;
+      shot.visualDescription = value;
       applied.push("visualDescription");
     } else if (field === "shotDesign" || w.slot === "shotDesign") {
       const sd = { ...((shot.shotDesign as Record<string, unknown>) ?? {}) };
-      sd.cameraMotion = w.value;
+      sd.cameraMotion = value;
       shot.shotDesign = sd;
       applied.push("shotDesign.cameraMotion");
+    } else if (w.slot === "narrative.avBeats" || field === "narrative.avBeats") {
+      const narr = { ...((shot.narrative as Record<string, unknown>) ?? {}) };
+      const prev = Array.isArray(narr.avBeats) ? [...(narr.avBeats as string[])] : [];
+      const beat = String(value ?? "");
+      if (beat && !prev.some((b) => b.includes(beat.slice(0, 4)))) prev.push(beat);
+      narr.avBeats = prev.slice(0, 12);
+      shot.narrative = narr;
+      applied.push("narrative.avBeats");
     } else {
-      shot[field] = w.value;
+      shot[field] = value;
       applied.push(String(field));
     }
     log.push({
       slot: String(field),
       before,
-      after: String(w.value ?? ""),
+      after: String(value ?? ""),
       reason: String(w.reason ?? "repair_as_design"),
       at: new Date().toISOString(),
       packageVersion: Number(shot.packageVersion ?? 0) + 1,
     });
+  }
+  // VD write invalidates phase hash — restamp IntentGraph so SSOT survives
+  if (applied.includes("visualDescription")) {
+    try {
+      const { applyLiteraryIntentGraphToShot } =
+        require("../compilers/literaryIntentGraph") as typeof import("../compilers/literaryIntentGraph");
+      applyLiteraryIntentGraphToShot(shot);
+    } catch {
+      /* optional */
+    }
   }
   shot.repairChangelog = log.slice(-40);
   shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;

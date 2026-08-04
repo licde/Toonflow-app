@@ -301,6 +301,38 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
         if (wantsAxis && !motion.includes("轴线") && !motion.includes("180")) {
           motion = `${axis180}；${motion}`.trim();
         }
+        // Wave-5C: timeline ms from design avBeats / shot meta
+        try {
+          const { buildJlCutTimelineSlice, jlCutTimelineEgressNote, detectJlCutFromAvBeats } =
+            require("./jlCutTimeline") as typeof import("./jlCutTimeline");
+          const fromBeats = detectJlCutFromAvBeats(designBeats);
+          const metaTl = (ctx.shotMeta as { jlCutTimeline?: { note?: string } } | null)?.jlCutTimeline;
+          const adaptTl = adaptPack?.jlCutTimeline;
+          const narrTl = (ctx.designShot as { narrative?: { transitionAudio?: { note?: string; jCutAudioLeadMs?: number; lCutAudioLagMs?: number } } } | null)
+            ?.narrative?.transitionAudio;
+          const slice =
+            adaptTl ??
+            metaTl ??
+            (narrTl?.note
+              ? {
+                  note: narrTl.note,
+                  jCutAudioLeadMs: narrTl.jCutAudioLeadMs,
+                  lCutAudioLagMs: narrTl.lCutAudioLagMs,
+                  source: "design_avBeats" as const,
+                }
+              : null) ??
+            buildJlCutTimelineSlice({
+              wantsJ: fromBeats.wantsJ,
+              wantsL: fromBeats.wantsL,
+              source: "design_avBeats",
+            });
+          const tlNote = jlCutTimelineEgressNote(slice as never);
+          if (tlNote && !motion.includes("时间线转场")) {
+            motion = `${tlNote}；${motion}`.trim();
+          }
+        } catch {
+          /* optional */
+        }
       } catch {
         /* optional */
       }
@@ -373,6 +405,38 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
   }
   if (ctx.spatialRelation) {
     visualBody = `${visualBody}。站位：${ctx.spatialRelation.slice(0, 40)}`;
+  }
+  // Wave-5A: design narrative.screenSide → Visual 画面侧 (realization only)
+  {
+    const side = String(
+      (ctx.designShot as { narrative?: { screenSide?: string } } | null)?.narrative?.screenSide ?? "",
+    ).toLowerCase();
+    if (side === "left" || side === "right" || side === "center") {
+      const label = side === "left" ? "偏左" : side === "right" ? "偏右" : "居中";
+      if (!visualBody.includes("画面侧")) {
+        visualBody = `${visualBody}。画面侧：${label}`;
+      }
+    }
+    // Wave-8: eyelineDir → Visual 视线
+    const eye = String(
+      (ctx.designShot as { narrative?: { eyelineDir?: string } } | null)?.narrative?.eyelineDir ?? "",
+    ).toLowerCase();
+    if (eye === "left" || eye === "right" || eye === "center") {
+      const elabel = eye === "left" ? "朝左" : eye === "right" ? "朝右" : "对镜头";
+      if (!visualBody.includes("视线：")) {
+        visualBody = `${visualBody}。视线：${elabel}`;
+      }
+    }
+    // Wave-16: framing room SSOT → Visual soft notes (realization only)
+    const narrFr = (ctx.designShot as {
+      narrative?: { headroomStatus?: string; lookingRoomStatus?: string };
+    } | null)?.narrative;
+    if (String(narrFr?.headroomStatus ?? "") === "tight" && !visualBody.includes("头上空间")) {
+      visualBody = `${visualBody}。保留头上空间`;
+    }
+    if (String(narrFr?.lookingRoomStatus ?? "") === "tight" && !visualBody.includes("视线前方留白")) {
+      visualBody = `${visualBody}。视线前方留白`;
+    }
   }
   if (ctx.bgBlur === false) {
     visualBody = `${visualBody}。背景清晰不虚化`;
@@ -459,6 +523,26 @@ function buildFiveSectionFromContext(ctx: ShotCompileContext): string {
       }
       if (designBeats.some((b) => /L.?cut|声延至下|本镜声延/i.test(b)) && !audioBody.includes("声延")) {
         audioBody = `${audioBody}\n转场声画：${lCut}`.trim();
+      }
+      // Wave-5C: timeline ms note on Audio
+      try {
+        const { jlCutTimelineEgressNote, buildJlCutTimelineSlice, detectJlCutFromAvBeats } =
+          require("./jlCutTimeline") as typeof import("./jlCutTimeline");
+        const fromBeats = detectJlCutFromAvBeats(designBeats);
+        const slice =
+          adaptPack?.jlCutTimeline ??
+          (ctx.shotMeta as { jlCutTimeline?: { note?: string } } | null)?.jlCutTimeline ??
+          buildJlCutTimelineSlice({
+            wantsJ: fromBeats.wantsJ,
+            wantsL: fromBeats.wantsL,
+            source: "design_avBeats",
+          });
+        const tl = jlCutTimelineEgressNote(slice as never);
+        if (tl && !audioBody.includes("时间线转场")) {
+          audioBody = `${audioBody}\n${tl}`.trim();
+        }
+      } catch {
+        /* optional */
       }
     } catch {
       /* optional */

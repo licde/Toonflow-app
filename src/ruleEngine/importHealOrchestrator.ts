@@ -254,14 +254,14 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
       } catch {
         /* optional */
       }
-      // LGIA: re-ensure stillPhase after prune/import heal so phase survives
+      // LGIA: full IntentGraph stamp after prune/import so phase+firstFrame survive
       try {
-        const { ensureStillPhaseOnShot } =
-          require("./compilers/stillPhasePlan") as typeof import("./compilers/stillPhasePlan");
+        const { applyLiteraryIntentGraphToShot } =
+          require("./compilers/literaryIntentGraph") as typeof import("./compilers/literaryIntentGraph");
         const pd = working.preDesignPack as { shots?: Record<string, unknown>[] } | undefined;
         const shots = pd?.shots ?? [];
         for (const s of shots) {
-          ensureStillPhaseOnShot(s);
+          applyLiteraryIntentGraphToShot(s);
         }
       } catch {
         /* optional */
@@ -670,6 +670,8 @@ export function runImportHeal(input: RunImportHealInput): ImportHealResult {
       industryResidualDebts:
         (exportGateFull as { industryResidualDebts?: string[] }).industryResidualDebts ??
         (working as { meta?: { industryResidualDebts?: string[] } }).meta?.industryResidualDebts,
+      chatMustFixIds,
+      laneDiagnostics: exportGateFull.laneDiagnostics,
     },
     repairChangelog: (working as { meta?: { repairChangelog?: unknown } }).meta?.repairChangelog,
     industryResidualDebts: (working as { meta?: { industryResidualDebts?: string[] } }).meta

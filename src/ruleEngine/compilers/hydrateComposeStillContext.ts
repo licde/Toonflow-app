@@ -265,6 +265,64 @@ export async function hydrateComposeStillContext(
       }
       if (shot && bindOk) {
         ctx.visualDescription = (shot.visualDescription as string) ?? ctx.visualDescription ?? null;
+        const narr = (shot.narrative as Record<string, unknown> | undefined) ?? {};
+        // SSOT unique read — emotion/phase/bgBlur from stamped design
+        try {
+          const { readStillSsotFromShot, peelCompiledAgainstSsot } =
+            await import("./stillSsotRead");
+          const ssot = readStillSsotFromShot(shot as Record<string, unknown>);
+          if (ssot.emotionIntensity != null) {
+            (ctx as { emotionIntensity?: number }).emotionIntensity = ssot.emotionIntensity;
+            ctx.emotion = ssot.emotionIntensity;
+          } else {
+            const emoRaw = Number(
+              narr.emotionIntensity ??
+                (shot as { emotionIntensity?: number }).emotionIntensity ??
+                sb.emotion ??
+                NaN,
+            );
+            // Prefer narrative; avoid inventing 4 from empty — only use sb.emotion if > 0 and narr missing
+            if (Number.isFinite(emoRaw) && emoRaw > 0) {
+              (ctx as { emotionIntensity?: number }).emotionIntensity = emoRaw;
+              ctx.emotion = emoRaw;
+            }
+          }
+          if (ssot.stillPhase) {
+            (ctx as { stillPhase?: string }).stillPhase = ssot.stillPhase;
+          }
+          if (typeof ssot.bgBlur === "boolean") {
+            (ctx as { bgBlur?: boolean }).bgBlur = ssot.bgBlur;
+          }
+          (ctx as { narrative?: Record<string, unknown> }).narrative = {
+            ...narr,
+            ...(ssot.stillPhase ? { stillPhase: ssot.stillPhase } : {}),
+            ...(ssot.emotionIntensity != null ? { emotionIntensity: ssot.emotionIntensity } : {}),
+            ...(typeof ssot.bgBlur === "boolean" ? { bgBlur: ssot.bgBlur } : {}),
+            ...(ssot.firstFrameAction ? { firstFrameAction: ssot.firstFrameAction } : {}),
+            ...(ssot.firstFrameProp ? { firstFrameProp: ssot.firstFrameProp } : {}),
+          };
+          if (ctx.compiledImagePrompt) {
+            ctx.compiledImagePrompt = peelCompiledAgainstSsot(
+              ctx.compiledImagePrompt,
+              ssot.stillPhase,
+            );
+          }
+        } catch {
+          const emoRaw = Number(
+            narr.emotionIntensity ??
+              (shot as { emotionIntensity?: number }).emotionIntensity ??
+              sb.emotion ??
+              NaN,
+          );
+          if (Number.isFinite(emoRaw) && emoRaw > 0) {
+            (ctx as { emotionIntensity?: number }).emotionIntensity = emoRaw;
+            ctx.emotion = emoRaw;
+          }
+          (ctx as { narrative?: Record<string, unknown> }).narrative = {
+            ...narr,
+            ...(Number.isFinite(emoRaw) && emoRaw > 0 ? { emotionIntensity: emoRaw } : {}),
+          };
+        }
         const codes = (shot.charCodes as string[] | undefined) ?? [];
         if (codes.length) (ctx as { shotCharCodes?: string[] }).shotCharCodes = codes.map((c) => String(c).toUpperCase());
         if (
@@ -281,7 +339,16 @@ export async function hydrateComposeStillContext(
         }
         if (!ctx.compiledImagePrompt) {
           const gen = shot.generation as { imagePrompt?: string } | undefined;
-          if (gen?.imagePrompt?.trim()) ctx.compiledImagePrompt = gen.imagePrompt.trim();
+          if (gen?.imagePrompt?.trim()) {
+            try {
+              const { peelCompiledAgainstSsot, readStillSsotFromShot } =
+                await import("./stillSsotRead");
+              const ph = readStillSsotFromShot(shot as Record<string, unknown>).stillPhase;
+              ctx.compiledImagePrompt = peelCompiledAgainstSsot(gen.imagePrompt.trim(), ph);
+            } catch {
+              ctx.compiledImagePrompt = gen.imagePrompt.trim();
+            }
+          }
         }
         ctx.shotSize =
           (shot.shotSize as string) ??

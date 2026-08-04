@@ -83,6 +83,8 @@ export interface ExportGateResult {
   repairChangelog?: unknown[];
   /** Residual industry debts after autoClose timeout / lock skip */
   industryResidualDebts?: string[];
+  /** 仅 A/超限 B — FE RulePanel chatMustFixIds 同源，勿用 closureSnapshot.blockIds */
+  chatMustFixIds?: string[];
   /** 车道可观测：must/auto + 执行器/cleared/residual（勿靠 toast 猜层） */
   laneDiagnostics?: {
     mustIds: string[];
@@ -786,6 +788,8 @@ export function formatExportGateBlockPayload(result: ExportGateResult): Record<s
     designFindings: result.designFindings,
     shapeSalvageLog: result.shapeSalvageLog,
     rePushPlan: result.inspected?.rePushPlan ?? [],
+    chatMustFixIds: result.chatMustFixIds ?? result.laneDiagnostics?.mustIds ?? [],
+    laneDiagnostics: result.laneDiagnostics,
   };
 }
 
@@ -2048,6 +2052,21 @@ function runExportGateInner(raw: unknown, opts: RunExportGateOpts = {}): ExportG
     )
       ? ((bundle as { meta: { industryResidualDebts: string[] } }).meta.industryResidualDebts)
       : undefined,
+    // LGIA: echo stillPhase from first stamped shot for FE/inspectBundle
+    stillPhase: (() => {
+      try {
+        const shots = (bundle.preDesignPack?.shots ?? []) as Record<string, unknown>[];
+        for (const s of shots) {
+          const p = (s.narrative as { stillPhase?: string } | undefined)?.stillPhase;
+          if (p === "approaching" || p === "mid_contact" || p === "held") return p;
+        }
+      } catch {
+        /* optional */
+      }
+      return undefined;
+    })(),
+    requireFixBeforeBurn: false,
+    chatMustFixIds: authorMustIds,
     laneDiagnostics: {
       mustIds: authorMustIds,
       autoIds: autoResidualIds,

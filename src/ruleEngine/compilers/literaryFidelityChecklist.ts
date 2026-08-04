@@ -467,15 +467,22 @@ export function buildLiteraryFidelityChecklist(input: {
     for (const anchor of extractDeclaredSpatialAnchors(desc)) {
       const id = `spatialAnchor:${anchor}`;
       if (seen.has(id) || seen.has(`contact:${anchor}`)) continue;
+      // First-frame: grip anchors (捏紧…) are video-phase — don't legislate still freeze to grip
+      if (/捏紧|指节|握持满/.test(anchor) && /弯腰|俯身|捡/.test(desc)) {
+        continue;
+      }
       seen.add(id);
+      const stillAnchor = /捏紧|指节/.test(anchor)
+        ? anchor.replace(/捏紧纸张边.*/, "主手伸向纸缘").replace(/指节泛白/, "接近纸缘")
+        : anchor;
       items.push({
         id,
         kind: "composition",
-        mustTokens: [anchor],
-        vlmQuestion: `图中空间/握持/承写落点是否清晰可见「${anchor}」？`,
-        healInject: `空间落点必须落在${anchor}，禁止无方位漂移`,
+        mustTokens: [stillAnchor],
+        vlmQuestion: `图中空间/握持/承写落点是否清晰可见「${stillAnchor}」？`,
+        healInject: `空间落点必须落在${stillAnchor}，禁止无方位漂移`,
         strengthenKey: keys.composition ?? "composition",
-        strengthenValue: anchor,
+        strengthenValue: stillAnchor,
       });
     }
 

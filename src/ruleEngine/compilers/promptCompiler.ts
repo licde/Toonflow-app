@@ -19,7 +19,7 @@ export function buildImageIR(shot: EpisodeShot, config: ResolvedConfig): PromptI
     n.sceneName ?? "",
     n.shotSize ?? "medium shot",
     n.colorTone ?? "4500K",
-    `情绪${n.emotionIntensity ?? 4}`,
+    `情绪${n.emotionIntensity ?? (shot as { emotionIntensity?: number }).emotionIntensity ?? 4}`,
   ].filter(Boolean);
   const constraints: string[] = [];
   if (n.type === "PURE-SCENE") constraints.push("no people, no characters");

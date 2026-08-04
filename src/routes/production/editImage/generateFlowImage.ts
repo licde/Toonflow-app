@@ -118,6 +118,9 @@ export default router.post(
           refreshStoryboardBeforeRegen: result.refreshStoryboardBeforeRegen,
           deliveryTier: (result as { deliveryTier?: string }).deliveryTier,
           requireFixBeforeBurn: (result as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn,
+          adviseSmartRepair: (result as { adviseSmartRepair?: boolean }).adviseSmartRepair,
+          burnAllowed: (result as { burnAllowed?: boolean }).burnAllowed,
+          stillPhase: (result as { stillPhase?: string | null }).stillPhase,
           ctaKind: (result as { ctaKind?: string }).ctaKind,
         }),
       );

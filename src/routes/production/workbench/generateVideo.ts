@@ -156,6 +156,44 @@ export default router.post(
         },
       } as typeof shotMeta;
     }
+    // Wave-8: single ≡ batch — episode jlCut / transitionAudio soft persist before burn
+    if (pkg?.shots?.length) {
+      try {
+        const { runEpisodeAvEnhanceOrchestrator } =
+          await import("@/ruleEngine/quality/episodeAvEnhanceOrchestrator");
+        const { episodeInputsFromPackageShots, persistEpisodeAvEnhanceToShots } =
+          await import("@/ruleEngine/compilers/persistEpisodeAvEnhance");
+        const inputs = episodeInputsFromPackageShots(
+          pkg.shots as unknown as Array<Record<string, unknown>>,
+        );
+        if (inputs.length) {
+          const ep = runEpisodeAvEnhanceOrchestrator({ shots: inputs });
+          persistEpisodeAvEnhanceToShots({
+            packageShots: pkg.shots as unknown as Array<Record<string, unknown>>,
+            results: ep.shots,
+          });
+          // Refresh local shotMeta reference after persist
+          if (shotMeta) {
+            const sid = (shotMeta as { storyboardId?: number }).storyboardId;
+            const idx = Number((shotMeta as { shotIndex?: number }).shotIndex ?? NaN);
+            const refreshed =
+              (sid != null ? pkg.shots.find((s) => s.storyboardId === sid) : undefined) ??
+              (Number.isFinite(idx)
+                ? pkg.shots.find((s) => Number((s as { shotIndex?: number }).shotIndex) === idx)
+                : undefined);
+            if (refreshed) shotMeta = { ...(shotMeta as object), ...refreshed } as typeof shotMeta;
+          }
+          try {
+            const { saveEpisodePackage } = await import("@/ruleEngine/storage/episodePackageStore");
+            await saveEpisodePackage(u.db, pkg);
+          } catch {
+            /* best-effort */
+          }
+        }
+      } catch {
+        /* optional episode AV */
+      }
+    }
     // Clear promptState stale — heal_then_burn（反馈降级，不挡烧）
     if (shotMeta && String((shotMeta as { promptState?: string }).promptState ?? "") === "stale") {
       healThenBurnNotes.push("promptState=stale 已清 · 实现已降级继续烧");
@@ -1246,12 +1284,24 @@ export default router.post(
         healThenBurnNotes.push(contactGate.message);
       }
       // Motion 起态写入 [Motion] 段，禁止全文 prepend「禁弯腰」打架
-      const motionHint = String(
+      const stillPhaseMeta = String(
+        (stillMeta as { stillPhase?: string } | null)?.stillPhase ??
+          (stillMeta as { narrative?: { stillPhase?: string } } | null)?.narrative?.stillPhase ??
+          "",
+      );
+      let motionHint = String(
         (stillMeta as { videoMotionStartHint?: string } | null)?.videoMotionStartHint ??
           (stillMeta as { generationContract?: { videoMotionStartHint?: string } } | null)
             ?.generationContract?.videoMotionStartHint ??
           "",
       ).trim();
+      // LGIA: held plate → inject no-reenter-bend hint if missing
+      if (stillPhaseMeta === "held" && !/禁止再.*弯腰|持态/.test(motionHint)) {
+        motionHint = [motionHint, "从静帧持态起，禁止再弯腰触及"].filter(Boolean).join("；");
+      }
+      if (stillPhaseMeta === "approaching" && !/接近未握|尚未捏紧/.test(motionHint)) {
+        motionHint = [motionHint, "起态=接近未握，Motion可递进至触及捏紧"].filter(Boolean).join("；");
+      }
       if (motionHint && !/禁止弯腰绿继承/.test(motionHint)) {
         const slice = motionHint.slice(0, Math.min(10, motionHint.length));
         if (!burnPrompt.includes(slice)) {
@@ -1270,7 +1320,10 @@ export default router.post(
       const poseGate = assertStillVideoPoseHandoff({
         visualDescription: vdForContact,
         stillPrompt: stillPromptForHandoff,
-        stillMeta: stillMeta as Record<string, unknown> | null,
+        stillMeta: {
+          ...(stillMeta as Record<string, unknown> | null),
+          stillPhase: stillPhaseMeta || undefined,
+        } as Record<string, unknown> | null,
         videoPrompt: burnPrompt,
         contactStartState: (stillMeta as { contactStartState?: string } | null)?.contactStartState as
           | import("@/ruleEngine/compilers/contactEventPolicy").ContactStartState

@@ -1,7 +1,7 @@
 /**
  * episodeContinuityContract — lightweight cross-shot continuity checks.
  */
-import { auditAxis180Pair } from "../design/screenSideAxis";
+import { auditAxis180Chain, auditAxis180Pair } from "../design/screenSideAxis";
 
 export function auditEpisodeContinuity(input: {
   previousShot?: Record<string, unknown> | null;
@@ -30,4 +30,16 @@ export function auditEpisodeContinuity(input: {
     if (!axis.ok && axis.finding) findings.push(axis.finding);
   }
   return { ok: findings.length === 0, findings };
+}
+
+/** Wave-14 — full-shot axis chain soft audit (never hard-block). */
+export function auditEpisodeAxisChain(
+  shots: Array<Record<string, unknown> | null | undefined>,
+): { ok: boolean; findings: string[]; pairCount: number } {
+  const chain = auditAxis180Chain(shots);
+  const findings = [
+    ...chain.pairFindings.map((p) => p.finding),
+    ...(chain.chainFinding ? [chain.chainFinding] : []),
+  ];
+  return { ok: chain.ok && !chain.chainFinding, findings, pairCount: chain.pairFindings.length };
 }

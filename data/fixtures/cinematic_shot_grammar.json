@@ -69,9 +69,13 @@
     }
   },
   "deferred": {
-    "note": "Wave-2 stubs only — full J/L-cut timeline + true 180 solver not in this wave",
-    "jCut": "softHint",
-    "lCut": "softHint",
-    "axis180": "softHint"
+    "note": "Wave-5: soft jlCut ms offsets + Key composition when faceBoxNorm; still deferred full NLE export + true CV 180 + auto VLM face box",
+    "jCut": "softHint+timelineMs",
+    "lCut": "softHint+timelineMs",
+    "axis180": "softHint+screenSide",
+    "headroom": "softNoKey|measuredWithKey",
+    "lookingRoom": "softNoKey|measuredWithKey",
+    "fullNle": "deferred",
+    "cv180Solver": "deferred"
   }
 }

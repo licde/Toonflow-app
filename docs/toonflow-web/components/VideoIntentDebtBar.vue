@@ -86,6 +86,10 @@ import {
   isQcSoftDeliverOnly,
   isThinVideoPromptStub,
   spineReady,
+  isCompositionSoftDebt,
+  compositionSoftCtaLabel,
+  isLgiaPhaseDebt,
+  lgiaPhaseCtaLabel,
   type VideoIrdFinding,
   type DesignIntentFidelityResult,
 } from "@/types/videoIntentOps";
@@ -126,7 +130,12 @@ const props = withDefaults(
     realizationDegraded?: boolean | null;
     /** durable silent-repair changelog */
     repairChangelog?: Array<{ slot?: string; before?: string; after?: string; reason?: string }> | null;
+    /** Wave-5 composition soft residuals */
+    industryResidualDebts?: string[] | null;
     adaptDiff?: string | null;
+    /** LGIA stillPhase SSOT — exposed for phase debt chips (non-blocking) */
+    stillPhase?: string | null;
+    adviseSmartRepair?: boolean | null;
   }>(),
   {
     title: "视频设计债 · 智能修复",
@@ -165,6 +174,11 @@ const adaptDebtLines = computed((): string[] => {
   for (const e of (props.repairChangelog ?? []).slice(-3)) {
     lines.push(`静默修复：${e.slot} ${e.before ?? ""}→${e.after ?? ""} (${e.reason ?? ""})`);
   }
+  if (props.stillPhase) lines.push(`静帧分相：${props.stillPhase}`);
+  const softDebts = (props.industryResidualDebts ?? []).filter(isCompositionSoftDebt).slice(0, 4);
+  for (const d of softDebts) lines.push(`构图债：${d}`);
+  const phaseDebts = (props.industryResidualDebts ?? []).filter(isLgiaPhaseDebt).slice(0, 4);
+  for (const d of phaseDebts) lines.push(`分相债：${d}`);
   return lines;
 });
 
@@ -192,6 +206,10 @@ const show = computed(
     props.qcWeak === true ||
     props.pixelDimStatus === "unmeasured" ||
     props.pixelDimStatus === "measured_fail" ||
+    Boolean(props.stillPhase) ||
+    props.adviseSmartRepair === true ||
+    (props.industryResidualDebts ?? []).some(isCompositionSoftDebt) ||
+    (props.industryResidualDebts ?? []).some(isLgiaPhaseDebt) ||
     isVideoIrdDebtMeta({
       ok: props.ok,
       primaryAction: props.primaryAction,
@@ -265,8 +283,14 @@ const explainText = computed(() => {
   );
 });
 
-const applyLabel = computed(() =>
-  videoIrdCtaLabel({
+const applyLabel = computed(() => {
+  const phase = lgiaPhaseCtaLabel(props.industryResidualDebts, props.stillPhase);
+  if (phase && ((props.industryResidualDebts ?? []).some(isLgiaPhaseDebt) || props.stillPhase)) {
+    return phase;
+  }
+  const soft = compositionSoftCtaLabel(props.industryResidualDebts, props.pixelDimStatus);
+  if (soft && (props.industryResidualDebts ?? []).some(isCompositionSoftDebt)) return soft;
+  return videoIrdCtaLabel({
     primaryAction: props.primaryAction,
     missingSlots: slots.value,
     primaryNextStep: props.primaryNextStep,
@@ -274,8 +298,8 @@ const applyLabel = computed(() =>
     code: props.code,
     pixelDimStatus: props.pixelDimStatus,
     qcWeak: props.qcWeak,
-  }),
-);
+  });
+});
 
 const handEditLabel = computed(() =>
   slots.value.length ? `手改VD补${slots.value.slice(0, 2).join("/")}` : "手改VD",

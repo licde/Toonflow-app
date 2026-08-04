@@ -202,6 +202,9 @@ export function deriveGenerationContract(input: {
       propAlias: modality.contact.propAlias,
       propCanonical: modality.contact.propCanonical,
       locus: modality.contact.locus,
+      stillPhase:
+        (input.episodeShot as { narrative?: { stillPhase?: string } } | null)?.narrative?.stillPhase ??
+        (/弯腰|俯身|捡/.test(vd) ? "approaching" : null),
     });
     if (formInject.formFact) {
       pushFact(mustShowFacts, seen, "prop_form", formInject.formFact, "must", "designIntent");
@@ -227,15 +230,23 @@ export function deriveGenerationContract(input: {
     for (const line of formInject.forbidden) {
       forbiddenSubstitutions.push(line);
     }
-    // Still freeze phase for video pose handoff (generic)
-    pushFact(
-      mustShowFacts,
-      seen,
-      "contact_freeze",
-      `本帧冻结为${prop}已触肤瞬间（非进入前悬空、非离开后空位）`,
-      "should",
-      "designIntent",
-    );
+    // Still freeze phase for video pose handoff — LGIA: respect stillPhase
+    {
+      let freeze = `本帧冻结为${prop}已触肤瞬间（非进入前悬空、非离开后空位）`;
+      try {
+        const phase = String(
+          (input.episodeShot as { narrative?: { stillPhase?: string } } | null)?.narrative?.stillPhase ?? "",
+        );
+        if (phase === "approaching") {
+          freeze = `本帧冻结为弯腰接近${prop}（手伸向纸，尚未捏紧完成；触及与捏紧归视频后相）`;
+        } else if (phase === "mid_contact") {
+          freeze = `本帧冻结为${prop}指尖刚触瞬间`;
+        }
+      } catch {
+        /* default held freeze */
+      }
+      pushFact(mustShowFacts, seen, "contact_freeze", freeze, "should", "designIntent");
+    }
   }
   if (/禁口含|禁纸入口|仅颊触非口含|仅面颊触非口含/.test(vd)) {
     forbiddenSubstitutions.push("禁止口含/纸入口");
@@ -292,7 +303,23 @@ export function deriveGenerationContract(input: {
   }
 
   if (names.length) {
-    pushFact(secondaryConstraints, seen, "identity", `主角定妆锁：${names[0]}`, "should", "designIntent");
+    let primaryLock = names[0];
+    try {
+      const { pickVdLiteraryPrimary } =
+        require("../compilers/stillFirstFrameLiterarySsot") as typeof import("../compilers/stillFirstFrameLiterarySsot");
+      const lit = pickVdLiteraryPrimary(vd, names);
+      if (lit) primaryLock = lit;
+      const narrPrimary = String(
+        (input.episodeShot as { narrative?: { literaryPrimary?: string } } | null)?.narrative
+          ?.literaryPrimary ?? "",
+      ).trim();
+      if (narrPrimary && names.some((n) => n.includes(narrPrimary) || narrPrimary.includes(n))) {
+        primaryLock = names.find((n) => n.includes(narrPrimary) || narrPrimary.includes(n)) ?? narrPrimary;
+      }
+    } catch {
+      /* names[0] fallback */
+    }
+    pushFact(secondaryConstraints, seen, "identity", `主角定妆锁：${primaryLock}`, "should", "designIntent");
   }
 
   const i2vCriticalFacts = mustShowFacts

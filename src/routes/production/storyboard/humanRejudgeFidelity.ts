@@ -144,7 +144,10 @@ export default router.post(
       const file = writeJudgeCorpusEntry({
         id,
         createdAt: new Date().toISOString(),
-        description: description || String(prev?.promptUsed ?? "").slice(0, 400),
+        description:
+          description ||
+          String((prev as { literaryDesc?: string } | null)?.literaryDesc ?? "").slice(0, 400) ||
+          String((row as { prompt?: string }).prompt ?? "").slice(0, 400),
         items,
         expected: expected ?? items.map((i: { id: string; pass: boolean }) => ({ id: i.id, pass: i.pass })),
         source: "human_rejudge",
@@ -348,6 +351,7 @@ export default router.post(
               adaptFeedbackFromHumanRejudge,
               mergeAdaptFeedback,
               adaptFeedbackPersistSlice,
+              applyAdaptFeedbackRouted,
             } = await import("@/ruleEngine/quality/adaptFeedbackWriteback");
             const prevFb = Array.isArray(er.adaptFeedback) ? (er.adaptFeedback as typeof adaptFeedback) : [];
             const shotIdx = Number(prev?.shotIndex ?? prev?.index ?? 0) || null;
@@ -364,6 +368,48 @@ export default router.post(
               });
             }
             Object.assign(er, adaptFeedbackPersistSlice(adaptFeedback));
+            // LGIA: route design vs realization owners
+            try {
+              const prevPack = (er.realizationAdaptPack ??
+                prev?.realizationAdaptPack) as
+                | import("@/ruleEngine/compilers/realizationAdapt").RealizationAdaptPack
+                | undefined;
+              if (prevPack && adaptFeedback.length) {
+                const routed = applyAdaptFeedbackRouted({
+                  pack: prevPack,
+                  feedback: adaptFeedback,
+                  shot: (prev as Record<string, unknown>) ?? null,
+                });
+                Object.assign(er, {
+                  realizationAdaptPack: routed.pack,
+                  adaptFeedbackDesignKinds: routed.designKinds,
+                  adaptFeedbackRealizationKinds: routed.realizationKinds,
+                });
+                // Design kinds → IntentGraph stamp (closed loop), not egress soup
+                if (routed.designKinds.length && prev) {
+                  try {
+                    const { applyLiteraryIntentGraphToShot } = await import(
+                      "@/ruleEngine/compilers/literaryIntentGraph"
+                    );
+                    const shotLike = { ...(prev as Record<string, unknown>) };
+                    const stamped = applyLiteraryIntentGraphToShot(shotLike);
+                    if (stamped.changed) {
+                      Object.assign(er, {
+                        designRefineAfterRejudge: {
+                          diffs: stamped.diffs,
+                          stillPhase: (shotLike.narrative as { stillPhase?: string })?.stillPhase,
+                          at: new Date().toISOString(),
+                        },
+                      });
+                    }
+                  } catch {
+                    /* optional design stamp */
+                  }
+                }
+              }
+            } catch {
+              /* optional routed apply */
+            }
           } catch {
             /* optional adapt feedback */
           }

@@ -120,10 +120,15 @@ export function extractShotDesignSample(
       sourcePath: "shotDesign.composition.foreground",
     });
   } else if (/休书|婚书|信笺|纸/.test(vd)) {
+    const phase = String((shot as { narrative?: { stillPhase?: string } })?.narrative?.stillPhase ?? "");
+    const approaching =
+      phase === "approaching" ||
+      phase === "mid_contact" ||
+      (/弯腰|俯身|捡/.test(vd) && phase !== "held");
     must.push({
       id: "fg.prop_hand",
       bar: "must",
-      text: "主手持/触纸入画",
+      text: approaching ? "主手伸向/刚触纸入画" : "主手持/触纸入画",
       sourcePath: "visualDescription",
     });
   }
@@ -136,13 +141,16 @@ export function extractShotDesignSample(
     Boolean(shot?.sceneName) ||
     Boolean((shot as { sceneCode?: string })?.sceneCode);
   if (sceneCue || bgBlur === true) {
+    const noDof = bgBlur === false;
     must.push({
       id: "bg.scene_soft",
       bar: "must",
-      text: "背景：主场景浅景深虚化，禁止灰棚白棚",
+      text: noDof
+        ? "背景：主场景环境轮廓可辨，禁止浅景深抢戏，禁止灰棚白棚"
+        : "背景：主场景浅景深虚化，禁止灰棚白棚",
       sourcePath: "shotDesign.cameraAnchor.bgBlur|composition.background|scene",
     });
-    sources.push("shotDesignSample.bg_scene_soft_must");
+    sources.push(noDof ? "shotDesignSample.bg_scene_env_must" : "shotDesignSample.bg_scene_soft_must");
   } else if (bg && !fragBg) {
     must.push({
       id: "bg.composition",
@@ -170,12 +178,18 @@ export function extractShotDesignSample(
     }
   }
   if (/指节|捏紧|指尖/.test(vd)) {
-    should.push({
-      id: "grip.knuckles_pale",
-      bar: "should",
-      text: "握持：指尖捏紧，指节泛白",
-      sourcePath: "visualDescription",
-    });
+    const phase = String((shot as { narrative?: { stillPhase?: string } })?.narrative?.stillPhase ?? "");
+    const approaching = phase === "approaching" || phase === "mid_contact" || (/弯腰|俯身|捡/.test(vd) && phase !== "held");
+    if (!approaching) {
+      should.push({
+        id: "grip.knuckles_pale",
+        bar: "should",
+        text: "握持：指尖捏紧，指节泛白",
+        sourcePath: "visualDescription",
+      });
+    } else {
+      sources.push("shotDesignSample.grip_skip_approaching");
+    }
   }
   if (eyes) {
     should.push({

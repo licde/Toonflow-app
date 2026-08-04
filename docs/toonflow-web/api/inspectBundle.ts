@@ -55,6 +55,17 @@ export async function dryRunImport(
     exportGate?.industryResidualDebts ??
     data.industryResidualDebts ??
     (data as { meta?: { industryResidualDebts?: string[] } }).meta?.industryResidualDebts;
+  const stillPhase =
+    (exportGate as { stillPhase?: string } | undefined)?.stillPhase ??
+    (data as { stillPhase?: string }).stillPhase ??
+    (data as { meta?: { stillPhase?: string } }).meta?.stillPhase ??
+    null;
+  const adviseSmartRepair =
+    (exportGate as { adviseSmartRepair?: boolean } | undefined)?.adviseSmartRepair ??
+    (data as { adviseSmartRepair?: boolean }).adviseSmartRepair;
+  const z110Handoff =
+    (exportGate as { z110Handoff?: unknown } | undefined)?.z110Handoff ??
+    (data as { z110Handoff?: unknown }).z110Handoff;
   return {
     ...data.preImport,
     ...data,
@@ -64,6 +75,9 @@ export async function dryRunImport(
     previewStatusLine,
     repairChangelog,
     industryResidualDebts,
+    stillPhase,
+    adviseSmartRepair,
+    z110Handoff,
   };
 }
 

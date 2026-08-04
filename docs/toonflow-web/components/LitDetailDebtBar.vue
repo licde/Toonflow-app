@@ -14,6 +14,8 @@
 
     </div>
 
+    <p v-if="phaseLine" class="lit-debt__phase">{{ phaseLine }}</p>
+
     <p v-if="findingIds.length" class="lit-debt__codes">codes: {{ findingIds.join(" · ") }}</p>
 
     <div class="lit-debt__actions" role="group" aria-label="文学细节修复">
@@ -357,6 +359,16 @@ const slots = computed(() => {
 });
 
 
+
+const phaseLine = computed(() => {
+  const m = props.stillMeta as { stillPhase?: string; narrative?: { stillPhase?: string } } | null;
+  const p = m?.stillPhase ?? m?.narrative?.stillPhase ?? "";
+  if (!p) return "";
+  if (p === "approaching") return "静帧分相：approaching（接近未握 · 软债不阻断）";
+  if (p === "mid_contact") return "静帧分相：mid_contact（刚触 · 软债不阻断）";
+  if (p === "held") return "静帧分相：held（持态）";
+  return `静帧分相：${p}`;
+});
 
 const findingIds = computed(() =>
 

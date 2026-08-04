@@ -108,6 +108,17 @@ export interface ExportGateSummary {
   repairChangelog?: RepairChangelogEntry[];
   /** Residual industry debts after autoClose timeout / lock skip */
   industryResidualDebts?: string[];
+  /** A/超限 B only — FE RulePanel chatMustFixIds */
+  chatMustFixIds?: string[];
+  laneDiagnostics?: {
+    mustIds: string[];
+    autoIds: string[];
+    actuatorsRan?: string[];
+    cleared?: string[];
+    residual?: string[];
+  };
+  /** Wave-10 Z110 NLE handoff stubs */
+  z110Handoff?: import("./z110Handoff").Z110Handoff;
 }
 
 export interface InspectBundleResult {
@@ -135,6 +146,9 @@ export interface InspectBundleResult {
   chatRepairText?: string;
   /** W93 smart proposals (also pass as RulePanel prop) */
   smartDesignProposals?: SmartDesignProposal[];
+  industryResidualDebts?: string[];
+  repairChangelog?: RepairChangelogEntry[];
+  z110Handoff?: import("./z110Handoff").Z110Handoff;
 }
 
 export interface DryRunImportResponse {

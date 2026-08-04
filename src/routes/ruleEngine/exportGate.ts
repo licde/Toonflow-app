@@ -44,6 +44,8 @@ export default router.post(
           shapeSalvageSummary: result.shapeSalvageSummary,
           designExitIncomplete: result.designExitIncomplete,
           previewStatusLine: result.previewStatusLine,
+          chatMustFixIds: result.chatMustFixIds ?? result.laneDiagnostics?.mustIds ?? [],
+          laneDiagnostics: result.laneDiagnostics,
           endpoint: "exportGate",
         }),
       );

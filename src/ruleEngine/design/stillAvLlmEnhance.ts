@@ -20,6 +20,7 @@ export function doctrineAvEnhanceFallback(input: {
   hasSkirtFragment?: boolean;
   realizationOccupancy?: string | null;
   realizationDegraded?: boolean | null;
+  stillPhase?: string | null;
 }): StillAvEnhanceResult {
   const lines: string[] = [];
   const sources = ["avEnhance.doctrineFallback"];
@@ -34,12 +35,22 @@ export function doctrineAvEnhanceFallback(input: {
   let videoMotionHint: string | undefined;
   const real = String(input.realizationOccupancy ?? input.seal?.poseOccupancy ?? "");
   const degraded = input.realizationDegraded === true;
+  const phase = String(input.stillPhase ?? "");
   if (degraded && real === "kneel_hold") {
     videoMotionHint = "Motion起态：跪持近地持纸，起态与静帧一致；禁止弯腰俯身开场";
     sources.push("avEnhance.realization_kneel");
   } else if (degraded && real === "stand_hold") {
     videoMotionHint = "Motion起态：站姿持纸，起态与静帧一致；禁止弯腰俯身开场";
     sources.push("avEnhance.realization_stand");
+  } else if (phase === "approaching" || phase === "mid_contact") {
+    videoMotionHint =
+      phase === "mid_contact"
+        ? "Motion起态：指尖刚触纸缘，可递进至捏紧；禁止已握满胸前起幅"
+        : "Motion起态：接近未握，主手伸向纸缘，可递进至触及捏紧";
+    sources.push(`avEnhance.phase:${phase}`);
+  } else if (phase === "held" && input.seal?.poseOccupancy === "bend_pickup") {
+    videoMotionHint = "Motion起态：从静帧持态起，禁止再弯腰触及";
+    sources.push("avEnhance.phase:held");
   } else if (input.seal?.poseOccupancy === "bend_pickup") {
     videoMotionHint = "Motion起态：弯腰捡拾已触地，纸在主手，禁止从胸前举卡起幅";
   } else if (input.seal?.primaryObjective === "contact_geom") {

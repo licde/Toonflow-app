@@ -159,28 +159,47 @@ export function resolveStillBgPolicy(input: StillBgPolicyInput): StillBgPolicyRe
         /* scene-first default */
       }
       // Scene-first: keep hall when linked; only drop when doctrine forces fragment-over-full without scene
-      const keepHall = hasSceneLink && !fragmentOverFull;
+      // LGIA: bgBlur===false → no shallow-DOF push; prefer skirt fragment / readable interior without Buddha dominance
+      const noShallow = input.bgBlur === false;
+      const keepHall = hasSceneLink && !fragmentOverFull && !noShallow;
+      // bgBlur:false → atmosphere only; do not hang full SCENE softEnv (佛像/香案 risk)
+      const softHallNoDof = hasSceneLink && noShallow;
       const dropHall = fragmentOverFull && !hasSceneLink;
       return {
         policy: "demote",
-        bgMode: keepHall ? "soft_env" : dropHall ? "atmosphere_only" : hasSceneLink ? "soft_env" : "atmosphere_only",
+        bgMode: softHallNoDof
+          ? "atmosphere_only"
+          : keepHall
+            ? "soft_env"
+            : dropHall
+              ? "atmosphere_only"
+              : hasSceneLink
+                ? "soft_env"
+                : "atmosphere_only",
         excludeScene: false,
-        keepSoftEnvRef: keepHall || (hasSceneLink && !fragmentOverFull),
-        softEnvContinuity: continuityOf(keepHall || hasSceneLink, hasSceneLink),
-        omitSrefToken: !(keepHall || hasSceneLink),
-        bgGuidance:
-          keepHall || hasSceneLink
+        keepSoftEnvRef: keepHall || (hasSceneLink && !fragmentOverFull && !noShallow),
+        softEnvContinuity: continuityOf(keepHall || (hasSceneLink && !noShallow), hasSceneLink),
+        omitSrefToken: !(keepHall || softHallNoDof || hasSceneLink),
+        bgGuidance: noShallow
+          ? keepHall || softHallNoDof || hasSceneLink
+            ? "背景：主场景环境轮廓可辨（木作/烛光），禁止浅景深抢戏，禁止香案/佛像升为主构图；裙摆/衣角碎片优先，禁止次角完整正脸抢戏，禁止灰棚白棚"
+            : "背景仅次角裙摆/衣角等碎片，禁止浅景深抢戏，禁止次角完整正脸或持道具抢戏；保留气氛轮廓可辨，禁止灰棚"
+          : keepHall || hasSceneLink
             ? "背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化，禁止次角完整正脸抢戏"
             : "背景仅次角裙摆/衣角等碎片虚化浅景深，禁止次角完整正脸或持道具抢戏；保留气氛轮廓可辨，禁止灰棚",
-        reason: keepHall || (hasSceneLink && !fragmentOverFull)
+        reason: noShallow
           ? bendOrAction
-            ? "bend_action:keep_softEnv"
-            : `bg_fragment:${frag.kind}:keep_softEnv`
-          : bendOrAction && !frag.stripFullSecondary
-            ? "bend_action:atmosphere"
-            : dropHall
-              ? `bg_fragment:${frag.kind}:over_softEnv`
-              : `bg_fragment:${frag.kind}`,
+            ? "bend_action:bgBlur_false"
+            : `bg_fragment:${frag.kind}:bgBlur_false`
+          : keepHall || (hasSceneLink && !fragmentOverFull)
+            ? bendOrAction
+              ? "bend_action:keep_softEnv"
+              : `bg_fragment:${frag.kind}:keep_softEnv`
+            : bendOrAction && !frag.stripFullSecondary
+              ? "bend_action:atmosphere"
+              : dropHall
+                ? `bg_fragment:${frag.kind}:over_softEnv`
+                : `bg_fragment:${frag.kind}`,
         pack,
         sceneEstablishing: false,
       };

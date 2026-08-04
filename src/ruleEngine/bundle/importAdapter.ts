@@ -1538,7 +1538,10 @@ export async function dryRunImport(db: Knex, raw: unknown, opts: ImportOptions):
       shapeSalvageLog: exportGate.shapeSalvageLog ?? prep.shapeSalvageLog,
       shapeSalvageSummary: formatShapeSalvageSummary(exportGate.shapeSalvageLog ?? prep.shapeSalvageLog),
       rePushPlan: executedRePushPlan,
+      chatMustFixIds: exportGate.chatMustFixIds ?? exportGate.laneDiagnostics?.mustIds ?? [],
+      laneDiagnostics: exportGate.laneDiagnostics,
     },
+    chatMustFixIds: exportGate.chatMustFixIds ?? exportGate.laneDiagnostics?.mustIds ?? [],
     previewStatusLine: exportGate.previewStatusLine,
     endpoint: "int" as const,
   };

@@ -440,4 +440,73 @@ export function shouldOfferVideoHumanRejudge(meta: {
 
 }
 
+/** Wave-5/13 composition soft / measured debt IDs (never hard-block). */
+export const COMPOSITION_SOFT_DEBT_IDS = [
+  "headroom_undeclared",
+  "looking_room_undeclared",
+  "axis180_undeclared",
+  "headroom_tight",
+  "looking_room_fail",
+  "headroom_soft_provisional",
+  "looking_room_soft_provisional",
+  "axis180_same_side",
+  "axis180_same_side_face_box",
+  "axis180_same_eyeline",
+  "axis180_chain_same_side",
+  "framing_headroom_tight",
+  "framing_looking_room_tight",
+  "composition_unmeasured",
+  "composition_measured_fail",
+] as const;
+
+export type CompositionSoftDebtId = (typeof COMPOSITION_SOFT_DEBT_IDS)[number];
+
+export function isCompositionSoftDebt(id: string | null | undefined): boolean {
+  return COMPOSITION_SOFT_DEBT_IDS.includes(String(id ?? "") as CompositionSoftDebtId);
+}
+
+/** LGIA stillPhase / phase residual debts — soft only, never hard-block burn */
+export const LGIA_PHASE_DEBT_IDS = [
+  "still_phase_approaching",
+  "still_phase_mid_contact",
+  "still_phase_held",
+  "lgia.stillPhase",
+  "contam_soft:contact_zombie",
+  "contam_soft:plate_geometry",
+  "literary_primary",
+  "prop_form",
+] as const;
+
+export function isLgiaPhaseDebt(id: string | null | undefined): boolean {
+  const s = String(id ?? "");
+  if ((LGIA_PHASE_DEBT_IDS as readonly string[]).includes(s)) return true;
+  return /still_phase_|lgia\.|contam_soft:|phase_debt/i.test(s);
+}
+
+export function lgiaPhaseCtaLabel(debts?: string[] | null, stillPhase?: string | null): string {
+  const list = (debts ?? []).filter(isLgiaPhaseDebt);
+  if (!list.length && !stillPhase) return "";
+  if (stillPhase === "approaching" || list.some((d) => /approaching/.test(d))) {
+    return "智能修复·分相(接近未握)";
+  }
+  if (list.length) return "智能修复·分相债";
+  return "";
+}
+
+/** CTA for composition soft residuals — homologous with industry smart repair. */
+export function compositionSoftCtaLabel(
+  debts?: string[] | null,
+  pixelDimStatus?: string | null,
+): string {
+  const list = (debts ?? []).filter(isCompositionSoftDebt);
+  if (!list.length && pixelDimStatus !== "measured_fail" && pixelDimStatus !== "unmeasured") {
+    return "";
+  }
+  if (pixelDimStatus === "measured_fail" || list.some((d) => /tight|fail|measured_fail/.test(d))) {
+    return "智能修复";
+  }
+  if (pixelDimStatus === "unmeasured" || list.length) return "智能修复";
+  return "";
+}
+
 

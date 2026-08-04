@@ -10,6 +10,47 @@ import type {
   RepairChangelogEntry,
 } from "@/types/closure";
 import { CLOSURE_DIMENSION_LABELS, forkLabel as forkLabelText } from "@/types/closure";
+import {
+  summarizeZ110Handoff,
+  z110HandoffBanner,
+  type Z110Handoff,
+} from "@/types/z110Handoff";
+
+/** Mirror BE handoffStubSelect for FE copy/download. */
+function pickLocalStub(
+  z: Z110Handoff | null,
+  format: "edl" | "fcp" | "premiere" | "json" | "otio" | "resolve" | "manifest" | "srt",
+): { filename: string; text: string } | null {
+  if (!z) return null;
+  if (format === "edl" && z.edlStub && z.edlStub.length > 8) {
+    return { filename: "toonflow.edl", text: z.edlStub };
+  }
+  if (format === "fcp" && z.fcpXmlStub?.includes("xmeml")) {
+    return { filename: "toonflow.fcpxml.xml", text: z.fcpXmlStub };
+  }
+  if (format === "premiere" && z.premiereXmlStub?.includes("premiereProject")) {
+    return { filename: "toonflow.premiere.stub.xml", text: z.premiereXmlStub };
+  }
+  if (format === "otio" && z.otioStub?.includes("OTIO_SCHEMA")) {
+    return { filename: "toonflow.otio.json", text: z.otioStub };
+  }
+  if (format === "resolve" && z.resolveXmlStub?.includes("resolveProject")) {
+    return { filename: "toonflow.resolve.stub.xml", text: z.resolveXmlStub };
+  }
+  if (format === "manifest" && z.handoffManifest && z.handoffManifest.includes("formats")) {
+    return { filename: "toonflow.handoff.manifest.json", text: z.handoffManifest };
+  }
+  if (format === "srt" && z.srtStub && z.srtStub.length > 12) {
+    return { filename: "toonflow.srt", text: z.srtStub };
+  }
+  if (format === "json") {
+    return {
+      filename: "toonflow.transitions.json",
+      text: JSON.stringify({ timeline: z.timeline ?? null }, null, 2),
+    };
+  }
+  return null;
+}
 
 const props = defineProps<{
   result: InspectBundleResult | null;
@@ -29,6 +70,8 @@ const props = defineProps<{
   /** Wave-2 silent design repair log for toast / debt board */
   repairChangelog?: RepairChangelogEntry[] | null;
   industryResidualDebts?: string[] | null;
+  /** Wave-9/12 Z110 NLE handoff stubs */
+  z110Handoff?: Z110Handoff | null;
 }>();
 
 const emit = defineEmits<{
@@ -189,10 +232,100 @@ const residualDebtLine = computed(() => {
     (props.result as InspectBundleResult & { industryResidualDebts?: string[] } | null)
       ?.industryResidualDebts ??
     [];
-  return debts.length
-    ? `残留行业债：${debts.slice(0, 6).join(", ")}${debts.length > 6 ? "…" : ""}`
-    : "";
+  if (!debts.length) return "";
+  const phase = debts.filter((d) => /still_phase_|lgia\.|contam_soft:/.test(d));
+  const rest = debts.filter((d) => !phase.includes(d));
+  const bits: string[] = [];
+  if (phase.length) bits.push(`分相债：${phase.slice(0, 4).join(", ")}`);
+  if (rest.length) bits.push(`残留行业债：${rest.slice(0, 4).join(", ")}`);
+  return bits.join(" · ") + (debts.length > 6 ? "…" : "");
 });
+
+const z110Banner = computed(() => {
+  const z =
+    props.z110Handoff ??
+    (props.result as InspectBundleResult & { z110Handoff?: Z110Handoff; Z110?: Z110Handoff } | null)
+      ?.z110Handoff ??
+    (props.result as InspectBundleResult & { Z110?: Z110Handoff } | null)?.Z110 ??
+    null;
+  return z110HandoffBanner(summarizeZ110Handoff(z));
+});
+
+const z110Resolved = computed((): Z110Handoff | null => {
+  return (
+    props.z110Handoff ??
+    (props.result as InspectBundleResult & { z110Handoff?: Z110Handoff; Z110?: Z110Handoff } | null)
+      ?.z110Handoff ??
+    (props.result as InspectBundleResult & { Z110?: Z110Handoff } | null)?.Z110 ??
+    null
+  );
+});
+
+const z110CopyFlash = ref("");
+
+async function onCopyZ110Stub(
+  format: "edl" | "fcp" | "premiere" | "json" | "otio" | "resolve" | "manifest" | "srt",
+) {
+  const pick = pickLocalStub(z110Resolved.value, format);
+  if (!pick) {
+    z110CopyFlash.value = `${format} 草稿不可用`;
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(pick.text);
+    z110CopyFlash.value = `已复制 ${pick.filename}`;
+    emit("copyChat", pick.text);
+  } catch {
+    z110CopyFlash.value = "复制失败";
+  }
+}
+
+function onDownloadZ110Stub(
+  format: "edl" | "fcp" | "premiere" | "json" | "otio" | "resolve" | "manifest" | "srt",
+) {
+  const pick = pickLocalStub(z110Resolved.value, format);
+  if (!pick) {
+    z110CopyFlash.value = `${format} 草稿不可用`;
+    return;
+  }
+  const blob = new Blob([pick.text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = pick.filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  z110CopyFlash.value = `已下载 ${pick.filename}`;
+}
+
+/** Wave-14: download each available stub sequentially (browser; no zip dep). */
+function onDownloadAllZ110Stubs() {
+  const z = z110Resolved.value;
+  const formats: Array<"edl" | "fcp" | "premiere" | "otio" | "resolve" | "srt" | "manifest" | "json"> = [
+    "edl",
+    "fcp",
+    "premiere",
+    "otio",
+    "resolve",
+    "srt",
+    "manifest",
+    "json",
+  ];
+  let n = 0;
+  for (const format of formats) {
+    const pick = pickLocalStub(z, format);
+    if (!pick) continue;
+    const blob = new Blob([pick.text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = pick.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    n += 1;
+  }
+  z110CopyFlash.value = n ? `已下载 ${n} 个交接草稿` : "无可用草稿";
+}
 
 function onCopy(h: RepairHint) {
   if (h.chatTemplate) emit("copyChat", h.chatTemplate);
@@ -311,6 +444,26 @@ function onCopyFullBrief() {
       <ul v-if="changelogLines.length">
         <li v-for="(line, i) in changelogLines" :key="i">{{ line }}</li>
       </ul>
+    </section>
+
+    <section v-if="z110Banner" class="rule-panel__section rule-panel__section--z110">
+      <h4>Z110 声画交接（stub）</h4>
+      <p>{{ z110Banner }}</p>
+      <p class="rule-panel__residual">EDL/FCPXML/Premiere/OTIO/Resolve 仅为交接草稿，不可当生产工程导入。</p>
+      <div class="rule-panel__z110-actions">
+        <button type="button" class="rule-panel__copy-primary" @click="onCopyZ110Stub('edl')">复制 EDL</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onCopyZ110Stub('fcp')">复制 FCPXML</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onCopyZ110Stub('premiere')">复制 Premiere stub</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onCopyZ110Stub('otio')">复制 OTIO stub</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onCopyZ110Stub('resolve')">复制 Resolve stub</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onCopyZ110Stub('manifest')">复制 manifest</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onCopyZ110Stub('srt')">复制 SRT</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onDownloadZ110Stub('edl')">下载 EDL</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onDownloadZ110Stub('srt')">下载 SRT</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onDownloadZ110Stub('otio')">下载 OTIO</button>
+        <button type="button" class="rule-panel__copy-primary" @click="onDownloadAllZ110Stubs">下载全部 stub</button>
+      </div>
+      <p v-if="z110CopyFlash" class="rule-panel__residual">{{ z110CopyFlash }}</p>
     </section>
 
     <section v-if="result.closureReport?.missing?.length" class="rule-panel__section">

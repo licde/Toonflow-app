@@ -43,10 +43,18 @@ export function occupancyLeadStem(occ: PoseOccupancy): string {
 }
 
 /** Compact compress lead (no hard-coded bend for all action_primary). */
-export function occupancyCompressLead(occ: PoseOccupancy | null | undefined): string {
+export function occupancyCompressLead(
+  occ: PoseOccupancy | null | undefined,
+  opts?: { stillPhase?: string | null },
+): string {
   switch (occ) {
-    case "bend_pickup":
+    case "bend_pickup": {
+      const phase = String(opts?.stillPhase ?? "");
+      if (phase === "approaching" || phase === "mid_contact") {
+        return "占位：弯腰俯身接近地面薄纸，手伸向纸面（尚未捏紧完成），休书在地。";
+      }
       return "占位：弯腰捡拾，躯干前倾，指尖捏紧指节泛白，休书薄纸主手近地触地。";
+    }
     case "kneel_hold":
       return "占位：跪坐持物，躯干稳定，道具在主手。";
     case "desk_lean":

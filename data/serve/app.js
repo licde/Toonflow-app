@@ -244956,10 +244956,15 @@ function occupancyLeadStem(occ) {
       return "\u5360\u4F4D\uFF1A\u6309\u6587\u5B66\u4E3B\u59FF\u6001\u5165\u753B";
   }
 }
-function occupancyCompressLead(occ) {
+function occupancyCompressLead(occ, opts) {
   switch (occ) {
-    case "bend_pickup":
+    case "bend_pickup": {
+      const phase = String(opts?.stillPhase ?? "");
+      if (phase === "approaching" || phase === "mid_contact") {
+        return "\u5360\u4F4D\uFF1A\u5F2F\u8170\u4FEF\u8EAB\u63A5\u8FD1\u5730\u9762\u8584\u7EB8\uFF0C\u624B\u4F38\u5411\u7EB8\u9762\uFF08\u5C1A\u672A\u634F\u7D27\u5B8C\u6210\uFF09\uFF0C\u4F11\u4E66\u5728\u5730\u3002";
+      }
       return "\u5360\u4F4D\uFF1A\u5F2F\u8170\u6361\u62FE\uFF0C\u8EAF\u5E72\u524D\u503E\uFF0C\u6307\u5C16\u634F\u7D27\u6307\u8282\u6CDB\u767D\uFF0C\u4F11\u4E66\u8584\u7EB8\u4E3B\u624B\u8FD1\u5730\u89E6\u5730\u3002";
+    }
     case "kneel_hold":
       return "\u5360\u4F4D\uFF1A\u8DEA\u5750\u6301\u7269\uFF0C\u8EAF\u5E72\u7A33\u5B9A\uFF0C\u9053\u5177\u5728\u4E3B\u624B\u3002";
     case "desk_lean":
@@ -245272,6 +245277,8 @@ function assertEgressObeysPrimarySeal(input) {
   const hints = [];
   let prompt = String(input.prompt ?? "").trim();
   const seal = input.seal;
+  const phase = String(input.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
   if (seal?.sealHash) {
     const gated = gatePromptThroughPrimarySeal({ prompt, seal });
     prompt = gated.prompt;
@@ -245279,21 +245286,28 @@ function assertEgressObeysPrimarySeal(input) {
     if (gated.dropped.length) sources.push(`seal.gate.drop:${gated.dropped.length}`);
   }
   if (isBendSealed(seal)) {
-    const cheek = stripHostileCheekLegislation(prompt, seal, {
-      currentVisualDescription: void 0
-    });
-    prompt = cheek.prompt;
-    if (cheek.stripped.length) {
-      sources.push("seal.gate.strip:contact_zombie");
-      if (cheek.stripped.some((s) => /oral_cu|blood/.test(s))) {
-        sources.push("seal.gate.strip:off_beat_oral");
-        hints.push("off_beat_cu");
-      } else {
-        hints.push("contact_zombie");
+    const hasPhaseAtom = /尚未捏紧|接近地面薄纸|手伸向纸面|刚触及/.test(prompt.slice(0, 160));
+    if (!approaching && !hasPhaseAtom) {
+      const cheek = stripHostileCheekLegislation(prompt, seal, {
+        currentVisualDescription: void 0
+      });
+      prompt = cheek.prompt;
+      if (cheek.stripped.length) {
+        sources.push("seal.gate.strip:contact_zombie");
+        if (cheek.stripped.some((s) => /oral_cu|blood/.test(s))) {
+          sources.push("seal.gate.strip:off_beat_oral");
+          hints.push("off_beat_cu");
+        } else {
+          hints.push("contact_zombie");
+        }
       }
+    } else if (approaching || hasPhaseAtom) {
+      sources.push("seal.gate.preserve:lgia_stillPhase_atoms");
     }
     if (input.ensureBendLead !== false) {
-      const lead = occupancyCompressLead(seal?.poseOccupancy ?? "bend_pickup");
+      const lead = occupancyCompressLead(seal?.poseOccupancy ?? "bend_pickup", {
+        stillPhase: phase || (hasPhaseAtom ? "approaching" : null)
+      });
       if (!/弯腰|捡拾|捡起|俯身/.test(prompt.slice(0, 120))) {
         prompt = `${lead}${prompt}`.replace(/。{2,}/g, "\u3002").trim();
         sources.push("seal.gate.ensure:bend_lead");
@@ -245319,19 +245333,24 @@ function assertEgressObeysPrimarySeal(input) {
 function classifyStillContamination(input) {
   const prompt = String(input.promptUsed ?? "");
   const sources = input.composeSources ?? [];
+  const phase = String(input.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
   if (input.previousDroppedOffBeat || sources.some((s) => /previous\.dropped_off_beat|off_beat/.test(s))) {
     return "off_beat_cu";
   }
   if (isBendSealed(input.seal)) {
     const head = prompt.slice(0, 100);
-    if (CHEEK_CONTACT_POS.test(head) || /接触几何：/.test(head)) return "contact_zombie";
+    const phaseApproachAtom = approaching || /尚未捏紧|接近地面薄纸|手伸向纸面|刚触及/.test(head) || sources.some((s) => /lgia\.stillPhase:approaching|lgia\.stillPhase:mid_contact/.test(s));
+    if (!phaseApproachAtom && (CHEEK_CONTACT_POS.test(head) || /接触几何：/.test(head))) {
+      return "contact_zombie";
+    }
     if (PURPLE_ROBE_LOCUS.test(prompt)) return "locus_mangled";
     if (input.propPlateMissing && HOLD_CARD.test(prompt) === false) {
       return "plate_geometry";
     }
   }
   if (PURPLE_ROBE_LOCUS.test(prompt)) return "locus_mangled";
-  if (sources.some((s) => /contact_zombie|foundation\.restore:.*contact_geom/.test(s)) && isBendSealed(input.seal)) {
+  if (!approaching && sources.some((s) => /contact_zombie|foundation\.restore:.*contact_geom/.test(s)) && isBendSealed(input.seal)) {
     return "contact_zombie";
   }
   return "none";
@@ -245454,9 +245473,13 @@ function stripForeignBeatAtomsFromEgress(egress, visualDescription) {
   const stripped = [];
   if (!text2.trim()) return { text: text2, stripped };
   if (!ACTION_PRIMARY_ATOMS.test(vd)) {
-    const before = text2;
-    text2 = text2.replace(/[^。；;\n]*(?:弯腰|捡起|俯身捡|捏紧纸|指节泛白|休书|婚书|信笺)[^。；;\n]*/gi, "").replace(/\s{2,}/g, " ").trim();
-    if (text2 !== before) stripped.push("action_paper");
+    const keepPhase = /尚未捏紧|接近地面薄纸|手伸向纸面|刚触及|lgia\.stillPhase/.test(text2) || /弯腰|俯身|捡/.test(vd);
+    if (!keepPhase) {
+      const before = text2;
+      text2 = text2.replace(/[^。；;\n]*(?:弯腰|捡起|俯身捡|捏紧纸|指节泛白|休书|婚书|信笺)[^。；;\n]*/gi, "").replace(/\s{2,}/g, " ").trim();
+      if (text2 !== before) stripped.push("action_paper");
+    }
+  } else {
   }
   if (!OFF_BEAT_MOUTH_CU_ATOMS.test(vd) && ACTION_PRIMARY_SURVIVE_STEMS.test(vd)) {
     const before = text2;
@@ -246910,7 +246933,9 @@ ${prompt}`;
   const softEnvHung = input.softEnvHung === true || roles.includes("softEnv") && input.droppedSoftEnv !== true;
   const plateMissing = input.propPlateMissing === true || String(input.propPlateGrade ?? "") === "missing";
   const sig = input.localSignals ?? {};
-  const holdBad = sig.holdCardSuspected === true && sig.groundPropSuspected !== true || sig.primaryPoseGuess === "kneel_hold" || sig.primaryPoseGuess === "stand_hold" || sig.kneelSquatSuspected === true;
+  const phase = String(input.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
+  const holdBad = !approaching && (sig.holdCardSuspected === true && sig.groundPropSuspected !== true || sig.primaryPoseGuess === "kneel_hold" || sig.primaryPoseGuess === "stand_hold" || sig.kneelSquatSuspected === true);
   const { resolveRealizationState: resolveRealizationState2, realizationDegradedUserNote: realizationDegradedUserNote2 } = (init_realizationLadder(), __toCommonJS(realizationLadder_exports));
   const realization = resolveRealizationState2({
     intentOccupancy: seal?.poseOccupancy ?? (bend ? "bend_pickup" : null),
@@ -246978,6 +247003,7 @@ ${prompt}`;
       continue;
     }
     if (def.id === "grip.knuckles_pale") {
+      if (approaching) continue;
       if (!wantsKnuckles(vd) && !(bend && paper)) continue;
       if (!/指节|捏紧|指尖/.test(prompt)) {
         push(def.id, "egress_missing_knuckles", def);
@@ -247021,6 +247047,8 @@ ${prompt}`;
       continue;
     }
     if (def.id === "mouth.neutral_closed") {
+      const dialogueNative = /dialogue_native|开口对白|张嘴说话|natural mouth|lipSync/.test(prompt + vd);
+      if (approaching && dialogueNative) continue;
       if (/开口对白|张嘴说话|natural mouth/.test(prompt) && /闭口|抿嘴|neutral_closed/.test(vd)) {
         push(def.id, "egress_open_mouth_vs_closed", def);
       }
@@ -247267,17 +247295,19 @@ function resolveStillBgPolicy(input) {
         fragmentOverFull = isNoComfyNoKeyDoctrine2().fragmentOverFullSoftEnv;
       } catch {
       }
-      const keepHall = hasSceneLink && !fragmentOverFull;
+      const noShallow = input.bgBlur === false;
+      const keepHall = hasSceneLink && !fragmentOverFull && !noShallow;
+      const softHallNoDof = hasSceneLink && noShallow;
       const dropHall = fragmentOverFull && !hasSceneLink;
       return {
         policy: "demote",
-        bgMode: keepHall ? "soft_env" : dropHall ? "atmosphere_only" : hasSceneLink ? "soft_env" : "atmosphere_only",
+        bgMode: softHallNoDof ? "atmosphere_only" : keepHall ? "soft_env" : dropHall ? "atmosphere_only" : hasSceneLink ? "soft_env" : "atmosphere_only",
         excludeScene: false,
-        keepSoftEnvRef: keepHall || hasSceneLink && !fragmentOverFull,
-        softEnvContinuity: continuityOf(keepHall || hasSceneLink, hasSceneLink),
-        omitSrefToken: !(keepHall || hasSceneLink),
-        bgGuidance: keepHall || hasSceneLink ? "\u80CC\u666F\uFF1A\u4E3B\u573A\u666F\u6D45\u666F\u6DF1\u865A\u5316\uFF08\u6BBF\u5185\u8F6E\u5ED3/\u70DB\u5149\u53EF\u8FA8\uFF09\uFF0C\u7981\u6B62\u7070\u68DA\u767D\u68DA\uFF1B\u88D9\u6446/\u8863\u89D2\u53EF\u4E3A\u52A0\u5F3A\u865A\u5316\uFF0C\u7981\u6B62\u6B21\u89D2\u5B8C\u6574\u6B63\u8138\u62A2\u620F" : "\u80CC\u666F\u4EC5\u6B21\u89D2\u88D9\u6446/\u8863\u89D2\u7B49\u788E\u7247\u865A\u5316\u6D45\u666F\u6DF1\uFF0C\u7981\u6B62\u6B21\u89D2\u5B8C\u6574\u6B63\u8138\u6216\u6301\u9053\u5177\u62A2\u620F\uFF1B\u4FDD\u7559\u6C14\u6C1B\u8F6E\u5ED3\u53EF\u8FA8\uFF0C\u7981\u6B62\u7070\u68DA",
-        reason: keepHall || hasSceneLink && !fragmentOverFull ? bendOrAction ? "bend_action:keep_softEnv" : `bg_fragment:${frag.kind}:keep_softEnv` : bendOrAction && !frag.stripFullSecondary ? "bend_action:atmosphere" : dropHall ? `bg_fragment:${frag.kind}:over_softEnv` : `bg_fragment:${frag.kind}`,
+        keepSoftEnvRef: keepHall || hasSceneLink && !fragmentOverFull && !noShallow,
+        softEnvContinuity: continuityOf(keepHall || hasSceneLink && !noShallow, hasSceneLink),
+        omitSrefToken: !(keepHall || softHallNoDof || hasSceneLink),
+        bgGuidance: noShallow ? keepHall || softHallNoDof || hasSceneLink ? "\u80CC\u666F\uFF1A\u4E3B\u573A\u666F\u73AF\u5883\u8F6E\u5ED3\u53EF\u8FA8\uFF08\u6728\u4F5C/\u70DB\u5149\uFF09\uFF0C\u7981\u6B62\u6D45\u666F\u6DF1\u62A2\u620F\uFF0C\u7981\u6B62\u9999\u6848/\u4F5B\u50CF\u5347\u4E3A\u4E3B\u6784\u56FE\uFF1B\u88D9\u6446/\u8863\u89D2\u788E\u7247\u4F18\u5148\uFF0C\u7981\u6B62\u6B21\u89D2\u5B8C\u6574\u6B63\u8138\u62A2\u620F\uFF0C\u7981\u6B62\u7070\u68DA\u767D\u68DA" : "\u80CC\u666F\u4EC5\u6B21\u89D2\u88D9\u6446/\u8863\u89D2\u7B49\u788E\u7247\uFF0C\u7981\u6B62\u6D45\u666F\u6DF1\u62A2\u620F\uFF0C\u7981\u6B62\u6B21\u89D2\u5B8C\u6574\u6B63\u8138\u6216\u6301\u9053\u5177\u62A2\u620F\uFF1B\u4FDD\u7559\u6C14\u6C1B\u8F6E\u5ED3\u53EF\u8FA8\uFF0C\u7981\u6B62\u7070\u68DA" : keepHall || hasSceneLink ? "\u80CC\u666F\uFF1A\u4E3B\u573A\u666F\u6D45\u666F\u6DF1\u865A\u5316\uFF08\u6BBF\u5185\u8F6E\u5ED3/\u70DB\u5149\u53EF\u8FA8\uFF09\uFF0C\u7981\u6B62\u7070\u68DA\u767D\u68DA\uFF1B\u88D9\u6446/\u8863\u89D2\u53EF\u4E3A\u52A0\u5F3A\u865A\u5316\uFF0C\u7981\u6B62\u6B21\u89D2\u5B8C\u6574\u6B63\u8138\u62A2\u620F" : "\u80CC\u666F\u4EC5\u6B21\u89D2\u88D9\u6446/\u8863\u89D2\u7B49\u788E\u7247\u865A\u5316\u6D45\u666F\u6DF1\uFF0C\u7981\u6B62\u6B21\u89D2\u5B8C\u6574\u6B63\u8138\u6216\u6301\u9053\u5177\u62A2\u620F\uFF1B\u4FDD\u7559\u6C14\u6C1B\u8F6E\u5ED3\u53EF\u8FA8\uFF0C\u7981\u6B62\u7070\u68DA",
+        reason: noShallow ? bendOrAction ? "bend_action:bgBlur_false" : `bg_fragment:${frag.kind}:bgBlur_false` : keepHall || hasSceneLink && !fragmentOverFull ? bendOrAction ? "bend_action:keep_softEnv" : `bg_fragment:${frag.kind}:keep_softEnv` : bendOrAction && !frag.stripFullSecondary ? "bend_action:atmosphere" : dropHall ? `bg_fragment:${frag.kind}:over_softEnv` : `bg_fragment:${frag.kind}`,
         pack: pack2,
         sceneEstablishing: false
       };
@@ -247357,14 +247387,21 @@ function deriveShotModalityIntent(input) {
     reasons.push(...stillCls.reasons.map((r) => `still:${r}`));
   }
   const names = (input.characterNames ?? []).map((s) => String(s).trim()).filter(Boolean);
-  const femaleLead = names[0];
-  const secondaryRole = names.length >= 2 ? names[1] : void 0;
+  let femaleLead = names[0];
+  try {
+    const { pickVdLiteraryPrimary: pickVdLiteraryPrimary2 } = (init_stillFirstFrameLiterarySsot(), __toCommonJS(stillFirstFrameLiterarySsot_exports));
+    const lit = pickVdLiteraryPrimary2(vd, names);
+    if (lit) femaleLead = lit;
+  } catch {
+  }
+  const secondaryRole = names.length >= 2 ? names.find((n) => n !== femaleLead) ?? names[1] : void 0;
   const bgPolicy = resolveStillBgPolicy({
     description: vd,
     characterNames: input.characterNames,
     shotSize: input.shotSize,
     sceneEstablishingHint: input.sceneEstablishingHint,
-    hasSceneLink
+    hasSceneLink,
+    bgBlur: input.bgBlur
   });
   const bgMode = bgPolicy.bgMode;
   const excludeSceneEstablishing = bgPolicy.excludeScene;
@@ -248079,14 +248116,21 @@ function deriveGenerationContract(input) {
     for (const line of formInject.forbidden) {
       forbiddenSubstitutions.push(line);
     }
-    pushFact(
-      mustShowFacts,
-      seen,
-      "contact_freeze",
-      `\u672C\u5E27\u51BB\u7ED3\u4E3A${prop}\u5DF2\u89E6\u80A4\u77AC\u95F4\uFF08\u975E\u8FDB\u5165\u524D\u60AC\u7A7A\u3001\u975E\u79BB\u5F00\u540E\u7A7A\u4F4D\uFF09`,
-      "should",
-      "designIntent"
-    );
+    {
+      let freeze = `\u672C\u5E27\u51BB\u7ED3\u4E3A${prop}\u5DF2\u89E6\u80A4\u77AC\u95F4\uFF08\u975E\u8FDB\u5165\u524D\u60AC\u7A7A\u3001\u975E\u79BB\u5F00\u540E\u7A7A\u4F4D\uFF09`;
+      try {
+        const phase = String(
+          input.episodeShot?.narrative?.stillPhase ?? ""
+        );
+        if (phase === "approaching") {
+          freeze = `\u672C\u5E27\u51BB\u7ED3\u4E3A\u5F2F\u8170\u63A5\u8FD1${prop}\uFF08\u624B\u4F38\u5411\u7EB8\uFF0C\u5C1A\u672A\u634F\u7D27\u5B8C\u6210\uFF1B\u89E6\u53CA\u4E0E\u634F\u7D27\u5F52\u89C6\u9891\u540E\u76F8\uFF09`;
+        } else if (phase === "mid_contact") {
+          freeze = `\u672C\u5E27\u51BB\u7ED3\u4E3A${prop}\u6307\u5C16\u521A\u89E6\u77AC\u95F4`;
+        }
+      } catch {
+      }
+      pushFact(mustShowFacts, seen, "contact_freeze", freeze, "should", "designIntent");
+    }
   }
   if (/禁口含|禁纸入口|仅颊触非口含|仅面颊触非口含/.test(vd)) {
     forbiddenSubstitutions.push("\u7981\u6B62\u53E3\u542B/\u7EB8\u5165\u53E3");
@@ -248129,7 +248173,20 @@ function deriveGenerationContract(input) {
     }
   }
   if (names.length) {
-    pushFact(secondaryConstraints, seen, "identity", `\u4E3B\u89D2\u5B9A\u5986\u9501\uFF1A${names[0]}`, "should", "designIntent");
+    let primaryLock = names[0];
+    try {
+      const { pickVdLiteraryPrimary: pickVdLiteraryPrimary2 } = (init_stillFirstFrameLiterarySsot(), __toCommonJS(stillFirstFrameLiterarySsot_exports));
+      const lit = pickVdLiteraryPrimary2(vd, names);
+      if (lit) primaryLock = lit;
+      const narrPrimary = String(
+        input.episodeShot?.narrative?.literaryPrimary ?? ""
+      ).trim();
+      if (narrPrimary && names.some((n) => n.includes(narrPrimary) || narrPrimary.includes(n))) {
+        primaryLock = names.find((n) => n.includes(narrPrimary) || narrPrimary.includes(n)) ?? narrPrimary;
+      }
+    } catch {
+    }
+    pushFact(secondaryConstraints, seen, "identity", `\u4E3B\u89D2\u5B9A\u5986\u9501\uFF1A${primaryLock}`, "should", "designIntent");
   }
   const i2vCriticalFacts = mustShowFacts.filter((f) => /contact|prop|主角|站位/.test(f.id + f.text)).map((f) => f.text).slice(0, 6);
   const sceneWeight = modality.bgMode === "keep_plate" ? "keep" : modality.bgMode === "soft_env" ? "soft" : "min";
@@ -248438,6 +248495,426 @@ var init_stillShotRecipeAdapt = __esm({
     HAND_CU_IDENTITY_LOCK = "\u9501\u5B9A\u89D2\u8272\u5B9A\u5986\u624B\u90E8/\u8896\u53E3/\u914D\u9970\u7EB9\u7406\u53C2\u8003\uFF0C\u7981\u6B62\u91CD\u5851\u624B\u90E8\u8EAB\u4EFD\u7EC6\u8282\u3002";
     PROP_CU_HQ_RECIPE = "\u7AD6\u5C4F9:16\u5B89\u5168\u533A\u6784\u56FE\uFF0C\u9053\u5177\u4E3B\u4F53\u6E05\u6670\u4E0D\u88C1\u5207\uFF0C\u6D45\u666F\u6DF1\uFF0C\u9AD8\u7EC6\u8282\u89C6\u9891\u9996\u5E27\uFF1B\u672C\u955C\u4EE5\u7269\u4EF6\u4E3A\u4E3B\uFF0C\u7981\u6B62\u786C\u52A0\u4EBA\u50CF\u5934\u9762\u90E8\u62A2\u620F\u3002";
     ECU_MOUTH_HQ_RECIPE2 = "\u7AD6\u5C4F9:16\u5B89\u5168\u533A\uFF0C\u5507\u90E8/\u53E3\u9F3B\u5C40\u90E8\u7279\u5199\u5360\u753B\u5E45\u4E3B\u533A\uFF0C\u54AC\u5507\u6E17\u8840\u4E0E\u5FAE\u8868\u60C5\u53EF\u8BFB\uFF0C\u6D45\u666F\u6DF1\uFF1B\u7981\u6B62\u534A\u8EAB\u8170\u7EBF\u5165\u753B\uFF0C\u7981\u6B62\u624B\u6301\u7EB8\u7C7B\u6587\u4E66\u62A2\u620F\uFF0C\u7981\u6B62\u7070\u68DA\u767D\u68DA\u3002";
+  }
+});
+
+// src/ruleEngine/compilers/stillPhasePlan.ts
+var stillPhasePlan_exports = {};
+__export(stillPhasePlan_exports, {
+  STILL_PHASES: () => STILL_PHASES,
+  ensureStillPhaseOnShot: () => ensureStillPhaseOnShot,
+  inferStillPhase: () => inferStillPhase,
+  isStillPhase: () => isStillPhase,
+  phaseToContactStart: () => phaseToContactStart,
+  readStillPhase: () => readStillPhase,
+  stillPhasePromptAtoms: () => stillPhasePromptAtoms
+});
+function isStillPhase(v) {
+  return STILL_PHASES.includes(String(v ?? ""));
+}
+function inferStillPhase(input) {
+  const narr2 = input.narrative ?? {};
+  const locked = input.authorLock === true || narr2.stillPhaseAuthorLock === true || narr2.authorOverrideLock === true;
+  const author = input.authorStillPhase ?? narr2.stillPhase ?? narr2.stillPhase;
+  if (locked && isStillPhase(author)) {
+    return {
+      stillPhase: author,
+      contactStartState: phaseToContactStart(author),
+      source: "author",
+      reason: "author_lock",
+      authorLocked: true
+    };
+  }
+  if (isStillPhase(author) && !locked) {
+    if (!PROCESS_ACTION_RE.test(String(input.visualDescription ?? ""))) {
+      return {
+        stillPhase: author,
+        contactStartState: phaseToContactStart(author),
+        source: "author",
+        reason: "narrative.stillPhase"
+      };
+    }
+  }
+  const vd = String(input.visualDescription ?? "");
+  const motion = String(input.videoPrompt ?? "");
+  const hasPhasedMotion = /0\s*[-–~]\s*1\s*s|1\s*[-–~]\s*2\s*s|2\s*[-–~]\s*3\s*s/.test(motion) || /弯腰俯身|指尖触及|捏紧纸/.test(motion);
+  if (PROCESS_ACTION_RE.test(vd) && (hasPhasedMotion || PROCESS_ACTION_RE.test(vd))) {
+    if (HELD_COMPLETE_RE.test(vd) && !hasPhasedMotion && /站立持|已持/.test(vd)) {
+      return {
+        stillPhase: "held",
+        contactStartState: "at_locus",
+        source: "inferred",
+        reason: "held_complete_vd"
+      };
+    }
+    if (MID_TOUCH_RE.test(vd) && !hasPhasedMotion) {
+      return {
+        stillPhase: "mid_contact",
+        contactStartState: "approaching",
+        source: "inferred",
+        reason: "mid_touch_vd"
+      };
+    }
+    return {
+      stillPhase: "approaching",
+      contactStartState: "entering",
+      source: "inferred",
+      reason: hasPhasedMotion ? "process_action_phased_motion" : "process_action_default_approaching"
+    };
+  }
+  if (isStillPhase(author)) {
+    return {
+      stillPhase: author,
+      contactStartState: phaseToContactStart(author),
+      source: "author",
+      reason: "narrative.stillPhase"
+    };
+  }
+  return {
+    stillPhase: "held",
+    contactStartState: "at_locus",
+    source: "default",
+    reason: "non_process_default_held"
+  };
+}
+function phaseToContactStart(phase) {
+  if (phase === "approaching") return "entering";
+  if (phase === "mid_contact") return "approaching";
+  return "at_locus";
+}
+function stillPhasePromptAtoms(phase) {
+  if (phase === "approaching") {
+    return {
+      must: ["\u5F2F\u8170\u4FEF\u8EAB\u63A5\u8FD1\u5730\u9762\u8584\u7EB8\uFF0C\u4E3B\u624B\u4F38\u5411\u7EB8\u7F18"],
+      forbidAsPrimary: []
+    };
+  }
+  if (phase === "mid_contact") {
+    return {
+      must: ["\u6307\u5C16\u521A\u89E6\u53CA\u8584\u7EB8\u8FB9\u7F18"],
+      forbidAsPrimary: []
+    };
+  }
+  return {
+    must: ["\u624B\u5DF2\u6301/\u634F\u7EB8\u7F18\u53EF\u8BFB"],
+    forbidAsPrimary: []
+  };
+}
+function ensureStillPhaseOnShot(shot, opts) {
+  const narr2 = { ...shot.narrative ?? {} };
+  const locked = narr2.stillPhaseAuthorLock === true || shot.authorOverrideLock === true;
+  if (locked && isStillPhase(narr2.stillPhase) && !opts?.force) {
+    const plan2 = inferStillPhase({
+      visualDescription: String(shot.visualDescription ?? ""),
+      videoPrompt: String(shot.generation?.videoPrompt ?? ""),
+      narrative: narr2,
+      authorLock: true
+    });
+    return { plan: plan2, changed: false };
+  }
+  const plan = inferStillPhase({
+    visualDescription: String(shot.visualDescription ?? ""),
+    videoPrompt: String(shot.generation?.videoPrompt ?? ""),
+    narrative: narr2
+  });
+  const prev = String(narr2.stillPhase ?? "");
+  let changed = false;
+  if (prev !== plan.stillPhase) {
+    narr2.stillPhase = plan.stillPhase;
+    narr2.stillPhaseSource = plan.source;
+    narr2.stillPhaseReason = plan.reason;
+    changed = true;
+  }
+  if (String(narr2.contactStartState ?? "") !== plan.contactStartState) {
+    narr2.contactStartState = plan.contactStartState;
+    changed = true;
+  }
+  if (changed) {
+    shot.narrative = narr2;
+    shot.promptState = "stale";
+    shot.videoStale = true;
+    const log = Array.isArray(shot.repairChangelog) ? [...shot.repairChangelog] : [];
+    const dup = log.findIndex(
+      (e) => e.slot === "stillPhase" && String(e.after) === plan.stillPhase
+    );
+    const entry = {
+      slot: "stillPhase",
+      before: prev || "(empty)",
+      after: plan.stillPhase,
+      reason: plan.reason,
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      packageVersion: Number(shot.packageVersion ?? 0) + 1
+    };
+    if (dup >= 0) log[dup] = entry;
+    else log.push(entry);
+    shot.repairChangelog = log.slice(-40);
+    shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
+  }
+  return { plan, changed };
+}
+function readStillPhase(shotOrMeta) {
+  if (!shotOrMeta) return null;
+  const narr2 = shotOrMeta.narrative;
+  const p3 = narr2?.stillPhase ?? shotOrMeta.stillPhase;
+  return isStillPhase(p3) ? p3 : null;
+}
+var STILL_PHASES, PROCESS_ACTION_RE, HELD_COMPLETE_RE, MID_TOUCH_RE;
+var init_stillPhasePlan = __esm({
+  "src/ruleEngine/compilers/stillPhasePlan.ts"() {
+    "use strict";
+    STILL_PHASES = ["approaching", "mid_contact", "held"];
+    PROCESS_ACTION_RE = /弯腰|俯身|捡起|捡拾|拾起|捡/;
+    HELD_COMPLETE_RE = /已捡起|手持休书|捏紧纸|指节泛白|持纸站/;
+    MID_TOUCH_RE = /指尖触及|刚触|触到纸/;
+  }
+});
+
+// src/ruleEngine/compilers/stillFirstFrameExtract.ts
+var stillFirstFrameExtract_exports = {};
+__export(stillFirstFrameExtract_exports, {
+  MAX_INDUSTRY_NORM_HINTS: () => MAX_INDUSTRY_NORM_HINTS,
+  extractStillFirstFrameLiterary: () => extractStillFirstFrameLiterary,
+  formatFirstFrameEgressSpine: () => formatFirstFrameEgressSpine,
+  isPoseCueNoPaperProp: () => isPoseCueNoPaperProp,
+  stripInterferenceAgainstFirstFrame: () => stripInterferenceAgainstFirstFrame
+});
+function extractStillFirstFrameLiterary(input) {
+  const vd = String(input.visualDescription ?? "").trim();
+  const narr2 = input.narrative ?? {};
+  const names = (input.characterNames ?? []).map(String).filter(Boolean);
+  const sources = ["ff.extract"];
+  const phasePlan = inferStillPhase({
+    visualDescription: vd,
+    videoPrompt: input.videoPrompt,
+    narrative: narr2,
+    authorStillPhase: input.authorStillPhase ?? narr2.stillPhase
+  });
+  const phase = phasePlan.stillPhase;
+  sources.push(`ff.phase:${phase}:${phasePlan.reason}`);
+  const primary = pickVdLiteraryPrimary(vd, names) || String(narr2.literaryPrimary ?? "").trim() || names[0] || null;
+  if (primary) sources.push(`ff.primary:${primary}`);
+  const emoRaw = Number(
+    narr2.emotionIntensity ?? input.emotionIntensity ?? narr2.emotion ?? NaN
+  );
+  const emotionIntensity = Number.isFinite(emoRaw) ? emoRaw : null;
+  const shotSize = String(input.shotSize ?? narr2.shotSize ?? "").trim() || (/中景|近景|特写|全景|MS|CU|WS/i.exec(vd)?.[0] ?? null);
+  const bgBlur = typeof input.bgBlur === "boolean" ? input.bgBlur : typeof narr2.bgBlur === "boolean" ? narr2.bgBlur : null;
+  const skirt = /裙摆|衣角|虚化/.test(vd + String(narr2.secondaryBudget ?? "")) || String(narr2.secondaryBudget ?? "") === "skirt_blur";
+  const secondaryBudget = skirt ? "skirt_blur" : names.length > 1 ? "skirt_blur" : "none";
+  const hasProp = /休书|婚书|信笺|薄纸|纸张/.test(vd);
+  const propName = /休书/.test(vd) ? "\u4F11\u4E66" : hasProp ? "\u8584\u7EB8" : null;
+  let actionLine = "";
+  if (BEND_RE.test(vd) || phase === "approaching" || phase === "mid_contact") {
+    if (phase === "approaching") {
+      actionLine = primary ? `${primary}\u5F2F\u8170\u4FEF\u8EAB\u63A5\u8FD1\u5730\u9762\u8584\u7EB8\uFF0C\u4E3B\u624B\u4F38\u5411\u7EB8\u7F18` : "\u5F2F\u8170\u4FEF\u8EAB\u63A5\u8FD1\u5730\u9762\u8584\u7EB8\uFF0C\u4E3B\u624B\u4F38\u5411\u7EB8\u7F18";
+    } else if (phase === "mid_contact") {
+      actionLine = primary ? `${primary}\u5F2F\u8170\uFF0C\u6307\u5C16\u521A\u89E6\u53CA\u8584\u7EB8\u8FB9\u7F18` : "\u5F2F\u8170\uFF0C\u6307\u5C16\u521A\u89E6\u53CA\u8584\u7EB8\u8FB9\u7F18";
+    } else {
+      actionLine = primary ? `${primary}\u5F2F\u8170\u6361\u62FE\uFF0C\u4E3B\u624B\u6301\u7EB8\u7F18\u53EF\u8BFB` : "\u5F2F\u8170\u6361\u62FE\uFF0C\u4E3B\u624B\u6301\u7EB8\u7F18\u53EF\u8BFB";
+    }
+    sources.push("ff.action:bend_freeze");
+  } else {
+    const clause = vd.split(/[。；;\n]/).map((s) => s.trim()).find((s) => s.length >= 4) || vd.slice(0, 48);
+    actionLine = clause.replace(GRIP_COMPLETE_RE, "").replace(/\s{2,}/g, " ").trim() || vd.slice(0, 40);
+    sources.push("ff.action:vd_clause");
+  }
+  let propLine = null;
+  if (propName) {
+    if (phase === "approaching") {
+      propLine = `${propName}\u5728\u5730\u9762/\u8FD1\u5730\uFF0C\u4E3B\u624B\u63A5\u8FD1\u6216\u521A\u4F38\u5411\u7EB8\u7F18`;
+    } else if (phase === "mid_contact") {
+      propLine = `${propName}\u7EB8\u7F18\u521A\u89E6\u4E3B\u624B`;
+    } else {
+      propLine = `${propName}\u5728\u4E3B\u624B\uFF0C\u7EB8\u7F18\u53EF\u8BFB`;
+    }
+    sources.push("ff.prop");
+  }
+  const intentClass = (() => {
+    if (/过肩|OTS|对切|正反打/.test(vd)) return "ots";
+    if (BEND_RE.test(vd) || phase === "approaching") return "action_primary";
+    if (/对白|开口|口型/.test(vd) || Boolean(narr2.dialogue?.lines?.length)) {
+      return "speak";
+    }
+    if (/近景|特写|CU/i.test(String(shotSize ?? ""))) return "face";
+    return "other";
+  })();
+  const necessaryNegatives = buildNecessaryNegatives({
+    phase,
+    intentClass,
+    bgBlur,
+    secondaryBudget
+  });
+  const positiveSpine = buildPositiveSpine({
+    primary,
+    actionLine,
+    propLine,
+    emotionIntensity,
+    shotSize,
+    secondaryBudget,
+    bgBlur,
+    phase
+  });
+  return {
+    primaryName: primary,
+    actionLine,
+    propLine,
+    stillPhase: phase,
+    phasePlan,
+    emotionIntensity,
+    shotSize,
+    secondaryBudget,
+    bgBlur,
+    necessaryNegatives,
+    positiveSpine,
+    intentClass,
+    sources
+  };
+}
+function buildPositiveSpine(input) {
+  const lines = [];
+  if (input.primary) lines.push(`\u4E3B\u89D2\u5B9A\u5986\u9501\uFF1A${input.primary}`);
+  if (input.shotSize) lines.push(`\u666F\u522B\uFF1A${input.shotSize}`);
+  if (input.emotionIntensity != null) lines.push(`\u60C5\u7EEA${input.emotionIntensity}`);
+  if (input.actionLine) lines.push(input.actionLine);
+  if (input.propLine) lines.push(input.propLine);
+  if (input.secondaryBudget === "skirt_blur") {
+    lines.push("\u6B21\u89D2\u4EC5\u88D9\u6446/\u8863\u89D2\u865A\u5316\uFF0C\u7981\u6B62\u5B8C\u6574\u6B63\u8138\u7ACB\u50CF\u62A2\u620F");
+  }
+  if (input.bgBlur === false) {
+    lines.push("\u80CC\u666F\uFF1A\u4E3B\u573A\u666F\u73AF\u5883\u8F6E\u5ED3\u53EF\u8FA8\uFF08\u6728\u4F5C/\u70DB\u5149\uFF09\uFF0C\u7981\u6B62\u6D45\u666F\u6DF1\u62A2\u620F");
+  } else if (input.bgBlur === true) {
+    lines.push("\u80CC\u666F\u6D45\u666F\u6DF1\u865A\u5316\uFF0C\u5BA4\u5185\u8F6E\u5ED3\u53EF\u8FA8");
+  }
+  return lines.filter(Boolean);
+}
+function buildNecessaryNegatives(input) {
+  const neg = [];
+  if (input.intentClass === "action_primary" || input.phase === "approaching") {
+    neg.push("\u7981\u6B62\u8DEA\u5750/\u8E72\u8DEA\u66FF\u4EE3\u5F2F\u8170\u4FEF\u8EAB");
+  }
+  if (input.phase === "approaching" || input.phase === "mid_contact") {
+    neg.push("\u7981\u6B62\u5DF2\u63E1\u6EE1\u5C55\u793A\u6216\u80F8\u524D\u6367\u6301");
+  }
+  if (input.bgBlur === false || input.intentClass === "action_primary") {
+    neg.push("\u7981\u6B62\u4F5B\u50CF/\u9999\u6848/\u4F9B\u684C\u5347\u4E3A\u4E3B\u6784\u56FE");
+  }
+  neg.push("\u7981\u6B62\u56DB\u89C6\u56FE/\u62FC\u7248/\u591A\u5BAB\u683C");
+  return neg.slice(0, MAX_NECESSARY_NEG);
+}
+function stripInterferenceAgainstFirstFrame(egress, extract) {
+  let text2 = String(egress ?? "");
+  const stripped = [];
+  if (!text2.trim()) return { text: text2, stripped };
+  const approaching = extract.stillPhase === "approaching" || extract.stillPhase === "mid_contact";
+  {
+    const before = text2;
+    text2 = text2.replace(/禁止作为主态：[^。；;\n]*/g, "");
+    if (text2 !== before) stripped.push("forbid_as_primary_stack");
+  }
+  if (approaching) {
+    const clauses = text2.split(/(?<=[。；;\n])/);
+    const kept = [];
+    for (const c of clauses) {
+      const isGripLead = /占位：/.test(c) && /捏紧|指节泛白/.test(c) && !/尚未捏紧|伸向纸|接近地面/.test(c);
+      const isGripAction = /动作主导：/.test(c) && /捏紧|指节/.test(c);
+      const isPinchUp = /主手触地捏起|指尖捏紧纸张边缘/.test(c) && !/尚未|伸向|接近/.test(c);
+      if (isGripLead || isGripAction || isPinchUp) {
+        stripped.push("grip_complete_vs_approaching");
+        continue;
+      }
+      kept.push(c);
+    }
+    text2 = kept.join("");
+  }
+  if (approaching && (text2.match(/占位：/g) ?? []).length > 1) {
+    const clauses = text2.split(/(?<=[。；;\n])/);
+    let seenOcc = false;
+    const kept = [];
+    for (const c of clauses) {
+      if (/占位：/.test(c)) {
+        if (seenOcc) {
+          stripped.push("dup_occupancy_lead");
+          continue;
+        }
+        seenOcc = true;
+        if (/捏紧|指节泛白/.test(c) && !/尚未|伸向|接近/.test(c)) {
+          kept.push("\u5360\u4F4D\uFF1A\u5F2F\u8170\u4FEF\u8EAB\u63A5\u8FD1\u5730\u9762\u8584\u7EB8\uFF0C\u4E3B\u624B\u4F38\u5411\u7EB8\u7F18\u3002");
+          stripped.push("rewrite_occ_to_approach");
+          continue;
+        }
+      }
+      kept.push(c);
+    }
+    text2 = kept.join("");
+  }
+  text2 = text2.replace(/\s{2,}/g, " ").replace(/。{2,}/g, "\u3002").trim();
+  return { text: text2, stripped };
+}
+function formatFirstFrameEgressSpine(extract, normHints) {
+  const norms = (normHints ?? []).filter(Boolean).slice(0, MAX_INDUSTRY_NORM_HINTS);
+  return [...extract.positiveSpine, ...norms, ...extract.necessaryNegatives].filter(Boolean).join("\u3002").replace(/。{2,}/g, "\u3002");
+}
+function isPoseCueNoPaperProp(reason) {
+  return /pose_cue_no_paper|scene_floor_crop_pose_cue/i.test(String(reason ?? ""));
+}
+var MAX_NECESSARY_NEG, GRIP_COMPLETE_RE, BEND_RE, MAX_INDUSTRY_NORM_HINTS;
+var init_stillFirstFrameExtract = __esm({
+  "src/ruleEngine/compilers/stillFirstFrameExtract.ts"() {
+    "use strict";
+    init_stillFirstFrameLiterarySsot();
+    init_stillPhasePlan();
+    MAX_NECESSARY_NEG = 4;
+    GRIP_COMPLETE_RE = /捏紧|指节泛白|已捡起|持纸站|胸前捧持|已握满/;
+    BEND_RE = /弯腰|俯身|捡起|捡拾|拾起/;
+    MAX_INDUSTRY_NORM_HINTS = 2;
+  }
+});
+
+// src/ruleEngine/compilers/industryNormGate.ts
+var industryNormGate_exports = {};
+__export(industryNormGate_exports, {
+  resolveAllowedNormHintKeys: () => resolveAllowedNormHintKeys,
+  resolveGatedSoftHints: () => resolveGatedSoftHints
+});
+function detectSignals(input) {
+  const vd = String(input.visualDescription ?? "");
+  const cls = String(input.stillIntentClass ?? "").toLowerCase();
+  const size = String(input.shotSize ?? "");
+  const otsLike = input.otsLike === true || /过肩|OTS|对切|正反打/.test(vd) || cls.includes("ots");
+  const faceish = input.faceish === true || /近景|特写|大特写|CU|ecu|face/i.test(size) || cls.includes("face") || cls.includes("speak");
+  const speakLike = input.speakLike === true || cls.includes("speak") || cls.includes("dialogue") || /对白|开口|口型/.test(vd);
+  const actionPrimary = cls.includes("action") || cls.includes("bend") || /弯腰|捡起|捡拾|俯身/.test(vd);
+  const phase = String(input.stillPhase ?? "");
+  return { otsLike, faceish, speakLike, actionPrimary, phase };
+}
+function resolveAllowedNormHintKeys(input) {
+  const s = detectSignals(input);
+  if (s.actionPrimary && (s.phase === "approaching" || s.phase === "" || s.phase === "mid_contact")) {
+    if (s.faceish) return ["headroom"];
+    return [];
+  }
+  if (s.otsLike) return ["axis", "axis180", "lookingRoom"];
+  if (s.speakLike || s.faceish) return ["headroom", "lookingRoom"];
+  if (s.faceish) return ["headroom", "lookingRoom"];
+  return [];
+}
+function resolveGatedSoftHints(input) {
+  const keys2 = resolveAllowedNormHintKeys(input);
+  const all3 = ["headroom", "lookingRoom", "axis", "axis180"];
+  const skipped = all3.filter((k) => !keys2.includes(k));
+  let hints = softGrammarHints(keys2).filter(Boolean);
+  try {
+    const { MAX_INDUSTRY_NORM_HINTS: MAX_INDUSTRY_NORM_HINTS2 } = (init_stillFirstFrameExtract(), __toCommonJS(stillFirstFrameExtract_exports));
+    hints = hints.slice(0, MAX_INDUSTRY_NORM_HINTS2);
+  } catch {
+    hints = hints.slice(0, 2);
+  }
+  return { hints, keys: keys2, skipped };
+}
+var init_industryNormGate = __esm({
+  "src/ruleEngine/compilers/industryNormGate.ts"() {
+    "use strict";
+    init_cinematicShotGrammar();
   }
 });
 
@@ -252377,6 +252854,35 @@ function layerDesignConsume(ctx, parts, sources) {
   }
 }
 function layerShootableExtras(ctx, parts, sources, mode) {
+  try {
+    const { extractStillFirstFrameLiterary: extractStillFirstFrameLiterary2 } = (init_stillFirstFrameExtract(), __toCommonJS(stillFirstFrameExtract_exports));
+    const names = (ctx.characters ?? []).filter((c) => c.kind !== "scene").map((c) => c.name || c.code).filter(Boolean);
+    const ff = extractStillFirstFrameLiterary2({
+      visualDescription: ctx.visualDescription,
+      narrative: ctx.narrative,
+      videoPrompt: String(ctx.videoPrompt ?? ""),
+      characterNames: names,
+      shotSize: String(ctx.shotSize ?? ""),
+      emotionIntensity: ctx.emotionIntensity ?? (Number.isFinite(Number(ctx.emotion)) ? Number(ctx.emotion) : null),
+      bgBlur: typeof ctx.bgBlur === "boolean" ? ctx.bgBlur : null
+    });
+    ctx.stillPhase = ff.stillPhase;
+    ctx.firstFrameExtract = ff;
+    for (const line of ff.positiveSpine) {
+      if (line && !parts.some((p3) => p3.includes(line.slice(0, Math.min(10, line.length))))) {
+        parts.push(line);
+        sources.push("ff.spine");
+      }
+    }
+    for (const n of ff.necessaryNegatives) {
+      if (n && !parts.some((p3) => p3.includes(n.slice(0, 8)))) {
+        parts.push(n);
+        sources.push("ff.neg");
+      }
+    }
+    sources.push(...ff.sources);
+  } catch {
+  }
   const fg5 = String(ctx.foreground ?? "").trim();
   const bg = String(ctx.background ?? "").trim();
   if (fg5 || bg) {
@@ -252384,23 +252890,35 @@ function layerShootableExtras(ctx, parts, sources, mode) {
     sources.push("shotDesign.composition");
   }
   const shotZh = formatShotSizeZh(ctx.shotSize);
-  if (shotZh) {
+  if (shotZh && !parts.some((p3) => /^景别：/.test(p3))) {
     parts.push(`\u666F\u522B\uFF1A${shotZh}`);
     sources.push("shot.shotSize");
   }
   try {
-    const { softGrammarHints: softGrammarHints2 } = (init_cinematicShotGrammar(), __toCommonJS(cinematicShotGrammar_exports));
-    const hints = softGrammarHints2(["headroom", "lookingRoom", "axis", "axis180"]);
-    for (const h of hints) {
+    const { resolveGatedSoftHints: resolveGatedSoftHints2 } = (init_industryNormGate(), __toCommonJS(industryNormGate_exports));
+    const { readStillPhase: readStillPhase2 } = (init_stillPhasePlan(), __toCommonJS(stillPhasePlan_exports));
+    const metaBag = ctx.shotMeta ?? ctx.stillMeta ?? ctx;
+    const phase = ctx.stillPhase ?? readStillPhase2(metaBag) ?? readStillPhase2({ narrative: ctx.narrative }) ?? null;
+    const ffIntent = ctx.firstFrameExtract?.intentClass;
+    const gated = resolveGatedSoftHints2({
+      stillIntentClass: String(ctx.stillIntentClass ?? "") || String(ffIntent ?? ""),
+      stillPhase: phase,
+      shotSize: String(ctx.shotSize ?? ""),
+      visualDescription: ctx.visualDescription,
+      otsLike: ffIntent === "ots",
+      faceish: ffIntent === "face",
+      speakLike: ffIntent === "speak"
+    });
+    for (const h of gated.hints) {
       if (h && !parts.some((p3) => p3.includes(h))) {
         parts.push(h);
-        sources.push("cinematic.softHints");
+        sources.push("cinematic.softHints.gated");
       }
     }
+    if (gated.skipped.length) sources.push(`cinematic.softHints.skip:${gated.skipped.join("+")}`);
     const { assessComposition: assessComposition2, injectCompositionSoftHints: injectCompositionSoftHints2 } = (init_compositionAssess(), __toCommonJS(compositionAssess_exports));
     const { readFaceBoxNormFromMeta: readFaceBoxNormFromMeta2, keyOrAdapterPresentFromMeta: keyOrAdapterPresentFromMeta2 } = (init_faceBoxNormFromMeta(), __toCommonJS(faceBoxNormFromMeta_exports));
     const { resolveFaceBoxForCompose: resolveFaceBoxForCompose2 } = (init_softFaceBoxHeuristic(), __toCommonJS(softFaceBoxHeuristic_exports));
-    const metaBag = ctx.shotMeta ?? ctx.stillMeta ?? ctx;
     const metaBox = readFaceBoxNormFromMeta2(metaBag);
     const { readProvisionalFaceBoxFromMeta: readProvisionalFaceBoxFromMeta2 } = (init_faceBoxNormFromMeta(), __toCommonJS(faceBoxNormFromMeta_exports));
     const localSoft = readProvisionalFaceBoxFromMeta2(metaBag);
@@ -252421,7 +252939,15 @@ function layerShootableExtras(ctx, parts, sources, mode) {
       spatialRelation: typeof ctx.spatialRelation === "string" ? ctx.spatialRelation : void 0,
       faceBudget: String(ctx.faceBudget ?? "")
     });
-    const nextParts = injectCompositionSoftHints2(parts, softComp.findings);
+    const findingsForInject = gated.keys.length === 0 ? [] : softComp.findings.filter((f) => {
+      if (f.id.startsWith("headroom") && !gated.keys.includes("headroom")) return false;
+      if (f.id.startsWith("looking_room") && !gated.keys.includes("lookingRoom")) return false;
+      if (f.id.startsWith("axis") && !gated.keys.includes("axis180") && !gated.keys.includes("axis")) {
+        return false;
+      }
+      return true;
+    });
+    const nextParts = injectCompositionSoftHints2(parts, findingsForInject);
     if (nextParts.length !== parts.length) {
       parts.length = 0;
       parts.push(...nextParts);
@@ -252455,8 +252981,10 @@ function layerShootableExtras(ctx, parts, sources, mode) {
     }
   }
   if (mode === "fidelity" || ctx.qualityMode === "hq_update") {
-    parts.push("\u53D9\u4E8B\u573A\u9762\u4F18\u5148\u4E8E\u53C2\u8003\u56FE\u62FC\u8D34\uFF0C\u753B\u9762\u5FC5\u987B\u4F53\u73B0\u4E0A\u8FF0\u63CF\u5199\u4E2D\u7684\u52A8\u4F5C\u4E0E\u7269\u4EF6");
-    sources.push("fidelity.narrativeFirst");
+    if (!parts.some((p3) => /叙事场面优先/.test(p3))) {
+      parts.push("\u53D9\u4E8B\u573A\u9762\u4F18\u5148\u4E8E\u53C2\u8003\u56FE\u62FC\u8D34\uFF0C\u753B\u9762\u5FC5\u987B\u4F53\u73B0\u4E0A\u8FF0\u63CF\u5199\u4E2D\u7684\u52A8\u4F5C\u4E0E\u7269\u4EF6");
+      sources.push("fidelity.narrativeFirst");
+    }
   }
 }
 function layerSkeletonScene(ctx, parts, sources, adapt) {
@@ -253287,13 +253815,19 @@ ${primary?.text ?? ""}`
   } catch {
   }
   try {
-    const { ACTION_PRIMARY_SURVIVE_STEMS: ACTION_PRIMARY_SURVIVE_STEMS2 } = (init_stillFirstFrameLiterarySsot(), __toCommonJS(stillFirstFrameLiterarySsot_exports));
-    const vdAct = String(ctx.visualDescription ?? primary?.text ?? "");
-    if (ACTION_PRIMARY_SURVIVE_STEMS2.test(vdAct)) {
-      const head = vdAct.match(/[^。；;\n]*(?:弯腰|捡起|捡|捏紧|指节)[^。；;\n]{0,40}/)?.[0]?.trim() || "";
-      if (head && !descParts.some((p3) => p3.includes(head.slice(0, 8)))) {
-        descParts.unshift(`\u52A8\u4F5C\u4E3B\u5BFC\uFF1A${head.slice(0, 80)}`);
-        sources.push("action.primary.lead");
+    const ff = ctx.firstFrameExtract;
+    const phase = String(ff?.stillPhase ?? ctx.stillPhase ?? "");
+    if (phase === "approaching" || phase === "mid_contact") {
+      sources.push("action.primary.lead:skip_ff_owns");
+    } else {
+      const { ACTION_PRIMARY_SURVIVE_STEMS: ACTION_PRIMARY_SURVIVE_STEMS2 } = (init_stillFirstFrameLiterarySsot(), __toCommonJS(stillFirstFrameLiterarySsot_exports));
+      const vdAct = String(ctx.visualDescription ?? primary?.text ?? "");
+      if (ACTION_PRIMARY_SURVIVE_STEMS2.test(vdAct)) {
+        const head = vdAct.match(/[^。；;\n]*(?:弯腰|捡起|捡|俯身)[^。；;\n]{0,40}/)?.[0]?.trim() || "";
+        if (head && !/捏紧|指节/.test(head) && !descParts.some((p3) => p3.includes(head.slice(0, 8)))) {
+          descParts.unshift(`\u52A8\u4F5C\u4E3B\u5BFC\uFF1A${head.slice(0, 80)}`);
+          sources.push("action.primary.lead");
+        }
       }
     }
   } catch {
@@ -254243,13 +254777,31 @@ ${String(ctx.rawPrompt ?? "")}`;
   try {
     const { assertEgressObeysPrimarySeal: assertEgressObeysPrimarySeal2, classifyStillContamination: classifyStillContamination2 } = (init_stillSealGate(), __toCommonJS(stillSealGate_exports));
     const activeSeal = ctx._activePrimarySeal ?? generationContract.primaryIntentSeal;
-    const gated = assertEgressObeysPrimarySeal2({ prompt, seal: activeSeal });
+    const ff = ctx.firstFrameExtract;
+    const stillPhase = ctx.stillPhase ?? ff?.stillPhase ?? ctx.episodeShot?.narrative?.stillPhase ?? null;
+    const hasFfSpine = sources.some((s) => s === "ff.spine" || /^ff\./.test(s));
+    const gated = assertEgressObeysPrimarySeal2({
+      prompt,
+      seal: activeSeal,
+      stillPhase,
+      // First-frame spine already carries occupancy — do not stack bend_lead
+      ensureBendLead: !hasFfSpine && stillPhase !== "approaching" && stillPhase !== "mid_contact"
+    });
     prompt = gated.prompt;
     sources.push(...gated.sources);
+    if (ff) {
+      const { stripInterferenceAgainstFirstFrame: stripInterferenceAgainstFirstFrame2 } = (init_stillFirstFrameExtract(), __toCommonJS(stillFirstFrameExtract_exports));
+      const stripped = stripInterferenceAgainstFirstFrame2(prompt, ff);
+      prompt = stripped.text;
+      for (const s of stripped.stripped) sources.push(`ff.strip:${s}`);
+    }
+    generationContract.stillPhase = stillPhase ?? void 0;
+    ctx.stillPhase = stillPhase ?? void 0;
     const contam = classifyStillContamination2({
       promptUsed: prompt,
       seal: activeSeal,
-      composeSources: sources
+      composeSources: sources,
+      stillPhase
     });
     if (contam !== "none") {
       sources.push(`contaminationClass:${contam}`);
@@ -254310,7 +254862,8 @@ ${String(ctx.rawPrompt ?? "")}`;
     promptLintConflicts: warnings.filter((w) => w.startsWith("promptLint:")).map((w) => w.replace(/^promptLint:/, "")),
     generationContract,
     bgPolicyReason: bgPolicyResult.reason,
-    recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : void 0
+    recipeHeals: recipeHeal.healed.length ? recipeHeal.healed : void 0,
+    stillPhase: ctx.stillPhase ?? generationContract?.stillPhase ?? null
   };
 }
 function computeComposeHash(ctx) {
@@ -258243,13 +258796,25 @@ function fillPhaseTemplate(tmpl, dur) {
   const t2 = Math.max(t1 + 0.5, Math.round(2 * dur / 3 * 10) / 10);
   return tmpl.replace(/\{t1\}/g, String(t1)).replace(/\{t2\}/g, String(t2)).replace(/\{dur\}/g, String(dur));
 }
-function vdBendPhases(vd, dur) {
+function vdBendPhases(vd, dur, stillPhase) {
   const d = Math.max(2, dur);
   const a = Math.max(0.5, Math.round(d / 3 * 10) / 10);
   const b = Math.max(a + 0.5, Math.round(2 * d / 3 * 10) / 10);
+  const phase = String(stillPhase ?? "");
+  if (phase === "held") {
+    if (/捏|攥|握|持/.test(vd)) return [`0s-${d}s: \u4FDD\u6301\u6301\u7EB8/\u634F\u7F18\u53EF\u8BFB\uFF0C\u7981\u6B62\u518D\u5F2F\u8170\u89E6\u53CA`];
+    return [`0s-${d}s: \u9759\u5E27\u6301\u6001\u8FDE\u7EED\uFF0C\u7981\u6B62\u518D\u8FDB\u5165\u5F2F\u8170\u89E6\u53CA`];
+  }
   const phases = [];
-  if (/弯腰|俯身/.test(vd)) phases.push(`0s-${a}s: \u5F2F\u8170\u4FEF\u8EAB`);
-  if (/捡|拾|触及/.test(vd)) phases.push(`${phases.length ? a : 0}s-${b}s: \u6307\u5C16\u89E6\u53CA\u7269\u4EF6`);
+  if (phase === "mid_contact") {
+    phases.push(`0s-${a}s: \u6307\u5C16\u5DF2\u89E6\u7EB8\u7F18`);
+    if (/捏|攥|握/.test(vd)) phases.push(`${a}s-${d}s: \u634F\u7D27\u7EB8\u7F18`);
+    return phases;
+  }
+  if (/弯腰|俯身/.test(vd) || phase === "approaching") phases.push(`0s-${a}s: \u5F2F\u8170\u4FEF\u8EAB`);
+  if (/捡|拾|触及/.test(vd) || phase === "approaching") {
+    phases.push(`${phases.length ? a : 0}s-${b}s: \u6307\u5C16\u89E6\u53CA\u7269\u4EF6`);
+  }
   if (/捏|攥|握/.test(vd)) phases.push(`${phases.length ? b : a}s-${d}s: \u634F\u7D27\u7EB8\u7F18`);
   return phases;
 }
@@ -258272,6 +258837,14 @@ function buildRealizationAdaptPack(input) {
   const dur = Math.max(1, Math.round(Number(input.durationSec) || 3));
   const fixture = loadRealizationMotionAdaptFixture();
   const sources = ["realizationAdapt.build"];
+  let stillPhase = null;
+  try {
+    const { readStillPhase: readStillPhase2 } = (init_stillPhasePlan(), __toCommonJS(stillPhasePlan_exports));
+    stillPhase = readStillPhase2(input.stillMeta) ?? (typeof input.stillMeta?.stillPhase === "string" ? input.stillMeta.stillPhase : null);
+  } catch {
+    stillPhase = typeof input.stillMeta?.stillPhase === "string" ? String(input.stillMeta.stillPhase) : null;
+  }
+  if (stillPhase) sources.push(`realizationAdapt.stillPhase:${stillPhase}`);
   const realization = input.realization ?? resolveRealizationState({
     intentOccupancy: input.intentOccupancy,
     visualDescription: vd,
@@ -258285,7 +258858,7 @@ function buildRealizationAdaptPack(input) {
   const mapping = fixture.mappings?.[key] ?? fixture.mappings?.[`${intent}:${intent}`];
   const enabled = input.enable !== false && isRealizationAdaptEnabled() && mayApplyRealizationAdapt({ trunkBlockers: input.trunkBlockers });
   if (!enabled || !mapping) {
-    const phases = vdBendPhases(vd, dur);
+    const phases = vdBendPhases(vd, dur, stillPhase);
     return {
       intentOccupancy: intent,
       realizationOccupancy: real,
@@ -258294,16 +258867,19 @@ function buildRealizationAdaptPack(input) {
       mappingKey: key,
       motionPhases: phases,
       motionBody: phases.join("\n"),
-      motionStartHint: "",
+      motionStartHint: stillPhase === "held" ? "\u4ECE\u9759\u5E27\u6301\u6001\u8D77\uFF0C\u7981\u6B62\u518D\u5F2F\u8170\u89E6\u53CA" : "",
       cameraPolicy: input.dialoguePresent ? "\u9759\u6B62" : "\u8F7B\u5FAE\u8FD0\u955C",
-      i2vCriticalFacts: [],
-      forbiddenMotionTokens: [],
+      i2vCriticalFacts: stillPhase === "held" ? ["\u8D77\u6001=\u9759\u5E27\u6301\u6001", "\u7981\u6B62\u518D\u8FDB\u5165\u5F2F\u8170\u89E6\u53CA"] : [],
+      forbiddenMotionTokens: stillPhase === "held" ? ["\u5F2F\u8170\u4FEF\u8EAB", "\u5F2F\u8170\u6361\u62FE", "\u4FEF\u8EAB\u6361", "\u6307\u5C16\u89E6\u53CA"] : [],
       sources: [...sources, "realizationAdapt.disabled_or_no_mapping"]
     };
   }
   let motionPhases = [];
-  if (mapping.useVdPhases) {
-    motionPhases = vdBendPhases(vd, dur);
+  if (stillPhase === "held") {
+    motionPhases = vdBendPhases(vd, dur, "held");
+    sources.push("realizationAdapt.held_plate_no_reenter_bend");
+  } else if (mapping.useVdPhases) {
+    motionPhases = vdBendPhases(vd, dur, stillPhase);
     sources.push("realizationAdapt.vd_phases");
   } else if (mapping.phases?.length) {
     motionPhases = mapping.phases.map((p3) => fillPhaseTemplate(p3, dur));
@@ -258313,14 +258889,16 @@ function buildRealizationAdaptPack(input) {
   const atmosphere = mapping.atmosphereBoost ?? extractAtmosphere(vd, input.stillMeta) ?? void 0;
   const sfx = input.sfxIntent ?? input.avCausality?.audioBeat ?? mapping.sfxBeat ?? (/纸|休书|捏/.test(vd) ? "\u7EB8\u5F20\u6469\u64E6" : void 0);
   const footnote = degraded && intent === "bend_pickup" && real !== "bend_pickup" ? mapping.narrativeFootnote ?? realizationDegradedUserNote(realization) : void 0;
-  const motionStartHint = String(mapping.motionStartHint ?? "").trim();
+  const motionStartHint = stillPhase === "held" ? "\u4ECE\u9759\u5E27\u6301\u6001\u8D77\uFF0C\u7981\u6B62\u518D\u5F2F\u8170\u89E6\u53CA" : String(mapping.motionStartHint ?? "").trim();
   const i2vFacts = [...mapping.i2vCriticalFacts ?? []];
   if (degraded) i2vFacts.push("\u8D77\u6001\u4E0E\u9759\u5E27\u4E00\u81F4");
+  if (stillPhase === "held") i2vFacts.push("\u8D77\u6001=\u9759\u5E27\u6301\u6001", "\u7981\u6B62\u518D\u8FDB\u5165\u5F2F\u8170\u89E6\u53CA");
+  if (stillPhase === "approaching") i2vFacts.push("\u8D77\u6001=\u63A5\u8FD1\u672A\u63E1", "Motion\u53EF\u9012\u8FDB\u81F3\u89E6\u53CA\u634F\u7D27");
   return {
     intentOccupancy: intent,
     realizationOccupancy: real,
     realizationDegraded: degraded,
-    adapted: degraded || real !== intent,
+    adapted: degraded || real !== intent || stillPhase === "held",
     mappingKey: key,
     motionPhases,
     motionBody: motionPhases.join("\n"),
@@ -258331,7 +258909,7 @@ function buildRealizationAdaptPack(input) {
     performanceBoost: perf,
     narrativeFootnote: footnote,
     i2vCriticalFacts: [...new Set(i2vFacts)],
-    forbiddenMotionTokens: mapping.forbiddenMotionTokens ?? [],
+    forbiddenMotionTokens: stillPhase === "held" ? [.../* @__PURE__ */ new Set([...mapping.forbiddenMotionTokens ?? [], "\u5F2F\u8170\u4FEF\u8EAB", "\u5F2F\u8170\u6361\u62FE", "\u4FEF\u8EAB\u6361", "\u6307\u5C16\u89E6\u53CA"])] : mapping.forbiddenMotionTokens ?? [],
     sources
   };
 }
@@ -261276,7 +261854,7 @@ function buildImageIR(shot, config3) {
     n.sceneName ?? "",
     n.shotSize ?? "medium shot",
     n.colorTone ?? "4500K",
-    `\u60C5\u7EEA${n.emotionIntensity ?? 4}`
+    `\u60C5\u7EEA${n.emotionIntensity ?? shot.emotionIntensity ?? 4}`
   ].filter(Boolean);
   const constraints = [];
   if (n.type === "PURE-SCENE") constraints.push("no people, no characters");
@@ -279597,6 +280175,112 @@ var init_repairAsDesign = __esm({
   }
 });
 
+// src/ruleEngine/compilers/literaryIntentGraph.ts
+var literaryIntentGraph_exports = {};
+__export(literaryIntentGraph_exports, {
+  applyLiteraryIntentGraphToShot: () => applyLiteraryIntentGraphToShot,
+  buildLiteraryIntentGraph: () => buildLiteraryIntentGraph
+});
+function buildLiteraryIntentGraph(shot) {
+  const vd = String(shot.visualDescription ?? "");
+  const narr2 = shot.narrative ?? {};
+  const names = Array.isArray(shot.characterNames) ? shot.characterNames.map(String) : [];
+  const cam = shot.shotDesign?.cameraAnchor;
+  const ff = extractStillFirstFrameLiterary({
+    visualDescription: vd,
+    narrative: narr2,
+    videoPrompt: String(shot.generation?.videoPrompt ?? ""),
+    characterNames: names,
+    shotSize: String(shot.shotSize ?? narr2.shotSize ?? ""),
+    emotionIntensity: narr2.emotionIntensity != null ? Number(narr2.emotionIntensity) : shot.emotionIntensity,
+    bgBlur: typeof cam?.bgBlur === "boolean" ? cam.bgBlur : null
+  });
+  ensureStillPhaseOnShot(shot, { force: false });
+  return {
+    primaryName: ff.primaryName,
+    secondaryBudget: ff.secondaryBudget,
+    actionVerb: ff.actionLine || null,
+    propObject: ff.propLine ? /休书/.test(ff.propLine) ? "\u4F11\u4E66" : "\u8584\u7EB8" : null,
+    poseOccupancy: ff.intentClass === "action_primary" ? "bend_pickup" : null,
+    emotionIntensity: ff.emotionIntensity,
+    bgBlur: ff.bgBlur,
+    stillPhasePlan: ff.phasePlan,
+    industryFlags: {
+      otsLike: ff.intentClass === "ots",
+      speakLike: ff.intentClass === "speak",
+      faceish: ff.intentClass === "face"
+    },
+    firstFrame: ff
+  };
+}
+function applyLiteraryIntentGraphToShot(shot) {
+  if (shot.designLock === true || shot.authorOverrideLock === true) {
+    return { changed: false, graph: buildLiteraryIntentGraph(shot), diffs: [] };
+  }
+  const diffs = [];
+  const phase = ensureStillPhaseOnShot(shot);
+  if (phase.changed) diffs.push(`stillPhase:${phase.plan.stillPhase}`);
+  const graph = buildLiteraryIntentGraph(shot);
+  const narr2 = { ...shot.narrative ?? {} };
+  let changed = phase.changed;
+  const ff = graph.firstFrame;
+  if (graph.primaryName && String(narr2.literaryPrimary ?? "") !== graph.primaryName) {
+    narr2.literaryPrimary = graph.primaryName;
+    changed = true;
+    diffs.push(`literaryPrimary:${graph.primaryName}`);
+  }
+  if (ff?.actionLine && String(narr2.firstFrameAction ?? "") !== ff.actionLine) {
+    narr2.firstFrameAction = ff.actionLine;
+    changed = true;
+    diffs.push("firstFrameAction");
+  }
+  if (ff?.propLine && String(narr2.firstFrameProp ?? "") !== ff.propLine) {
+    narr2.firstFrameProp = ff.propLine;
+    changed = true;
+    diffs.push("firstFrameProp");
+  }
+  if (narr2.emotionIntensity == null) {
+    const fromShot = Number(shot.emotionIntensity);
+    if (Number.isFinite(fromShot)) {
+      narr2.emotionIntensity = fromShot;
+      changed = true;
+      diffs.push(`emotionIntensity:${fromShot}`);
+    } else if (ff?.emotionIntensity != null) {
+      narr2.emotionIntensity = ff.emotionIntensity;
+      changed = true;
+      diffs.push(`emotionIntensity:${ff.emotionIntensity}`);
+    }
+  }
+  if (graph.poseOccupancy && !shot.intentOccupancy) {
+    shot.intentOccupancy = graph.poseOccupancy;
+    changed = true;
+    diffs.push(`intentOccupancy:${graph.poseOccupancy}`);
+  }
+  if (graph.secondaryBudget === "skirt_blur" && !narr2.secondaryBudget) {
+    narr2.secondaryBudget = "skirt_blur";
+    changed = true;
+    diffs.push("secondaryBudget:skirt_blur");
+  }
+  if (typeof graph.bgBlur === "boolean" && narr2.bgBlur == null) {
+    narr2.bgBlur = graph.bgBlur;
+    changed = true;
+  }
+  if (changed) {
+    shot.narrative = narr2;
+    shot.promptState = "stale";
+    shot.videoStale = true;
+    shot.packageVersion = Number(shot.packageVersion ?? 0) + 1;
+  }
+  return { changed, graph, diffs };
+}
+var init_literaryIntentGraph = __esm({
+  "src/ruleEngine/compilers/literaryIntentGraph.ts"() {
+    "use strict";
+    init_stillFirstFrameExtract();
+    init_stillPhasePlan();
+  }
+});
+
 // src/ruleEngine/compilers/transitionAudioStamp.ts
 var transitionAudioStamp_exports = {};
 __export(transitionAudioStamp_exports, {
@@ -280070,7 +280754,12 @@ function expandRevealThenReaction(shots) {
         narrative: {
           ...s.narrative ?? {},
           shotSize: size,
-          dialogue: { lines: [] }
+          dialogue: { lines: [] },
+          // LGIA: reaction child is held/face — not parent's approaching bend soup
+          stillPhase: "held",
+          stillPhaseSource: "split_child_policy",
+          stillPhaseReason: "reaction_held_face",
+          contactStartState: "at_locus"
         },
         shotDesign: {
           ...s.shotDesign ?? {},
@@ -280143,7 +280832,12 @@ function expandActionThenDialogueMcu(shots) {
         visualDescription: vd.replace(/[，,]?\s*[^。]*说[^。]*/g, "").trim() || vd,
         narrative: {
           ...s.narrative ?? {},
-          dialogue: { lines: [] }
+          dialogue: { lines: [] },
+          // LGIA: action child inherits parent stillPhase (process freeze)
+          stillPhase: s.narrative?.stillPhase ?? "approaching",
+          stillPhaseSource: "split_child_inherit",
+          stillPhaseReason: "face_split_action_inherit",
+          literaryPrimary: s.narrative?.literaryPrimary
         },
         shotDesign: {
           ...s.shotDesign ?? {},
@@ -280167,6 +280861,14 @@ function expandActionThenDialogueMcu(shots) {
         _faceBudgetSplitId: splitId,
         shotSize: speakDef?.shotSize ?? "\u8FD1\u666F",
         visualDescription: /面容可读|抬视线/.test(vd) ? vd : `${vd.replace(/弯腰|俯身|低头|跪持/g, "\u62AC\u89C6\u7EBF").slice(0, 180)}${vd.endsWith("\u3002") ? "" : "\u3002"}\u8FD1\u666F\u9762\u5BB9\u53EF\u8BFB\uFF0C\u62AC\u89C6\u7EBF\u53E3\u578B\u3002`,
+        narrative: {
+          ...s.narrative ?? {},
+          // LGIA: speak child is held/face dialogue — not parent approaching soup
+          stillPhase: "held",
+          stillPhaseSource: "split_child_policy",
+          stillPhaseReason: "face_split_speak_held",
+          literaryPrimary: s.narrative?.literaryPrimary
+        },
         shotDesign: {
           ...s.shotDesign ?? {},
           lipSyncPolicy: "dialogue_native",
@@ -280246,6 +280948,33 @@ function runIndustryAvSilentRepair(shotsIn, opts) {
     shots = ex.shots;
     changelog.push(...ex.changelog);
     if (ex.expanded) diffs.push(`face_split\xD7${ex.expanded}`);
+  }
+  {
+    try {
+      const { applyLiteraryIntentGraphToShot: applyLiteraryIntentGraphToShot2 } = (init_literaryIntentGraph(), __toCommonJS(literaryIntentGraph_exports));
+      for (const sh of shots) {
+        if (isDesignLocked(sh)) continue;
+        const r = applyLiteraryIntentGraphToShot2(sh);
+        if (r.changed) {
+          for (const d of r.diffs) {
+            changelog.push(
+              appendChangelog(sh, {
+                slot: d.split(":")[0] ?? "lgia",
+                before: "(empty)",
+                after: d,
+                reason: "lgia_intent_graph",
+                trigger: "lgia"
+              })
+            );
+            diffs.push(`lgia:${d}`);
+          }
+        }
+        if (r.graph.stillPhasePlan.stillPhase === "approaching") {
+          residualDebts.push("still_phase_approaching");
+        }
+      }
+    } catch {
+    }
   }
   if (Date.now() - t0 > maxMs) {
     residualDebts.push("industry_repair_timeout");
@@ -286700,7 +287429,9 @@ function formatExportGateBlockPayload(result) {
     fieldWalkGaps: result.fieldWalkGaps,
     designFindings: result.designFindings,
     shapeSalvageLog: result.shapeSalvageLog,
-    rePushPlan: result.inspected?.rePushPlan ?? []
+    rePushPlan: result.inspected?.rePushPlan ?? [],
+    chatMustFixIds: result.chatMustFixIds ?? result.laneDiagnostics?.mustIds ?? [],
+    laneDiagnostics: result.laneDiagnostics
   };
 }
 function loadImportSalvageRegistry() {
@@ -287715,6 +288446,7 @@ function runExportGateInner(raw, opts = {}) {
     industryResidualDebts: Array.isArray(
       bundle.meta?.industryResidualDebts
     ) ? bundle.meta.industryResidualDebts : void 0,
+    chatMustFixIds: authorMustIds,
     laneDiagnostics: {
       mustIds: authorMustIds,
       autoIds: autoResidualIds,
@@ -288789,6 +289521,31 @@ function runDesignAutoClose(plan, opts) {
         }
       } catch {
       }
+    }
+    try {
+      const { applyLiteraryIntentGraphToShot: applyLiteraryIntentGraphToShot2 } = (init_literaryIntentGraph(), __toCommonJS(literaryIntentGraph_exports));
+      const pdLgia = plan.planData ?? {};
+      const packLgia = pdLgia.preDesignPack ?? plan.preDesignPack ?? {};
+      const shotsLgia = [...packLgia.shots ?? []];
+      let lgiaChanged = 0;
+      for (const s of shotsLgia) {
+        const r = applyLiteraryIntentGraphToShot2(s);
+        if (r.changed) lgiaChanged++;
+      }
+      if (lgiaChanged > 0) {
+        packLgia.shots = shotsLgia;
+        if (pdLgia.preDesignPack) pdLgia.preDesignPack.shots = shotsLgia;
+        else pdLgia.preDesignPack = { shots: shotsLgia };
+        plan.planData = pdLgia;
+        if (plan.preDesignPack) plan.preDesignPack.shots = shotsLgia;
+        touched = true;
+        changes.push({
+          ruleId: "LGIA-STILL-PHASE",
+          detail: `stillPhase_stamp shots=${lgiaChanged}`,
+          path: "preDesignPack.shots[].narrative.stillPhase"
+        });
+      }
+    } catch {
     }
     if (failed.has("DEX-PROP-CONT") || Boolean(opts?.forceExpand)) {
       try {
@@ -295106,6 +295863,26 @@ async function composeAndPersistStillPrompt(db2, input) {
   const contamFromCompose = String(gc.contaminationClass ?? "").trim() || (result.sources ?? []).map((s) => /^contaminationClass:(.+)$/.exec(String(s))?.[1]).find(Boolean) || "";
   const offBeat = (result.sources ?? []).some((s) => /previous\.dropped_off_beat|contaminationClass:off_beat/i.test(String(s))) || contamFromCompose === "off_beat_cu";
   const deliveryTierCompose = contamFromCompose && contamFromCompose !== "none" ? "draft" : "preview";
+  let stillPhaseStamp = null;
+  let contactStartStamp = null;
+  try {
+    const { ensureStillPhaseOnShot: ensureStillPhaseOnShot2, readStillPhase: readStillPhase2 } = (init_stillPhasePlan(), __toCommonJS(stillPhasePlan_exports));
+    const shotLike = {
+      visualDescription: String(ctx.visualDescription ?? ""),
+      narrative: meta4?.narrative ?? {},
+      generation: { videoPrompt: String(meta4?.videoPrompt ?? "") },
+      stillPhase: result.stillPhase
+    };
+    const ensured = ensureStillPhaseOnShot2(shotLike);
+    stillPhaseStamp = ensured.plan.stillPhase;
+    contactStartStamp = ensured.plan.contactStartState;
+    if (!(result.sources ?? []).some((s) => /lgia\.stillPhase:/.test(String(s)))) {
+      result.sources?.push?.(`lgia.stillPhase:${stillPhaseStamp}`);
+    }
+    void readStillPhase2;
+  } catch {
+    stillPhaseStamp = result.stillPhase ?? (meta4?.narrative?.stillPhase ?? null);
+  }
   await db2("o_storyboard").where({ id: input.storyboardId }).update({
     // Literary SSOT column untouched — egress only in reason.promptUsed
     reason: mergeReasonMeta(row.reason, {
@@ -295136,6 +295913,15 @@ async function composeAndPersistStillPrompt(db2, input) {
       ...designContentHash ? { designContentHash, dialogueFingerprint: dialogueFingerprint || void 0 } : {},
       recipeNotPersistedToVd: true,
       stillIntentClass,
+      ...stillPhaseStamp ? {
+        stillPhase: stillPhaseStamp,
+        contactStartState: contactStartStamp ?? void 0,
+        narrative: {
+          ...meta4?.narrative ?? {},
+          stillPhase: stillPhaseStamp,
+          ...contactStartStamp ? { contactStartState: contactStartStamp } : {}
+        }
+      } : {},
       // M7: design hash recorded; video stale if prior hash differs
       ...meta4?.literaryDescHash && meta4.literaryDescHash !== litHash ? { chainStale: { still: false, video: true, burn: true }, videoStale: true } : {},
       ...meta4?.designContentHash && designContentHash && meta4.designContentHash !== designContentHash ? { videoStale: true, promptState: "stale" } : {}
@@ -299308,7 +300094,8 @@ function compressStillEgressForSeedream(input) {
     try {
       const { occupancyCompressLead: occupancyCompressLead2 } = (init_primaryIntentSeal(), __toCommonJS(primaryIntentSeal_exports));
       const lead = occupancyCompressLead2(
-        bendOccSeed ? "bend_pickup" : occ
+        bendOccSeed ? "bend_pickup" : occ,
+        { stillPhase: input.stillPhase ?? null }
       );
       geomLead = sceneFirst ? `${lead.replace(/。$/, "")}\uFF1B\u80CC\u666F\uFF1A\u4E3B\u573A\u666F\u6BBF\u5185\u6D45\u666F\u6DF1\u53EF\u8FA8\uFF0C\u7981\u6B62\u7070\u68DA\u767D\u68DA\uFF1B\u88D9\u6446\u865A\u5316\u4E3A\u52A0\u5F3A\u9879\u3002` : `${lead.replace(/。$/, "")}\uFF1B\u80CC\u666F\u4EC5\u88D9\u6446\u788E\u7247\u865A\u5316\u3002`;
     } catch {
@@ -300423,8 +301210,10 @@ var init_judgeSampleAtoms = __esm({
 // src/ruleEngine/quality/applyLiteraryRepairDeltas.ts
 var applyLiteraryRepairDeltas_exports = {};
 __export(applyLiteraryRepairDeltas_exports, {
+  PROP_SOFT_MIN_BYTES: () => PROP_SOFT_MIN_BYTES,
   applyLiteraryRepairDeltas: () => applyLiteraryRepairDeltas,
-  propSoftSlotActuallyPresent: () => propSoftSlotActuallyPresent
+  propSoftSlotActuallyPresent: () => propSoftSlotActuallyPresent,
+  propSoftSlotByteLength: () => propSoftSlotByteLength
 });
 async function applyLiteraryRepairDeltas(input) {
   const misses = input.missingEffects ?? [];
@@ -300577,7 +301366,8 @@ async function applyLiteraryRepairDeltas(input) {
           const softIdx = roles.indexOf("softEnv");
           const softB64 = softIdx >= 0 ? refs[softIdx]?.base64 : void 0;
           const fromScene = await composeBendPropSoftFromScene2({ sceneBase64: softB64 });
-          if (fromScene?.base64) {
+          const { isPoseCueNoPaperProp: isPoseCueNoPaperProp2 } = (init_stillFirstFrameExtract(), __toCommonJS(stillFirstFrameExtract_exports));
+          if (fromScene?.base64 && !isPoseCueNoPaperProp2(fromScene.reason)) {
             synth = {
               base64: fromScene.base64,
               kind: fromScene.kind,
@@ -300585,6 +301375,8 @@ async function applyLiteraryRepairDeltas(input) {
               plateMode: "object_inset"
             };
             sources.push(`delta.propSoft_scene_floor:${fromScene.reason}`);
+          } else if (fromScene && isPoseCueNoPaperProp2(fromScene.reason)) {
+            sources.push(`delta.propSoft.reject_pose_cue:${fromScene.reason}`);
           }
         } catch {
         }
@@ -300689,21 +301481,33 @@ async function applyLiteraryRepairDeltas(input) {
     claimPlateRepair
   };
 }
-function propSoftSlotActuallyPresent(input) {
+function propSoftSlotByteLength(input) {
   const roles = input.refsRoles ?? [];
   const refs = input.referenceList ?? [];
+  const rawOf = (b64) => String(b64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim();
   const idx = roles.indexOf("propSoft");
-  if (idx >= 0) {
-    return Boolean(String(refs[idx]?.base64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim());
+  const candidates = [];
+  if (idx >= 0) candidates.push(rawOf(String(refs[idx]?.base64 ?? "")));
+  for (const r of refs) {
+    if (r.role === "propSoft") candidates.push(rawOf(String(r.base64 ?? "")));
   }
-  return refs.some(
-    (r) => r.role === "propSoft" && Boolean(String(r.base64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim())
-  );
+  let max = 0;
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const approx = Math.floor(raw.length * 3 / 4);
+    if (approx > max) max = approx;
+  }
+  return max;
 }
+function propSoftSlotActuallyPresent(input) {
+  return propSoftSlotByteLength(input) >= (input.minBytes ?? PROP_SOFT_MIN_BYTES);
+}
+var PROP_SOFT_MIN_BYTES;
 var init_applyLiteraryRepairDeltas = __esm({
   "src/ruleEngine/quality/applyLiteraryRepairDeltas.ts"() {
     "use strict";
     init_literaryPrimaryEffects();
+    PROP_SOFT_MIN_BYTES = 64;
   }
 });
 
@@ -300788,6 +301592,14 @@ function resolveSample(input) {
   }
 }
 async function reassertLiteraryEffectsAfterStill(input) {
+  let stillPhase = input.stillPhase ?? null;
+  if (!stillPhase && input.episodeShot) {
+    try {
+      const { readStillPhase: readStillPhase2 } = (init_stillPhasePlan(), __toCommonJS(stillPhasePlan_exports));
+      stillPhase = readStillPhase2(input.episodeShot);
+    } catch {
+    }
+  }
   let localHeuristicOk;
   let localPoseSignals = {};
   if (!input.skipLocalHeuristic) {
@@ -300836,7 +301648,8 @@ async function reassertLiteraryEffectsAfterStill(input) {
     videoMotionStartHint: input.videoMotionStartHint,
     localHeuristicOk,
     softEnvHung: (input.refsRoles ?? []).includes("softEnv") && input.droppedSoftEnv !== true,
-    droppedSoftEnv: input.droppedSoftEnv
+    droppedSoftEnv: input.droppedSoftEnv,
+    stillPhase
   });
   const sample = resolveSample(input);
   let sampleMustFulfilled = q.literaryEffectsQualified === true;
@@ -301969,6 +302782,72 @@ var init_untilClearRuntime = __esm({
   }
 });
 
+// src/ruleEngine/compilers/lgiaDeliveryPolicy.ts
+var lgiaDeliveryPolicy_exports = {};
+__export(lgiaDeliveryPolicy_exports, {
+  resolveLgiaDelivery: () => resolveLgiaDelivery
+});
+function resolveLgiaDelivery(input) {
+  const keyOpt = input.keyOptional === true || input.vlmKeyMissing === true || input.pixelDimStatus === "unmeasured";
+  if (input.trueUnshootable === true) {
+    return {
+      adviseSmartRepair: true,
+      requireFixBeforeBurn: true,
+      deliveryTier: "draft",
+      burnAllowed: false,
+      reason: "true_unshootable",
+      userMessageHint: "\u771F\u4E0D\u53EF\u62CD\uFF1A\u7F3A\u5A92\u4F53\u6216\u5382\u5546\u4E0D\u53EF\u7528"
+    };
+  }
+  const contam = String(input.contaminationClass ?? "none");
+  const litFail = input.literaryEffectsQualified === false;
+  const fidelityFix = input.fidelityRequireFix === true;
+  const composedFix = input.composedRequireFix === true && !keyOpt;
+  if (keyOpt) {
+    return {
+      adviseSmartRepair: litFail || fidelityFix || contam !== "none" || composedFix,
+      requireFixBeforeBurn: false,
+      deliveryTier: litFail || contam !== "none" ? "preview" : "preview",
+      burnAllowed: true,
+      reason: "key_optional_unmeasured_soft",
+      userMessageHint: "\u50CF\u7D20\u672A\u6D4B\uFF08Key \u53EF\u9009\uFF0C\u975E\u5931\u8D25\uFF09\uFF1B\u53EF\u8BD5\u62CD\uFF1B\u5EFA\u8BAE\u667A\u80FD\u4FEE\u590D"
+    };
+  }
+  if (litFail || contam !== "none" && contam !== "none") {
+    return {
+      adviseSmartRepair: true,
+      requireFixBeforeBurn: false,
+      deliveryTier: "preview",
+      burnAllowed: true,
+      reason: contam !== "none" ? `contam_soft:${contam}` : "literary_soft_debt",
+      userMessageHint: "\u8BBE\u8BA1\u610F\u56FE\u672A\u5C3D\xB7\u53EF\u964D\u7EA7\u8BD5\u62CD\xB7\u667A\u80FD\u4FEE\u590D"
+    };
+  }
+  if (fidelityFix || composedFix) {
+    return {
+      adviseSmartRepair: true,
+      requireFixBeforeBurn: false,
+      deliveryTier: "preview",
+      burnAllowed: true,
+      reason: "fidelity_soft_advise",
+      userMessageHint: "\u4FDD\u771F\u5EFA\u8BAE\u4FEE\u590D\xB7\u4E0D\u963B\u65AD\u8BD5\u62CD"
+    };
+  }
+  return {
+    adviseSmartRepair: false,
+    requireFixBeforeBurn: false,
+    deliveryTier: "burn",
+    burnAllowed: true,
+    reason: "clear",
+    userMessageHint: ""
+  };
+}
+var init_lgiaDeliveryPolicy = __esm({
+  "src/ruleEngine/compilers/lgiaDeliveryPolicy.ts"() {
+    "use strict";
+  }
+});
+
 // src/ruleEngine/qc/stillVideoReadiness.ts
 var stillVideoReadiness_exports = {};
 __export(stillVideoReadiness_exports, {
@@ -301996,7 +302875,14 @@ function assessStillVideoReadiness(input) {
     misses.push("visualPass_false");
   }
   const contam = String(meta4.contaminationClass ?? "").trim();
-  if (contam && contam !== "none") misses.push(`contam:${contam}`);
+  if (contam && contam !== "none") {
+    const phase = String(meta4.stillPhase ?? "");
+    if ((phase === "approaching" || phase === "mid_contact") && (contam === "contact_zombie" || contam === "plate_geometry")) {
+      misses.push(`contam_soft:${contam}`);
+    } else {
+      misses.push(`contam:${contam}`);
+    }
+  }
   if (String(meta4.deliveryTier ?? "") === "draft") misses.push("delivery:draft");
   if (meta4.keyOptional === true) misses.push("key_optional");
   if (String(meta4.pixelDimStatus ?? "") === "unmeasured") misses.push("pixel_unmeasured");
@@ -302213,6 +303099,8 @@ function judgeStillHeuristicNoVlm(input) {
   const hints = [];
   let debtKind = "key_unmeasured";
   let pixelDimStatus2 = "unmeasured";
+  const phase = String(input.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
   if (String(input.propPlateGrade ?? "") === "missing" && /休书|婚书|信笺|纸|捡|捏/.test(vd)) {
     atomMisses.push("prop_plate");
     debtKind = "prop_plate";
@@ -302220,17 +303108,18 @@ function judgeStillHeuristicNoVlm(input) {
   }
   const wantsAction = /弯腰|捡|捏紧|指节/.test(vd);
   if (wantsAction) {
-    if (!/弯腰|捡|捏紧|指节/.test(prompt)) {
+    const actionOk = approaching ? /弯腰|俯身|接近|伸向|触及|捡/.test(prompt) : /弯腰|捡|捏紧|指节/.test(prompt);
+    if (!actionOk) {
       atomMisses.push("action_primary_egress");
       debtKind = "action_misfire";
       hints.push("compose_regen_action_primary_lead+force_full");
     }
-    if (input.signals?.uprightAtTableSuspected) {
+    if (!approaching && input.signals?.uprightAtTableSuspected) {
       atomMisses.push("action_misfire:desk_lean_ne_pickup");
       debtKind = "action_misfire";
       hints.push("compose_regen_action_primary_lead+force_full");
     }
-    if (input.signals?.propInLeadHandSuspected === false) {
+    if (!approaching && input.signals?.propInLeadHandSuspected === false) {
       atomMisses.push("prop_ownership");
       debtKind = "action_misfire";
       hints.push("prop_in_lead_hand");
@@ -303502,7 +304391,8 @@ async function runGenerateFlowImageCore(db2, body, deps = {}) {
                   (_, i) => (lastComposed2.refsRoles ?? [])[i] === "softEnv"
                 )?.base64 || (softEnvPlatePresent ? referenceList[referenceList.length - 1]?.base64 : void 0);
                 const fromScene = await composeBendPropSoftFromScene2({ sceneBase64: softB64 });
-                if (fromScene?.base64) {
+                const { isPoseCueNoPaperProp: isPoseCueNoPaperProp2 } = (init_stillFirstFrameExtract(), __toCommonJS(stillFirstFrameExtract_exports));
+                if (fromScene?.base64 && !isPoseCueNoPaperProp2(fromScene.reason)) {
                   synth = {
                     base64: fromScene.base64,
                     kind: fromScene.kind,
@@ -303513,6 +304403,11 @@ async function runGenerateFlowImageCore(db2, body, deps = {}) {
                   lastComposed2.sources = [
                     ...lastComposed2.sources ?? [],
                     `propSoft.${fromScene.reason}`
+                  ];
+                } else if (fromScene && isPoseCueNoPaperProp2(fromScene.reason)) {
+                  lastComposed2.sources = [
+                    ...lastComposed2.sources ?? [],
+                    `propSoft.reject_pose_cue_no_paper:${fromScene.reason}`
                   ];
                 }
               } catch {
@@ -304463,7 +305358,8 @@ async function runGenerateFlowImageCore(db2, body, deps = {}) {
           droppedSoftEnv: lastComposed2.droppedSoftEnv,
           fragmentPlateHung: lastComposed2.fragmentPlateHung,
           referenceList: lastComposed2.lastReferenceList,
-          identityContam: lastComposed2.identityContamProbe
+          identityContam: lastComposed2.identityContamProbe,
+          stillPhase: lastComposed2.stillPhase ?? lastComposed2.episodeShot?.narrative?.stillPhase ?? null
         });
         lastComposed2.literaryEffectsPersist = literaryEffectsPersistSlice2(lit);
         if (lit.sampleMustFulfilled === true || lit.literaryEffectsQualified === true) break;
@@ -304663,7 +305559,9 @@ async function finalizeSuccess(db2, input) {
       propPlateMissing: input.composed.propPlateMissing,
       imageBase64: input.composed.lastImageBase64,
       videoMotionStartHint: input.composed.generationContract?.videoMotionStartHint,
-      identityContam: input.composed.identityContamProbe
+      identityContam: input.composed.identityContamProbe,
+      stillPhase: input.composed.stillPhase ?? input.composed.generationContract?.stillPhase ?? input.composed.narrative?.stillPhase ?? null,
+      referenceList: input.composed.referenceList
     });
     if (litAfter.localPoseSignals.primaryPoseGuess) {
       poseEvidence = {
@@ -304862,6 +305760,7 @@ async function finalizeSuccess(db2, input) {
   try {
     const { classifyStillContamination: classifyStillContamination2 } = (init_stillSealGate(), __toCommonJS(stillSealGate_exports));
     const seal = input.composed.generationContract?.primaryIntentSeal ?? null;
+    const stillPhaseForContam = input.composed.stillPhase ?? input.composed.generationContract?.stillPhase ?? null;
     contaminationClass = classifyStillContamination2({
       promptUsed: input.promptUsed,
       seal,
@@ -304869,7 +305768,8 @@ async function finalizeSuccess(db2, input) {
       propPlateMissing: Boolean(input.composed.propPlateMissing),
       previousDroppedOffBeat: (input.composed.sources ?? []).some(
         (s) => /previous\.dropped/.test(s)
-      )
+      ),
+      stillPhase: stillPhaseForContam
     });
     const gcContam = String(
       input.composed.generationContract?.contaminationClass ?? ""
@@ -304899,7 +305799,30 @@ async function finalizeSuccess(db2, input) {
     }
   })();
   const ctaOut = input.composed.actuatorDegraded && Boolean(input.composed.keepSoftEnvRef) && !hq ? "\u542F\u52A8Comfy\u6216\u4EBA\u5BA1" : litAfter?.ctaLabel || ctaResolvedFinal?.label || ctaResolved?.label || vlmCta;
-  const requireFixBeforeBurn = Boolean(input.composed.requireFixBeforeBurn) || litDebtStop || nextStepOut === "split_shot" || nextStepOut === "chat_repair" || Boolean(input.composed.fidelityRequireFix) || contaminationClass !== "none" || litAfter?.literaryEffectsQualified === false;
+  const lgiaDelivery = (() => {
+    try {
+      const { resolveLgiaDelivery: resolveLgiaDelivery2 } = (init_lgiaDeliveryPolicy(), __toCommonJS(lgiaDeliveryPolicy_exports));
+      return resolveLgiaDelivery2({
+        keyOptional: keyMissing,
+        pixelDimStatus: keyMissing ? "unmeasured" : input.visualPass ? "measured_pass" : "measured_fail",
+        vlmKeyMissing: keyMissing,
+        stillPhase: input.composed.stillPhase ?? input.composed.generationContract?.stillPhase ?? null,
+        literaryEffectsQualified: litAfter?.literaryEffectsQualified,
+        contaminationClass,
+        fidelityRequireFix: Boolean(input.composed.fidelityRequireFix),
+        composedRequireFix: Boolean(input.composed.requireFixBeforeBurn),
+        trueUnshootable: nextStepOut === "split_shot" || nextStepOut === "chat_repair" && litDebtStop
+      });
+    } catch {
+      return null;
+    }
+  })();
+  if (lgiaDelivery) {
+    deliveryTier = lgiaDelivery.deliveryTier;
+  }
+  const requireFixBeforeBurn = lgiaDelivery ? lgiaDelivery.requireFixBeforeBurn : Boolean(input.composed.requireFixBeforeBurn) || litDebtStop || nextStepOut === "split_shot" || nextStepOut === "chat_repair";
+  const adviseSmartRepair = lgiaDelivery?.adviseSmartRepair === true;
+  const burnAllowed = lgiaDelivery?.burnAllowed !== false;
   const { assessStillVideoReadiness: assessStillVideoReadiness2 } = (init_stillVideoReadiness(), __toCommonJS(stillVideoReadiness_exports));
   const readiness = assessStillVideoReadiness2({
     stillQuality: hq ? "hq_ok" : "weak",
@@ -305400,8 +306323,13 @@ async function finalizeSuccess(db2, input) {
           visualDescription: input.literaryDesc,
           promptUsed: input.promptUsed,
           propPlateGrade: input.composed.propPlateGrade,
-          vlmKeyPresent: !keyMissing && Boolean(input.visualPassAt)
+          vlmKeyPresent: !keyMissing && Boolean(input.visualPassAt),
+          stillPhase: input.composed.stillPhase ?? input.composed.generationContract?.stillPhase ?? null
         });
+        const phase = input.composed.stillPhase ?? input.composed.generationContract?.stillPhase ?? "";
+        if ((phase === "approaching" || phase === "mid_contact") && hj.debtKind === "action_misfire") {
+          return "key_unmeasured";
+        }
         if (hj.debtKind && hj.debtKind !== "key_unmeasured") return hj.debtKind;
       } catch {
       }
@@ -305425,6 +306353,15 @@ async function finalizeSuccess(db2, input) {
       (s) => /previous\.dropped_off_beat|contaminationClass:off_beat/i.test(String(s))
     ),
     requireFixBeforeBurn,
+    adviseSmartRepair,
+    burnAllowed,
+    stillPhase: input.composed.stillPhase ?? input.composed.generationContract?.stillPhase ?? (() => {
+      const src = input.composed.sources ?? [];
+      const hit = src.find((s) => /^ff\.phase:([^:]+)/.test(s) || /^lgia\.stillPhase:/.test(s));
+      if (!hit) return null;
+      const m = /^ff\.phase:([^:]+)/.exec(hit) || /^lgia\.stillPhase:(.+)$/.exec(hit);
+      return m?.[1] ?? null;
+    })(),
     ctaKind: ctaResolvedFinal?.kind ?? ctaResolved?.kind,
     autoRepairStage: autoRepair.autoRepairStage,
     autoRepairRound: autoRepair.autoRepairRound,
@@ -305684,6 +306621,9 @@ var init_generateFlowImage = __esm({
               refreshStoryboardBeforeRegen: result.refreshStoryboardBeforeRegen,
               deliveryTier: result.deliveryTier,
               requireFixBeforeBurn: result.requireFixBeforeBurn,
+              adviseSmartRepair: result.adviseSmartRepair,
+              burnAllowed: result.burnAllowed,
+              stillPhase: result.stillPhase,
               ctaKind: result.ctaKind
             })
           );
@@ -309303,7 +310243,8 @@ ${promptText}`;
                   episodeShot: item,
                   droppedSoftEnv: composedForPipe.droppedSoftEnv,
                   fragmentPlateHung: composedForPipe.fragmentPlateHung,
-                  referenceList: composedForPipe.lastReferenceList
+                  referenceList: composedForPipe.lastReferenceList,
+                  stillPhase: item.narrative?.stillPhase ?? composedForPipe.stillPhase ?? null
                 });
                 composedForPipe.literaryEffectsPersist = literaryEffectsPersistSlice2(litAfter);
                 if (litAfter.videoMotionStartHint && composedForPipe.generationContract) {
@@ -309550,7 +310491,34 @@ ${promptText}`;
                 missingSlots: loopOut.repairMissingSlots ?? repairRoute?.missingSlots,
                 irdPrimaryAction: loopOut.repairIrdPrimaryAction ?? repairRoute?.irdPrimaryAction,
                 videoStale: true,
-                deliveryTier: allowHq && litAfter?.literaryEffectsQualified !== false ? "burn" : litAfter?.literaryEffectsQualified === false ? "draft" : "preview",
+                ...(() => {
+                  try {
+                    const { resolveLgiaDelivery: resolveLgiaDelivery2 } = (init_lgiaDeliveryPolicy(), __toCommonJS(lgiaDeliveryPolicy_exports));
+                    const d = resolveLgiaDelivery2({
+                      keyOptional: true,
+                      vlmKeyMissing: keyMissing,
+                      pixelDimStatus: keyMissing ? "unmeasured" : allowHq ? "measured_pass" : "measured_fail",
+                      stillPhase: item.narrative?.stillPhase ?? composedForPipe.stillPhase ?? null,
+                      literaryEffectsQualified: litAfter?.literaryEffectsQualified,
+                      contaminationClass: String(
+                        composedForPipe.generationContract?.contaminationClass ?? "none"
+                      ),
+                      fidelityRequireFix: false,
+                      composedRequireFix: false
+                    });
+                    return {
+                      deliveryTier: d.deliveryTier,
+                      requireFixBeforeBurn: d.requireFixBeforeBurn,
+                      adviseSmartRepair: d.adviseSmartRepair,
+                      burnAllowed: d.burnAllowed,
+                      stillPhase: d.reason.includes("still") ? item.narrative?.stillPhase : item.narrative?.stillPhase ?? composedForPipe.stillPhase
+                    };
+                  } catch {
+                    return {
+                      deliveryTier: allowHq && litAfter?.literaryEffectsQualified !== false ? "burn" : litAfter?.literaryEffectsQualified === false ? "draft" : "preview"
+                    };
+                  }
+                })(),
                 debtKind: litAfter?.debtKind,
                 ...composedForPipe.literaryEffectsPersist ?? {},
                 i2vCriticalFacts: litAfter?.i2vCriticalFacts ?? composedForPipe.generationContract?.i2vCriticalFacts,
@@ -309810,6 +310778,7 @@ var adaptFeedbackWriteback_exports = {};
 __export(adaptFeedbackWriteback_exports, {
   adaptFeedbackFromHumanRejudge: () => adaptFeedbackFromHumanRejudge,
   adaptFeedbackPersistSlice: () => adaptFeedbackPersistSlice,
+  applyAdaptFeedbackRouted: () => applyAdaptFeedbackRouted,
   applyAdaptFeedbackToPack: () => applyAdaptFeedbackToPack,
   mergeAdaptFeedback: () => mergeAdaptFeedback,
   parseAdaptFeedbackFromMeta: () => parseAdaptFeedbackFromMeta,
@@ -309866,8 +310835,33 @@ function adaptFeedbackPersistSlice(entries) {
   return { adaptFeedback: entries };
 }
 function rejudgeOwnerForFeedback(kind) {
-  if (kind === "face_unreadability" || kind === "shot_size_too_wide") return "design";
+  const k = String(kind ?? "");
+  if (k === "face_unreadability" || k === "shot_size_too_wide" || k === "still_phase" || k === "literary_primary" || k === "prop_form" || /phase|primary|prop_soft|emotionIntensity/i.test(k)) {
+    return "design";
+  }
   return "realization";
+}
+function applyAdaptFeedbackRouted(input) {
+  const designKinds = [];
+  const realizationKinds = [];
+  for (const f of input.feedback) {
+    if (rejudgeOwnerForFeedback(f.kind) === "design") designKinds.push(f.kind);
+    else realizationKinds.push(f.kind);
+  }
+  const pack2 = applyAdaptFeedbackToPack(
+    input.pack,
+    input.feedback.filter((f) => rejudgeOwnerForFeedback(f.kind) === "realization")
+  );
+  if (designKinds.length && input.shot) {
+    const sources = [...pack2.sources ?? []];
+    sources.push(`adaptFeedback.escalate_design:${designKinds.join("+")}`);
+    return {
+      pack: { ...pack2, sources },
+      designKinds,
+      realizationKinds
+    };
+  }
+  return { pack: pack2, designKinds, realizationKinds };
 }
 function applyAdaptFeedbackToPack(pack2, feedback) {
   const relevant = feedback.filter((f) => f.kind !== "realization_adapt_ok");
@@ -310158,7 +311152,8 @@ var init_humanRejudgeFidelity = __esm({
                 const {
                   adaptFeedbackFromHumanRejudge: adaptFeedbackFromHumanRejudge2,
                   mergeAdaptFeedback: mergeAdaptFeedback2,
-                  adaptFeedbackPersistSlice: adaptFeedbackPersistSlice2
+                  adaptFeedbackPersistSlice: adaptFeedbackPersistSlice2,
+                  applyAdaptFeedbackRouted: applyAdaptFeedbackRouted2
                 } = await Promise.resolve().then(() => (init_adaptFeedbackWriteback(), adaptFeedbackWriteback_exports));
                 const prevFb = Array.isArray(er.adaptFeedback) ? er.adaptFeedback : [];
                 const shotIdx = Number(prev?.shotIndex ?? prev?.index ?? 0) || null;
@@ -310175,6 +311170,22 @@ var init_humanRejudgeFidelity = __esm({
                   });
                 }
                 Object.assign(er, adaptFeedbackPersistSlice2(adaptFeedback));
+                try {
+                  const prevPack = er.realizationAdaptPack ?? prev?.realizationAdaptPack;
+                  if (prevPack && adaptFeedback.length) {
+                    const routed = applyAdaptFeedbackRouted2({
+                      pack: prevPack,
+                      feedback: adaptFeedback,
+                      shot: prev ?? null
+                    });
+                    Object.assign(er, {
+                      realizationAdaptPack: routed.pack,
+                      adaptFeedbackDesignKinds: routed.designKinds,
+                      adaptFeedbackRealizationKinds: routed.realizationKinds
+                    });
+                  }
+                } catch {
+                }
               } catch {
               }
               const now2 = (/* @__PURE__ */ new Date()).toISOString();
@@ -313228,6 +314239,13 @@ function polishCameraGrammar(shots, inputs) {
 function polishEmotionArc(shots, inputs) {
   let count = 0;
   for (let i = 1; i < shots.length; i++) {
+    const phase = String(
+      inputs[i].shotMeta?.stillPhase ?? inputs[i].designShot?.narrative?.stillPhase ?? ""
+    );
+    if (phase === "approaching" || phase === "held") {
+      shots[i].polishNotes.push(`emotion_cliff:skip_stillPhase_${phase}`);
+      continue;
+    }
     const prev = extractEmotion(inputs[i - 1]);
     const cur = extractEmotion(inputs[i]);
     if (prev == null || cur == null) continue;
@@ -313331,7 +314349,10 @@ function runEpisodeAvEnhanceOrchestrator(input) {
       intentOccupancy: intent,
       realizationOccupancy: realization,
       realizationDegraded: meta4.realizationDegraded === true,
-      stillMeta: meta4,
+      stillMeta: {
+        ...meta4,
+        stillPhase: meta4.stillPhase ?? shot.designShot?.narrative?.stillPhase ?? shot.narrative?.stillPhase
+      },
       emotionIntensity: extractEmotion(shot),
       sfxIntent: String(meta4.sfxIntent ?? "").trim() || null,
       avCausality: meta4.avCausality,
@@ -313339,6 +314360,12 @@ function runEpisodeAvEnhanceOrchestrator(input) {
       trunkBlockers: trunk,
       enable: enabled
     });
+    const designPhase = String(
+      meta4.stillPhase ?? shot.designShot?.narrative?.stillPhase ?? ""
+    );
+    if (designPhase === "approaching" || designPhase === "held") {
+      pack2.sources = [...pack2.sources ?? [], `episodeAv.respect_stillPhase:${designPhase}`];
+    }
     if (pack2.adapted) adaptHit++;
     if (pack2.realizationDegraded) degrade++;
     if (pack2.intentOccupancy !== pack2.realizationOccupancy) mismatch++;
@@ -318342,9 +319369,18 @@ ${vdCheck}`
             } else if (contactGate.severity === "WARN" && contactGate.message) {
               healThenBurnNotes.push(contactGate.message);
             }
-            const motionHint = String(
+            const stillPhaseMeta = String(
+              stillMeta?.stillPhase ?? stillMeta?.narrative?.stillPhase ?? ""
+            );
+            let motionHint = String(
               stillMeta?.videoMotionStartHint ?? stillMeta?.generationContract?.videoMotionStartHint ?? ""
             ).trim();
+            if (stillPhaseMeta === "held" && !/禁止再.*弯腰|持态/.test(motionHint)) {
+              motionHint = [motionHint, "\u4ECE\u9759\u5E27\u6301\u6001\u8D77\uFF0C\u7981\u6B62\u518D\u5F2F\u8170\u89E6\u53CA"].filter(Boolean).join("\uFF1B");
+            }
+            if (stillPhaseMeta === "approaching" && !/接近未握|尚未捏紧/.test(motionHint)) {
+              motionHint = [motionHint, "\u8D77\u6001=\u63A5\u8FD1\u672A\u63E1\uFF0CMotion\u53EF\u9012\u8FDB\u81F3\u89E6\u53CA\u634F\u7D27"].filter(Boolean).join("\uFF1B");
+            }
             if (motionHint && !/禁止弯腰绿继承/.test(motionHint)) {
               const slice = motionHint.slice(0, Math.min(10, motionHint.length));
               if (!burnPrompt.includes(slice)) {
@@ -318366,7 +319402,10 @@ ${motionHint}`.trim();
             const poseGate = assertStillVideoPoseHandoff2({
               visualDescription: vdForContact,
               stillPrompt: stillPromptForHandoff,
-              stillMeta,
+              stillMeta: {
+                ...stillMeta,
+                stillPhase: stillPhaseMeta || void 0
+              },
               videoPrompt: burnPrompt,
               contactStartState: stillMeta?.contactStartState
             });
@@ -323500,8 +324539,11 @@ async function dryRunImport(db2, raw, opts) {
       missingFieldSummary: exportGate.missingFieldSummary,
       shapeSalvageLog: exportGate.shapeSalvageLog ?? prep.shapeSalvageLog,
       shapeSalvageSummary: formatShapeSalvageSummary(exportGate.shapeSalvageLog ?? prep.shapeSalvageLog),
-      rePushPlan: executedRePushPlan
+      rePushPlan: executedRePushPlan,
+      chatMustFixIds: exportGate.chatMustFixIds ?? exportGate.laneDiagnostics?.mustIds ?? [],
+      laneDiagnostics: exportGate.laneDiagnostics
     },
+    chatMustFixIds: exportGate.chatMustFixIds ?? exportGate.laneDiagnostics?.mustIds ?? [],
     previewStatusLine: exportGate.previewStatusLine,
     endpoint: "int"
   };
@@ -323716,6 +324758,8 @@ var init_exportGate2 = __esm({
               shapeSalvageSummary: result.shapeSalvageSummary,
               designExitIncomplete: result.designExitIncomplete,
               previewStatusLine: result.previewStatusLine,
+              chatMustFixIds: result.chatMustFixIds ?? result.laneDiagnostics?.mustIds ?? [],
+              laneDiagnostics: result.laneDiagnostics,
               endpoint: "exportGate"
             })
           );
@@ -324346,6 +325390,15 @@ function runImportHeal(input) {
         pruneIntentGraphOnBundle2(working);
       } catch {
       }
+      try {
+        const { ensureStillPhaseOnShot: ensureStillPhaseOnShot2 } = (init_stillPhasePlan(), __toCommonJS(stillPhasePlan_exports));
+        const pd = working.preDesignPack;
+        const shots = pd?.shots ?? [];
+        for (const s of shots) {
+          ensureStillPhaseOnShot2(s);
+        }
+      } catch {
+      }
     } catch {
     }
     try {
@@ -324690,7 +325743,9 @@ function runImportHeal(input) {
       warns: exportGateFull.warns,
       repairHints: exportGateFull.repairHints,
       repairChangelog: exportGateFull.repairChangelog ?? working.meta?.repairChangelog,
-      industryResidualDebts: exportGateFull.industryResidualDebts ?? working.meta?.industryResidualDebts
+      industryResidualDebts: exportGateFull.industryResidualDebts ?? working.meta?.industryResidualDebts,
+      chatMustFixIds,
+      laneDiagnostics: exportGateFull.laneDiagnostics
     },
     repairChangelog: working.meta?.repairChangelog,
     industryResidualDebts: working.meta?.industryResidualDebts,

@@ -62,7 +62,18 @@ export function assessStillVideoReadiness(input: {
     misses.push("visualPass_false");
   }
   const contam = String(meta.contaminationClass ?? "").trim();
-  if (contam && contam !== "none") misses.push(`contam:${contam}`);
+  if (contam && contam !== "none") {
+    const phase = String(meta.stillPhase ?? "");
+    // LGIA: approaching incomplete grip / approach atoms ≠ hard contam for I2V soft ledger
+    if (
+      (phase === "approaching" || phase === "mid_contact") &&
+      (contam === "contact_zombie" || contam === "plate_geometry")
+    ) {
+      misses.push(`contam_soft:${contam}`);
+    } else {
+      misses.push(`contam:${contam}`);
+    }
+  }
   if (String(meta.deliveryTier ?? "") === "draft") misses.push("delivery:draft");
   if (meta.keyOptional === true) misses.push("key_optional");
   if (String(meta.pixelDimStatus ?? "") === "unmeasured") misses.push("pixel_unmeasured");

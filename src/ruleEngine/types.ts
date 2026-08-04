@@ -99,6 +99,18 @@ export interface EpisodeShot {
     lipSyncPolicy?: string;
     exprCue?: string;
     continuityFrom?: string;
+    /** LGIA / first-frame SSOT (design refine stamp) */
+    stillPhase?: "approaching" | "mid_contact" | "held";
+    stillPhaseSource?: string;
+    stillPhaseReason?: string;
+    stillPhaseAuthorLock?: boolean;
+    stillPhaseVdHash?: string;
+    contactStartState?: string;
+    firstFrameAction?: string;
+    firstFrameProp?: string;
+    literaryPrimary?: string;
+    secondaryBudget?: "skirt_blur" | "full_ok" | "none";
+    bgBlur?: boolean;
   };
   generation: {
     imagePrompt?: string;

@@ -88,7 +88,15 @@ export function guardStillPromptFoundations(input: {
     // soft: ensure studio ban + soft env guidance
     if (!/禁止灰棚|禁止白棚|纯色摄影棚/.test(prompt)) {
       missing.push("env:studio_ban");
-      restore("env:studio_ban", "背景弱化：浅景深虚化环境，保留室内轮廓可辨，禁止灰棚/白棚空白背景");
+      const noDof =
+        (contract as { bgBlur?: boolean } | null)?.bgBlur === false ||
+        /禁止浅景深|bgBlur.?false|环境轮廓可辨/.test(prompt + original + vd);
+      restore(
+        "env:studio_ban",
+        noDof
+          ? "背景弱化：环境轮廓可辨（木作/烛光），禁止浅景深抢戏，禁止灰棚/白棚空白背景"
+          : "背景弱化：浅景深虚化环境，保留室内轮廓可辨，禁止灰棚/白棚空白背景",
+      );
     }
     const colorFact = contract?.mustShowFacts.find((f) => f.id === "color_temp");
     if (colorFact && !/色温|烛火|暖光|4500/.test(prompt)) {

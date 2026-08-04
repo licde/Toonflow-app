@@ -81,10 +81,54 @@ export function adaptFeedbackPersistSlice(entries: AdaptFeedbackEntry[]): Record
   return { adaptFeedback: entries };
 }
 
-/** Map human rejudge → design vs realization owner (Wave-2). */
-export function rejudgeOwnerForFeedback(kind: AdaptFeedbackKind): "design" | "realization" {
-  if (kind === "face_unreadability" || kind === "shot_size_too_wide") return "design";
+/** Map human rejudge → design vs realization owner (Wave-2 / LGIA). */
+export function rejudgeOwnerForFeedback(
+  kind: AdaptFeedbackKind | string,
+): "design" | "realization" {
+  const k = String(kind ?? "");
+  if (
+    k === "face_unreadability" ||
+    k === "shot_size_too_wide" ||
+    k === "still_phase" ||
+    k === "literary_primary" ||
+    k === "prop_form" ||
+    /phase|primary|prop_soft|emotionIntensity/i.test(k)
+  ) {
+    return "design";
+  }
   return "realization";
+}
+
+/** Apply feedback with owner routing — design kinds escalate RepairAsDesign; realization mutates pack. */
+export function applyAdaptFeedbackRouted(input: {
+  pack: import("../compilers/realizationAdapt").RealizationAdaptPack;
+  feedback: AdaptFeedbackEntry[];
+  shot?: Record<string, unknown> | null;
+}): {
+  pack: import("../compilers/realizationAdapt").RealizationAdaptPack;
+  designKinds: string[];
+  realizationKinds: string[];
+} {
+  const designKinds: string[] = [];
+  const realizationKinds: string[] = [];
+  for (const f of input.feedback) {
+    if (rejudgeOwnerForFeedback(f.kind) === "design") designKinds.push(f.kind);
+    else realizationKinds.push(f.kind);
+  }
+  const pack = applyAdaptFeedbackToPack(
+    input.pack,
+    input.feedback.filter((f) => rejudgeOwnerForFeedback(f.kind) === "realization"),
+  );
+  if (designKinds.length && input.shot) {
+    const sources = [...(pack.sources ?? [])];
+    sources.push(`adaptFeedback.escalate_design:${designKinds.join("+")}`);
+    return {
+      pack: { ...pack, sources },
+      designKinds,
+      realizationKinds,
+    };
+  }
+  return { pack, designKinds, realizationKinds };
 }
 
 /** Apply feedback seed to orchestrator polish hints (non-destructive). */

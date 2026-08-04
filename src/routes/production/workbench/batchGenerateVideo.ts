@@ -694,40 +694,30 @@ export default router.post(
     try {
       const { runEpisodeAvEnhanceOrchestrator, episodeAvMetricsSummary } =
         await import("@/ruleEngine/quality/episodeAvEnhanceOrchestrator");
-      const { realizationAdaptPersistSlice } =
-        await import("@/ruleEngine/compilers/realizationAdapt");
+      const { episodeInputsFromPackageShots, persistEpisodeAvEnhanceToShots } =
+        await import("@/ruleEngine/compilers/persistEpisodeAvEnhance");
       const shotInputs = tasks
         .filter((t) => !t.skipReason)
         .map((t) => {
-          const sm = pkg?.shots?.find((s) => s.storyboardId === t.storyboardId) as
-            | Record<string, unknown>
-            | undefined;
-          return {
-            shotIndex: Number(sm?.shotIndex ?? sm?.index ?? 0) || null,
-            sceneCode: String(sm?.sceneCode ?? ""),
-            shotMeta: sm ?? {},
-            designShot: sm ?? {},
-            durationSec: t.duration,
-            dialoguePresent: Boolean(
-              (sm?.narrative as { dialogue?: { lines?: unknown[] } } | undefined)?.dialogue?.lines
-                ?.length,
-            ),
-            emotionIntensity: Number(
-              (sm?.narrative as { emotionIntensity?: number } | undefined)?.emotionIntensity,
-            ),
-          };
-        });
+          const sm = (pkg?.shots?.find((s) => s.storyboardId === t.storyboardId) ?? {}) as Record<
+            string,
+            unknown
+          >;
+          const base = episodeInputsFromPackageShots([
+            { ...sm, duration: t.duration ?? sm.duration },
+          ])[0]!;
+          return base;
+        })
+        .filter((s) => s.shotMeta && Object.keys(s.shotMeta).length > 0);
       if (shotInputs.length) {
         const epResult = runEpisodeAvEnhanceOrchestrator({ shots: shotInputs });
         episodeAvMetrics = epResult.metrics;
         episodeAvAdaptSummary = episodeAvMetricsSummary(epResult.metrics);
-        for (const r of epResult.shots) {
-          const sm = pkg?.shots?.find(
-            (s) => Number(s.shotIndex ?? s.index) === Number(r.shotIndex),
-          ) as Record<string, unknown> | undefined;
-          if (sm && r.adaptPack.adapted) {
-            Object.assign(sm, realizationAdaptPersistSlice(r.adaptPack));
-          }
+        if (pkg?.shots?.length) {
+          persistEpisodeAvEnhanceToShots({
+            packageShots: pkg.shots as unknown as Array<Record<string, unknown>>,
+            results: epResult.shots,
+          });
         }
       }
     } catch {
@@ -1001,12 +991,23 @@ export default router.post(
           batchHealNotes.push(contact.message);
         }
         // Motion 起态写入 [Motion] — homology with generateVideo
-        const motionHint = String(
+        const stillPhaseBatch = String(
+          (batchStillMeta as { stillPhase?: string } | null)?.stillPhase ??
+            (batchStillMeta as { narrative?: { stillPhase?: string } } | null)?.narrative?.stillPhase ??
+            "",
+        );
+        let motionHint = String(
           (batchStillMeta as { videoMotionStartHint?: string } | null)?.videoMotionStartHint ??
             (batchStillMeta as { generationContract?: { videoMotionStartHint?: string } } | null)
               ?.generationContract?.videoMotionStartHint ??
             "",
         ).trim();
+        if (stillPhaseBatch === "held" && !/禁止再.*弯腰|持态/.test(motionHint)) {
+          motionHint = [motionHint, "从静帧持态起，禁止再弯腰触及"].filter(Boolean).join("；");
+        }
+        if (stillPhaseBatch === "approaching" && !/接近未握|尚未捏紧/.test(motionHint)) {
+          motionHint = [motionHint, "起态=接近未握，Motion可递进至触及捏紧"].filter(Boolean).join("；");
+        }
         if (motionHint && !/禁止弯腰绿继承/.test(motionHint)) {
           const slice = motionHint.slice(0, Math.min(10, motionHint.length));
           if (!vendorPrompt.includes(slice)) {

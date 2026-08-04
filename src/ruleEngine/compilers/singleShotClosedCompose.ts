@@ -138,12 +138,21 @@ export function stripForeignBeatAtomsFromEgress(
   if (!text.trim()) return { text, stripped };
 
   if (!ACTION_PRIMARY_ATOMS.test(vd)) {
-    const before = text;
-    text = text
-      .replace(/[^。；;\n]*(?:弯腰|捡起|俯身捡|捏紧纸|指节泛白|休书|婚书|信笺)[^。；;\n]*/gi, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-    if (text !== before) stripped.push("action_paper");
+    // LGIA: never strip phase approach atoms when process action is declared
+    const keepPhase =
+      /尚未捏紧|接近地面薄纸|手伸向纸面|刚触及|lgia\.stillPhase/.test(text) ||
+      /弯腰|俯身|捡/.test(vd);
+    if (!keepPhase) {
+      const before = text;
+      text = text
+        .replace(/[^。；;\n]*(?:弯腰|捡起|俯身捡|捏紧纸|指节泛白|休书|婚书|信笺)[^。；;\n]*/gi, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      if (text !== before) stripped.push("action_paper");
+    }
+  } else {
+    // Preserve「尚未捏紧」phase atoms even when ACTION_PRIMARY present
+    /* no-op — keep egress */
   }
   if (!OFF_BEAT_MOUTH_CU_ATOMS.test(vd) && ACTION_PRIMARY_SURVIVE_STEMS.test(vd)) {
     const before = text;

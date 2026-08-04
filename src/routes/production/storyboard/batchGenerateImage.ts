@@ -55,6 +55,13 @@ export default router.post(
     if (!storyboardIds || storyboardIds.length === 0) return res.status(400).send(error("storyboardIds不能为空"));
     let finalStoryboardIds: number[] = storyboardIds || [];
 
+    try {
+      const { markGenerationInflight } = await import("@/ruleEngine/design/genInflightGuard");
+      markGenerationInflight(projectId, "still");
+    } catch {
+      /* optional */
+    }
+
     // Warehouse debt: draft OK; hq_update gets enhance CTA (never gray-button forever)
     {
       const pkg = await loadEpisodePackage(u.db, projectId, scriptId);
@@ -63,6 +70,12 @@ export default router.post(
       const debt = readWarehouseDebtFromPackage(pkg);
       const enhance = warehouseDebtStillEnhance(debt);
       if (enhance.enhance && qualityMode === "hq_update" && !compulsory) {
+        try {
+          const { clearGenerationInflight } = await import("@/ruleEngine/design/genInflightGuard");
+          clearGenerationInflight(projectId);
+        } catch {
+          /* optional */
+        }
         return res.status(400).send(
           error(enhance.userMessage, {
             code: "WAREHOUSE_DEBT_STILL_ENHANCE",
@@ -653,6 +666,11 @@ export default router.post(
                   }
                 })(),
                 leadCharCodes: bind.orderedCodes.length ? bind.orderedCodes.slice(0, 1) : undefined,
+                literaryPrimary:
+                  (composedForPipe as { firstFrameExtract?: { primaryName?: string } }).firstFrameExtract
+                    ?.primaryName ??
+                  (item as { narrative?: { literaryPrimary?: string } }).narrative?.literaryPrimary ??
+                  undefined,
               },
             );
             let referenceList = builtRefs.referenceList;
@@ -902,11 +920,26 @@ export default router.post(
                         ?.designIntentProfile?.poseOccupancy ??
                       "";
                     const lit = String(composedForPipe.visualBody ?? composedForPipe.prompt ?? "");
-                    const propLead =
-                      occ === "bend_pickup" || /弯腰|捡起|捡拾|俯身/.test(lit)
-                        ? `${label.canonical}入画于主手触地捡拾（薄纸片软板，非书、非颊触、非胸前展示卡）`
-                        : `${label.canonical}入画于触点（薄纸片软板，非书、非手持卡片）`;
-                    vendorPrompt = `${formBits.join("。")}。${propLead}。${vendorPrompt}`;
+                    const phaseProp = String(
+                      (composedForPipe as { stillPhase?: string }).stillPhase ??
+                        (composedForPipe.generationContract as { stillPhase?: string } | undefined)?.stillPhase ??
+                        (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                        (composedForPipe as { firstFrameExtract?: { stillPhase?: string } }).firstFrameExtract
+                          ?.stillPhase ??
+                        "",
+                    );
+                    const approachingProp =
+                      phaseProp === "approaching" || phaseProp === "mid_contact";
+                    // Approaching: skip grip-complete propLead (Core homology)
+                    if (!(approachingProp && (occ === "bend_pickup" || /弯腰|捡起|捡拾|俯身/.test(lit)))) {
+                      const propLead =
+                        occ === "bend_pickup" || /弯腰|捡起|捡拾|俯身/.test(lit)
+                          ? `${label.canonical}入画于主手触地捡拾（薄纸片软板，非书、非颊触、非胸前展示卡）`
+                          : `${label.canonical}入画于触点（薄纸片软板，非书、非手持卡片）`;
+                      vendorPrompt = `${formBits.join("。")}。${propLead}。${vendorPrompt}`;
+                    } else if (formBits.length) {
+                      vendorPrompt = `${formBits.join("。")}。${label.canonical}入画于伸向纸缘尚未捏紧（薄纸片软板）。${vendorPrompt}`;
+                    }
                   }
                 }
               }
@@ -1098,6 +1131,14 @@ export default router.post(
                 primaryIntentSeal?: { poseOccupancy?: string };
                 designIntentProfile?: { plateMode?: string };
               } | undefined)?.primaryIntentSeal;
+              const batchStillPhase = String(
+                (composedForPipe as { stillPhase?: string }).stillPhase ??
+                  (composedForPipe.generationContract as { stillPhase?: string } | undefined)?.stillPhase ??
+                  (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                  (composedForPipe as { firstFrameExtract?: { stillPhase?: string } }).firstFrameExtract
+                    ?.stillPhase ??
+                  "",
+              );
               const bindZh = buildEventRefOrdinalBinding({
                 roles: ((composedForPipe as { refsRoles?: string[] }).refsRoles ?? chosen.roles) as Array<
                   "identity" | "propSoft" | "softEnv"
@@ -1109,6 +1150,7 @@ export default router.post(
                 plateMode: (composedForPipe.generationContract as { designIntentProfile?: { plateMode?: string } } | undefined)
                   ?.designIntentProfile?.plateMode,
                 fragmentPlateHung: Boolean((composedForPipe as { fragmentPlateHung?: boolean }).fragmentPlateHung),
+                stillPhase: batchStillPhase || null,
               });
               if (bindZh && !/参考绑定：/.test(vendorPrompt)) {
                 vendorPrompt = `${String(vendorPrompt).trim()}。${bindZh}`;
@@ -1117,7 +1159,13 @@ export default router.post(
                 sealBindB?.poseOccupancy === "bend_pickup" ||
                 /弯腰|捡起|捡拾|俯身/.test(String(composedForPipe.visualBody ?? ""))
               ) {
-                if (!/站姿弯腰|禁止蹲跪/.test(vendorPrompt.slice(0, 80))) {
+                const approachingBind =
+                  batchStillPhase === "approaching" || batchStillPhase === "mid_contact";
+                if (approachingBind) {
+                  if (!/禁止跪坐|禁止蹲跪|伸向纸缘/.test(vendorPrompt.slice(0, 120))) {
+                    vendorPrompt = `占位：站姿弯腰俯身，主手伸向纸缘尚未捏紧；禁止跪坐/蹲跪替代弯腰俯身。${String(vendorPrompt).trim()}`;
+                  }
+                } else if (!/站姿弯腰|禁止蹲跪/.test(vendorPrompt.slice(0, 80))) {
                   vendorPrompt = `占位：站姿弯腰捡拾，躯干前倾；禁止蹲跪盘坐替代弯腰。${String(vendorPrompt).trim()}`;
                 }
               }
@@ -1324,6 +1372,66 @@ export default router.post(
               }
               delete (composedForPipe as { _litRepairDelta?: unknown })._litRepairDelta;
             }
+            // Sole spine reseal before vendor (Core homology)
+            try {
+              const ffB = (composedForPipe as {
+                firstFrameExtract?: import("@/ruleEngine/compilers/stillFirstFrameExtract").StillFirstFrameExtract;
+              }).firstFrameExtract;
+              const phaseB = String(
+                (composedForPipe as { stillPhase?: string }).stillPhase ??
+                  (composedForPipe.generationContract as { stillPhase?: string } | undefined)?.stillPhase ??
+                  (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                  ffB?.stillPhase ??
+                  "",
+              );
+              if (ffB) {
+                const { resealVendorPromptToSsot } = await import("@/ruleEngine/compilers/stillSsotRead");
+                const { resolveGatedSoftHints } = await import("@/ruleEngine/compilers/industryNormGate");
+                const gatedB = resolveGatedSoftHints({
+                  stillIntentClass: String(ffB.intentClass ?? composedForPipe.generationContract?.objectiveClass ?? ""),
+                  stillPhase: phaseB || ffB.stillPhase,
+                  shotSize: String((item as { shotSize?: string }).shotSize ?? ""),
+                  visualDescription: literaryDesc,
+                  otsLike: ffB.intentClass === "ots",
+                  faceish: ffB.intentClass === "face",
+                  speakLike: ffB.intentClass === "speak",
+                });
+                const sceneNameB = String(
+                  (item as { sceneName?: string }).sceneName ?? (item as { sceneCode?: string }).sceneCode ?? "",
+                ).trim();
+                const envLineB =
+                  sceneNameB && !/^SCENE-/i.test(sceneNameB) && !/CHAR-SCENE/i.test(sceneNameB)
+                    ? `环境：${sceneNameB.replace(/^SCENE-/i, "")}轮廓可辨`
+                    : null;
+                const colorLineB = /4500|暖光|烛/.test(String(literaryDesc ?? ""))
+                  ? "色温：4500K"
+                  : null;
+                const resealedB = resealVendorPromptToSsot({
+                  vendorPrompt,
+                  extract: {
+                    ...ffB,
+                    stillPhase: (phaseB || ffB.stillPhase) as typeof ffB.stillPhase,
+                  },
+                  normHints: gatedB.hints,
+                  colorTempLine: colorLineB,
+                  envLine: envLineB,
+                  force: Boolean(phaseB || ffB.stillPhase),
+                });
+                if (resealedB.resealed) {
+                  vendorPrompt = resealedB.prompt;
+                  if (!/禁止跪坐|禁止蹲跪/.test(vendorPrompt)) {
+                    vendorPrompt = `${vendorPrompt}。禁止跪坐/蹲跪替代弯腰俯身`;
+                  }
+                  pipeline = {
+                    ...pipeline,
+                    autoHealed: [...(pipeline.autoHealed ?? []), "ff.ssot_reseal:preVendor"],
+                    egressPrompt: vendorPrompt,
+                  };
+                }
+              }
+            } catch {
+              /* optional */
+            }
             (composedForPipe as { lastReferenceList?: Array<{ type: "image"; base64: string; role?: string }> }).lastReferenceList =
               referenceList.map((r, i) => ({
                 type: "image" as const,
@@ -1359,8 +1467,16 @@ export default router.post(
                 ?.primaryIntentSeal?.poseOccupancy ??
                 (composedForPipe.generationContract as { designIntentProfile?: { poseOccupancy?: string } } | undefined)
                   ?.designIntentProfile?.poseOccupancy,
-              primaryIntentSeal: (composedForPipe.generationContract as { primaryIntentSeal?: { poseOccupancy?: string; sealHash?: string } } | undefined)
-                ?.primaryIntentSeal,
+              primaryIntentSeal: (composedForPipe.generationContract as {
+                primaryIntentSeal?: { poseOccupancy?: string; sealHash?: string };
+              } | undefined)?.primaryIntentSeal,
+              stillPhase:
+                (composedForPipe as { stillPhase?: string }).stillPhase ??
+                (composedForPipe.generationContract as { stillPhase?: string } | undefined)?.stillPhase ??
+                (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                (composedForPipe as { firstFrameExtract?: { stillPhase?: string } }).firstFrameExtract
+                  ?.stillPhase ??
+                null,
               runSeedream: async (promptOverride?: string) => {
                 const seedPrompt = promptOverride || vendorPrompt;
                 const imageCls = await u.Ai.Image(
@@ -1462,6 +1578,10 @@ export default router.post(
               fragmentPlateHung: (composedForPipe as { fragmentPlateHung?: boolean }).fragmentPlateHung,
               referenceList: (composedForPipe as { lastReferenceList?: Array<{ type: "image"; base64: string; role?: string }> })
                 .lastReferenceList,
+              stillPhase:
+                (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                (composedForPipe as { stillPhase?: string }).stillPhase ??
+                null,
             });
             (composedForPipe as { literaryEffectsPersist?: Record<string, unknown> }).literaryEffectsPersist =
               literaryEffectsPersistSlice(litAfter);
@@ -1817,12 +1937,47 @@ export default router.post(
             missingSlots: loopOut.repairMissingSlots ?? repairRoute?.missingSlots,
             irdPrimaryAction: loopOut.repairIrdPrimaryAction ?? repairRoute?.irdPrimaryAction,
             videoStale: true,
-            deliveryTier:
-              allowHq && litAfter?.literaryEffectsQualified !== false
-                ? "burn"
-                : litAfter?.literaryEffectsQualified === false
-                  ? "draft"
-                  : "preview",
+            ...(() => {
+              try {
+                const { resolveLgiaDelivery } =
+                  require("@/ruleEngine/compilers/lgiaDeliveryPolicy") as typeof import("@/ruleEngine/compilers/lgiaDeliveryPolicy");
+                const d = resolveLgiaDelivery({
+                  keyOptional: true,
+                  vlmKeyMissing: keyMissing,
+                  pixelDimStatus: keyMissing ? "unmeasured" : allowHq ? "measured_pass" : "measured_fail",
+                  stillPhase:
+                    (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                    (composedForPipe as { stillPhase?: string }).stillPhase ??
+                    null,
+                  literaryEffectsQualified: litAfter?.literaryEffectsQualified,
+                  contaminationClass: String(
+                    (composedForPipe.generationContract as { contaminationClass?: string } | undefined)
+                      ?.contaminationClass ?? "none",
+                  ),
+                  fidelityRequireFix: false,
+                  composedRequireFix: false,
+                });
+                return {
+                  deliveryTier: d.deliveryTier,
+                  requireFixBeforeBurn: d.requireFixBeforeBurn,
+                  adviseSmartRepair: d.adviseSmartRepair,
+                  burnAllowed: d.burnAllowed,
+                  stillPhase: d.reason.includes("still")
+                    ? (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase
+                    : (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                      (composedForPipe as { stillPhase?: string }).stillPhase,
+                };
+              } catch {
+                return {
+                  deliveryTier:
+                    allowHq && litAfter?.literaryEffectsQualified !== false
+                      ? "burn"
+                      : litAfter?.literaryEffectsQualified === false
+                        ? "draft"
+                        : "preview",
+                };
+              }
+            })(),
             debtKind: litAfter?.debtKind,
             ...((composedForPipe as { literaryEffectsPersist?: Record<string, unknown> }).literaryEffectsPersist ??
               {}),
@@ -1905,6 +2060,12 @@ export default router.post(
     for (let i = 0; i < generateList.length; i += concurrentCount) {
       const batch = generateList.slice(i, i + concurrentCount);
       await Promise.all(batch.map(lockedTask));
+    }
+    try {
+      const { clearGenerationInflight } = await import("@/ruleEngine/design/genInflightGuard");
+      clearGenerationInflight(projectId);
+    } catch {
+      /* optional */
     }
   },
 );

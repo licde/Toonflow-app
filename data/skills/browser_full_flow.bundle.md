@@ -10,7 +10,7 @@ supersedes: design_flow.bundle.md v1.1
 
 # Browser Chat 全流程 · 优化版 v2.1.0
 
-> 生成时间：2026-07-30T19:53:32.945Z · rulePack 2.1.0 · tier T3 · 勿手改，改源 skill 后重跑 `yarn bundle:browser-full-flow`
+> 生成时间：2026-08-04T00:04:46.688Z · rulePack 2.1.0 · tier T3 · 勿手改，改源 skill 后重跑 `yarn bundle:browser-full-flow`
 > 说明：**Chat bundle ≠ 后端 API**。改 skill/fixture 才需本命令；改 `src/ruleEngine` TS 需重启服务，不会体现在本文件。
 
 ## §0 用法·红线
@@ -1358,17 +1358,17 @@ shotSize、cameraMovement、lightingSetup、compiledPrompt。
 ## 出站硬闸（SB）
 
 - `runDesignExitGate(SB)`：**必须**过闸再 `setStepStatus` 完成；禁止自检假绿跳过
-- **setStepStatus ≡ exportGate**：默认 **diagnose-only**（写 `meta.expandProvenance.mode=diagnose_only`）；仅显式 `forceExpand:true` 才 apply IRD/cam/oneBeat；高置信 auto-close 含 **可抬短镜抬时**（LIP/DFW 同靶+vendor snap），**不**静默同文唇拆；超 vendor/多句须 Confirm 语义拆后重跑 designExit
+- **setStepStatus ≡ exportGate**：默认 **diagnose-only**（写 `meta.expandProvenance.mode=diagnose_only`）；高置信可拍债可压力智拆（带 cap）；显式 `forceExpand:true` 才满额 apply IRD/cam/oneBeat；扩后必 slot heal；高置信 auto-close 含 **可抬短镜抬时**（LIP/DFW 同靶+vendor snap），**不**静默同文唇拆；超 vendor/多句须 Confirm 语义拆后重跑 designExit
 - 失败时：服务器会先高置信 auto-close（**LIP 抬时** / NAR-15 占位 RA / DC-01 mirror / 噪声 EXTRA / peak→shotDesignIntent / 唯一名→charCodes；有定妆图写 assetCrefPlan，无图则 stub+deferredStill）；仍红则按失败清单 **同轮重写 shots/JSON**，禁止只改 `passed`/自报绿
 - **LIP**：可抬→设计退出前抬净；导入 raise 仅兜底；禁 DFW「导入可愈」与超限 LIP 互斥谎称；`importOk≠designExitPass`
 - 不发明定妆 URL / 假 `--cref`；**无定妆图**时可设计期 **stub+assetCrefPlan 延期**（配角后期 AS 智能补图）；生成/compose 仍须真图
 - 出脸镜须 `charCodes` 或可派生 speaker 入册；`DEX-ASSET-CREF` 在 SB 认 stub 绑，AS 要 imaged
-- **导入**：已有 `preDesignPack.shots` 时默认 **diagnose-only**（禁 IRD/cam/oneBeat 静默再拆 16→170）；`forceExpand` 才 apply；dryRun 须展示 **postHeal 镜数**（作者→愈后）与**非法同文占比**
+- **导入**：已有 `preDesignPack.shots` 时 **智拆=可拍+因果连续**（非禁智拆）；高置信可拍债可压力扩，超 cap/低置信→Confirm；`forceExpand` 显式扩；扩后必 continuity+egress（`importDesignSlotHeal`）；`skipAutoDesignSb`=仅跳空包 LLM；dryRun 回显 expandDelta/continuity/heal/rePush；展示 postHeal 与非法同文占比
 - **一镜一画面（语义强制）**：连续≥3 归一化同文 VD（**有对白也算**）→ `DEX-DUP-VD` BLOCK；禁止「同文口型复用」当设计；超 vendor/多句 → Confirm 语义拆（子镜须景别/运镜/`intent.picture` 相对父镜可区分）或改短，**禁止**指望导入静默拆成同文 N 镜
 - **DEX-DUP-VD / DEX-DIRTY-STILL-PROMPT / DEX-HAND-LIP**：同文连镜、手+眼同帧、文学体裸 `--cref CHAR`/`--sref SCENE`、手镜 lip≠none → BLOCK；composed prompt **尾** IR 码除外
 - **配方智能适配（≠改设计）**：分镜 VD/景别/intent 是 SSOT；compose 按镜型适配（手 CU **仅**显式手部特写；座次/中景/权力反差 **压过** 摩挲扳指动作，禁手CU禁出脸对撞）；**特写×出镜≥2**：VD 只点名一人 → **降出场人数+裁主角 cref**（禁拆镜 Confirm）；VD 多人同框意图 → `still_cu_cast` 智能拆；成稿泄漏「仅N人」同核；禁【Edit焦点】文学洗绿；Edit 反拼版用短锁（`*_EDIT_ZH`），接触几何/主look优先于拼版句；文学意图原子（端坐太师椅/抄书等）须在 compose/首烧/Edit 存活；**禁止**把配方句回写 `visualDescription`。真脏手+脸 → Chat BLOCK + VisBeat Confirm 拆；导入与设计 **同核智能拆/降人数**（非仅软过）；残留才 `importOk≠designExitPass` / Confirm，禁静默同文拆手脸
 - **PROMPT-FIDELITY / 文学存活**：座次/锚点未覆盖 = 契约债 → heal 双写 VD+egress untilClear（可拍）；不过绿≠挡拍；Edit 焦点只追加，禁掏空文学基底
-- **`importOk≠designExitPass`**：导入可进仓 ≠ 设计闭合；禁止只改 `modalityPromptAudit` / `narrativeSelfcheck.passed`
+- **`importOk≠designExitPass`**：导入可进仓 ≠ 设计闭合；仓债写入 EpisodePackage.warehouseDebt；placement-only **禁**假置 `importSplitExpanded`；禁止只改 `modalityPromptAudit` / `narrativeSelfcheck.passed`
 - composeStillPromptPreview `persist:true` 写库用 `result.composeMode`（禁裸变量 `mode` → `mode is not defined`）
 - VLM 缺 Key：图已出、HQ 未过（≠ preview HTTP 400）
 - DC-01（缺覆盖）、**DC-01-EXTRA（乱入）**；时长噪点如「：3s」属伪台词，导入会剥离，勿当文学台词修
@@ -1448,6 +1448,7 @@ axis=谢玄辞-沈清漪；anchors=立于树影下|从光亮处走来
   - `still_firstframe_dirty` → 假双脸/多拍：**智能拆镜**（优先）或改单拍描写 → stale → MD-IMG；**禁止只 regen**
   - `still_firstframe_stale` → 描写已变：改 VD 后重出 HQ
   - `still_firstframe_weak` → 弱静照/缺 visualPass：`batch_still` 重出（勿先逼改 VD）
+  - **可拍优先（Chat≡Web CTA）**：finding=契约债→反推+untilClear 治愈至可拍 HQ；**永不灰「生成/烧片」**；CTA=`智拆并生成`/`增强锚点并生成`/`补定妆并继续生成`；`PROMPT-FIDELITY` 同源补锚双写 VD；`forbidRegen`≡建议治愈非门闩。工具：`resolve_still_cta`
   - `dirty_still_prompt` → 真手+脸同帧：改 VD / VisBeat 拆；非 seating+扳指动作误脏
   - 视频污染壳（XML 索要 / 跨镜 PEAK / EN QF）→ sanitize 后重编译本镜
 - 描写过短反推：`qp02_visual_short` → SB 重写 `visualDescription`；导入不发明占位
@@ -10873,7 +10874,7 @@ Slot 定义 SSOT：`data/fixtures/modality_prompt_slots.json`（skills / compile
   - **DEX-QP-02 / QP-02**（BLOCK）：画面描写空/过短/抽象无物象 — 与 export 同核；须 SB 重设计。深链 `qp02_visual_short`。minChars 仅防空壳底线
   - **DEX-LIT-CONTACT-XOR / CONTACT / ANCHOR / PROP-CONT**（BLOCK）：可拍结构槽、颊触≠口含互斥、邻镜道具连续 — `confirm_enhance` / 手改 VD / 拆镜；禁只 regen；深链 `lit_detail_contact_xor` / `lit_detail_*` / `prop_continuity`；导入 soft demote ≠ ExitPass
   - **DEX-CAST-ON-DESC**（BLOCK）：描写点名须进 `charCodes`（与 DEX-CAST-CODES 分立）。**智能绑定**：CD/资产唯一命中可自动补码+cref；歧义拒绑保留姓名；CD 无则 orphan stub（仍 BLOCK export 假绿）。**禁剥名**、禁自由 NER 造角。深链 `cast_on_desc_missing`（RH-CAST-ON-DESC）
-  - **DEX-EMPTY-SHOT-CONSISTENCY**（BLOCK）：空镜声明不得与人名/出脸/codes 并存。深链 `empty_shot_conflict`（RH-EMPTY-SHOT）；forbidRegenWithoutDescFix。compose 出站禁再叠「正脸清晰」
+  - **DEX-EMPTY-SHOT-CONSISTENCY**（CONTRACT）：空镜声明不得与人名/出脸/codes 并存。深链 `empty_shot_conflict`（RH-EMPTY-SHOT）；反推改写 untilClear，非灰钮。compose 出站禁再叠「正脸清晰」
   - **DEX-EXPR-SPEAK**（BLOCK）：高强度**出镜**对白须 `microExpression`+`lipSyncPolicy`；OS/VO 不强制口型闸。禁默认表演假过。深链 `expr_speak_missing`（RH-EXPR-SPEAK）
   - **DEX-ASSET-CREF**（BLOCK · AS；SB 可 stub 延期）：出脸/`CHAR-*` 须本镜绑；SB 可用 stub+`assetCrefPlan` 过设计闸，AS/compose 须定妆真图。禁止假 `--cref`/假绿。深链 `asset_cref`（RH-ASSET-CREF → AS）
   - **designBrief 同挂 EMPTY/EXPR/CAST**（与 SB 同核）：不得提前出站绕开 SB
@@ -11129,7 +11130,12 @@ rulePackVersion: 2.0.1
 ## 附录 L rePush
 
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
+  "shootablePolicy": {
+    "forbidRegenWithoutDescFixMeans": "requireFixBeforeBurn",
+    "blocksGenerate": false,
+    "note": "Legacy forbidRegenWithoutDescFix never grays Generate; mapped by reverseRouteShootable.ts"
+  },
   "routes": [
     {
       "trigger": "visual_multi_beat",
@@ -13123,7 +13129,12 @@ PC-09~14：§15 四模态触达（VID/AUD/IMG/FX slot + 跨模态 identity）
 ## 附录 Q 四模态反推
 
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
+  "shootablePolicy": {
+    "forbidRegenWithoutDescFixMeans": "requireFixBeforeBurn",
+    "blocksGenerate": false,
+    "note": "Legacy forbidRegenWithoutDescFix never grays Generate; mapped by reverseRouteShootable.ts"
+  },
   "routes": [
     {
       "trigger": "visual_multi_beat",
@@ -15523,7 +15534,7 @@ IC dryRun：intelligent_closure_checklist.json
       "ruleId": "PROMPT-FIDELITY",
       "checkIds": ["PROMPT-FIDELITY"],
       "symptom": "image/video 提示词未覆盖设计锚点",
-      "action": "改 VD 或重编译提示词，禁 freeform 跳过 Shot List",
+      "action": "heal 双写 VD+egress 至锚点覆盖；untilClear 非挡拍；禁 freeform 跳过设计",
       "chatTemplate": "【PROMPT-FIDELITY】契约债：提示词须覆盖 visualDescription 锚点（端坐/太师椅/抄书等）。自动 heal 补锚双写 VD+egress untilClear → 继续生成；Chat 可反推改描写或重 compose。Edit 只追加缺失项，禁掏空文学基底假绿。永不灰「生成」。reverseTarget=SB。"
     },
     {

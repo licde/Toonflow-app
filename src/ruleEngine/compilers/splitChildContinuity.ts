@@ -11,6 +11,9 @@ export type SplitChildContinuitySeed = {
   lightHint?: string | null;
   continuityFrom?: string | null;
   splitHint?: string | null;
+  /** LGIA: inherit parent freeze phase when child is action-type */
+  stillPhase?: string | null;
+  emotionIntensity?: number | null;
 };
 
 export function buildSplitChildContinuitySeed(parent: Record<string, unknown> | null | undefined): SplitChildContinuitySeed {
@@ -30,6 +33,13 @@ export function buildSplitChildContinuitySeed(parent: Record<string, unknown> | 
     lightHint: String(narr.lightContinuity ?? p.lightHint ?? "光比与父镜连续").trim() || null,
     continuityFrom: String(narr.continuityFrom ?? `承接父镜${p.shotIndex ?? ""}`).trim() || null,
     splitHint: String(p.splitHint ?? narr.splitHint ?? "").trim() || null,
+    stillPhase: String(narr.stillPhase ?? "").trim() || null,
+    emotionIntensity:
+      typeof narr.emotionIntensity === "number"
+        ? Number(narr.emotionIntensity)
+        : Number.isFinite(Number(p.emotionIntensity))
+          ? Number(p.emotionIntensity)
+          : null,
   };
 }
 
@@ -46,6 +56,14 @@ export function applySplitChildContinuity(
   if (seed.wardrobeHint) narr.wardrobeContinuity = seed.wardrobeHint;
   if (seed.lightHint) narr.lightContinuity = seed.lightHint;
   if (seed.splitHint) narr.splitHint = seed.splitHint;
+  if (seed.stillPhase && !narr.stillPhase) {
+    narr.stillPhase = seed.stillPhase;
+    narr.stillPhaseSource = "split_child_inherit";
+    narr.stillPhaseAuthorLock = true;
+  }
+  if (seed.emotionIntensity != null && narr.emotionIntensity == null) {
+    narr.emotionIntensity = seed.emotionIntensity;
+  }
   if (seed.identityCodes?.length) {
     narr.assetCodes = [...new Set([...(Array.isArray(narr.assetCodes) ? narr.assetCodes : []), ...seed.identityCodes])];
   }

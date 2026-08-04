@@ -158,6 +158,9 @@ export async function mergeAssociateAssetIds(
     /** When skirt_blur / fragment: keep only lead CHAR plates */
     secondaryCharacterBudget?: "none" | "hands_only" | "upper_body" | "ensemble" | "skirt_blur";
     leadCharCodes?: string[];
+    /** Fallback when leadCharCodes empty — match CHAR code to primary name */
+    literaryPrimary?: string | null;
+    leadCharName?: string | null;
   },
 ): Promise<{ assetIds: number[]; warnings: ReferenceWarning[]; softEnvAssetId?: number; propSoftAssetId?: number }> {
   const refs = parsePromptRefs(prompt);
@@ -178,7 +181,19 @@ export async function mergeAssociateAssetIds(
   // Fragment budget: drop non-lead CHAR codes before resolve
   if (stripSecondary) {
     const charList = codes.filter((x) => /^CHAR-/i.test(x));
-    const keepFirst = charList[0]?.toUpperCase() ?? "";
+    // Prefer explicit lead; else prefer CHAR matching literaryPrimary token; else first
+    let keepFirst = charList[0]?.toUpperCase() ?? "";
+    if (leadCodeSet.size === 0) {
+      const primaryHint = String(opts?.literaryPrimary ?? opts?.leadCharName ?? "").trim();
+      if (primaryHint) {
+        const hit = charList.find((c) => {
+          const bare = c.replace(/^CHAR-/i, "").replace(/-/g, "").toUpperCase();
+          const hint = primaryHint.replace(/\s/g, "").toUpperCase();
+          return bare.includes(hint.slice(0, Math.min(4, hint.length))) || hint.includes(bare.slice(0, 4));
+        });
+        if (hit) keepFirst = hit.toUpperCase();
+      }
+    }
     codes = codes.filter((c) => {
       if (!/^CHAR-/i.test(c)) return true;
       if (leadCodeSet.size === 0) return c.toUpperCase() === keepFirst;
@@ -385,6 +400,8 @@ export async function buildReferenceListForStoryboard(
     propSoftCodes?: string[];
     secondaryCharacterBudget?: "none" | "hands_only" | "upper_body" | "ensemble" | "skirt_blur";
     leadCharCodes?: string[];
+    literaryPrimary?: string | null;
+    leadCharName?: string | null;
   },
 ): Promise<{
   referenceList: { type: "image"; base64: string }[];
@@ -426,6 +443,8 @@ export async function buildReferenceListForStoryboard(
       propSoftCodes,
       secondaryCharacterBudget: opts?.secondaryCharacterBudget,
       leadCharCodes: opts?.leadCharCodes,
+      literaryPrimary: opts?.literaryPrimary,
+      leadCharName: opts?.leadCharName,
     },
   );
 

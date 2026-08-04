@@ -12,7 +12,9 @@ import {
 } from "../compilers/cinematicShotGrammar";
 import {
   ensureScreenSideOnShot,
+  ensureEyelineDirOnShot,
   auditAxis180Pair,
+  auditAxis180Chain,
   flipSpatialSideKeyword,
   readShotScreenSide,
 } from "./screenSideAxis";
@@ -404,6 +406,11 @@ export function expandRevealThenReaction(
           ...((s.narrative as object) ?? {}),
           shotSize: size,
           dialogue: { lines: [] },
+          // LGIA: reaction child is held/face — not parent's approaching bend soup
+          stillPhase: "held",
+          stillPhaseSource: "split_child_policy",
+          stillPhaseReason: "reaction_held_face",
+          contactStartState: "at_locus",
         },
         shotDesign: {
           ...((s.shotDesign as object) ?? {}),
@@ -484,6 +491,13 @@ export function expandActionThenDialogueMcu(
         narrative: {
           ...((s.narrative as object) ?? {}),
           dialogue: { lines: [] },
+          // LGIA: action child inherits parent stillPhase (process freeze)
+          stillPhase:
+            (s.narrative as { stillPhase?: string } | undefined)?.stillPhase ?? "approaching",
+          stillPhaseSource: "split_child_inherit",
+          stillPhaseReason: "face_split_action_inherit",
+          literaryPrimary:
+            (s.narrative as { literaryPrimary?: string } | undefined)?.literaryPrimary,
         },
         shotDesign: {
           ...((s.shotDesign as object) ?? {}),
@@ -509,6 +523,15 @@ export function expandActionThenDialogueMcu(
         visualDescription: /面容可读|抬视线/.test(vd)
           ? vd
           : `${vd.replace(/弯腰|俯身|低头|跪持/g, "抬视线").slice(0, 180)}${vd.endsWith("。") ? "" : "。"}近景面容可读，抬视线口型。`,
+        narrative: {
+          ...((s.narrative as object) ?? {}),
+          // LGIA: speak child is held/face dialogue — not parent approaching soup
+          stillPhase: "held",
+          stillPhaseSource: "split_child_policy",
+          stillPhaseReason: "face_split_speak_held",
+          literaryPrimary:
+            (s.narrative as { literaryPrimary?: string } | undefined)?.literaryPrimary,
+        },
         shotDesign: {
           ...((s.shotDesign as object) ?? {}),
           lipSyncPolicy: "dialogue_native",
@@ -603,6 +626,36 @@ export function runIndustryAvSilentRepair(
     changelog.push(...ex.changelog);
     if (ex.expanded) diffs.push(`face_split×${ex.expanded}`);
   }
+  // LGIA: IntentGraph + stillPhase stamp (design refinement first)
+  {
+    try {
+      const { applyLiteraryIntentGraphToShot } =
+        require("../compilers/literaryIntentGraph") as typeof import("../compilers/literaryIntentGraph");
+      for (const sh of shots) {
+        if (isDesignLocked(sh)) continue;
+        const r = applyLiteraryIntentGraphToShot(sh);
+        if (r.changed) {
+          for (const d of r.diffs) {
+            changelog.push(
+              appendChangelog(sh, {
+                slot: d.split(":")[0] ?? "lgia",
+                before: "(empty)",
+                after: d,
+                reason: "lgia_intent_graph",
+                trigger: "lgia",
+              }),
+            );
+            diffs.push(`lgia:${d}`);
+          }
+        }
+        if (r.graph.stillPhasePlan.stillPhase === "approaching") {
+          residualDebts.push("still_phase_approaching");
+        }
+      }
+    } catch {
+      /* optional */
+    }
+  }
   if (Date.now() - t0 > maxMs) {
     residualDebts.push("industry_repair_timeout");
     return { shots, changed: changelog.length, changelog, diffs, residualDebts };
@@ -623,35 +676,277 @@ export function runIndustryAvSilentRepair(
   }
     // 1d) Wave-4 screenSide SSOT + axis180 same-side soft heal
   {
-    for (const sh of shots) ensureScreenSideOnShot(sh);
+    for (const sh of shots) {
+      ensureScreenSideOnShot(sh);
+      ensureEyelineDirOnShot(sh);
+      // Wave-11: fill unknown side/eyeline from local/real face box (soft)
+      try {
+        const { ensureScreenSideFromFaceBox, ensureEyelineFromFaceBoxLookingRoom } =
+          require("./faceBoxAxisSoft") as typeof import("./faceBoxAxisSoft");
+        const s = ensureScreenSideFromFaceBox(sh);
+        if (s.changed) {
+          changelog.push(
+            appendChangelog(sh, {
+              slot: "narrative.screenSide",
+              before: "(empty)",
+              after: s.side,
+              reason: "screenSide_from_face_box",
+              trigger: "face_box_soft",
+            }),
+          );
+          diffs.push(`screenSideBox:${sh.clientId ?? sh.shotIndex}`);
+        }
+        const e = ensureEyelineFromFaceBoxLookingRoom(sh);
+        if (e.changed) {
+          changelog.push(
+            appendChangelog(sh, {
+              slot: "narrative.eyelineDir",
+              before: "(empty)",
+              after: e.dir,
+              reason: "eyeline_from_face_box_looking_room",
+              trigger: "face_box_soft",
+            }),
+          );
+          diffs.push(`eyelineBox:${sh.clientId ?? sh.shotIndex}`);
+        }
+      } catch {
+        /* optional */
+      }
+    }
     for (let i = 1; i < shots.length; i++) {
       const prev = shots[i - 1]!;
       const cur = shots[i]!;
       if (isDesignLocked(cur)) continue;
       const axis = auditAxis180Pair(prev, cur);
-      if (axis.ok || axis.finding !== "axis180_same_side") continue;
-      const narr = { ...((cur.narrative as Record<string, unknown>) ?? {}) };
-      const before = String(narr.spatialRelation ?? "");
-      const fixed = flipSpatialSideKeyword(before);
-      if (!fixed || fixed === before) {
-        residualDebts.push("axis180_same_side");
+      if (axis.ok) continue;
+      if (axis.finding === "axis180_same_side" || axis.finding === "axis180_same_side_face_box") {
+        const narr = { ...((cur.narrative as Record<string, unknown>) ?? {}) };
+        const before = String(narr.spatialRelation ?? "");
+        const fixed = flipSpatialSideKeyword(before);
+        if (!fixed || fixed === before) {
+          residualDebts.push(axis.finding);
+          continue;
+        }
+        narr.spatialRelation = fixed;
+        cur.narrative = narr;
+        ensureScreenSideOnShot(cur);
+        cur.promptState = "stale";
+        cur.videoStale = true;
+        changelog.push(
+          appendChangelog(cur, {
+            slot: "spatialRelation",
+            before: before || "(empty)",
+            after: fixed,
+            reason: axis.finding === "axis180_same_side_face_box" ? "axis180_face_box_heal" : "axis180_pair_heal",
+            trigger: "eyeline_axis",
+          }),
+        );
+        diffs.push(`axis180:${cur.clientId ?? cur.shotIndex}`);
         continue;
       }
-      narr.spatialRelation = fixed;
-      cur.narrative = narr;
-      ensureScreenSideOnShot(cur);
-      cur.promptState = "stale";
-      cur.videoStale = true;
-      changelog.push(
-        appendChangelog(cur, {
-          slot: "spatialRelation",
-          before: before || "(empty)",
-          after: fixed,
-          reason: "axis180_pair_heal",
-          trigger: "eyeline_axis",
-        }),
-      );
-      diffs.push(`axis180:${cur.clientId ?? cur.shotIndex}`);
+      if (axis.finding === "axis180_same_eyeline") {
+        const { flipEyelineKeyword } = require("./screenSideAxis") as typeof import("./screenSideAxis");
+        const before = String(cur.visualDescription ?? "");
+        const fixed = flipEyelineKeyword(before);
+        if (!fixed || fixed === before) {
+          residualDebts.push("axis180_same_eyeline");
+          continue;
+        }
+        cur.visualDescription = fixed;
+        ensureEyelineDirOnShot(cur);
+        cur.promptState = "stale";
+        cur.videoStale = true;
+        changelog.push(
+          appendChangelog(cur, {
+            slot: "visualDescription",
+            before: before || "(empty)",
+            after: fixed,
+            reason: "axis180_eyeline_heal",
+            trigger: "eyeline_axis",
+          }),
+        );
+        // Also refresh eyelineDir SSOT after VD flip
+        const narrE = { ...((cur.narrative as Record<string, unknown>) ?? {}) };
+        const eyeBefore = String(narrE.eyelineDir ?? "(empty)");
+        ensureEyelineDirOnShot(cur);
+        const eyeAfter = String(
+          ((cur.narrative as { eyelineDir?: string } | undefined)?.eyelineDir ?? "") || "(empty)",
+        );
+        if (eyeBefore !== eyeAfter) {
+          changelog.push(
+            appendChangelog(cur, {
+              slot: "narrative.eyelineDir",
+              before: eyeBefore,
+              after: eyeAfter,
+              reason: "eyelineDir_stamp",
+              trigger: "eyeline_axis",
+            }),
+          );
+        }
+        diffs.push(`axis180_eyeline:${cur.clientId ?? cur.shotIndex}`);
+      }
+    }
+    // Wave-14/15: episode/scene axis chain rollup + soft axis notes on scene
+    try {
+      const chain = auditAxis180Chain(shots);
+      for (const p of chain.pairFindings) {
+        if (!residualDebts.includes(p.finding)) residualDebts.push(p.finding);
+      }
+      if (chain.chainFinding) {
+        residualDebts.push(chain.chainFinding);
+        diffs.push(`axis180_chain:${chain.chainFinding}`);
+        const axisHint = softGrammarHints(["axis180"])[0] ?? "保持180度轴线，过肩对切不越轴";
+        const riskScenes = new Set(
+          Object.entries(chain.sceneFailCounts)
+            .filter(([, n]) => n >= 2)
+            .map(([sc]) => sc),
+        );
+        for (const sh of shots) {
+          if (isDesignLocked(sh)) continue;
+          const scene = String(sh.sceneCode ?? sh.sceneName ?? "_");
+          if (!riskScenes.has(scene) && !riskScenes.has("_")) continue;
+          const blob = `${String(sh.visualDescription ?? "")} ${String(
+            (sh.narrative as { spatialRelation?: string } | undefined)?.spatialRelation ?? "",
+          )}`;
+          if (!/过肩|OTS|对切|正反打|反打|对视/.test(blob)) continue;
+          const narr = { ...((sh.narrative as Record<string, unknown>) ?? {}) };
+          const beats = Array.isArray(narr.avBeats) ? [...(narr.avBeats as string[])] : [];
+          if (beats.some((b) => /180|轴线|不越轴/.test(String(b)))) continue;
+          beats.push(axisHint);
+          narr.avBeats = beats;
+          narr.axisChainNote = chain.chainFinding;
+          sh.narrative = narr;
+          sh.promptState = "stale";
+          sh.videoStale = true;
+          changelog.push(
+            appendChangelog(sh, {
+              slot: "narrative.avBeats",
+              before: "(empty)",
+              after: axisHint.slice(0, 40),
+              reason: "axis180_chain_soft_note",
+              trigger: "axis180_chain",
+            }),
+          );
+          diffs.push(`axisChainNote:${sh.clientId ?? sh.shotIndex}`);
+        }
+      }
+    } catch {
+      /* optional */
+    }
+  }
+  // Wave-5A/B / Wave-6: composition soft / measured residuals (never hard-block)
+  // Wave-14: silent heal provisional / measured-fail composition via RepairAsDesign
+  {
+    try {
+      const { assessComposition } =
+        require("../compilers/compositionAssess") as typeof import("../compilers/compositionAssess");
+      const {
+        readFaceBoxNormFromMeta,
+        readProvisionalFaceBoxFromMeta,
+        keyOrAdapterPresentFromMeta,
+      } = require("../compilers/faceBoxNormFromMeta") as typeof import("../compilers/faceBoxNormFromMeta");
+      const { ensureTransitionAudioFromAvBeats } =
+        require("../compilers/transitionAudioStamp") as typeof import("../compilers/transitionAudioStamp");
+      const HEAL_COMP = new Set([
+        "headroom_soft_provisional",
+        "looking_room_soft_provisional",
+        "headroom_tight",
+        "looking_room_fail",
+        "headroom_undeclared",
+        "looking_room_undeclared",
+      ]);
+      for (const sh of shots) {
+        const meta = sh as Record<string, unknown>;
+        const keyPresent = keyOrAdapterPresentFromMeta(meta);
+        const faceBox = readFaceBoxNormFromMeta(meta);
+        const provisional = faceBox ? null : readProvisionalFaceBoxFromMeta(meta);
+        if (faceBox && !(meta.faceBoxNorm as unknown)) meta.faceBoxNorm = faceBox;
+        const r = assessComposition({
+          keyOrAdapterPresent: keyPresent,
+          faceBoxNorm: faceBox,
+          provisionalFaceBoxNorm: provisional,
+          visualDescription: String(sh.visualDescription ?? ""),
+          shotSize: String(sh.shotSize ?? (sh.narrative as { shotSize?: string } | undefined)?.shotSize ?? ""),
+          spatialRelation: String(
+            (sh.narrative as { spatialRelation?: string } | undefined)?.spatialRelation ?? "",
+          ),
+          faceBudget: String((sh as { faceBudget?: string }).faceBudget ?? ""),
+        });
+        for (const f of r.findings) residualDebts.push(f.id);
+        if (r.pixelDimStatus === "unmeasured" && r.findings.length) {
+          residualDebts.push("composition_unmeasured");
+        }
+        if (r.pixelDimStatus === "measured_fail") residualDebts.push("composition_measured_fail");
+        (sh as { pixelDimStatus?: string }).pixelDimStatus = r.pixelDimStatus;
+
+        if (!isDesignLocked(sh)) {
+          // Wave-16: stamp framing room SSOT from box + findings
+          try {
+            const { ensureFramingRoomFromFaceBox, stampFramingRoomFromFindings } =
+              require("./framingRoomSoft") as typeof import("./framingRoomSoft");
+            const fr = ensureFramingRoomFromFaceBox(sh);
+            const st = stampFramingRoomFromFindings(
+              sh,
+              r.findings.map((f) => f.id),
+            );
+            if (fr.changed || st.changed) {
+              changelog.push(
+                appendChangelog(sh, {
+                  slot: "narrative.headroomStatus",
+                  before: "(empty)",
+                  after: `${String((sh.narrative as { headroomStatus?: string })?.headroomStatus ?? "")}/${String((sh.narrative as { lookingRoomStatus?: string })?.lookingRoomStatus ?? "")}`,
+                  reason: "framing_room_soft",
+                  trigger: "composition_framing",
+                }),
+              );
+              diffs.push(`framingRoom:${sh.clientId ?? sh.shotIndex}`);
+            }
+            // Wave-17: soft residual debts from framing SSOT
+            const hr = String((sh.narrative as { headroomStatus?: string } | undefined)?.headroomStatus ?? "");
+            const lr = String((sh.narrative as { lookingRoomStatus?: string } | undefined)?.lookingRoomStatus ?? "");
+            if (hr === "tight") residualDebts.push("framing_headroom_tight");
+            if (lr === "tight") residualDebts.push("framing_looking_room_tight");
+          } catch {
+            /* optional */
+          }
+          for (const f of r.findings) {
+            if (!HEAL_COMP.has(f.id)) continue;
+            const plan = planIndustryAvRepair({ kind: f.id, shot: sh, hint: f.hint ?? f.message });
+            if (!plan.writes.length) continue;
+            const before = String(sh.visualDescription ?? "");
+            const applied = applyRepairAsDesignToShot(sh, plan);
+            if (applied.applied.length) {
+              changelog.push(
+                appendChangelog(sh, {
+                  slot: "visualDescription",
+                  before: before || "(empty)",
+                  after: String(sh.visualDescription ?? "").slice(0, 120),
+                  reason: `composition_heal:${f.id}`,
+                  trigger: r.provisionalSoft ? "composition_provisional" : "composition_soft",
+                }),
+              );
+              diffs.push(`compHeal:${f.id}:${sh.clientId ?? sh.shotIndex}`);
+            }
+          }
+        }
+
+        // Wave-6: design-side transitionAudio mirror from avBeats (not full NLE)
+        const ta = ensureTransitionAudioFromAvBeats(sh);
+        if (ta.changed) {
+          changelog.push(
+            appendChangelog(sh, {
+              slot: "narrative.transitionAudio",
+              before: "(empty)",
+              after: ta.stamp?.note ?? "",
+              reason: "transition_audio_from_avBeats",
+              trigger: "jl_cut",
+            }),
+          );
+          diffs.push(`transitionAudio:${sh.clientId ?? sh.shotIndex}`);
+        }
+      }
+    } catch {
+      /* optional */
     }
   }
   if (Date.now() - t0 > maxMs) {
@@ -723,6 +1018,8 @@ const UNDOABLE_SLOTS = new Set([
   "visualDescription",
   "microExpression",
   "spatialRelation",
+  "narrative.screenSide",
+  "narrative.eyelineDir",
   "shotDesign.cameraMotion",
   "narrative.avBeats",
 ]);
@@ -754,6 +1051,23 @@ export function undoRepairChangelogEntry(
   } else if (entry.slot === "spatialRelation") {
     const narr = { ...((shot.narrative as Record<string, unknown>) ?? {}) };
     narr.spatialRelation = before;
+    // Clear stamped side so ensureScreenSide re-derives from restored spatial
+    delete narr.screenSide;
+    shot.narrative = narr;
+    try {
+      ensureScreenSideOnShot(shot);
+    } catch {
+      /* optional */
+    }
+  } else if (entry.slot === "narrative.screenSide") {
+    const narr = { ...((shot.narrative as Record<string, unknown>) ?? {}) };
+    if (before) narr.screenSide = before;
+    else delete narr.screenSide;
+    shot.narrative = narr;
+  } else if (entry.slot === "narrative.eyelineDir") {
+    const narr = { ...((shot.narrative as Record<string, unknown>) ?? {}) };
+    if (before && before !== "(empty)") narr.eyelineDir = before;
+    else delete narr.eyelineDir;
     shot.narrative = narr;
   } else if (entry.slot === "shotDesign.cameraMotion") {
     const sd = { ...((shot.shotDesign as Record<string, unknown>) ?? {}) };

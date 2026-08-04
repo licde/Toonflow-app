@@ -174,6 +174,24 @@ export function buildStillErrorEnvelope(input: {
     };
   }
 
+  // Infra ReferenceError/TypeError must never masquerade as vendor failure
+  if (
+    cat === "runtime_type_error" ||
+    /is not defined|ReferenceError|is not a function|TypeError|Cannot read propert/i.test(msg)
+  ) {
+    const summary = msg.replace(/\s+/g, " ").trim().slice(0, 120) || "未知运行时异常";
+    const primary = buildPrimaryBlock("retry_shot", {
+      stage: "prompt",
+      userMessageOverride: `生图后处理异常：${summary}。图可能已生成，请刷新分镜后确认；若无图请重试`,
+    });
+    return {
+      code: "RUNTIME",
+      primaryNextStep: primary.primaryNextStep,
+      userMessage: primary.userMessage,
+      ctaLabel: "刷新后重试",
+    };
+  }
+
   if (
     cat === "vendor_passthrough" ||
     cat === "network_timeout" ||

@@ -317,6 +317,31 @@ export async function composeAndPersistStillPrompt(
   const deliveryTierCompose =
     contamFromCompose && contamFromCompose !== "none" ? "draft" : "preview";
 
+  // LGIA: stamp stillPhase SSOT onto reason meta (triple-path parity with compose)
+  let stillPhaseStamp: string | null = null;
+  let contactStartStamp: string | null = null;
+  try {
+    const { ensureStillPhaseOnShot, readStillPhase } =
+      require("./stillPhasePlan") as typeof import("./stillPhasePlan");
+    const shotLike = {
+      visualDescription: String(ctx.visualDescription ?? ""),
+      narrative: (meta as { narrative?: Record<string, unknown> })?.narrative ?? {},
+      generation: { videoPrompt: String((meta as { videoPrompt?: string })?.videoPrompt ?? "") },
+      stillPhase: (result as { stillPhase?: string }).stillPhase,
+    } as Record<string, unknown>;
+    const ensured = ensureStillPhaseOnShot(shotLike);
+    stillPhaseStamp = ensured.plan.stillPhase;
+    contactStartStamp = ensured.plan.contactStartState;
+    if (!(result.sources ?? []).some((s) => /lgia\.stillPhase:/.test(String(s)))) {
+      (result.sources as string[] | undefined)?.push?.(`lgia.stillPhase:${stillPhaseStamp}`);
+    }
+    void readStillPhase;
+  } catch {
+    stillPhaseStamp =
+      (result as { stillPhase?: string }).stillPhase ??
+      ((meta as { narrative?: { stillPhase?: string } })?.narrative?.stillPhase ?? null);
+  }
+
   // Reuse ingress litHash (VD ∪ peeled imagePrompt ∪ bg) — do not redeclare
   await db("o_storyboard")
     .where({ id: input.storyboardId })
@@ -354,6 +379,17 @@ export async function composeAndPersistStillPrompt(
           : {}),
         recipeNotPersistedToVd: true,
         stillIntentClass,
+        ...(stillPhaseStamp
+          ? {
+              stillPhase: stillPhaseStamp,
+              contactStartState: contactStartStamp ?? undefined,
+              narrative: {
+                ...(((meta as { narrative?: Record<string, unknown> })?.narrative) ?? {}),
+                stillPhase: stillPhaseStamp,
+                ...(contactStartStamp ? { contactStartState: contactStartStamp } : {}),
+              },
+            }
+          : {}),
         // M7: design hash recorded; video stale if prior hash differs
         ...(meta?.literaryDescHash &&
         meta.literaryDescHash !== litHash

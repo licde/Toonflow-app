@@ -181,6 +181,8 @@ export function qualifyLiteraryEffects(input: {
   softEnvHung?: boolean | null;
   droppedSoftEnv?: boolean | null;
   wantsScene?: boolean | null;
+  /** LGIA: approaching still must not require completed grip */
+  stillPhase?: string | null;
 }): QualifyLiteraryEffectsResult {
   const vd = String(input.visualDescription ?? "");
   const prompt = String(input.promptUsed ?? "");
@@ -196,11 +198,15 @@ export function qualifyLiteraryEffects(input: {
     input.propPlateMissing === true ||
     String(input.propPlateGrade ?? "") === "missing";
   const sig = input.localSignals ?? {};
+  const phase = String(input.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
+  // LGIA: approaching bend — kneel_hold suspicion must not alone poison as held contamination
   const holdBad =
-    (sig.holdCardSuspected === true && sig.groundPropSuspected !== true) ||
-    sig.primaryPoseGuess === "kneel_hold" ||
-    sig.primaryPoseGuess === "stand_hold" ||
-    sig.kneelSquatSuspected === true;
+    !approaching &&
+    ((sig.holdCardSuspected === true && sig.groundPropSuspected !== true) ||
+      sig.primaryPoseGuess === "kneel_hold" ||
+      sig.primaryPoseGuess === "stand_hold" ||
+      sig.kneelSquatSuspected === true);
 
   const { resolveRealizationState, realizationDegradedUserNote } =
     require("../compilers/realizationLadder") as typeof import("../compilers/realizationLadder");
@@ -295,6 +301,7 @@ export function qualifyLiteraryEffects(input: {
       continue;
     }
     if (def.id === "grip.knuckles_pale") {
+      if (approaching) continue; // LGIA: process freeze ≠ completed grip
       if (!wantsKnuckles(vd) && !(bend && paper)) continue;
       if (!/指节|捏紧|指尖/.test(prompt)) {
         push(def.id, "egress_missing_knuckles", def);
@@ -344,6 +351,10 @@ export function qualifyLiteraryEffects(input: {
       continue;
     }
     if (def.id === "mouth.neutral_closed") {
+      // LGIA: approaching × dialogue_native — lip owns mouth; don't force closed
+      const dialogueNative =
+        /dialogue_native|开口对白|张嘴说话|natural mouth|lipSync/.test(prompt + vd);
+      if (approaching && dialogueNative) continue;
       if (/开口对白|张嘴说话|natural mouth/.test(prompt) && /闭口|抿嘴|neutral_closed/.test(vd)) {
         push(def.id, "egress_open_mouth_vs_closed", def);
       }
@@ -438,7 +449,10 @@ export function qualifyLiteraryEffects(input: {
  * Repair ladder: identity/殿/纸 → details → pose realization try.
  * Never identity SCENE collage; IRD lengthening is not primary.
  */
-export function repairPlanForMissingEffects(misses: LiteraryEffectMiss[]): {
+export function repairPlanForMissingEffects(
+  misses: LiteraryEffectMiss[],
+  opts?: { stillPhase?: string | null },
+): {
   injectLines: string[];
   forceFull: boolean;
   deltaHints: string[];
@@ -468,6 +482,8 @@ export function repairPlanForMissingEffects(misses: LiteraryEffectMiss[]): {
   const deltaHints: string[] = [];
   const triggers: string[] = [];
   let forceFull = false;
+  const phase = String(opts?.stillPhase ?? "");
+  const approaching = phase === "approaching" || phase === "mid_contact";
   for (const m of sorted) {
     triggers.push(m.id);
     if (m.id === "identity.no_modern_attire") {
@@ -475,20 +491,35 @@ export function repairPlanForMissingEffects(misses: LiteraryEffectMiss[]): {
       forceFull = true;
       deltaHints.push("identity_bend_sil", "seed");
     } else if (m.id === "bg.no_gray_studio") {
-      injectLines.push("背景：主场景浅景深虚化，禁止灰棚白棚");
+      injectLines.push(
+        approaching
+          ? "背景：主场景环境轮廓可辨，禁止灰棚白棚"
+          : "背景：主场景浅景深虚化，禁止灰棚白棚",
+      );
       forceFull = true;
       deltaHints.push("keep_softEnv", "seed");
     } else if (m.id === "prop.in_frame.paper" || m.id === "prop.glyph.should") {
-      injectLines.push("本镜休书薄纸须清晰入画于主手，纸面墨迹优先，禁止胸前标牌贴纸");
+      injectLines.push(
+        approaching
+          ? "本镜休书薄纸须清晰入画于地面/伸向触点，纸面墨迹优先，禁止胸前标牌贴纸"
+          : "本镜休书薄纸须清晰入画于主手，纸面墨迹优先，禁止胸前标牌贴纸",
+      );
       forceFull = true;
       deltaHints.push("propSoft_resynth");
     } else if (m.id === "occupancy.bend_pickup" || m.id === "prop.locus.ground_or_lead_hand") {
-      // Pose last — try bend; fail path stamps realizationDegraded elsewhere
-      injectLines.push("占位：站姿弯腰捡拾，躯干前倾，纸在主手触地；禁止胸前捧持展示；无纸直立假绿");
+      injectLines.push(
+        approaching
+          ? "占位：站姿弯腰俯身，主手伸向纸缘尚未捏紧；禁止胸前捧持展示；禁止跪坐蹲跪"
+          : "占位：站姿弯腰捡拾，躯干前倾，纸在主手触地；禁止胸前捧持展示；无纸直立假绿",
+      );
       forceFull = true;
       deltaHints.push("propSoft_resynth", "identity_bend_sil", "preferActionBody", "seed");
     } else if (m.id === "grip.knuckles_pale") {
-      injectLines.push("握持：指尖捏紧纸缘，指节泛白");
+      if (approaching) {
+        injectLines.push("主手伸向纸缘（尚未捏紧），禁止握紧完成态抢首帧");
+      } else {
+        injectLines.push("握持：指尖捏紧纸缘，指节泛白");
+      }
       deltaHints.push("egress_hash");
     } else if (m.id === "bg.fragment.skirt") {
       injectLines.push("裙摆/衣角浅景深虚化可辨（加强项），禁止次角完整正脸抢戏");

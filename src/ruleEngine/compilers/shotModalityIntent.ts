@@ -52,6 +52,8 @@ export type ShotModalityIntentInput = {
   /** Persist stillIntentClass if already classified */
   stillIntentClass?: string | null;
   dialogueLines?: string[] | null;
+  /** shotDesign.cameraAnchor.bgBlur */
+  bgBlur?: boolean | null;
 };
 
 /** Infer SCENE-* from prompt / sref tokens (canvas parity with storyboard link). */
@@ -100,8 +102,17 @@ export function deriveShotModalityIntent(input: ShotModalityIntentInput): ShotMo
   }
 
   const names = (input.characterNames ?? []).map((s) => String(s).trim()).filter(Boolean);
-  const femaleLead = names[0];
-  const secondaryRole = names.length >= 2 ? names[1] : undefined;
+  let femaleLead = names[0];
+  try {
+    const { pickVdLiteraryPrimary } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    const lit = pickVdLiteraryPrimary(vd, names);
+    if (lit) femaleLead = lit;
+  } catch {
+    /* names[0] */
+  }
+  const secondaryRole =
+    names.length >= 2 ? names.find((n) => n !== femaleLead) ?? names[1] : undefined;
 
   const bgPolicy = resolveStillBgPolicy({
     description: vd,
@@ -109,6 +120,7 @@ export function deriveShotModalityIntent(input: ShotModalityIntentInput): ShotMo
     shotSize: input.shotSize,
     sceneEstablishingHint: input.sceneEstablishingHint,
     hasSceneLink,
+    bgBlur: input.bgBlur,
   });
 
   const bgMode = bgPolicy.bgMode;

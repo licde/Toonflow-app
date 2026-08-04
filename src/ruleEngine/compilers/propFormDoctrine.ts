@@ -143,6 +143,8 @@ export function buildPropFormInject(input: {
   propCanonical?: string | null;
   locus?: string | null;
   poseOccupancy?: string | null;
+  /** First-frame stillPhase — approaching uses reach poseFact */
+  stillPhase?: string | null;
 }): PropFormInject {
   const doctrine = getPropFormDoctrine(input.propClassId);
   if (!doctrine) {
@@ -172,7 +174,13 @@ export function buildPropFormInject(input: {
     (/面颊|颊|脸颊|颧/.test(locus) || /面颊|贴颊|划过面颊/.test(vdBlob));
   let poseFact = doctrine.poseMust ? `${prop}姿态：${doctrine.poseMust}` : undefined;
   if (bendOcc) {
-    poseFact = `${prop}入画于主手触地捡拾（非颊触、非胸前捧持展示）`;
+    // Prefer first-frame approach wording when phase known; default approach for process bend
+    const phase = String(input.stillPhase ?? "");
+    if (phase === "held") {
+      poseFact = `${prop}入画于主手触地捡拾（非颊触、非胸前捧持展示）`;
+    } else {
+      poseFact = `${prop}入画于主手接近/刚触地面薄纸（非颊触、非胸前捧持、非已握满展示）`;
+    }
     forbidden.push("禁止手持卡片/胸前展示卡/跪坐捧持替代弯腰捡拾");
   } else if (cheekLocus) {
     poseFact = `${prop}须与面颊真实贴合/划过（颊触）`;
@@ -218,8 +226,14 @@ export function assertDoctrineCoversPolicyClasses(): string[] {
 /**
  * Match VD then inject — works for contact OR non-contact paper_doc / doc_readable.
  */
-export function buildPropFormInjectFromVd(vd: string): PropFormInject {
+export function buildPropFormInjectFromVd(
+  vd: string,
+  opts?: { stillPhase?: string | null },
+): PropFormInject {
   const poseOccupancy = /弯腰|捡起|捡拾|俯身/.test(vd) ? "bend_pickup" : null;
+  const stillPhase =
+    opts?.stillPhase ??
+    (/弯腰|俯身|捡/.test(vd) && /捏紧|指节/.test(vd) ? "approaching" : null);
   const m = matchContactEventVd(vd);
   if (m.isContactEvent && m.propClassId) {
     return buildPropFormInject({
@@ -229,6 +243,7 @@ export function buildPropFormInjectFromVd(vd: string): PropFormInject {
       propCanonical: m.propCanonical,
       locus: m.locus,
       poseOccupancy,
+      stillPhase,
     });
   }
   // Non-contact paper / hold — still apply paper_doc positive dims
@@ -238,6 +253,7 @@ export function buildPropFormInjectFromVd(vd: string): PropFormInject {
       propClassId: "paper_doc",
       propAlias: /休书|婚书|信笺|信纸/.exec(vd)?.[0] ?? "纸",
       poseOccupancy,
+      stillPhase,
     });
   }
   return { forbidden: [], softPlateHint: "generic", glyphText: "" };
