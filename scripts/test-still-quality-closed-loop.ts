@@ -483,10 +483,13 @@ ok("C1 IMG-STILL-QA", BLOCK_TO_TRIGGER_FOR_TEST["IMG-STILL-QA"] === "img_still_w
     ok(`I1 forbid ${f.slice(0, 16)}`, !prompt.includes(f));
   }
   ok(
-    "I1 softOther 虚化背景",
-    /动作主体：沈清漪/.test(prompt) && /沈母.*虚化/.test(prompt) && /禁止第三人/.test(prompt),
+    "I1 softOther 裙摆碎片",
+    /动作主体：沈清漪/.test(prompt) && /沈母.*裙摆|沈母.*衣角|沈母.*虚化/.test(prompt) && /禁止第三人/.test(prompt),
   );
-  ok("I1 cast card 仅2人", /出镜人数：仅2人/.test(prompt) && /沈清漪/.test(prompt));
+  ok(
+    "I1 cast card 完整入画仅1人",
+    /出镜人数：完整入画仅1人（沈清漪）/.test(prompt) && /裙摆|衣角/.test(prompt),
+  );
   ok(
     "I1 bg demote readable not grey-void",
     /室内环境可辨|禁止灰棚/.test(prompt) && !/场景参考不送像素/.test(prompt),

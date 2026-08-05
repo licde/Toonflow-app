@@ -73,6 +73,10 @@ export interface StillMeta {
   handoffReason?: string;
   /** Event refs echo */
   refsRoles?: string[];
+  /** Physical send-order thumbs (cropped bytes) for @图N chip verify */
+  refThumbUrls?: string[];
+  /** Seedream ZH egress stamped on reason */
+  promptUsed?: string | null;
   propPlateMissing?: boolean;
   synthesizedPropPlate?: boolean;
   softEnvMissingHonest?: boolean;
@@ -177,6 +181,31 @@ export interface StillMeta {
   /** Vendor pipeline egress —「实际出图词」; edit surface stays column prompt */
   promptUsed?: string | null;
   vendorPromptUsed?: string | null;
+  /** Homologous one-click heal kind from healShotSizeOrSplit / SelfHeal */
+  oneClickRepairKind?:
+    | "none"
+    | "shotSize"
+    | "split"
+    | "shotSize_and_split"
+    | "quality_enhance"
+    | "confirm_required"
+    | "remount_refs"
+    | "rebind_ordinal"
+    | "restore_scene"
+    | "partial_edit"
+    | "design_refine"
+    | "regen_still_then_burn"
+    | "recompile_keep_ordinal"
+    | string
+    | null;
+  /** Observable 图N/降级/修复账本尾 */
+  healLogTail?: string | null;
+  tunLedger?: Array<{ at?: string; kind?: string; detail?: string; missingSlot?: string }> | null;
+  /** Compose sources — detect ff.ssot_only_egress seal */
+  composeSources?: string[] | null;
+  ssotSealed?: boolean | null;
+  stillPhase?: string | null;
+  realizationDegraded?: boolean | null;
 }
 
 /** Split structure/form debt vs Key-optional unmeasured vs actuator degrade (三分流). */
@@ -508,29 +537,83 @@ export function resolveStillPrimaryCtaLabel(meta: StillMeta | null | undefined):
   blocksGenerate: boolean;
 } {
   if (!meta) return { kind: "generate", label: "生成静帧", blocksGenerate: false };
+  try {
+    const { resolveStillPrimaryCta } =
+      require("../../../src/ruleEngine/design/shootableArchitecture") as typeof import("../../../src/ruleEngine/design/shootableArchitecture");
+    const be = resolveStillPrimaryCta({
+      primaryNextStep: meta.primaryNextStep,
+      irdPrimaryAction: meta.irdPrimaryAction,
+      stillQuality: meta.stillQuality,
+      visualPass: meta.visualPass,
+      keyOptional: meta.keyOptional,
+      pixelDimStatus: meta.pixelDimStatus,
+      debtKind: meta.debtKind,
+      contaminationClass: meta.contaminationClass,
+      stillPhase: meta.stillPhase,
+      composeSources: meta.composeSources,
+      ssotSealed: meta.ssotSealed,
+      realizationDegraded: meta.realizationDegraded,
+      oneClickRepairKind: meta.oneClickRepairKind,
+      missingIdentity: meta.debtKind === "missing_identity",
+    });
+    return { kind: be.kind, label: be.label, blocksGenerate: false };
+  } catch {
+    /* FE-only fallback below */
+  }
   if (meta.debtKind === "missing_identity" || meta.propPlateGrade === "identity_missing") {
     return { kind: "enqueue_identity_and_generate", label: "补定妆并继续生成", blocksGenerate: false };
   }
-  if (meta.debtKind === "prompt_fidelity") {
+  const ock = String(meta.oneClickRepairKind ?? "");
+  if (ock === "design_refine") {
+    return { kind: "enhance_and_generate", label: "设计细化·补挂图N资产", blocksGenerate: false };
+  }
+  if (ock && ock !== "none" && ock !== "confirm_required") {
+    return {
+      kind: "one_click_heal",
+      label:
+        ock === "split" || ock === "shotSize_and_split"
+          ? "一键智拆并生成"
+          : ock === "shotSize"
+            ? "一键改景别并生成"
+            : ock === "partial_edit"
+              ? "局部智能修复"
+              : ock === "restore_scene"
+                ? "一键智能修复·恢复场景板"
+                : ock === "rebind_ordinal"
+                  ? "一键智能修复·重绑@图N"
+                  : ock === "recompile_keep_ordinal"
+                    ? "一键智能修复·重编译保留@图N"
+                    : ock === "regen_still_then_burn"
+                    ? "一键智能修复·先重出静照"
+                    : "一键智能修复",
+      blocksGenerate: false,
+    };
+  }
+  if (meta.debtKind === "prompt_fidelity" && !meta.stillPhase && !meta.ssotSealed) {
     return { kind: "enhance_and_generate", label: "增强锚点并生成", blocksGenerate: false };
   }
   if (meta.stillQuality === "hq_ok" && meta.visualPass === true) {
     return { kind: "burn_ready", label: "可烧视频", blocksGenerate: false };
   }
-  // Intent-first: pose realization debt does not block burn CTA
   if (
     meta.realizationDegraded === true ||
     (meta as { realization?: { realizationDegraded?: boolean } }).realization?.realizationDegraded === true
   ) {
-    return { kind: "burn_ready", label: "可烧视频（姿态债）", blocksGenerate: false };
+    return { kind: "realization_soft", label: "减冲突增强后重出（设计已密封）", blocksGenerate: false };
   }
   const step = String(meta.primaryNextStep ?? "");
   const ird = String(meta.irdPrimaryAction ?? "");
   if (ird === "confirm_split" || step === "split_shot") {
     return { kind: "split_and_generate", label: "智拆并生成", blocksGenerate: false };
   }
-  if (ird === "confirm_enhance" || ird === "apply_auto_enhance" || step === "chat_repair") {
+  if (
+    (ird === "confirm_enhance" || ird === "apply_auto_enhance" || step === "chat_repair") &&
+    !(meta.stillPhase || meta.ssotSealed)
+  ) {
     return { kind: "enhance_and_generate", label: "增强设计并生成", blocksGenerate: false };
+  }
+  if (step === "chat_repair" && (meta.stillPhase || meta.ssotSealed)) {
+    return { kind: "realization_soft", label: "继续生成修复（设计已密封）", blocksGenerate: false };
   }
   if (
     step === "regen_storyboard_hq" ||
@@ -542,6 +625,141 @@ export function resolveStillPrimaryCtaLabel(meta: StillMeta | null | undefined):
     return { kind: "continue_repair", label: "继续生成修复", blocksGenerate: false };
   }
   return { kind: "generate", label: "生成静帧", blocksGenerate: false };
+}
+
+/** True when text looks like PromptIR tag soup (CHAR-SCENE, 暖光 4500K, 情绪N), not sealed egress. */
+export function looksLikeStillIrSoup(text: string | null | undefined): boolean {
+  const t = String(text ?? "").trim();
+  if (!t) return false;
+  if (/CHAR-SCENE|PURE-SCENE|CHAR-PROP|PURE-PROP/i.test(t)) return true;
+  if (/^\s*,?\s*CHAR-/i.test(t)) return true;
+  if (/暖光\s*\d{3,4}\s*K/.test(t) && /情绪\d/.test(t) && t.length < 220) return true;
+  return false;
+}
+
+/** Dual surface: literary edit column vs egress promptUsed + CTA. */
+export function resolveStillDualSurface(meta: StillMeta | null | undefined): {
+  literaryEditPrompt: string;
+  egressPrompt: string;
+  /** Canvas /「实际出图词」— never IR soup */
+  canvasDisplayPrompt: string;
+  displayEgress: boolean;
+  literaryIsIrSoup: boolean;
+  cta: ReturnType<typeof resolveStillPrimaryCtaLabel>;
+  note: string;
+} {
+  const literaryRaw = String((meta as { prompt?: string } | null)?.prompt ?? "").trim();
+  const egressRaw = String(meta?.vendorPromptUsed || meta?.promptUsed || "").trim();
+  const literaryIsIrSoup = looksLikeStillIrSoup(literaryRaw);
+  const egressIsIrSoup = looksLikeStillIrSoup(egressRaw);
+  // Never treat IR soup as sealed egress
+  const egress = egressIsIrSoup ? "" : egressRaw;
+  const literaryEditPrompt = literaryRaw;
+  const canvasDisplayPrompt = egress || (!literaryIsIrSoup ? literaryRaw : "");
+  const cta = resolveStillPrimaryCtaLabel(meta);
+  let note = "出图词看 vendorPromptUsed（Seedream：@图N 中文【画面】）；文学列仅编辑 SSOT";
+  if (Array.isArray((meta as { missingSlots?: string[] })?.missingSlots) &&
+    ((meta as { missingSlots?: string[] }).missingSlots ?? []).some((s) =>
+      /seedream\.field|propSoft|contactGeom|ref\.|still\.|video\.|identity\.sheet/.test(String(s)),
+    )) {
+    note = "设计债已记账·智能治愈同源可一键修复/设计细化；生成不阻断";
+  } else if (egress && literaryIsIrSoup) {
+    note = "实际出图用 vendorPromptUsed（@图N 中文【画面】）；节点 IR 汤勿当 vendor 词";
+  } else if (!egress && literaryIsIrSoup) {
+    note = "当前仅有 IR 标签汤·请生成后查看 vendorPromptUsed；勿把 CHAR-SCENE 当出图词";
+  } else if (String(meta?.oneClickRepairKind ?? "") === "confirm_required") {
+    note = "须 Confirm 智拆/改景别（显式锁或低置信）；生成不阻断";
+  } else if (meta?.oneClickRepairKind && meta.oneClickRepairKind !== "none") {
+    note = `已/可一键自愈：${meta.oneClickRepairKind}（智修同源，不阻断）`;
+  } else if (cta.kind === "realization_soft") {
+    note = "设计已密封；像素/增强冲突走减冲突重出，非重开设计";
+  } else if (meta?.keyOptional || meta?.pixelDimStatus === "unmeasured") {
+    note = "Key 可选·像素未测；非设计失败";
+  } else if (String((meta as { stillStage?: string })?.stillStage ?? "") === "explore") {
+    note = "探索预览变体·锁 Seed 后精修";
+  } else if (String((meta as { stillStage?: string })?.stillStage ?? "") === "refine") {
+    note = "精修档·Seed 已锁";
+  }
+  return {
+    literaryEditPrompt,
+    egressPrompt: egress,
+    canvasDisplayPrompt,
+    displayEgress: Boolean(egress),
+    literaryIsIrSoup,
+    cta,
+    note,
+  };
+}
+
+/** Parse Seedream still dialect chips: prefer @图N, also accept @图片N. */
+export type AtTuEgressChip = {
+  ordinal: number;
+  token: string;
+  label: string;
+  thumbUrl: string;
+  missingThumb: boolean;
+  role?: string;
+};
+
+export function resolveAtTuEgressChips(input: {
+  egressPrompt?: string | null;
+  refsRoles?: string[] | null;
+  refThumbUrls?: string[] | null;
+  fallbackThumbs?: string[] | null;
+}): { chips: AtTuEgressChip[]; dialect: "tu" | "tupian" | "mixed" | "none"; chipCount: number; refCount: number } {
+  const p = String(input.egressPrompt ?? "");
+  const tu = [...p.matchAll(/@图(\d+)\s*为([^\s@【，,]+)?/g)];
+  const tupian = [...p.matchAll(/@图片(\d+)/g)];
+  const roles = input.refsRoles ?? [];
+  const thumbs = input.refThumbUrls?.length ? input.refThumbUrls : input.fallbackThumbs ?? [];
+  const byOrd = new Map<number, AtTuEgressChip>();
+  for (const m of tu) {
+    const ordinal = Number(m[1]);
+    byOrd.set(ordinal, {
+      ordinal,
+      token: `@图${ordinal}`,
+      label: String(m[2] ?? "").trim() || `图${ordinal}`,
+      thumbUrl: String(thumbs[ordinal - 1] ?? ""),
+      missingThumb: !String(thumbs[ordinal - 1] ?? "").trim(),
+      role: roles[ordinal - 1],
+    });
+  }
+  if (!byOrd.size) {
+    for (const m of tupian) {
+      const ordinal = Number(m[1]);
+      byOrd.set(ordinal, {
+        ordinal,
+        token: `@图片${ordinal}`,
+        label: `图${ordinal}`,
+        thumbUrl: String(thumbs[ordinal - 1] ?? ""),
+        missingThumb: !String(thumbs[ordinal - 1] ?? "").trim(),
+        role: roles[ordinal - 1],
+      });
+    }
+  }
+  // Ensure physical ref slots appear even if prompt parse missed a token
+  for (let i = 0; i < Math.max(roles.length, thumbs.length); i++) {
+    const ordinal = i + 1;
+    if (!byOrd.has(ordinal)) {
+      byOrd.set(ordinal, {
+        ordinal,
+        token: `@图${ordinal}`,
+        label: String(roles[i] ?? `图${ordinal}`),
+        thumbUrl: String(thumbs[i] ?? ""),
+        missingThumb: !String(thumbs[i] ?? "").trim(),
+        role: roles[i],
+      });
+    }
+  }
+  const chips = [...byOrd.values()].sort((a, b) => a.ordinal - b.ordinal);
+  const dialect =
+    tu.length && tupian.length ? "mixed" : tu.length ? "tu" : tupian.length ? "tupian" : chips.length ? "tu" : "none";
+  return {
+    chips,
+    dialect,
+    chipCount: chips.length,
+    refCount: Math.max(roles.length, thumbs.filter(Boolean).length),
+  };
 }
 
 /** After split_shot success: FE must reload panels before generating child shots. */

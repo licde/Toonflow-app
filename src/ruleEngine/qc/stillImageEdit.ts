@@ -137,15 +137,24 @@ export function mergeEditReferenceList(input: {
   failedImageBase64?: string | null;
   neighborRefs?: StillImageEditRef[];
   config?: StillImageEditConfig;
-  /** layout_preserve: failed_still first as layout anchor, fewer crefs, no scene-tagged refs */
+  /** layout_preserve: failed_still first as layout anchor; KEEP scene/softEnv/prop (图N homology) */
   layoutPreserve?: boolean;
 }): StillImageEditRef[] {
   const cfg = input.config ?? loadStillImageEditConfig();
   const merge = cfg.refMerge ?? FALLBACK.refMerge!;
-  const maxCref = input.layoutPreserve ? Math.min(2, Math.max(1, merge.maxCrefRefs ?? 4)) : Math.max(1, merge.maxCrefRefs ?? 4);
+  const maxCref = input.layoutPreserve
+    ? Math.min(4, Math.max(1, merge.maxCrefRefs ?? 4))
+    : Math.max(1, merge.maxCrefRefs ?? 4);
+  const keepRole = (role: string | undefined) => {
+    const r = String(role ?? "");
+    // Never drop scene / softEnv / prop on partial edit (partial-edit-tun)
+    if (/scene|softEnv|prop|identity|cref/i.test(r)) return true;
+    if (input.layoutPreserve && (r === "other" || r === "layout")) return false;
+    return true;
+  };
   const cref = (input.crefOrderedRefs ?? [])
     .filter((r) => r?.base64)
-    .filter((r) => !(input.layoutPreserve && (r.role === "other" || r.role === "layout")))
+    .filter((r) => keepRole(r.role))
     .slice(0, maxCref)
     .map((r) => ({ ...r, type: "image" as const, role: r.role ?? ("cref" as const) }));
   const out: StillImageEditRef[] = [];
@@ -542,6 +551,39 @@ export function prepareStillImageEdit(input: StillImageEditInput): {
     } catch {
       /* remap optional */
     }
+  }
+
+  // Heal path: when multi event refs hung, recompile Seedream ZH @图N (never 图1=+EN)
+  try {
+    const roles = referenceList
+      .map((r) => String(r.role ?? "").trim())
+      .filter((r) => r === "identity" || r === "propSoft" || r === "softEnv" || r === "cref" || r === "scene");
+    if (roles.length >= 1 && !structuralBlock) {
+      const {
+        compileSeedreamAtTuZhPrompt,
+        stripLegacyStillVendorEgress,
+        assertAtTuHomology,
+      } = require("../compilers/tunOrdinalBinding") as typeof import("../compilers/tunOrdinalBinding");
+      const normRoles = roles.map((r) =>
+        r === "cref" ? "identity" : r === "scene" ? "softEnv" : r,
+      );
+      const zh = compileSeedreamAtTuZhPrompt({
+        refsRoles: normRoles,
+        castNames,
+        primaryName: highName || castNames[0],
+        visualDescription: input.visualDescription || literaryBase,
+        poseOccupancy: /弯腰|捡|俯身/.test(String(input.visualDescription ?? literaryBase))
+          ? "bend_pickup"
+          : undefined,
+        readableZhText: /休书|婚书|信笺/.exec(String(input.visualDescription ?? literaryBase))?.[0],
+      });
+      const next = stripLegacyStillVendorEgress(zh.prompt);
+      if (assertAtTuHomology(next, referenceList.length).ok || /@图\d\s*为/.test(next)) {
+        promptUsed = next;
+      }
+    }
+  } catch {
+    /* keep edit prompt */
   }
 
   return { strategy, modelUsed, promptUsed, referenceList, structuralBlock };

@@ -122,18 +122,18 @@ ok(
   ok("ux.已换板", /已按参考契约换板重出/.test(real), real);
 }
 
-// 7. Refs contract bend
+// 7. Refs contract bend — T2I-first drops SCENE softEnv
 {
   const c = resolveStillRefsContract({
     visualDescription: SHOT3_VD,
     poseOccupancy: "bend_pickup",
     primaryObjective: "action_primary",
   });
-  ok("refs.keep_soft", c.dropFullSoftEnv === false, c.reason);
+  ok("refs.drop_soft", c.dropFullSoftEnv === true, c.reason);
   ok("refs.force_prop", c.forcePropOccupancySynth === false);
-  ok("refs.asset_first", /asset_first|keep_scene/.test(c.reason), c.reason);
+  ok("refs.t2i_first", /t2i_first_drop_scene/.test(c.reason), c.reason);
   ok("refs.face_lock", c.identityReplaceStandingSheet === true && c.identityPreferActionBody === false);
-  ok("refs.scene_first", /keep_scene/.test(c.reason) || c.dropFullSoftEnv === false, c.reason);
+  ok("refs.drop_hint", c.repairDeltaHints.includes("drop_softEnv"), c.repairDeltaHints.join(","));
 }
 
 console.log("ALL PASS test-g-beat-isolate-true-plates");

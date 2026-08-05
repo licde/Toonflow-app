@@ -391,3 +391,114 @@ export function resolveImageQualityAnchor(requested: string, projectQuality?: st
   const proj = projectQuality || "1K";
   return rank(proj) > rank(req) ? proj : req;
 }
+
+/**
+ * Seedream handbook ladder + stillStage (explore / refine / edit).
+ * Missing lockSeed → auto-allocate and account (never block).
+ */
+export type StillStage = "explore" | "refine" | "edit";
+
+export function resolveStillGenerationProfile(input: {
+  stillStage?: string | null;
+  qualityMode?: string | null;
+  requestedQuality?: string | null;
+  projectQuality?: string | null;
+  lockSeed?: number | null;
+  /** Last explore seed to inherit */
+  priorSeed?: number | null;
+  exploreCount?: number | null;
+}): {
+  stage: StillStage;
+  size: "1K" | "2K" | "4K";
+  seed: number;
+  seedHealed: boolean;
+  exploreCount: number;
+  ladder: "draft_preview" | "hq_refine" | "edit_i2i";
+  blocksGenerate: false;
+  sources: string[];
+} {
+  const raw = String(input.stillStage ?? "").trim();
+  let stage: StillStage =
+    raw === "explore" || raw === "refine" || raw === "edit"
+      ? raw
+      : input.qualityMode === "draft"
+        ? "explore"
+        : "explore";
+  // Explicit hq_update without stage → refine intent but soft seed
+  if (!raw && input.qualityMode === "hq_update") stage = "refine";
+
+  const sources: string[] = [`still.stage:${stage}`];
+  let seedHealed = false;
+  let seed =
+    typeof input.lockSeed === "number" && Number.isFinite(input.lockSeed) && input.lockSeed >= 0
+      ? Math.floor(input.lockSeed)
+      : typeof input.priorSeed === "number" && Number.isFinite(input.priorSeed) && input.priorSeed >= 0
+        ? Math.floor(input.priorSeed)
+        : undefined;
+
+  if (seed == null) {
+    seed = Math.floor(Math.random() * 2147483646) + 1;
+    seedHealed = true;
+    sources.push(stage === "refine" || stage === "edit" ? "heal.seed:auto_for_refine" : "heal.seed:explore");
+  } else if (
+    (stage === "refine" || stage === "edit") &&
+    (input.lockSeed == null || !Number.isFinite(input.lockSeed)) &&
+    input.priorSeed != null
+  ) {
+    sources.push("heal.seed:inherit_prior");
+    seedHealed = true;
+  }
+
+  if (stage === "explore") {
+    const n = Math.min(8, Math.max(1, Number(input.exploreCount ?? 4) || 4));
+    return {
+      stage,
+      size: "1K",
+      seed,
+      seedHealed,
+      exploreCount: n,
+      ladder: "draft_preview",
+      blocksGenerate: false,
+      sources,
+    };
+  }
+  const anchored = resolveImageQualityAnchor(input.requestedQuality || "2K", input.projectQuality);
+  const size: "1K" | "2K" | "4K" =
+    anchored === "4K" ? "4K" : "2K";
+  return {
+    stage,
+    size,
+    seed,
+    seedHealed,
+    exploreCount: 1,
+    ladder: stage === "edit" ? "edit_i2i" : "hq_refine",
+    blocksGenerate: false,
+    sources,
+  };
+}
+
+export function resolveStillVendorSizeLadder(input: {
+  qualityMode?: string | null;
+  requestedQuality?: string | null;
+  projectQuality?: string | null;
+  lockSeed?: number | null;
+}): {
+  size: "1K" | "2K" | "4K";
+  ladder: "draft_preview" | "hq_refine";
+  seedLockPreferred: boolean;
+  seed?: number;
+} {
+  const profile = resolveStillGenerationProfile({
+    qualityMode: input.qualityMode,
+    requestedQuality: input.requestedQuality,
+    projectQuality: input.projectQuality,
+    lockSeed: input.lockSeed,
+    stillStage: input.qualityMode === "draft" ? "explore" : "refine",
+  });
+  return {
+    size: profile.size,
+    ladder: profile.ladder === "edit_i2i" ? "hq_refine" : profile.ladder,
+    seedLockPreferred: profile.stage !== "explore",
+    seed: profile.seed,
+  };
+}

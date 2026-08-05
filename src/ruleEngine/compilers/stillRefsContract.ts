@@ -67,6 +67,12 @@ export function resolveStillRefsContract(input: {
   objectiveClass?: string | null;
   poseOccupancy?: string | null;
   visualDescription?: string | null;
+  stillPhase?: string | null;
+  /**
+   * FE already mounted a full SCENE / softEnv plate — never default-drop it on bend.
+   * May soften (blur) but keep hung; plan: stop-drop-fe-scene.
+   */
+  feSceneHung?: boolean | null;
   /** Prefer atoms from shot JSON sample when present */
   shotDesignSample?: {
     primaryObjective?: string | null;
@@ -126,26 +132,44 @@ export function resolveStillRefsContract(input: {
   }
 
   // --- Row: action_primary / bend_pickup occupancy ---
-  // Scene-first: keep full SCENE softEnv (hall + DOF). Skirt is Should/ZH — do not drop hall.
-  // Asset-first: do NOT force synth over warehouse paper; ladder decides hold-card → synth.
+  // Identity: replace standing four-view body with face crop (identityReplaceStandingSheet).
+  // FE已挂场景：禁止默认 dropFullSoftEnv（可 soften）；无 FE 场景才允许 drop→atmosphere。
   if (primaryObjective === "action_primary" || poseOccupancy === "bend_pickup") {
-    const dropSoft =
-      fragmentOverFull &&
-      Boolean(input.shotDesignSample?.must?.some((m) => m.id === "bg.fragment")) &&
-      !input.shotDesignSample?.must?.some((m) => m.id === "bg.scene_soft");
+    const approaching =
+      /接近|伸向|尚未捏|主手接近|弯腰俯身去捡/.test(vd) ||
+      /approaching|mid_contact/i.test(String((input as { stillPhase?: string }).stillPhase ?? ""));
+    const feHung = input.feSceneHung === true;
+    if (feHung) {
+      return {
+        dropFullSoftEnv: false,
+        forcePropOccupancySynth: false,
+        propPoseOccupancy: poseOccupancy === "bend_pickup" ? "bend_pickup" : poseOccupancy || "bend_pickup",
+        identityPreferActionBody: false,
+        identityReplaceStandingSheet: true,
+        allowAtmosphereSoftEnv: true,
+        repairDeltaHints: approaching
+          ? ["soften_softEnv", "identity_face_crop", "t2i_first", "seed"]
+          : ["soften_softEnv", "identity_face_crop", "propSoft_resynth_if_no_asset", "seed"],
+        reason: approaching
+          ? `refs_contract:action_primary/${poseOccupancy}:fe_scene_kept_soften_approaching`
+          : `refs_contract:action_primary/${poseOccupancy}:fe_scene_kept_soften`,
+        primaryObjective: "action_primary",
+        poseOccupancy,
+      };
+    }
     return {
-      dropFullSoftEnv: dropSoft,
+      dropFullSoftEnv: true,
       forcePropOccupancySynth: false,
       propPoseOccupancy: poseOccupancy === "bend_pickup" ? "bend_pickup" : poseOccupancy || "bend_pickup",
       identityPreferActionBody: false,
       identityReplaceStandingSheet: true,
       allowAtmosphereSoftEnv: true,
-      repairDeltaHints: dropSoft
-        ? ["propSoft_resynth_if_no_asset", "drop_softEnv", "identity_bend_sil", "seed"]
-        : ["propSoft_resynth_if_no_asset", "identity_bend_sil", "seed"],
-      reason: dropSoft
-        ? `refs_contract:action_primary/${poseOccupancy}:frag_no_scene_asset_first`
-        : `refs_contract:action_primary/${poseOccupancy}:keep_scene_asset_first`,
+      repairDeltaHints: approaching
+        ? ["drop_softEnv", "identity_face_crop", "t2i_first", "seed"]
+        : ["drop_softEnv", "identity_face_crop", "propSoft_resynth_if_no_asset", "seed"],
+      reason: approaching
+        ? `refs_contract:action_primary/${poseOccupancy}:t2i_first_drop_scene_approaching`
+        : `refs_contract:action_primary/${poseOccupancy}:t2i_first_drop_scene`,
       primaryObjective: "action_primary",
       poseOccupancy,
     };

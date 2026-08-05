@@ -325,11 +325,23 @@ ok("seal.bend", seal.poseOccupancy === "bend_pickup" || seal.primaryObjective ==
   ok("repair.delta", plan.deltaHints.length > 0 && plan.forceFull === true);
 }
 
-// 9. Crop ≥0.72 for bend / action_primary
+// 9. Crop: bend face-lock ≤0.4; contact/costume keeps ≥0.72
 {
   ok(
-    "crop.bend",
-    resolveIdentityCropTopRatio({ objectiveClass: "action_primary", poseOccupancy: "bend_pickup" }) >= 0.72,
+    "crop.bend_face_lock",
+    resolveIdentityCropTopRatio({
+      objectiveClass: "action_primary",
+      poseOccupancy: "bend_pickup",
+      identityReplaceStandingSheet: true,
+    }) <= 0.4,
+  );
+  ok(
+    "crop.bend_default_face",
+    resolveIdentityCropTopRatio({ objectiveClass: "action_primary", poseOccupancy: "bend_pickup" }) <= 0.4,
+  );
+  ok(
+    "crop.contact_upper",
+    resolveIdentityCropTopRatio({ objectiveClass: "contact_geom", poseOccupancy: null }) >= 0.72,
   );
   ok(
     "crop.face_only",
@@ -354,14 +366,14 @@ ok("seal.bend", seal.poseOccupancy === "bend_pickup" || seal.primaryObjective ==
   ok("bind.cheek", /颊/.test(cheek) || /触肤/.test(cheek), cheek);
 }
 
-// 11. Fragment over softEnv
+// 11. Bend T2I-first: drop softEnv even when SCENE linked
 {
   const bg = resolveStillBgPolicy({
     description: VD,
     shotSize: "MS",
     hasSceneLink: true,
   });
-  ok("fragment.keep_softEnv", bg.keepSoftEnvRef === true || /keep_softEnv/.test(String(bg.reason)), JSON.stringify(bg));
+  ok("fragment.drop_softEnv_bend", bg.keepSoftEnvRef === false && bg.omitSrefToken === true, JSON.stringify(bg));
 }
 
 // 12. Compress knuckles survive + scene-first when softEnv hung
@@ -555,7 +567,7 @@ ok("seal.bend", seal.poseOccupancy === "bend_pickup" || seal.primaryObjective ==
     "propSoft.present_with_bytes",
     propSoftSlotActuallyPresent({
       refsRoles: ["identity", "propSoft"],
-      referenceList: [{ base64: "aaa" }, { base64: "bbb".repeat(20) }],
+      referenceList: [{ base64: "aaa" }, { base64: "b".repeat(800) }],
     }) === true,
   );
 }
@@ -583,13 +595,13 @@ void (async () => {
     hasSceneLink: true,
   });
   ok(
-    "bend.softEnv_kept",
-    bgBend.keepSoftEnvRef === true,
-    JSON.stringify({ reason: bgBend.reason, keep: bgBend.keepSoftEnvRef }),
+    "bend.softEnv_dropped",
+    bgBend.keepSoftEnvRef === false && bgBend.omitSrefToken === true,
+    JSON.stringify({ reason: bgBend.reason, keep: bgBend.keepSoftEnvRef, omit: bgBend.omitSrefToken }),
   );
   ok(
     "bend.softEnv_reason",
-    /keep_softEnv|bend_action|characterCentric/.test(String(bgBend.reason)),
+    /t2i_first|bend_action/.test(String(bgBend.reason)),
     bgBend.reason,
   );
 
@@ -634,8 +646,8 @@ void (async () => {
     ],
     refsRoles: ["identity", "propSoft", "softEnv"],
   });
-  ok("delta.kept_softEnv", delta.droppedSoftEnv !== true);
-  ok("delta.has_softEnv_role", (delta.refsRoles ?? []).includes("softEnv"));
+  ok("delta.dropped_softEnv", delta.droppedSoftEnv === true);
+  ok("delta.no_softEnv_role", !(delta.refsRoles ?? []).includes("softEnv"));
   ok("delta.propSoft_resynth", Boolean(delta.propSoftBase64) && delta.sources.some((s) => /propSoft_resynth/.test(s)));
   ok("delta.plates_swapped", delta.platesSwapped === true && delta.claimPlateRepair === true);
   ok("delta.prop_changed", delta.propSoftBase64 !== "holdcard".repeat(20));
@@ -649,8 +661,8 @@ void (async () => {
     poseOccupancy: "bend_pickup",
     visualDescription: VD,
   });
-  ok("contract.action_keep_soft", actionC.dropFullSoftEnv === false && actionC.forcePropOccupancySynth === false, actionC.reason);
-  ok("contract.action_asset_first", /asset_first/.test(actionC.reason), actionC.reason);
+  ok("contract.action_drop_soft", actionC.dropFullSoftEnv === true && actionC.forcePropOccupancySynth === false, actionC.reason);
+  ok("contract.action_t2i_first", /t2i_first_drop_scene/.test(actionC.reason), actionC.reason);
   ok("contract.action_face_lock", actionC.identityReplaceStandingSheet === true && actionC.identityPreferActionBody === false);
   const contactC = resolveStillRefsContract({
     primaryObjective: "contact_geom",

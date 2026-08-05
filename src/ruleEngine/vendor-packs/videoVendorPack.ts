@@ -60,14 +60,15 @@ export function applyVendorPromptPack(input: {
 
   if (/seedance|volcengine.?sd2/i.test(vid) || /seedance/i.test(tpl)) {
     packId = "seedance";
-    // @图N → @图片N for Seedance Chinese pack
+    // @图N → @图片N for Seedance Chinese pack (keep ordinals)
     prompt = prompt.replace(/@图(\d+)/g, "@图片$1");
   } else if (/wan/i.test(vid) || /wan2\.6|wan2/i.test(tpl)) {
     packId = "wan";
-    // Wan narrative: strip @图 refs
+    // Wan: honest dialect — strip @图; emit video.tun_stripped for ledger when multi-ref expected
     if (/@图\d|@图片\d/i.test(prompt)) {
       prompt = prompt.replace(/@图(?:片)?\d+\s*[：:][^\n]*/g, "").replace(/@图(?:片)?\d+/g, "");
       warnings.push("wan_strip_at_refs");
+      warnings.push("video.tun_stripped");
     }
   } else if (/kling/i.test(vid)) {
     packId = "klingai";
@@ -77,9 +78,10 @@ export function applyVendorPromptPack(input: {
     packId = "vidu";
   } else if (/agnes/i.test(vid)) {
     packId = "agnesai";
-    if (/@图\d|negative\s*:/i.test(prompt)) {
-      prompt = prompt.replace(/@图(?:片)?\d+\s*[：:][^\n]*/g, "").replace(/negative\s*:[^\n]*/gi, "");
-      warnings.push("agnes_strip_at_and_negative");
+    // 图N-first: Agnes multi-param KEEPS @图N; only strip negative: channel
+    if (/negative\s*:/i.test(prompt)) {
+      prompt = prompt.replace(/negative\s*:[^\n]*/gi, "");
+      warnings.push("agnes_strip_negative_only");
     }
   }
 

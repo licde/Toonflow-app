@@ -51,9 +51,9 @@ export function occupancyCompressLead(
     case "bend_pickup": {
       const phase = String(opts?.stillPhase ?? "");
       if (phase === "approaching" || phase === "mid_contact") {
-        return "占位：弯腰俯身接近地面薄纸，手伸向纸面（尚未捏紧完成），休书在地。";
+        return "占位：站姿双脚着地弯腰俯身去捡起地面休书，膝不触地，手伸向纸面（尚未捏紧完成），休书在地。";
       }
-      return "占位：弯腰捡拾，躯干前倾，指尖捏紧指节泛白，休书薄纸主手近地触地。";
+      return "占位：站姿双脚着地弯腰捡拾，膝不触地，躯干前倾，指尖捏紧指节泛白，休书薄纸主手近地触地。";
     }
     case "kneel_hold":
       return "占位：跪坐持物，躯干稳定，道具在主手。";

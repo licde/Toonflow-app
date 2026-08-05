@@ -30,7 +30,8 @@ import {
   markHqOk,
   mergeReasonMeta,
   parseStillMetaFromReason,
-  resolveImageQualityAnchor,
+  resolveStillVendorSizeLadder,
+  resolveStillGenerationProfile,
 } from "@/ruleEngine/compilers/stillQuality";
 import { hashLiteraryDesc } from "@/ruleEngine/qc/stillFirstFrameGate";
 import { buildPrimaryBlock } from "@/ruleEngine/compilers/primaryBlock";
@@ -59,6 +60,11 @@ export interface GenerateFlowImageBody {
   requireParentRef?: boolean;
   /** default hq_update for storyboard-linked stills */
   qualityMode?: "hq_update" | "draft";
+  /** optional Seedream seed lock for hq refine */
+  seed?: number;
+  /** explore | refine | edit — default explore (handbook progressive) */
+  stillStage?: "explore" | "refine" | "edit";
+  exploreCount?: number;
   /** persist filePath + stillQuality when storyboardId present (default true) */
   persistToStoryboard?: boolean;
   /** optional QC strengthen map from postBurn */
@@ -75,6 +81,7 @@ export interface GenerateFlowImageDeps {
     referenceList: { type: "image"; base64: string }[];
     size: string;
     aspectRatio: string;
+    seed?: number;
   }) => Promise<{ save: (path: string) => Promise<void>; getResultUrl?: () => Promise<string>; resultBase64?: string }>;
   urlToBase64?: (url: string) => Promise<string>;
   /** Inject for tests — skip live Vision */
@@ -171,6 +178,10 @@ export async function runGenerateFlowImageCore(
   softAssetId?: number;
   propSoftPreviewUrl?: string;
   refsRoles?: string[];
+  refThumbUrls?: string[];
+  vendorPromptUsed?: string;
+  canvasDisplayPrompt?: string;
+  oneClickRepairKind?: string | null;
   vendorCalled?: boolean;
   vendorMs?: number;
   actuatorId?: string;
@@ -218,7 +229,24 @@ export async function runGenerateFlowImageCore(
   const prompt = body.prompt;
 
   const projectRow = await db("o_project").where({ id: projectId }).select("imageQuality").first();
-  const quality = resolveImageQualityAnchor(body.quality, projectRow?.imageQuality);
+  const genProfile = resolveStillGenerationProfile({
+    stillStage: body.stillStage,
+    qualityMode,
+    requestedQuality: body.quality,
+    projectQuality: projectRow?.imageQuality,
+    lockSeed: typeof body.seed === "number" ? body.seed : null,
+    exploreCount: body.exploreCount,
+  });
+  const sizeLadder = {
+    size: genProfile.size,
+    ladder: genProfile.ladder === "edit_i2i" ? ("hq_refine" as const) : genProfile.ladder,
+    seed: genProfile.seed,
+    seedLockPreferred: genProfile.stage !== "explore",
+  };
+  const quality = sizeLadder.size;
+  const vendorSeed = sizeLadder.seed;
+  (body as { resolvedQualityLadder?: string }).resolvedQualityLadder = sizeLadder.ladder;
+  (body as { stillStageResolved?: string }).stillStageResolved = genProfile.stage;
 
   // Compose + design enrich before spending vendor quota
   const composeCtx = await hydrateComposeStillContext(db, {
@@ -613,6 +641,14 @@ export async function runGenerateFlowImageCore(
     shot: undefined,
     storyboard: undefined,
   });
+  let pendingMountGate: {
+    missingSlots: string[];
+    reason: string;
+    ctaLabel: string;
+  } | null = null;
+  let mountedIdentityNames: string[] = [];
+  let mountedSceneName: string | null = null;
+  let mountedPropName: string | null = null;
 
   if (storyboardId) {
     try {
@@ -624,6 +660,38 @@ export async function runGenerateFlowImageCore(
             assetRows.map((r: { assetId: number }) => r.assetId),
           )
         : [];
+      try {
+        const { resolveDesignMountGate } =
+          require("@/ruleEngine/compilers/designMountGate") as typeof import("@/ruleEngine/compilers/designMountGate");
+        const mount = resolveDesignMountGate({
+          assets: (assets as Array<{ id?: number; type?: string; name?: string }>).map((a) => ({
+            assetId: a.id,
+            type: a.type,
+            name: a.name,
+          })),
+          visualDescription: String(composeCtx.visualDescription ?? body.prompt ?? ""),
+        });
+        if (!mount.ok) {
+          pendingMountGate = {
+            missingSlots: mount.missingSlots,
+            reason: mount.reason,
+            ctaLabel: mount.ctaLabel,
+          };
+        }
+      } catch {
+        /* optional */
+      }
+      const namedAssets = (assets as Array<{ type?: string; name?: string }>).map((a) => ({
+        type: String(a.type ?? "").trim(),
+        name: String(a.name ?? "").trim(),
+      }));
+      mountedIdentityNames = namedAssets
+        .filter((a) => a.name && /role|char|character|identity|人物|角色|定妆/i.test(`${a.type} ${a.name}`))
+        .map((a) => a.name);
+      mountedSceneName =
+        namedAssets.find((a) => a.name && /scene|bg|环境|场景/i.test(`${a.type} ${a.name}`))?.name || null;
+      mountedPropName =
+        namedAssets.find((a) => a.name && /tool|prop|道具|纸|书|信|灯笼/i.test(`${a.type} ${a.name}`))?.name || null;
       const codes = assets
         .map((a: { remark?: string }) => {
           const m = String(a.remark ?? "").match(/(?:assetCode|charCode):([A-Za-z]+-[A-Za-z0-9]+)/i);
@@ -666,7 +734,10 @@ export async function runGenerateFlowImageCore(
     }
   }
 
-  const charNames = (composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[];
+  const charNames =
+    mountedIdentityNames.length > 0
+      ? mountedIdentityNames
+      : ((composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[]);
   const literaryDesc = (() => {
     try {
       const { resolveLiteraryStillPrompt } =
@@ -717,7 +788,7 @@ export async function runGenerateFlowImageCore(
       Boolean((composeCtx as { sceneEstablishing?: boolean }).sceneEstablishing) ||
       /建立镜头|establishing|空镜建立|全景建立/i.test(String(literaryDesc ?? "")),
     hasSceneLink,
-    bgBlur: Boolean((composeCtx as { bgBlur?: boolean }).bgBlur),
+    bgBlur: (composeCtx as { bgBlur?: boolean }).bgBlur,
   });
   // Oral ECU: softEnv rim-only — prefer excludeScene + keepSoftEnvRef; never bake hall paper
   if (isOralMicroNotActionPrimary(literaryDesc)) {
@@ -806,6 +877,16 @@ export async function runGenerateFlowImageCore(
     framingMode: (composeCtx as { framingMode?: string }).framingMode ?? closedAssert.framingMode,
     closedAssertReasons: (composeCtx as { closedAssertReasons?: string[] }).closedAssertReasons ?? [],
   } as typeof composed;
+  if (pendingMountGate) {
+    (lastComposed as { missingSlots?: string[] }).missingSlots = [
+      ...new Set([
+        ...((lastComposed as { missingSlots?: string[] }).missingSlots ?? []),
+        ...pendingMountGate.missingSlots,
+      ]),
+    ];
+    (lastComposed as { oneClickRepairKind?: string }).oneClickRepairKind = "design_refine";
+    (lastComposed as { mountGateReason?: string }).mountGateReason = pendingMountGate.reason;
+  }
   if (bgPol.bgGuidance && bgPol.keepSoftEnvRef) {
     (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = bgPol.softEnvContinuity;
   }
@@ -1018,7 +1099,35 @@ export async function runGenerateFlowImageCore(
             salvageSoftEnvFromFeRefs,
           } = await import("@/ruleEngine/compilers/eventPlateReadiness");
           const dropScene = Boolean(lastComposed.excludeScene);
-          const softEnv = Boolean(lastComposed.keepSoftEnvRef);
+          // Re-resolve with FE scene hung so bend cannot default-drop hung softEnv
+          try {
+            const { resolveStillRefsContract: resolveRefsFe } = await import(
+              "@/ruleEngine/compilers/stillRefsContract"
+            );
+            const sealFe = (lastComposed.generationContract as {
+              primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
+            } | undefined)?.primaryIntentSeal;
+            const feHung =
+              Boolean(lastComposed.keepSoftEnvRef) ||
+              lastComposed.softEnvContinuity === "must";
+            if (feHung) {
+              const refsFe = resolveRefsFe({
+                primaryObjective: sealFe?.primaryObjective,
+                objectiveClass: lastComposed.generationContract?.objectiveClass,
+                poseOccupancy: sealFe?.poseOccupancy,
+                visualDescription: literaryDesc,
+                feSceneHung: true,
+              });
+              (lastComposed as { stillRefsContract?: typeof refsFe }).stillRefsContract = refsFe;
+            }
+          } catch {
+            /* keep composed contract */
+          }
+          // dropFullSoftEnv: never hang FE temple as softEnv/identity (Seedream handbook slots)
+          const dropSoftContract =
+            (lastComposed as { stillRefsContract?: { dropFullSoftEnv?: boolean } }).stillRefsContract
+              ?.dropFullSoftEnv === true;
+          const softEnv = Boolean(lastComposed.keepSoftEnvRef) && !dropSoftContract;
           const eventObj = objectiveNeedsPropPlate(lastComposed.generationContract?.objectiveClass);
           let softEnvB64: string | undefined;
           let propB64: string | undefined;
@@ -1065,24 +1174,52 @@ export async function runGenerateFlowImageCore(
                 primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
               } | undefined)?.primaryIntentSeal;
               let preferActionBody = false;
+              let faceOnlyLockEarly = false;
+              let topRatioEarly = 0.55;
               try {
                 const { resolveStillRefsContract } = await import(
                   "@/ruleEngine/compilers/stillRefsContract"
+                );
+                const { resolveBendIdentityCropPlan } = await import(
+                  "@/ruleEngine/compilers/eventPlateReadiness"
                 );
                 const refsC = resolveStillRefsContract({
                   primaryObjective: sealCropEarly?.primaryObjective,
                   objectiveClass: lastComposed.generationContract?.objectiveClass,
                   poseOccupancy: sealCropEarly?.poseOccupancy,
                   visualDescription: literaryDesc,
+                  feSceneHung:
+                    Boolean(lastComposed.keepSoftEnvRef) ||
+                    lastComposed.softEnvContinuity === "must" ||
+                    ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).includes("softEnv"),
                 });
-                preferActionBody = refsC.identityPreferActionBody;
                 (lastComposed as { stillRefsContract?: typeof refsC }).stillRefsContract = refsC;
+                const plan = resolveBendIdentityCropPlan({
+                  identityReplaceStandingSheet: refsC.identityReplaceStandingSheet,
+                  identityPreferActionBody: refsC.identityPreferActionBody,
+                  poseOccupancy: sealCropEarly?.poseOccupancy,
+                  primaryObjective: sealCropEarly?.primaryObjective,
+                  objectiveClass: lastComposed.generationContract?.objectiveClass,
+                  keepSoftEnvRef: softEnv,
+                  softEnvContinuity: softEnv ? "must" : "none",
+                  visualDescription: literaryDesc,
+                });
+                preferActionBody = plan.preferActionBody;
+                faceOnlyLockEarly = plan.faceOnlyLock;
+                topRatioEarly = plan.topRatio;
               } catch {
-                preferActionBody =
-                  sealCropEarly?.poseOccupancy === "bend_pickup" ||
-                  sealCropEarly?.primaryObjective === "action_primary" ||
-                  lastComposed.generationContract?.objectiveClass === "action_primary" ||
-                  /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? ""));
+                const { resolveBendIdentityCropPlan } = await import(
+                  "@/ruleEngine/compilers/eventPlateReadiness"
+                );
+                const plan = resolveBendIdentityCropPlan({
+                  poseOccupancy: sealCropEarly?.poseOccupancy,
+                  primaryObjective: sealCropEarly?.primaryObjective,
+                  objectiveClass: lastComposed.generationContract?.objectiveClass,
+                  visualDescription: literaryDesc,
+                });
+                preferActionBody = plan.preferActionBody;
+                faceOnlyLockEarly = plan.faceOnlyLock;
+                topRatioEarly = plan.topRatio;
               }
               const cropped = await cropTurnaroundSheetToIdentityPlate(base64, {
                 assumeSheet: true,
@@ -1101,8 +1238,38 @@ export async function runGenerateFlowImageCore(
                 }
                 continue;
               }
-              // Event objectives: upper-body bias keeps costume (not face-only soup)
-              if (eventObj && !(softEnv && softEnvB64)) {
+              // Event: upper-body bias OR bend face-lock (never torso+namecard for Seedream collage)
+              if (faceOnlyLockEarly) {
+                const face = await cropIdentityPlateToFaceBias(base64, {
+                  topRatio: topRatioEarly,
+                  faceOnly: true,
+                  preferActionBody: false,
+                });
+                if (face.cropped && face.base64) {
+                  base64 = face.base64;
+                } else {
+                  try {
+                    const { stampTunLedgerOntoMeta } =
+                      require("@/ruleEngine/compilers/tunOrdinalLedger") as typeof import("@/ruleEngine/compilers/tunOrdinalLedger");
+                    Object.assign(
+                      lastComposed as object,
+                      stampTunLedgerOntoMeta(lastComposed as Record<string, unknown>, {
+                        kind: "identity_sheet",
+                        detail: "face crop failed — sheet debt",
+                        missingSlot: "identity.sheet",
+                      }),
+                    );
+                    (lastComposed as { missingSlots?: string[] }).missingSlots = [
+                      ...new Set([
+                        ...((lastComposed as { missingSlots?: string[] }).missingSlots ?? []),
+                        "identity.sheet",
+                      ]),
+                    ];
+                  } catch {
+                    /* optional */
+                  }
+                }
+              } else if (eventObj && !(softEnv && softEnvB64)) {
                 const { resolveIdentityCropTopRatio } = await import(
                   "@/ruleEngine/compilers/eventPlateReadiness"
                 );
@@ -1120,14 +1287,14 @@ export async function runGenerateFlowImageCore(
                 });
                 if (face.cropped && face.base64) base64 = face.base64;
               }
-              // Bend: replace standing sheet body with face+lean silhouette (not upright four-up)
+              // Bend: replace standing sheet with face-only plate
               {
                 const refsForBend =
                   (lastComposed as { stillRefsContract?: { identityReplaceStandingSheet?: boolean } })
                     .stillRefsContract;
                 const replaceStand =
+                  faceOnlyLockEarly ||
                   refsForBend?.identityReplaceStandingSheet === true ||
-                  preferActionBody ||
                   sealCropEarly?.poseOccupancy === "bend_pickup";
                 if (replaceStand) {
                   try {
@@ -1150,8 +1317,13 @@ export async function runGenerateFlowImageCore(
               }
               identityPlates.push({ type: "image" as const, base64 });
             } else if (!dropScene && likelyScene) {
-              if (softEnv && !softEnvB64) softEnvB64 = base64;
-              else identityPlates.push({ type: "image" as const, base64 });
+              if (softEnv && !softEnvB64) {
+                softEnvB64 = base64;
+              } else {
+                // Seedream handbook: SCENE must never enter identity slot (temple/outdoor leak)
+                sceneRefsDropped += 1;
+                continue;
+              }
             } else if (!dropScene) {
               const cropped = await cropTurnaroundSheetToIdentityPlate(base64, { assumeSheet: false });
               if (cropped.cropped && cropped.reason === "four_up_left_quarter" && cropped.base64) {
@@ -1192,6 +1364,31 @@ export async function runGenerateFlowImageCore(
                 if (identityPlates.length > 1) {
                   const swapped = identityPlates.splice(1, 1)[0];
                   if (swapped) identityPlates[0] = swapped;
+                } else if (identityPlates[0]?.base64) {
+                  try {
+                    const { composeBendIdentityPlate } = await import(
+                      "@/ruleEngine/compilers/eventPlateReadiness"
+                    );
+                    const faceOnly = await composeBendIdentityPlate({
+                      faceSourceBase64: identityPlates[0].base64,
+                    });
+                    if (faceOnly?.usedFace && faceOnly.base64) {
+                      identityPlates[0] = { type: "image" as const, base64: faceOnly.base64 };
+                      (lastComposed as { sources?: string[] }).sources = [
+                        ...((lastComposed as { sources?: string[] }).sources ?? []),
+                        "identity.contam_bend_face_only",
+                      ];
+                      (lastComposed as { debtKind?: string }).debtKind =
+                        (lastComposed as { debtKind?: string }).debtKind || "identity_plate";
+                    }
+                  } catch {
+                    (lastComposed as { sources?: string[] }).sources = [
+                      ...((lastComposed as { sources?: string[] }).sources ?? []),
+                      "identity.contam_honest_no_swap",
+                    ];
+                    (lastComposed as { debtKind?: string }).debtKind =
+                      (lastComposed as { debtKind?: string }).debtKind || "identity_plate";
+                  }
                 }
               }
             } catch {
@@ -1290,11 +1487,14 @@ export async function runGenerateFlowImageCore(
                   objectiveClass: lastComposed.generationContract?.objectiveClass,
                   poseOccupancy: sealBend?.poseOccupancy,
                   visualDescription: literaryDesc,
+                  feSceneHung:
+                    Boolean(lastComposed.keepSoftEnvRef) ||
+                    ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).includes("softEnv"),
                 });
               (lastComposed as { stillRefsContract?: typeof refsC }).stillRefsContract = refsC;
               dropSoft = refsC.dropFullSoftEnv;
             } catch {
-              // Scene-first safe default: NEVER drop softEnv on import/resolve failure for bend
+              // Resolve failure: keep softEnv (do not invent drop)
               dropSoft = false;
             }
             if (dropSoft) {
@@ -1305,6 +1505,20 @@ export async function runGenerateFlowImageCore(
                 const role = roles[i] || "identity";
                 if (role === "softEnv") {
                   (lastComposed as { droppedSoftEnv?: boolean }).droppedSoftEnv = true;
+                  try {
+                    const { stampTunLedgerOntoMeta } =
+                      require("@/ruleEngine/compilers/tunOrdinalLedger") as typeof import("@/ruleEngine/compilers/tunOrdinalLedger");
+                    Object.assign(
+                      lastComposed as object,
+                      stampTunLedgerOntoMeta(lastComposed as Record<string, unknown>, {
+                        kind: "drop_softEnv",
+                        detail: "contract drop softEnv (no FE hung)",
+                        missingSlot: "ref.scene_mismatch",
+                      }),
+                    );
+                  } catch {
+                    /* optional */
+                  }
                   continue;
                 }
                 nextRefs.push(referenceList[i]!);
@@ -1338,7 +1552,10 @@ export async function runGenerateFlowImageCore(
             "@/ruleEngine/compilers/cropTurnaroundToIdentityPlate"
           );
           const eventObj = objectiveNeedsPropPlate(lastComposed.generationContract?.objectiveClass);
-          const softEnv = Boolean(lastComposed.keepSoftEnvRef);
+          const dropSoftContract2 =
+            (lastComposed as { stillRefsContract?: { dropFullSoftEnv?: boolean } }).stillRefsContract
+              ?.dropFullSoftEnv === true;
+          const softEnv = Boolean(lastComposed.keepSoftEnvRef) && !dropSoftContract2;
           const continuity =
             (lastComposed as { softEnvContinuity?: "must" | "optional" | "none" }).softEnvContinuity ??
             (softEnv ? "must" : "none");
@@ -1470,6 +1687,9 @@ export async function runGenerateFlowImageCore(
                 objectiveClass: lastComposed.generationContract?.objectiveClass,
                 poseOccupancy: sealBend2?.poseOccupancy,
                 visualDescription: literaryDesc,
+                feSceneHung:
+                  Boolean(lastComposed.keepSoftEnvRef) ||
+                  ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).includes("softEnv"),
               });
             (lastComposed as { stillRefsContract?: typeof refsC }).stillRefsContract = refsC;
             dropSoft2 = refsC.dropFullSoftEnv;
@@ -1543,6 +1763,9 @@ export async function runGenerateFlowImageCore(
               objectiveClass: lastComposed.generationContract?.objectiveClass,
               poseOccupancy: sealBend?.poseOccupancy,
               visualDescription: literaryDesc,
+              feSceneHung:
+                Boolean(lastComposed.keepSoftEnvRef) ||
+                ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).includes("softEnv"),
             });
             (lastComposed as { stillRefsContract?: typeof c }).stillRefsContract = c;
             forceOccupancyProp = c.forcePropOccupancySynth;
@@ -1591,7 +1814,23 @@ export async function runGenerateFlowImageCore(
                 poseOccupancy: occForPlate,
                 plateMode: label.plateMode,
               });
-              if (ladder.skipSynth) {
+              
+              const stillPhaseForProp =
+                (composeCtx as { stillPhase?: string }).stillPhase ??
+                (lastComposed as { stillPhase?: string }).stillPhase ??
+                ((lastComposed.generationContract as { stillPhase?: string } | undefined)?.stillPhase) ??
+                null;
+              const approachingProp =
+                stillPhaseForProp === "approaching" || stillPhaseForProp === "mid_contact";
+if (ladder.skipSynth) {
+                if (approachingProp) {
+                  skipSynth = false;
+                  (lastComposed as { sources?: string[] }).sources = [
+                    ...((lastComposed as { sources?: string[] }).sources ?? []),
+                    "propLadder.approaching_reject_warehouse",
+                  ];
+                } else {
+
                 // Honesty: skipSynth only when plate bytes actually hang into referenceList
                 // Asset-first: warehouse paper kept even under bend (forcePropOccupancySynth no longer overrides)
                 let hungBytes = false;
@@ -1644,6 +1883,7 @@ export async function runGenerateFlowImageCore(
                 } else {
                   skipSynth = true;
                 }
+                }
               }
             } catch {
               /* optional */
@@ -1661,6 +1901,10 @@ export async function runGenerateFlowImageCore(
               softPlateHint: label.softPlateHint,
               plateMode: synthOcc === "bend_pickup" ? "object_inset" : label.plateMode,
               poseOccupancy: synthOcc,
+              stillPhase:
+                (composeCtx as { stillPhase?: string }).stillPhase ??
+                (lastComposed as { stillPhase?: string }).stillPhase ??
+                null,
             });
             // Bend: prefer photographic SCENE floor crop over cartoon SVG (Seedream ignores flat SVG)
             if (synthOcc === "bend_pickup") {
@@ -1860,34 +2104,50 @@ export async function runGenerateFlowImageCore(
             return c?.dropFullSoftEnv === true;
           })();
           // Skirt fragment: ZH only when SCENE softEnv present (Should enhancement)
+          // T2I primary: never re-legislate 浅景深 when bgBlur===false / egress forbids it
+          const bgBlurFalseCore =
+            (composeCtx as { bgBlur?: boolean }).bgBlur === false ||
+            /禁止浅景深/.test(String(vendorPrompt));
           const hasSceneSoft =
             softEnvPlatePresent ||
             Boolean(lastComposed.keepSoftEnvRef) ||
             (lastComposed as { softEnvContinuity?: string }).softEnvContinuity === "must";
           if (hasSceneSoft && !softEnvDropLatch) {
-            if (!/裙摆|衣角|碎片/.test(vendorPrompt) && /裙摆|衣角|碎片/.test(String(literaryDesc ?? ""))) {
+            if (
+              !bgBlurFalseCore &&
+              !/裙摆|衣角|碎片/.test(vendorPrompt) &&
+              /裙摆|衣角|碎片/.test(String(literaryDesc ?? ""))
+            ) {
               vendorPrompt = `背景浅景深，裙摆/衣角虚化可辨（加强项）。${String(vendorPrompt).trim()}`;
+            } else if (
+              bgBlurFalseCore &&
+              !/裙摆|衣角|碎片/.test(vendorPrompt) &&
+              /裙摆|衣角|碎片/.test(String(literaryDesc ?? ""))
+            ) {
+              vendorPrompt = `裙摆/衣角虚化可辨（加强项）；背景轮廓可辨，禁止浅景深抢戏。${String(vendorPrompt).trim()}`;
             }
-            if (!/浅景深|主场景/.test(vendorPrompt)) {
+            if (!bgBlurFalseCore && !/浅景深|主场景/.test(vendorPrompt)) {
               vendorPrompt = `背景：主场景浅景深虚化，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
             }
-            // Mild blur on SCENE softEnv for DOF (best-effort)
-            try {
-              const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
-              const softIdx = roles.lastIndexOf("softEnv");
-              if (softIdx >= 0 && referenceList[softIdx]?.base64) {
-                const { softenSoftEnvPlateForAtmosphere } = await import("@/ruleEngine/compilers/eventPlateReadiness");
-                const blurred = await softenSoftEnvPlateForAtmosphere(referenceList[softIdx]!.base64, {
-                  softEnvContinuity:
-                    (lastComposed as { softEnvContinuity?: string }).softEnvContinuity ?? "must",
-                  sceneMust: true,
-                });
-                if (blurred.softened && blurred.base64) {
-                  referenceList[softIdx] = { type: "image" as const, base64: blurred.base64 };
+            // Mild blur on SCENE softEnv for DOF — skip when bgBlur:false (T2I / stamp homology)
+            if (!bgBlurFalseCore) {
+              try {
+                const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+                const softIdx = roles.lastIndexOf("softEnv");
+                if (softIdx >= 0 && referenceList[softIdx]?.base64) {
+                  const { softenSoftEnvPlateForAtmosphere } = await import("@/ruleEngine/compilers/eventPlateReadiness");
+                  const blurred = await softenSoftEnvPlateForAtmosphere(referenceList[softIdx]!.base64, {
+                    softEnvContinuity:
+                      (lastComposed as { softEnvContinuity?: string }).softEnvContinuity ?? "must",
+                    sceneMust: true,
+                  });
+                  if (blurred.softened && blurred.base64) {
+                    referenceList[softIdx] = { type: "image" as const, base64: blurred.base64 };
+                  }
                 }
+              } catch {
+                /* optional */
               }
-            } catch {
-              /* optional */
             }
           }
           if (softEnvDropLatch) {
@@ -1895,19 +2155,75 @@ export async function runGenerateFlowImageCore(
             (lastComposed as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = false;
             (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = "none";
             lastComposed.keepSoftEnvRef = false;
+            // Belt: strip any residual softEnv role even if early hang raced keepSoftEnvRef
+            {
+              const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+              if (roles.includes("softEnv")) {
+                const nextRefs: typeof referenceList = [];
+                const nextRoles: string[] = [];
+                for (let i = 0; i < referenceList.length; i++) {
+                  const role = roles[i] || "identity";
+                  if (role === "softEnv") continue;
+                  nextRefs.push(referenceList[i]!);
+                  nextRoles.push(String(role));
+                }
+                referenceList = nextRefs;
+                (lastComposed as { refsRoles?: string[] }).refsRoles = nextRoles;
+                softEnvPlatePresent = false;
+              }
+            }
           }
           if (atmNeed && !alreadyAtm) {
             if (softEnvDropLatch) {
-              // ZH-only atmosphere — no softEnv role when intentional fragment-only drop
-              (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung = true;
-              (lastComposed as { atmosphereZhOnly?: boolean }).atmosphereZhOnly = true;
-              if (!vendorPrompt.includes(String(atmNeed))) {
-                vendorPrompt = `保留${atmNeed}氛围可辨，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
+              // T2I-first dropped altar SCENE — MUST hang dark wood/candle atm plate.
+              // ZH-only leaves cref white studio as sole env signal → 白棚+名卡复现.
+              let hungAtm = false;
+              if (referenceList.length >= 1) {
+                try {
+                  const { synthesizeAtmospherePlate } = await import(
+                    "@/ruleEngine/compilers/eventPlateReadiness"
+                  );
+                  const atmPlate = await synthesizeAtmospherePlate({
+                    atmosphere: String(atmNeed),
+                  });
+                  if (atmPlate?.base64) {
+                    referenceList.push({ type: "image" as const, base64: atmPlate.base64 });
+                    softEnvPlatePresent = true;
+                    hungAtm = true;
+                    (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung = true;
+                    (lastComposed as { atmosphereZhOnly?: boolean }).atmosphereZhOnly = false;
+                    (lastComposed as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = true;
+                    (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = "optional";
+                    lastComposed.keepSoftEnvRef = true;
+                    const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+                    roles.push("softEnv");
+                    (lastComposed as { refsRoles?: string[] }).refsRoles = roles.slice(
+                      0,
+                      referenceList.length,
+                    );
+                    lastPipeline = {
+                      ...lastPipeline,
+                      autoHealed: [
+                        ...(lastPipeline.autoHealed ?? []),
+                        "atm:synth_softEnv_after_scene_drop",
+                      ],
+                    };
+                  }
+                } catch {
+                  /* fall through ZH */
+                }
               }
-              lastPipeline = {
-                ...lastPipeline,
-                autoHealed: [...(lastPipeline.autoHealed ?? []), "atm:zh_only_no_softEnv"],
-              };
+              if (!hungAtm) {
+                (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung = true;
+                (lastComposed as { atmosphereZhOnly?: boolean }).atmosphereZhOnly = true;
+                lastPipeline = {
+                  ...lastPipeline,
+                  autoHealed: [...(lastPipeline.autoHealed ?? []), "atm:zh_only_fallback"],
+                };
+              }
+              if (!vendorPrompt.includes(String(atmNeed))) {
+                vendorPrompt = `保留${atmNeed}氛围可辨（木作烛光环境），禁止灰棚白棚。${String(vendorPrompt).trim()}`;
+              }
             } else if (
               !softEnvPlatePresent &&
               !(lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity &&
@@ -1931,6 +2247,35 @@ export async function runGenerateFlowImageCore(
                   vendorPrompt = `保留${atmNeed}氛围可辨，禁止灰棚白棚。${String(vendorPrompt).trim()}`;
                 }
               }
+            }
+          } else if (softEnvDropLatch && !softEnvPlatePresent && referenceList.length >= 1) {
+            // No atm keyword in VD — still hang warm wood plate so cref white studio cannot win
+            try {
+              const { synthesizeAtmospherePlate } = await import(
+                "@/ruleEngine/compilers/eventPlateReadiness"
+              );
+              const atmPlate = await synthesizeAtmospherePlate({ atmosphere: "烛光" });
+              if (atmPlate?.base64) {
+                referenceList.push({ type: "image" as const, base64: atmPlate.base64 });
+                softEnvPlatePresent = true;
+                (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung = true;
+                (lastComposed as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = true;
+                (lastComposed as { softEnvContinuity?: string }).softEnvContinuity = "optional";
+                lastComposed.keepSoftEnvRef = true;
+                const roles = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+                roles.push("softEnv");
+                (lastComposed as { refsRoles?: string[] }).refsRoles = roles.slice(0, referenceList.length);
+                vendorPrompt = `保留暖光烛火氛围可辨（木作环境），禁止灰棚白棚。${String(vendorPrompt).trim()}`;
+                lastPipeline = {
+                  ...lastPipeline,
+                  autoHealed: [
+                    ...(lastPipeline.autoHealed ?? []),
+                    "atm:synth_default_after_scene_drop",
+                  ],
+                };
+              }
+            } catch {
+              /* optional */
             }
           }
         } catch {
@@ -2151,6 +2496,10 @@ export async function runGenerateFlowImageCore(
                   canonical: label.canonical,
                   glyphText: `${label.glyphText}·`,
                   softPlateHint: label.softPlateHint,
+                  stillPhase:
+                    (composeCtx as { stillPhase?: string }).stillPhase ??
+                    (lastComposed as { stillPhase?: string }).stillPhase ??
+                    null,
                 });
                 if (synth.base64 && sanitizeReferenceList([{ type: "image", base64: synth.base64 }]).length) {
                   if (referenceList.length >= 2) {
@@ -2194,44 +2543,40 @@ export async function runGenerateFlowImageCore(
           let softEnvBaked = Boolean(
             (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity,
           );
-          // Upper-body / action-body bias when softEnv was NOT baked
+          // Upper-body / face-lock when softEnv was NOT baked
           if (eventObj && !softEnvBaked && referenceList[0]?.base64) {
-            const { resolveIdentityCropTopRatio } = await import(
+            const { resolveBendIdentityCropPlan, composeBendIdentityPlate } = await import(
               "@/ruleEngine/compilers/eventPlateReadiness"
             );
             const sealCrop2 = (lastComposed.generationContract as {
               primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
             } | undefined)?.primaryIntentSeal;
-            const preferActionBody =
-              (lastComposed as { stillRefsContract?: { identityPreferActionBody?: boolean } }).stillRefsContract
-                ?.identityPreferActionBody === true ||
-              sealCrop2?.poseOccupancy === "bend_pickup" ||
-              sealCrop2?.primaryObjective === "action_primary" ||
-              /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? ""));
-            const topRatio = resolveIdentityCropTopRatio({
+            const refsC2 = (lastComposed as {
+              stillRefsContract?: {
+                identityPreferActionBody?: boolean;
+                identityReplaceStandingSheet?: boolean;
+              };
+            }).stillRefsContract;
+            const plan2 = resolveBendIdentityCropPlan({
+              identityReplaceStandingSheet: refsC2?.identityReplaceStandingSheet,
+              identityPreferActionBody: refsC2?.identityPreferActionBody,
+              poseOccupancy: sealCrop2?.poseOccupancy,
+              primaryObjective: sealCrop2?.primaryObjective,
               objectiveClass: lastComposed.generationContract?.objectiveClass,
               keepSoftEnvRef: lastComposed.keepSoftEnvRef,
               softEnvContinuity: continuity,
-              poseOccupancy: sealCrop2?.poseOccupancy,
-              primaryObjective: sealCrop2?.primaryObjective,
+              visualDescription: literaryDesc,
             });
             const face = await cropIdentityPlateToFaceBias(referenceList[0].base64, {
-              topRatio,
-              preferActionBody,
+              topRatio: plan2.topRatio,
+              preferActionBody: plan2.preferActionBody,
+              faceOnly: plan2.faceOnlyLock,
             });
             if (face.cropped && face.base64) {
               referenceList[0] = { type: "image" as const, base64: face.base64 };
             }
-            const replaceStand2 =
-              (lastComposed as { stillRefsContract?: { identityReplaceStandingSheet?: boolean } })
-                .stillRefsContract?.identityReplaceStandingSheet === true ||
-              preferActionBody ||
-              sealCrop2?.poseOccupancy === "bend_pickup";
-            if (replaceStand2 && referenceList[0]?.base64) {
+            if (plan2.replaceStandingSheet && referenceList[0]?.base64) {
               try {
-                const { composeBendIdentityPlate } = await import(
-                  "@/ruleEngine/compilers/eventPlateReadiness"
-                );
                 const bendId = await composeBendIdentityPlate({
                   faceSourceBase64: referenceList[0].base64,
                 });
@@ -2242,6 +2587,35 @@ export async function runGenerateFlowImageCore(
                 }
               } catch {
                 /* keep */
+              }
+            }
+            // Pre-vendor: if identity still white-studio / namecard, force face-lock again
+            if (plan2.replaceStandingSheet && referenceList[0]?.base64) {
+              try {
+                const { probeIdentitySheetLeakPixels, composeBendIdentityPlate: reBend } =
+                  await import("@/ruleEngine/compilers/eventPlateReadiness");
+                const leak = await probeIdentitySheetLeakPixels({
+                  imageBase64: referenceList[0].base64,
+                });
+                (lastComposed as { identitySheetLeakProbe?: typeof leak }).identitySheetLeakProbe = leak;
+                if (leak.sheetLeakSuspected) {
+                  const again = await reBend({ faceSourceBase64: referenceList[0].base64 });
+                  if (again.usedFace && again.base64) {
+                    referenceList[0] = { type: "image" as const, base64: again.base64 };
+                    (lastComposed as { bendIdentityReason?: string }).bendIdentityReason =
+                      `${again.reason}|reface:${leak.reason}`;
+                    lastPipeline = {
+                      ...lastPipeline,
+                      autoHealed: [
+                        ...(lastPipeline.autoHealed ?? []),
+                        `identity_sheet_leak_reface:${leak.reason}`,
+                      ],
+                    };
+                  }
+                  vendorPrompt = `图1仅锁脸型发饰，禁止复刻白棚定妆/手持名卡/牛仔夹克拼入场面。${String(vendorPrompt).trim()}`;
+                }
+              } catch {
+                /* optional */
               }
             }
           }
@@ -2261,10 +2635,13 @@ export async function runGenerateFlowImageCore(
             role: (refsRolesEcho[i] as "identity" | "propSoft" | "softEnv") || "identity",
           }));
           if (!softEnvBaked) {
-            // Scene-first: only strip softEnv when contract.dropFullSoftEnv
+            // dropFullSoftEnv = drop altar SCENE; keep synth atmosphere softEnv if hung
+            const atmHung = Boolean(
+              (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung,
+            );
             const dropLatch =
               (lastComposed as { stillRefsContract?: { dropFullSoftEnv?: boolean } }).stillRefsContract
-                ?.dropFullSoftEnv === true;
+                ?.dropFullSoftEnv === true && !atmHung;
             const pick = await applyContinuityAwareRefBudget({
               refs: tagged,
               propRequired: eventObj,
@@ -2341,8 +2718,12 @@ export async function runGenerateFlowImageCore(
               (lastComposed as { stillPhase?: string }).stillPhase ??
               (lastComposed.generationContract as { stillPhase?: string } | undefined)?.stillPhase ??
               null,
+            castNames: charNames?.length ? charNames : undefined,
+            propName: /休书|婚书|信笺/.exec(String(literaryDesc ?? ""))?.[0] ?? null,
+            sceneName: (composeCtx as { background?: string }).background ?? null,
           });
-          if (bindZh && !/参考绑定：/.test(vendorPrompt)) {
+          // Mid-pipeline: never append legacy 参考绑定：图N=；full ZH recompile happens pre-vendor
+          if (bindZh && !/@图\d\s*为/.test(vendorPrompt) && !/参考绑定\s*[：:]/.test(vendorPrompt)) {
             vendorPrompt = `${String(vendorPrompt).trim()}。${bindZh}`;
           }
           // Scene-first: if keepSoftEnvRef but softEnv slot missing after budget, honest debt + strong ban
@@ -2799,6 +3180,171 @@ export async function runGenerateFlowImageCore(
         (lastComposed as { lastReferenceList?: Array<{ type: "image"; base64: string }> }).lastReferenceList =
           referenceList.map((r) => ({ type: "image" as const, base64: r.base64 }));
 
+        // Seedream handbook: ≤3 slots identity→prop→softEnv; skirt_blur single identity
+        {
+          const { capStillRefsHandbookSlots } = await import(
+            "@/ruleEngine/compilers/eventPlateReadiness"
+          );
+          let singleId = true;
+          try {
+            const narr = (composeCtx as { narrative?: { secondaryBudget?: string } }).narrative;
+            const dip = (lastComposed.generationContract as {
+              designIntentProfile?: { secondaryBudget?: string };
+            } | undefined)?.designIntentProfile;
+            const budget =
+              narr?.secondaryBudget ?? dip?.secondaryBudget ?? "";
+            singleId = budget === "skirt_blur" || budget === "hands_only" || budget === "none" || !budget;
+          } catch {
+            singleId = true;
+          }
+          const rolesNow = ((lastComposed as { refsRoles?: string[] }).refsRoles ?? []).slice();
+          const taggedHb = referenceList.map((r, i) => ({
+            type: "image" as const,
+            base64: r.base64,
+            role: (rolesNow[i] as "identity" | "propSoft" | "softEnv") || "identity",
+          }));
+          const capped = capStillRefsHandbookSlots({
+            refs: taggedHb,
+            maxSlots: 20,
+            singleIdentityOnly: singleId,
+          });
+          referenceList = capped.refs.map((r) => ({ type: "image" as const, base64: r.base64 }));
+          (lastComposed as { refsRoles?: string[] }).refsRoles = capped.roles;
+          if (capped.dropped.length) {
+            (lastComposed as { handbookRefsDropped?: string[] }).handbookRefsDropped = capped.dropped;
+          }
+          // Period / face-lock: never burn pure-text as identity lock
+          const wantsId =
+            (lastComposed as { stillRefsContract?: { identityReplaceStandingSheet?: boolean } })
+              .stillRefsContract?.identityReplaceStandingSheet === true ||
+            (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string } } | undefined)
+              ?.primaryIntentSeal?.poseOccupancy === "bend_pickup" ||
+            lastComposed.generationContract?.objectiveClass === "action_primary";
+          if (wantsId && referenceList.length < 1 && qualityMode === "hq_update") {
+            throw Object.assign(new Error("定妆锁需要至少1张身份参考图；禁止无图纯文冒充"), {
+              code: "CREF_MISSING_FOR_IDENTITY_LOCK",
+              primaryNextStep: "chat_repair",
+              userMessage: "请挂定妆/脸锁参考后再生成",
+              ctaLabel: "补参考后生成",
+            });
+          }
+          // Final 图N bind from capped roles — replace any incomplete 图1-only prefix
+          {
+            const { buildEventRefOrdinalBinding } = await import(
+              "@/ruleEngine/compilers/eventPlateReadiness"
+            );
+            const sealBindFinal = (lastComposed.generationContract as {
+              primaryIntentSeal?: { poseOccupancy?: string };
+              designIntentProfile?: { plateMode?: string };
+            } | undefined)?.primaryIntentSeal;
+            const finalRoles = ((lastComposed as { refsRoles?: string[] }).refsRoles ??
+              []) as Array<"identity" | "propSoft" | "softEnv">;
+            const propNameFinal =
+              mountedPropName || (/休书|婚书|信笺/.exec(String(literaryDesc ?? ""))?.[0] ?? null);
+            const sceneNameFinal =
+              mountedSceneName || ((composeCtx as { background?: string }).background ?? null);
+            const castFinal =
+              charNames?.length
+                ? charNames
+                : [
+                    (lastComposed as { primaryName?: string }).primaryName ||
+                      (lastComposed.generationContract as { primaryName?: string } | undefined)
+                        ?.primaryName,
+                  ].filter(Boolean) as string[];
+            const bindFinal = buildEventRefOrdinalBinding({
+              roles: finalRoles,
+              propRequired: Boolean(
+                lastComposed.generationContract?.objectiveClass === "contact_geom" ||
+                  lastComposed.generationContract?.objectiveClass === "action_primary",
+              ),
+              softEnvBakedIntoIdentity: Boolean(
+                (lastComposed as { softEnvBakedIntoIdentity?: boolean }).softEnvBakedIntoIdentity,
+              ),
+              poseOccupancy: sealBindFinal?.poseOccupancy,
+              plateMode: (lastComposed.generationContract as { designIntentProfile?: { plateMode?: string } } | undefined)
+                ?.designIntentProfile?.plateMode,
+              fragmentPlateHung: Boolean((lastComposed as { fragmentPlateHung?: boolean }).fragmentPlateHung),
+              stillPhase:
+                (lastComposed as { stillPhase?: string }).stillPhase ??
+                (lastComposed.generationContract as { stillPhase?: string } | undefined)?.stillPhase ??
+                null,
+              castNames: castFinal,
+              propName: propNameFinal,
+              sceneName: sceneNameFinal,
+            });
+            if (bindFinal || finalRoles.length > 0) {
+              // Drop legacy 参考绑定：图N= and EN Avoid — Seedream ZH @图N only
+              try {
+                const { compileSeedreamAtTuZhPrompt, stripLegacyStillVendorEgress } =
+                  require("@/ruleEngine/compilers/tunOrdinalBinding") as typeof import("@/ruleEngine/compilers/tunOrdinalBinding");
+                vendorPrompt = compileSeedreamAtTuZhPrompt({
+                  refsRoles: finalRoles,
+                  castNames: castFinal,
+                  propName: propNameFinal,
+                  primaryName: castFinal[0],
+                  visualDescription: literaryDesc,
+                  shotSize: (lastComposed as { shotSize?: string }).shotSize,
+                  sceneName: sceneNameFinal,
+                  poseOccupancy: sealBindFinal?.poseOccupancy,
+                  stillPhase:
+                    (lastComposed as { stillPhase?: string }).stillPhase ??
+                    (lastComposed.generationContract as { stillPhase?: string } | undefined)?.stillPhase,
+                  readableZhText: propNameFinal || undefined,
+                  preferredBindingBlock: bindFinal,
+                }).prompt;
+                vendorPrompt = stripLegacyStillVendorEgress(vendorPrompt);
+              } catch {
+                vendorPrompt = `${bindFinal || ""}，【画面】${String(literaryDesc || vendorPrompt).slice(0, 120)}。`;
+              }
+            }
+          }
+          // Bend: force face-crop on identity[0] if still wide turnaround sheet
+          if (
+            wantsId &&
+            referenceList[0]?.base64 &&
+            ((lastComposed as { stillRefsContract?: { identityReplaceStandingSheet?: boolean } })
+              .stillRefsContract?.identityReplaceStandingSheet === true ||
+              (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string } } | undefined)
+                ?.primaryIntentSeal?.poseOccupancy === "bend_pickup")
+          ) {
+            try {
+              let b64 = referenceList[0].base64;
+              const { cropTurnaroundSheetToIdentityPlate } = await import(
+                "@/ruleEngine/compilers/cropTurnaroundToIdentityPlate"
+              );
+              const sheet = await cropTurnaroundSheetToIdentityPlate(b64, {
+                assumeSheet: true,
+                threeViewStrip: true,
+              });
+              if (sheet.cropped && sheet.base64) b64 = sheet.base64;
+              const { cropIdentityPlateToFaceBias } = await import(
+                "@/ruleEngine/compilers/eventPlateReadiness"
+              );
+              const face = await cropIdentityPlateToFaceBias(b64, {
+                topRatio: 0.45,
+                faceOnly: true,
+                preferActionBody: false,
+              });
+              if (face.cropped && face.base64) {
+                referenceList[0] = { type: "image", base64: face.base64 };
+              } else {
+                const { stampTunLedgerOntoMeta } =
+                  require("@/ruleEngine/compilers/tunOrdinalLedger") as typeof import("@/ruleEngine/compilers/tunOrdinalLedger");
+                Object.assign(
+                  lastComposed as object,
+                  stampTunLedgerOntoMeta(lastComposed as Record<string, unknown>, {
+                    kind: "identity_sheet",
+                    detail: "preVendor face crop failed",
+                    missingSlot: "identity.sheet",
+                  }),
+                );
+              }
+            } catch {
+              /* optional */
+            }
+          }
+        }
+
         let url: string;
         let savePath: string;
         let imageBase64: string;
@@ -2827,6 +3373,13 @@ export async function runGenerateFlowImageCore(
           prevGenFingerprint: (lastComposed as { genFingerprint?: string }).genFingerprint ?? null,
           deltaHints: litDelta?.deltaHints ?? (lastComposed as { litRepairDeltaHints?: string[] }).litRepairDeltaHints ?? null,
           visualDescription: literaryDesc,
+          castNames: charNames,
+          primaryName: charNames?.[0] || (lastComposed as { primaryName?: string }).primaryName,
+          propName: mountedPropName || (/休书|婚书|信笺/.exec(String(literaryDesc ?? ""))?.[0] ?? null),
+          sceneName: mountedSceneName || ((composeCtx as { background?: string }).background ?? null),
+          readableZhText: mountedPropName || (/休书|婚书|信笺/.exec(String(literaryDesc ?? ""))?.[0] ?? null),
+          shotSize: (lastComposed as { shotSize?: string }).shotSize ?? composeCtx.shotSize,
+          colorTempK: (lastComposed as { colorTempK?: number | string }).colorTempK,
           poseOccupancy: (lastComposed.generationContract as { primaryIntentSeal?: { poseOccupancy?: string }; designIntentProfile?: { poseOccupancy?: string } } | undefined)
             ?.primaryIntentSeal?.poseOccupancy ??
             (lastComposed.generationContract as { designIntentProfile?: { poseOccupancy?: string } } | undefined)
@@ -2846,6 +3399,7 @@ export async function runGenerateFlowImageCore(
                 referenceList,
                 size: quality,
                 aspectRatio: aspectRatio ?? ratio,
+                seed: vendorSeed,
               });
               const sp = `/${projectId}/workFlow/${u.uuid()}.jpg`;
               await stub.save(sp.replace(/^\//, ""));
@@ -2864,14 +3418,23 @@ export async function runGenerateFlowImageCore(
                 referenceList,
                 size: quality as "1K" | "2K" | "4K",
                 aspectRatio: aspectRatio as `${number}:${number}`,
+                ...(vendorSeed != null ? { seed: vendorSeed } : {}),
               },
               {
                 taskClass: "工作流图片生成",
                 describe: `工作流图片生成 mode=${modeRules.modeId} edit=${editStrategy ?? "generate"} stageCost=${stageCost}`,
                 relatedObjects: JSON.stringify({
                   ...body,
-                  resolvedImageMode: modeRules.modeId,
+                  resolvedImageMode:
+                    referenceList.length >= 2
+                      ? "multiReference"
+                      : referenceList.length === 1
+                        ? "singleImage"
+                        : modeRules.modeId,
                   qualityMode,
+                  qualityLadder: sizeLadder.ladder,
+                  vendorSeed,
+                  refsRoles: (lastComposed as { refsRoles?: string[] }).refsRoles,
                   editStrategy,
                   layoutTemplateId,
                   bgPolicy: lastComposed.bgPolicy ?? bgPol.policy,
@@ -2900,7 +3463,127 @@ export async function runGenerateFlowImageCore(
         (lastComposed as { egressCompressed?: boolean }).egressCompressed = vendorOut.egressCompressed;
         if (vendorOut.vendorPromptUsed) {
           (lastComposed as { vendorPromptUsed?: string }).vendorPromptUsed = vendorOut.vendorPromptUsed;
+          // Handbook: promptUsed = ZH @图N bytes actually sent to Seedream
+          vendorPrompt = vendorOut.vendorPromptUsed;
         }
+        // Stamp refsRoles + refThumbUrls in physical send order (cropped bytes)
+        {
+          const rolesStamp = (lastComposed as { refsRoles?: string[] }).refsRoles ?? [];
+          (lastComposed as { refsRoles?: string[] }).refsRoles = rolesStamp.length
+            ? rolesStamp
+            : rolesStamp;
+          const thumbs: string[] = [];
+          const thumbMissing: string[] = [];
+          for (let i = 0; i < referenceList.length; i++) {
+            const raw = String(referenceList[i]?.base64 ?? "").replace(/^data:image\/\w+;base64,/, "");
+            if (!raw) {
+              thumbs.push("");
+              thumbMissing.push("ref.thumb_missing");
+              continue;
+            }
+            if (raw.length > 180_000) {
+              thumbs.push("");
+              thumbMissing.push("ref.thumb_missing");
+            } else {
+              thumbs.push(`data:image/jpeg;base64,${raw}`);
+            }
+          }
+          (lastComposed as { refThumbUrls?: string[] }).refThumbUrls = thumbs;
+          if (thumbMissing.length) {
+            (lastComposed as { missingSlots?: string[] }).missingSlots = [
+              ...new Set([
+                ...((lastComposed as { missingSlots?: string[] }).missingSlots ?? []),
+                "ref.thumb_missing",
+              ]),
+            ];
+          }
+          try {
+            const { assertAtTuHomology } =
+              require("@/ruleEngine/compilers/tunOrdinalBinding") as typeof import("@/ruleEngine/compilers/tunOrdinalBinding");
+            const homo = assertAtTuHomology(String(vendorOut.vendorPromptUsed ?? vendorPrompt), referenceList.length);
+            if (!homo.ok) {
+              (lastComposed as { missingSlots?: string[] }).missingSlots = [
+                ...new Set([
+                  ...((lastComposed as { missingSlots?: string[] }).missingSlots ?? []),
+                  ...homo.missingSlots,
+                ]),
+              ];
+            }
+          } catch {
+            /* optional */
+          }
+        }
+        (lastComposed as { vendorSeed?: number }).vendorSeed = vendorSeed;
+        (lastComposed as { qualityLadder?: string }).qualityLadder = sizeLadder.ladder;
+        (lastComposed as { stillStage?: string }).stillStage = genProfile.stage;
+        if (vendorOut.healedFields?.length) {
+          (lastComposed as { healedFields?: string[] }).healedFields = vendorOut.healedFields;
+          (lastComposed as { sources?: string[] }).sources = [
+            ...((lastComposed as { sources?: string[] }).sources ?? []),
+            ...vendorOut.healedFields.map((f) => `heal.field:${f}`),
+          ];
+        }
+        if (vendorOut.missingSlots?.length) {
+          (lastComposed as { missingSlots?: string[] }).missingSlots = [
+            ...new Set([
+              ...((lastComposed as { missingSlots?: string[] }).missingSlots ?? []),
+              ...vendorOut.missingSlots,
+            ]),
+          ];
+        }
+        try {
+          const { resolveTunOneClickHeal } =
+            require("@/ruleEngine/design/tunOneClickHeal") as typeof import("@/ruleEngine/design/tunOneClickHeal");
+          const { stampTunLedgerOntoMeta } =
+            require("@/ruleEngine/compilers/tunOrdinalLedger") as typeof import("@/ruleEngine/compilers/tunOrdinalLedger");
+          const { assertVendorTunSurvived } =
+            require("@/ruleEngine/compilers/tunOrdinalBinding") as typeof import("@/ruleEngine/compilers/tunOrdinalBinding");
+          const roles = (lastComposed as { refsRoles?: string[] }).refsRoles ?? [];
+          if (!assertVendorTunSurvived(String(vendorOut.vendorPromptUsed ?? ""), roles.length)) {
+            (lastComposed as { missingSlots?: string[] }).missingSlots = [
+              ...new Set([
+                ...((lastComposed as { missingSlots?: string[] }).missingSlots ?? []),
+                "ref.ordinal_mismatch",
+              ]),
+            ];
+            Object.assign(
+              lastComposed as object,
+              stampTunLedgerOntoMeta(lastComposed as Record<string, unknown>, {
+                kind: "ordinal_rebind",
+                detail: "vendor egress missing 图N binding",
+                missingSlot: "ref.ordinal_mismatch",
+              }),
+            );
+          } else if (roles.length) {
+            Object.assign(
+              lastComposed as object,
+              stampTunLedgerOntoMeta(lastComposed as Record<string, unknown>, {
+                kind: "tun_kept",
+                detail: `图N survived n=${roles.length}`,
+              }),
+            );
+          }
+          const tunCta = resolveTunOneClickHeal({
+            missingSlots: (lastComposed as { missingSlots?: string[] }).missingSlots,
+            existingKind: (lastComposed as { oneClickRepairKind?: string }).oneClickRepairKind,
+          });
+          if (tunCta.oneClickRepairKind !== "none") {
+            (lastComposed as { oneClickRepairKind?: string }).oneClickRepairKind =
+              tunCta.oneClickRepairKind;
+            if (tunCta.ctaLabel) {
+              (lastComposed as { ctaLabel?: string }).ctaLabel = tunCta.ctaLabel;
+            }
+          }
+        } catch {
+          /* optional */
+        }
+        if (vendorOut.seedreamFields) {
+          (lastComposed as { seedreamFields?: Record<string, string> }).seedreamFields =
+            vendorOut.seedreamFields;
+        }
+        (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung = Boolean(
+          (lastComposed as { atmospherePlateHung?: boolean }).atmospherePlateHung,
+        );
         try {
           const { createHash } = require("crypto") as typeof import("crypto");
           const fp = createHash("sha256")
@@ -3585,7 +4268,32 @@ async function finalizeSuccess(
       return "设计意图必须元素已兑现；像素未测（Key 可选，非失败）；弱图债·可烧视频（设计意图优先）";
     }
   })();
-  const userMessage = hq
+  const sealedUserMessageOverride = (() => {
+    try {
+      const src = (input.composed as { sources?: string[] }).sources ?? [];
+      const phase =
+        (input.composed as { stillPhase?: string }).stillPhase ??
+        ((input.composed.generationContract as { stillPhase?: string } | undefined)?.stillPhase) ??
+        null;
+      const { isStillSsotSealed, sealedRealizationUserMessage } =
+        require("@/ruleEngine/design/shootableArchitecture") as typeof import("@/ruleEngine/design/shootableArchitecture");
+      if (!hq && isStillSsotSealed({ stillPhase: phase, composeSources: src })) {
+        return sealedRealizationUserMessage({
+          keyUnmeasured: keyMissing,
+          refInterference:
+            ((input.composed as { refsRoles?: string[] }).refsRoles ?? []).length > 1 ||
+            litAfter?.debtKind === "contamination" ||
+            litAfter?.realization?.realizationDegraded === true,
+        });
+      }
+    } catch {
+      /* optional */
+    }
+    return null;
+  })();
+  const userMessage = sealedUserMessageOverride
+    ? sealedUserMessageOverride
+    : hq
     ? input.composed.didSynthesize
       ? "已按设计智能合成并标记高质量首帧"
       : "已标记高质量首帧"
@@ -3662,6 +4370,16 @@ async function finalizeSuccess(
             : (input.composed as { propPlateMissing?: boolean }).propPlateMissing
               ? "prop_plate"
               : (input.composed as { debtKind?: string }).debtKind),
+        stillPhase:
+          (input.composed as { stillPhase?: string }).stillPhase ??
+          ((input.composed.generationContract as { stillPhase?: string } | undefined)?.stillPhase) ??
+          null,
+        composeSources: (input.composed as { sources?: string[] }).sources ?? [],
+        ssotSealed: ((input.composed as { sources?: string[] }).sources ?? []).some((x) =>
+          /ff\.ssot_only_egress|ssot\.phase/.test(String(x)),
+        ),
+        realizationDegraded: litAfter?.realization?.realizationDegraded === true,
+        oneClickRepairKind: (input.composed as { oneClickRepairKind?: string }).oneClickRepairKind ?? null
       });
     } catch {
       return null;
@@ -3722,21 +4440,68 @@ async function finalizeSuccess(
         pixelDimStatus: keyMissing ? "unmeasured" : input.visualPass ? "measured_pass" : "measured_fail",
         contaminationClass,
         deliveryTier: deliveryTier as "draft" | "preview" | "burn",
-        debtKind: (input.composed as { debtKind?: string }).debtKind,
+        debtKind: litAfter?.debtKind || (input.composed as { debtKind?: string }).debtKind,
+        stillPhase:
+          (input.composed as { stillPhase?: string }).stillPhase ??
+          ((input.composed.generationContract as { stillPhase?: string } | undefined)?.stillPhase) ??
+          null,
+        composeSources: (input.composed as { sources?: string[] }).sources ?? [],
+        ssotSealed: ((input.composed as { sources?: string[] }).sources ?? []).some((x) =>
+          /ff\.ssot_only_egress|ssot\.phase/.test(String(x)),
+        ),
+        realizationDegraded: litAfter?.realization?.realizationDegraded === true,
+        oneClickRepairKind: (input.composed as { oneClickRepairKind?: string }).oneClickRepairKind ?? null
       });
     } catch {
       return ctaResolved;
     }
   })();
-  const ctaOut =
-    (input.composed as { actuatorDegraded?: boolean }).actuatorDegraded &&
-    Boolean(input.composed.keepSoftEnvRef) &&
-    !hq
-      ? "启动Comfy或人审"
-      : litAfter?.ctaLabel ||
-        ctaResolvedFinal?.label ||
-        ctaResolved?.label ||
-        vlmCta;
+  const composeSourcesForSeal = (input.composed as { sources?: string[] }).sources ?? [];
+  const stillPhaseForSeal =
+    (input.composed as { stillPhase?: string }).stillPhase ??
+    ((input.composed.generationContract as { stillPhase?: string } | undefined)?.stillPhase) ??
+    null;
+  const ssotSealedForCta = (() => {
+    try {
+      const { isStillSsotSealed } =
+        require("@/ruleEngine/design/shootableArchitecture") as typeof import("@/ruleEngine/design/shootableArchitecture");
+      return isStillSsotSealed({
+        stillPhase: stillPhaseForSeal,
+        composeSources: composeSourcesForSeal,
+      });
+    } catch {
+      return composeSourcesForSeal.some((x) => /ff\.ssot_only_egress|ssot\.phase/.test(String(x)));
+    }
+  })();
+  const ctaOut = (() => {
+    if (
+      (input.composed as { actuatorDegraded?: boolean }).actuatorDegraded &&
+      Boolean(input.composed.keepSoftEnvRef) &&
+      !hq
+    ) {
+      return "启动Comfy或人审";
+    }
+    if (ssotSealedForCta && !hq) {
+      try {
+        const { sealedRealizationCtaLabel } =
+          require("@/ruleEngine/design/shootableArchitecture") as typeof import("@/ruleEngine/design/shootableArchitecture");
+        return (
+          ctaResolvedFinal?.label ||
+          ctaResolved?.label ||
+          sealedRealizationCtaLabel({
+            keyUnmeasured: keyMissing,
+            refInterference: Boolean(
+              ((input.composed as { refsRoles?: string[] }).refsRoles ?? []).length > 1 ||
+                litAfter?.debtKind === "contamination",
+            ),
+          })
+        );
+      } catch {
+        return ctaResolvedFinal?.label || ctaResolved?.label || vlmCta;
+      }
+    }
+    return litAfter?.ctaLabel || ctaResolvedFinal?.label || ctaResolved?.label || vlmCta;
+  })();
   // LGIA: Key optional; quality debt never alone forces requireFixBeforeBurn
   const lgiaDelivery = (() => {
     try {
@@ -4096,7 +4861,13 @@ async function finalizeSuccess(
       didSynthesize: input.composed.didSynthesize,
       scrubbed: input.composed.scrubbed,
       warnings: input.composed.warnings,
-      healLogTail: `compose:${input.composed.sources.join("|")}${input.autoHealed?.length ? `|heal:${input.autoHealed.join(",")}` : ""}`,
+      healLogTail: (() => {
+        const base = `compose:${input.composed.sources.join("|")}${input.autoHealed?.length ? `|heal:${input.autoHealed.join(",")}` : ""}`;
+        const tun = String((input.composed as { healLogTail?: string }).healLogTail ?? "").trim();
+        return tun ? `${base}|${tun}` : base;
+      })(),
+      tunLedger: (input.composed as { tunLedger?: unknown }).tunLedger,
+      oneClickRepairKind: (input.composed as { oneClickRepairKind?: string }).oneClickRepairKind ?? null,
       pendingHumanRejudge: input.pendingHumanRejudge,
       infraEditBypassUsed: input.infraEditBypassUsed,
       sheetLeak,
@@ -4118,6 +4889,11 @@ async function finalizeSuccess(
       refsSig: (input.composed as { refsSig?: string }).refsSig,
       atomMisses: (input.composed as { atomMisses?: string[] }).atomMisses,
       refsRoles: (input.composed as { refsRoles?: string[] }).refsRoles,
+      refThumbUrls: (input.composed as { refThumbUrls?: string[] }).refThumbUrls,
+      vendorSeed: (input.composed as { vendorSeed?: number }).vendorSeed,
+      qualityLadder: (input.composed as { qualityLadder?: string }).qualityLadder,
+      bendIdentityReplaced: Boolean((input.composed as { bendIdentityReplaced?: boolean }).bendIdentityReplaced),
+      atmospherePlateHung: Boolean((input.composed as { atmospherePlateHung?: boolean }).atmospherePlateHung),
       vendorCalled: (input.composed as { vendorCalled?: boolean }).vendorCalled,
       vendorMs: (input.composed as { vendorMs?: number }).vendorMs,
       synthesizedPropPlate: Boolean((input.composed as { synthesizedPropPlate?: boolean }).synthesizedPropPlate),
@@ -4136,9 +4912,14 @@ async function finalizeSuccess(
       vendorPromptUsed: (() => {
         const v = String((input.composed as { vendorPromptUsed?: string }).vendorPromptUsed ?? "").trim();
         const pu = String(input.promptUsed ?? "").trim();
-        if (v && v !== pu) return v.slice(0, 2000);
+        // Always stamp vendor surface when present (EN compiler egress)
+        if (v) return v.slice(0, 2000);
+        if (pu) return pu.slice(0, 2000);
         return undefined;
       })(),
+      seedreamFields: (input.composed as { seedreamFields?: Record<string, string> }).seedreamFields,
+      healedFields: (input.composed as { healedFields?: string[] }).healedFields,
+      stillStage: (input.composed as { stillStage?: string }).stillStage,
       autoRepairStage: autoRepair.autoRepairStage,
       autoRepairRound: autoRepair.autoRepairRound,
       autoRepairBudgetLeft: autoRepair.autoRepairBudgetLeft,
@@ -4254,7 +5035,25 @@ async function finalizeSuccess(
       }
     })(),
     promptUsed: input.promptUsed,
-    egressPrompt: input.promptUsed,
+    egressPrompt: (input.composed as { vendorPromptUsed?: string }).vendorPromptUsed || input.promptUsed,
+    vendorPromptUsed: (input.composed as { vendorPromptUsed?: string }).vendorPromptUsed || input.promptUsed,
+    refsRoles: (input.composed as { refsRoles?: string[] }).refsRoles,
+    refThumbUrls: (input.composed as { refThumbUrls?: string[] }).refThumbUrls,
+    canvasDisplayPrompt: (() => {
+      try {
+        const { resolveStillDualSurface } =
+          require("@/agents/scriptAgent/stillCtaSsot") as typeof import("@/agents/scriptAgent/stillCtaSsot");
+        return resolveStillDualSurface({
+          prompt: input.literaryDesc,
+          promptUsed: input.promptUsed,
+          vendorPromptUsed: (input.composed as { vendorPromptUsed?: string }).vendorPromptUsed || input.promptUsed,
+        }).canvasDisplayPrompt;
+      } catch {
+        return (input.composed as { vendorPromptUsed?: string }).vendorPromptUsed || input.promptUsed;
+      }
+    })(),
+    seedreamFields: (input.composed as { seedreamFields?: Record<string, string> }).seedreamFields,
+    stillStage: (input.composed as { stillStage?: string }).stillStage,
     contentPolicyWarnings: input.policy.hasSensitiveTerms ? input.policy.warnings : undefined,
     feedback: input.feedback,
     referenceCount: input.referenceCount,
@@ -4264,6 +5063,7 @@ async function finalizeSuccess(
     primaryNextStep: nextStepOut,
     userMessage,
     ctaLabel: ctaOut,
+    oneClickRepairKind: (input.composed as { oneClickRepairKind?: string }).oneClickRepairKind ?? null,
     missingSlots: input.repairMissingSlots,
     irdPrimaryAction: input.repairIrdPrimaryAction,
     composeSources: input.composed.sources,
@@ -4437,7 +5237,11 @@ async function finalizeSuccess(
         const m = /^ff\.phase:([^:]+)/.exec(hit) || /^lgia\.stillPhase:(.+)$/.exec(hit);
         return m?.[1] ?? null;
       })(),
-    ctaKind: ctaResolvedFinal?.kind ?? ctaResolved?.kind,
+    ctaKind: (() => {
+      const kind = ctaResolvedFinal?.kind ?? ctaResolved?.kind;
+      if (ssotSealedForCta && !hq && kind === "enhance_and_generate") return "realization_soft";
+      return kind;
+    })(),
     autoRepairStage: autoRepair.autoRepairStage,
     autoRepairRound: autoRepair.autoRepairRound,
     autoRepairBudgetLeft: autoRepair.autoRepairBudgetLeft,

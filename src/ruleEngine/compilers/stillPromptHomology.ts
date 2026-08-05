@@ -6,6 +6,15 @@ import { stripStaleBindingFromPrevious, previousBodyIsSheetLockSoup } from "./co
 import { normalizeStillEgressPrompt, demoteSheetLockSoup } from "./stillEgressNormalize";
 import { lintStillPromptBody } from "./stillPromptLint";
 
+/** Seedream ZH @图N handbook egress — skip literary homologize that could strip slots. */
+export function isAtTuVendorEgress(prompt: string | null | undefined): boolean {
+  const p = String(prompt ?? "").trim();
+  if (!p || !/@图\d\s*为/.test(p) || !/【画面】/.test(p)) return false;
+  if (/参考绑定\s*[：:]|图\d\s*[=＝]/.test(p)) return false;
+  if (/^A young woman/i.test(p)) return false;
+  return true;
+}
+
 export function homologizeStillPromptForStore(prompt: string): {
   prompt: string;
   changed: boolean;
@@ -14,6 +23,9 @@ export function homologizeStillPromptForStore(prompt: string): {
   const notes: string[] = [];
   let next = String(prompt ?? "").trim();
   if (!next) return { prompt: next, changed: false, notes };
+  if (isAtTuVendorEgress(next)) {
+    return { prompt: next, changed: false, notes: ["attu_vendor_passthrough"] };
+  }
 
   // Always strip lock soup before store — literary body must lead
   const stripped = stripStaleBindingFromPrevious(next);
@@ -52,6 +64,27 @@ export function homologizeStillPromptForStore(prompt: string): {
   if (linted.prompt !== next) {
     notes.push(...linted.conflicts.map((c) => `lint:${c.id}`));
     next = linted.prompt;
+  }
+  // Strip legacy Seedream-illegal 参考绑定：图N= / EN-first if they leaked into store
+  const beforeLegacy = next;
+  try {
+    const { stripLegacyStillVendorEgress, assertAtTuHomology } =
+      require("./tunOrdinalBinding") as typeof import("./tunOrdinalBinding");
+    if (/参考绑定\s*[：:]|图\d\s*[=＝]|A young woman/i.test(next)) {
+      next = stripLegacyStillVendorEgress(next);
+      notes.push("strip_legacy_attu");
+    }
+    // If still looks like EN-first with hung @图 residue, prefer empty strip of EN lead
+    if (/^A young /i.test(next.trim()) && /@图\d/.test(next)) {
+      next = next.replace(/^A young[\s\S]*?(?=@图\d|【画面】)/i, "").trim();
+      notes.push("strip_en_first_lead");
+    }
+    void assertAtTuHomology;
+  } catch {
+    next = next.replace(/参考绑定\s*[：:][^\n【]*/g, "").trim();
+  }
+  if (next !== beforeLegacy) {
+    /* notes already pushed */
   }
   // ENG_ONLY belt: engineering cluster tokens must never persist into stored egress
   if (/force_compose|delta_hash|hash_or_refs|inject_cross_class_anti_sub|regen_with_structure/i.test(next)) {

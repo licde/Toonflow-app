@@ -106,6 +106,14 @@ export function degradeHqWithoutVisualPass(meta: {
   humanOverride?: boolean | string | null;
 } | null): "hq_ok" | "weak" | "missing" | null {
   if (!meta) return null;
+  // VLM infra gap (vendor/bypass): do not rebrand as literary weak — burn softAllow homology
+  try {
+    const { isStillVlmInfraGap } =
+      require("./resolveStillForBurn") as typeof import("./resolveStillForBurn");
+    if (isStillVlmInfraGap(meta as Record<string, unknown>)) return null;
+  } catch {
+    /* optional */
+  }
   if (meta.stillQuality === "missing") return "missing";
   if (meta.stillQuality !== "hq_ok") return (meta.stillQuality as "weak") ?? "weak";
   if (!stillHqRequiresVisualPass()) return "hq_ok";

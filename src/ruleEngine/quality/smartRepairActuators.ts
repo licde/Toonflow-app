@@ -41,6 +41,14 @@ const PHASE1_DEBT = new Set([
 
 const ROUTES: SmartRepairRoute[] = [
   {
+    trigger: "SHOTSIZE_READABILITY",
+    debtClass: "FACE_BUDGET",
+    actuators: ["autoClose_text", "confirm_split", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
     trigger: "BG_READABLE",
     debtClass: "BG_READABLE",
     actuators: ["prompt_inject", "soft_env_ref", "fidelity_edit", "regen_storyboard_hq"],
@@ -230,6 +238,22 @@ const ROUTES: SmartRepairRoute[] = [
     maxAutoRounds: 3,
     confidenceAction: "apply_auto",
   },
+  // Seedream field / propSoft homology — design ≡ heal, never block
+  {
+    trigger: "seedream.field",
+    actuators: ["prompt_inject", "compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "propSoft",
+    debtClass: "CONTACT_GEOM",
+    actuators: ["prompt_inject", "compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
   {
     trigger: "off_beat_cu",
     debtClass: "STILL_HQ_EGRESS",
@@ -308,6 +332,138 @@ const ROUTES: SmartRepairRoute[] = [
     debtClass: "SECONDARY_DOMINANCE",
     actuators: ["prompt_inject", "compose_regen", "regen_storyboard_hq"],
     autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  // 图N / mount / video ordinal homology — one-click remount/rebind (never block generate)
+  {
+    trigger: "ref.attu_format",
+    actuators: ["compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "ref.picture_unref",
+    actuators: ["compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "ref.asset_name_missing",
+    debtClass: "IDENTITY_PLATE",
+    actuators: ["chat_repair", "confirm_enhance"],
+    autoStages: ["handoff_human"],
+    maxAutoRounds: 1,
+    confidenceAction: "confirm_only",
+  },
+  {
+    trigger: "ref.thumb_missing",
+    actuators: ["compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen"],
+    maxAutoRounds: 1,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "ref.ordinal_mismatch",
+    actuators: ["soft_env_ref", "compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "ref.scene_mismatch",
+    debtClass: "BG_READABLE",
+    actuators: ["soft_env_ref", "compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "drop_softEnv",
+    debtClass: "BG_READABLE",
+    actuators: ["soft_env_ref", "compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "ref.identity_mismatch",
+    debtClass: "IDENTITY_PLATE",
+    actuators: ["compose_regen", "fidelity_edit", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "fidelity_edit", "regen_storyboard_hq"],
+    maxAutoRounds: 3,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "identity.sheet",
+    debtClass: "IDENTITY_PLATE",
+    actuators: ["compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "ref.prop_replaced",
+    debtClass: "PROP_IN_FRAME",
+    actuators: ["prompt_inject", "compose_regen", "regen_storyboard_hq"],
+    autoStages: ["compose_regen", "regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "ref.identity.missing",
+    debtClass: "IDENTITY_PLATE",
+    actuators: ["chat_repair", "confirm_enhance"],
+    autoStages: ["handoff_human"],
+    maxAutoRounds: 1,
+    confidenceAction: "confirm_only",
+  },
+  {
+    trigger: "ref.scene.missing",
+    debtClass: "BG_READABLE",
+    actuators: ["chat_repair", "soft_env_ref"],
+    autoStages: ["handoff_human"],
+    maxAutoRounds: 1,
+    confidenceAction: "confirm_only",
+  },
+  {
+    trigger: "ref.prop.missing",
+    debtClass: "PROP_IN_FRAME",
+    actuators: ["chat_repair", "confirm_enhance"],
+    autoStages: ["handoff_human"],
+    maxAutoRounds: 1,
+    confidenceAction: "confirm_only",
+  },
+  {
+    trigger: "still.stale",
+    debtClass: "STILL_HQ_EGRESS",
+    actuators: ["regen_storyboard_hq", "compose_regen"],
+    autoStages: ["regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "still.missing",
+    debtClass: "STILL_HQ_EGRESS",
+    actuators: ["regen_storyboard_hq", "compose_regen"],
+    autoStages: ["regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "video.first_frame",
+    debtClass: "STILL_HQ_EGRESS",
+    actuators: ["regen_storyboard_hq"],
+    autoStages: ["regen_storyboard_hq"],
+    maxAutoRounds: 2,
+    confidenceAction: "apply_auto",
+  },
+  {
+    trigger: "video.tun_stripped",
+    actuators: ["prompt_inject", "chat_repair"],
+    autoStages: ["compose_regen"],
     maxAutoRounds: 2,
     confidenceAction: "apply_auto",
   },
@@ -402,6 +558,9 @@ export function burnNextStepForSmartRepairTrigger(trigger: string): string | nul
   if (/face_unread|FACE-READABILITY|still_i2v|visualPass|secondary_dominance|mouth/i.test(t)) {
     return "regen_storyboard_hq";
   }
+  if (/ref\.attu_format|ref\.picture_unref|ref\.ordinal_mismatch|ref\.thumb_missing/i.test(t)) {
+    return "regen_storyboard_hq";
+  }
   if (/REALIZATION-MOTION|cam_speak|VIDEO-PROMPT-STALE/i.test(t)) return "soft_patch";
   if (/confirm_split|split_shot/i.test(t)) return "split_shot";
   return null;
@@ -433,6 +592,17 @@ export function smartRepairFromLiteraryMisses(missingIds: string[]): {
     deltaHints: plan.deltaHints.length ? plan.deltaHints : ["seed", "egress_hash"],
     routes,
   };
+}
+
+/** Seedream handbook heal homology — soft-only, recompile EN after design writes. */
+export function smartRepairSeedreamHomology(
+  input: Parameters<
+    typeof import("./seedreamHealHomology").resolveSeedreamHealHomology
+  >[0],
+): ReturnType<typeof import("./seedreamHealHomology").resolveSeedreamHealHomology> {
+  const { resolveSeedreamHealHomology } =
+    require("./seedreamHealHomology") as typeof import("./seedreamHealHomology");
+  return resolveSeedreamHealHomology(input);
 }
 
 export function routeSmartRepair(trigger: string, confidence = 0.7): SmartRepairRoute | null {

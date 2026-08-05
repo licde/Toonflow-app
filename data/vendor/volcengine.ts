@@ -69,6 +69,8 @@ interface ImageConfig {
   referenceList?: Extract<ReferenceList, { type: "image" }>[];
   size: "1K" | "2K" | "4K";
   aspectRatio: `${number}:${number}`;
+  /** Optional Seedream seed [-1, 2147483647]; omit for vendor default */
+  seed?: number;
 }
 
 interface VideoConfig {
@@ -344,6 +346,10 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
   if (!isOldModel && config.referenceList && config.referenceList.length > 0) {
     const images = config.referenceList.map((ref) => ref.base64);
     body.image = images.length === 1 ? images[0] : images;
+  }
+
+  if (typeof config.seed === "number" && Number.isFinite(config.seed) && config.seed >= 0) {
+    body.seed = Math.min(2147483647, Math.floor(config.seed));
   }
 
   // 尺寸处理：优先使用推荐像素值，未匹配则直接传分辨率字符串让模型自行决定

@@ -487,7 +487,28 @@ export default router.post(
       });
       const { buildLiteraryFidelityChecklist } = await import("@/ruleEngine/compilers/literaryFidelityChecklist");
       const { runStillVisualFidelityLoop } = await import("@/ruleEngine/qc/stillVisualFidelityLoop");
-      const charNames = (composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[];
+      const assetIds = assets2StoryboardRows
+        .filter((r) => r.storyboardId === item.id && r.assetId)
+        .map((r) => r.assetId!) as number[];
+      const mountedAssets = assetIds.length
+        ? await u.db("o_assets").whereIn("id", assetIds).select("id", "type", "name")
+        : [];
+      const mountedIdentityNames = (mountedAssets as Array<{ type?: string; name?: string }>)
+        .filter((a) => String(a.name ?? "").trim())
+        .filter((a) => /role|char|character|identity|人物|角色|定妆/i.test(`${a.type ?? ""} ${a.name ?? ""}`))
+        .map((a) => String(a.name ?? "").trim());
+      const mountedSceneName =
+        (mountedAssets as Array<{ type?: string; name?: string }>).find((a) =>
+          /scene|bg|环境|场景/i.test(`${a.type ?? ""} ${a.name ?? ""}`),
+        )?.name ?? null;
+      const mountedPropName =
+        (mountedAssets as Array<{ type?: string; name?: string }>).find((a) =>
+          /tool|prop|道具|纸|书|信|灯笼/i.test(`${a.type ?? ""} ${a.name ?? ""}`),
+        )?.name ?? null;
+      const charNames =
+        mountedIdentityNames.length > 0
+          ? mountedIdentityNames
+          : ((composeCtx.characters ?? []).map((c) => c.name).filter(Boolean) as string[]);
       // Literary SSOT: never use motion-template videoDesc when visualDescription empty
       const literaryDesc =
         String(composeCtx.visualDescription ?? "").trim() || String(composed.visualBody ?? "").trim();
@@ -522,13 +543,17 @@ export default router.post(
       });
       const touched = touchPromptForVendor(composed.prompt, projectSettingData?.videoRatio as string | undefined);
       const policy = precheckContentPolicy(pipeline.egressPrompt);
-      const assetIds = assets2StoryboardRows
-        .filter((r) => r.storyboardId === item.id && r.assetId)
-        .map((r) => r.assetId!) as number[];
+      const { resolveStillVendorSizeLadder } = await import("@/ruleEngine/compilers/stillQuality");
+      const batchLadder = resolveStillVendorSizeLadder({
+        qualityMode: hq ? "hq_update" : "draft",
+        requestedQuality: projectSettingData?.imageQuality,
+        projectQuality: projectSettingData?.imageQuality,
+      });
       const repeloadObj = {
         prompt: pipeline.egressPrompt,
-        size: projectSettingData?.imageQuality as "1K" | "2K" | "4K",
+        size: batchLadder.size,
         aspectRatio: (touched.aspectRatio ?? projectSettingData?.videoRatio) as `${number}:${number}`,
+        ...(batchLadder.seed != null ? { seed: batchLadder.seed } : {}),
       };
       try {
         const { resolveShotIdentityBinding } = await import("@/ruleEngine/compilers/resolveShotIdentityBinding");
@@ -716,6 +741,9 @@ export default router.post(
                   objectiveClass: composedForPipe.generationContract?.objectiveClass,
                   poseOccupancy: sealCropB0?.poseOccupancy,
                   visualDescription: literaryDesc,
+                  feSceneHung:
+                    Boolean(composedForPipe.keepSoftEnvRef) ||
+                    Boolean((composedForPipe as { softEnvContinuity?: string }).softEnvContinuity === "must"),
                 });
                 (composedForPipe as { stillRefsContract?: typeof batchRefsContract }).stillRefsContract =
                   batchRefsContract;
@@ -723,39 +751,32 @@ export default router.post(
                 batchRefsContract = null;
               }
               if (eventObj && referenceList[0]?.base64) {
-                const { resolveIdentityCropTopRatio } = await import(
+                const { resolveBendIdentityCropPlan, composeBendIdentityPlate } = await import(
                   "@/ruleEngine/compilers/eventPlateReadiness"
                 );
                 const sealCropB = (composedForPipe.generationContract as {
                   primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
                 } | undefined)?.primaryIntentSeal;
-                const preferActionBody =
-                  batchRefsContract?.identityPreferActionBody === true ||
-                  sealCropB?.poseOccupancy === "bend_pickup" ||
-                  /弯腰|捡起|捡拾|俯身/.test(String(literaryDesc ?? ""));
-                const topRatio = resolveIdentityCropTopRatio({
+                const planB = resolveBendIdentityCropPlan({
+                  identityReplaceStandingSheet: batchRefsContract?.identityReplaceStandingSheet,
+                  identityPreferActionBody: batchRefsContract?.identityPreferActionBody,
+                  poseOccupancy: sealCropB?.poseOccupancy,
+                  primaryObjective: sealCropB?.primaryObjective,
                   objectiveClass: composedForPipe.generationContract?.objectiveClass,
                   keepSoftEnvRef: composedForPipe.keepSoftEnvRef && !batchRefsContract?.dropFullSoftEnv,
                   softEnvContinuity: softPresent && !batchRefsContract?.dropFullSoftEnv ? "must" : "none",
-                  poseOccupancy: sealCropB?.poseOccupancy,
-                  primaryObjective: sealCropB?.primaryObjective,
+                  visualDescription: literaryDesc,
                 });
                 const face = await cropIdentityPlateToFaceBias(referenceList[0].base64, {
-                  topRatio,
-                  preferActionBody,
+                  topRatio: planB.topRatio,
+                  preferActionBody: planB.preferActionBody,
+                  faceOnly: planB.faceOnlyLock,
                 });
                 if (face.cropped && face.base64) {
                   referenceList[0] = { type: "image" as const, base64: face.base64 };
                 }
-                const replaceStandB =
-                  batchRefsContract?.identityReplaceStandingSheet === true ||
-                  preferActionBody ||
-                  sealCropB?.poseOccupancy === "bend_pickup";
-                if (replaceStandB && referenceList[0]?.base64) {
+                if (planB.replaceStandingSheet && referenceList[0]?.base64) {
                   try {
-                    const { composeBendIdentityPlate } = await import(
-                      "@/ruleEngine/compilers/eventPlateReadiness"
-                    );
                     const bendId = await composeBendIdentityPlate({
                       faceSourceBase64: referenceList[0].base64,
                     });
@@ -798,7 +819,25 @@ export default router.post(
                     poseOccupancy: occForPlate,
                     plateMode: label.plateMode,
                   });
-                  if (ladder.skipSynth) {
+                  
+                  const stillPhaseForPropB =
+                    (composedForPipe as { stillPhase?: string }).stillPhase ||
+                    String(
+                      (composedForPipe as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                        "",
+                    ) ||
+                    null;
+                  const approachingPropB =
+                    stillPhaseForPropB === "approaching" || stillPhaseForPropB === "mid_contact";
+if (ladder.skipSynth) {
+                    if (approachingPropB) {
+                      skipSynth = false;
+                      (composedForPipe as { sources?: string[] }).sources = [
+                        ...((composedForPipe as { sources?: string[] }).sources ?? []),
+                        "propLadder.approaching_reject_warehouse",
+                      ];
+                    } else {
+
                     // Honesty: only skip when plate bytes hang; else force synth
                     // Asset-first: warehouse paper kept under bend
                     let hung = false;
@@ -830,6 +869,7 @@ export default router.post(
                     }
                     skipSynth = hung;
                     if (!hung) propPresent = false;
+                    }
                   }
                 } catch {
                   /* optional */
@@ -850,6 +890,13 @@ export default router.post(
                     softPlateHint: label.softPlateHint,
                     plateMode: synthOcc === "bend_pickup" ? "object_inset" : label.plateMode,
                     poseOccupancy: synthOcc,
+                    stillPhase:
+                      (composedForPipe as { stillPhase?: string }).stillPhase ||
+                      String(
+                        (composedForPipe as { narrative?: { stillPhase?: string } }).narrative
+                          ?.stillPhase ?? "",
+                      ) ||
+                      null,
                   });
                   if (synthOcc === "bend_pickup") {
                     try {
@@ -980,21 +1027,69 @@ export default router.post(
                   (composedForPipe as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = false;
                   composedForPipe.keepSoftEnvRef = false;
                   (composedForPipe as { softEnvContinuity?: string }).softEnvContinuity = "none";
-                } else {
-                  // Skirt ZH enhancement when keeping SCENE
-                  if (/裙摆|衣角|碎片/.test(String(composedForPipe.visualBody ?? "")) && !/裙摆|衣角/.test(vendorPrompt)) {
-                    vendorPrompt = `背景浅景深，裙摆/衣角虚化可辨（加强项）。${vendorPrompt}`;
+                  // Strip residual softEnv plate bytes (altar/hall cannot ride after T2I-first drop)
+                  {
+                    const rolesB = ((composedForPipe as { refsRoles?: string[] }).refsRoles ?? []).slice();
+                    if (rolesB.includes("softEnv") || softPresent) {
+                      const nextRefs: typeof referenceList = [];
+                      const nextRoles: string[] = [];
+                      for (let i = 0; i < referenceList.length; i++) {
+                        const role = rolesB[i] || referenceList[i]?.role || "identity";
+                        if (role === "softEnv") continue;
+                        nextRefs.push(referenceList[i]!);
+                        nextRoles.push(String(role));
+                      }
+                      referenceList = nextRefs;
+                      (composedForPipe as { refsRoles?: string[] }).refsRoles = nextRoles;
+                      softPresent = false;
+                    }
                   }
-                  if (!/浅景深|主场景|禁止灰棚/.test(vendorPrompt)) {
+                } else {
+                  // Skirt ZH — never re-legislate 浅景深 when bgBlur:false (T2I / Core homology)
+                  const bgBlurFalseBatch =
+                    (composedForPipe as { bgBlur?: boolean }).bgBlur === false ||
+                    /禁止浅景深/.test(vendorPrompt);
+                  if (
+                    /裙摆|衣角|碎片/.test(String(composedForPipe.visualBody ?? "")) &&
+                    !/裙摆|衣角/.test(vendorPrompt)
+                  ) {
+                    vendorPrompt = bgBlurFalseBatch
+                      ? `裙摆/衣角虚化可辨（加强项）；背景轮廓可辨，禁止浅景深抢戏。${vendorPrompt}`
+                      : `背景浅景深，裙摆/衣角虚化可辨（加强项）。${vendorPrompt}`;
+                  }
+                  if (!bgBlurFalseBatch && !/浅景深|主场景|禁止灰棚/.test(vendorPrompt)) {
                     vendorPrompt = `背景：主场景浅景深虚化，禁止灰棚白棚。${vendorPrompt}`;
                   }
                 }
-                if (atm && !softPresent && referenceList.length >= 1) {
+                if (atm && referenceList.length >= 1) {
                   if (dropLatchB) {
-                    (composedForPipe as { atmospherePlateHung?: boolean }).atmospherePlateHung = true;
-                    (composedForPipe as { atmosphereZhOnly?: boolean }).atmosphereZhOnly = true;
-                    vendorPrompt = `保留${atm}氛围可辨，禁止灰棚白棚。${vendorPrompt}`;
-                  } else {
+                    // After scene drop: hang synth atm as softEnv (never ZH-only → white studio)
+                    if (!softPresent) {
+                      const atmPlate = await synthesizeAtmospherePlate({ atmosphere: String(atm) });
+                      if (atmPlate?.base64) {
+                        referenceList.push({ type: "image" as const, base64: atmPlate.base64 });
+                        softPresent = true;
+                        (composedForPipe as { atmospherePlateHung?: boolean }).atmospherePlateHung =
+                          true;
+                        (composedForPipe as { atmosphereZhOnly?: boolean }).atmosphereZhOnly = false;
+                        (composedForPipe as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = true;
+                        (composedForPipe as { softEnvContinuity?: string }).softEnvContinuity =
+                          "optional";
+                        composedForPipe.keepSoftEnvRef = true;
+                        const rolesAtm = (
+                          (composedForPipe as { refsRoles?: string[] }).refsRoles ?? []
+                        ).slice();
+                        rolesAtm.push("softEnv");
+                        (composedForPipe as { refsRoles?: string[] }).refsRoles = rolesAtm.slice(
+                          0,
+                          referenceList.length,
+                        );
+                      } else {
+                        (composedForPipe as { atmosphereZhOnly?: boolean }).atmosphereZhOnly = true;
+                      }
+                    }
+                    vendorPrompt = `保留${atm}氛围可辨（木作烛光环境），禁止灰棚白棚。${vendorPrompt}`;
+                  } else if (!softPresent) {
                     const atmPlate = await synthesizeAtmospherePlate({ atmosphere: String(atm) });
                     if (atmPlate?.base64) {
                       referenceList.push({ type: "image" as const, base64: atmPlate.base64 });
@@ -1003,6 +1098,16 @@ export default router.post(
                       (composedForPipe as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = true;
                       vendorPrompt = `保留${atm}氛围可辨，禁止灰棚白棚。${vendorPrompt}`;
                     }
+                  }
+                } else if (dropLatchB && !softPresent && referenceList.length >= 1) {
+                  const atmPlate = await synthesizeAtmospherePlate({ atmosphere: "烛光" });
+                  if (atmPlate?.base64) {
+                    referenceList.push({ type: "image" as const, base64: atmPlate.base64 });
+                    softPresent = true;
+                    (composedForPipe as { atmospherePlateHung?: boolean }).atmospherePlateHung = true;
+                    (composedForPipe as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = true;
+                    composedForPipe.keepSoftEnvRef = true;
+                    vendorPrompt = `保留暖光烛火氛围可辨（木作环境），禁止灰棚白棚。${vendorPrompt}`;
                   }
                 }
               } catch {
@@ -1051,7 +1156,9 @@ export default router.post(
               const continuity =
                 (composedForPipe as { softEnvContinuity?: "must" | "optional" | "none" }).softEnvContinuity ??
                 (composedForPipe.keepSoftEnvRef ? "must" : "none");
-              const dropLatchBudget = batchRefsContract?.dropFullSoftEnv === true;
+              const dropLatchBudget =
+                batchRefsContract?.dropFullSoftEnv === true &&
+                !(composedForPipe as { atmospherePlateHung?: boolean }).atmospherePlateHung;
               const chosen = await applyContinuityAwareRefBudget({
                 refs: tagged,
                 propRequired: eventObj,
@@ -1102,25 +1209,30 @@ export default router.post(
                 );
                 if (softPresent) {
                   (composedForPipe as { softEnvMissingHonest?: boolean }).softEnvMissingHonest = false;
-                  // Mild DOF blur on SCENE softEnv
-                  try {
-                    const roles = chosen.roles ?? [];
-                    const softIdx = roles.lastIndexOf("softEnv");
-                    if (softIdx >= 0 && referenceList[softIdx]?.base64) {
-                      const { softenSoftEnvPlateForAtmosphere } = await import(
-                        "@/ruleEngine/compilers/eventPlateReadiness"
-                      );
-                      const blurred = await softenSoftEnvPlateForAtmosphere(referenceList[softIdx]!.base64, {
-                        softEnvContinuity:
-                          (composedForPipe as { softEnvContinuity?: string }).softEnvContinuity ?? "must",
-                        sceneMust: true,
-                      });
-                      if (blurred.softened && blurred.base64) {
-                        referenceList[softIdx] = { type: "image" as const, base64: blurred.base64 };
+                  // Mild DOF blur on SCENE softEnv — skip when bgBlur:false
+                  const bgBlurFalseSoft =
+                    (composedForPipe as { bgBlur?: boolean }).bgBlur === false ||
+                    /禁止浅景深/.test(String(vendorPrompt));
+                  if (!bgBlurFalseSoft) {
+                    try {
+                      const roles = chosen.roles ?? [];
+                      const softIdx = roles.lastIndexOf("softEnv");
+                      if (softIdx >= 0 && referenceList[softIdx]?.base64) {
+                        const { softenSoftEnvPlateForAtmosphere } = await import(
+                          "@/ruleEngine/compilers/eventPlateReadiness"
+                        );
+                        const blurred = await softenSoftEnvPlateForAtmosphere(referenceList[softIdx]!.base64, {
+                          softEnvContinuity:
+                            (composedForPipe as { softEnvContinuity?: string }).softEnvContinuity ?? "must",
+                          sceneMust: true,
+                        });
+                        if (blurred.softened && blurred.base64) {
+                          referenceList[softIdx] = { type: "image" as const, base64: blurred.base64 };
+                        }
                       }
+                    } catch {
+                      /* optional */
                     }
-                  } catch {
-                    /* optional */
                   }
                 }
               }
@@ -1151,8 +1263,11 @@ export default router.post(
                   ?.designIntentProfile?.plateMode,
                 fragmentPlateHung: Boolean((composedForPipe as { fragmentPlateHung?: boolean }).fragmentPlateHung),
                 stillPhase: batchStillPhase || null,
+                castNames: charNames?.length ? charNames : undefined,
+                propName: /休书|婚书|信笺/.exec(String(literaryDesc ?? ""))?.[0] ?? null,
+                sceneName: (composedForPipe as { sceneName?: string }).sceneName ?? null,
               });
-              if (bindZh && !/参考绑定：/.test(vendorPrompt)) {
+              if (bindZh && !/@图\d\s*为/.test(vendorPrompt) && !/参考绑定\s*[：:]/.test(vendorPrompt)) {
                 vendorPrompt = `${String(vendorPrompt).trim()}。${bindZh}`;
               }
               if (
@@ -1438,6 +1553,89 @@ export default router.post(
                 base64: r.base64,
                 role: (composedForPipe as { refsRoles?: string[] }).refsRoles?.[i],
               }));
+            // Seedream handbook: ≤3 identity→prop→softEnv before vendor
+            {
+              const { capStillRefsHandbookSlots } = await import(
+                "@/ruleEngine/compilers/eventPlateReadiness"
+              );
+              const narrB = (item as { narrative?: { secondaryBudget?: string } }).narrative;
+              const dipB = (composedForPipe.generationContract as {
+                designIntentProfile?: { secondaryBudget?: string };
+              } | undefined)?.designIntentProfile;
+              const budgetB = narrB?.secondaryBudget ?? dipB?.secondaryBudget ?? "";
+              const singleIdB =
+                budgetB === "skirt_blur" ||
+                budgetB === "hands_only" ||
+                budgetB === "none" ||
+                !budgetB;
+              const rolesHb = ((composedForPipe as { refsRoles?: string[] }).refsRoles ?? []).slice();
+              const cappedB = capStillRefsHandbookSlots({
+                refs: referenceList.map((r, i) => ({
+                  type: "image" as const,
+                  base64: r.base64,
+                  role: (rolesHb[i] as "identity" | "propSoft" | "softEnv") || "identity",
+                })),
+                maxSlots: 20,
+                singleIdentityOnly: singleIdB,
+              });
+              referenceList = cappedB.refs.map((r) => ({ type: "image" as const, base64: r.base64 }));
+              (composedForPipe as { refsRoles?: string[] }).refsRoles = cappedB.roles;
+            }
+            // Pre-vendor: force ZH @图N handbook (core≡batch)
+            {
+              const rolesB = ((composedForPipe as { refsRoles?: string[] }).refsRoles ?? []) as Array<
+                "identity" | "propSoft" | "softEnv"
+              >;
+              if (rolesB.length > 0) {
+                try {
+                  const { compileSeedreamAtTuZhPrompt, stripLegacyStillVendorEgress } =
+                    require("@/ruleEngine/compilers/tunOrdinalBinding") as typeof import("@/ruleEngine/compilers/tunOrdinalBinding");
+                  const { buildEventRefOrdinalBinding } = await import(
+                    "@/ruleEngine/compilers/eventPlateReadiness"
+                  );
+                  const propB =
+                    mountedPropName ||
+                    (/休书|婚书|信笺/.exec(String(literaryDesc ?? ""))?.[0] ?? null);
+                  const phasePre = String(
+                    (composedForPipe as { stillPhase?: string }).stillPhase ??
+                      (composedForPipe.generationContract as { stillPhase?: string } | undefined)?.stillPhase ??
+                      (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                      "",
+                  );
+                  const bindB = buildEventRefOrdinalBinding({
+                    roles: rolesB,
+                    propRequired: eventObj,
+                    castNames: charNames?.length ? charNames : undefined,
+                    propName: propB,
+                    sceneName:
+                      mountedSceneName ||
+                      ((composedForPipe as { sceneName?: string }).sceneName ?? null),
+                    poseOccupancy: (composedForPipe.generationContract as {
+                      primaryIntentSeal?: { poseOccupancy?: string };
+                    } | undefined)?.primaryIntentSeal?.poseOccupancy,
+                    stillPhase: phasePre || null,
+                  });
+                  vendorPrompt = stripLegacyStillVendorEgress(
+                    compileSeedreamAtTuZhPrompt({
+                      refsRoles: rolesB,
+                      castNames: charNames?.length ? charNames : undefined,
+                      propName: propB,
+                      primaryName: charNames?.[0],
+                      visualDescription: literaryDesc,
+                      sceneName: mountedSceneName || (composedForPipe as { sceneName?: string }).sceneName,
+                      poseOccupancy: (composedForPipe.generationContract as {
+                        primaryIntentSeal?: { poseOccupancy?: string };
+                      } | undefined)?.primaryIntentSeal?.poseOccupancy,
+                      stillPhase: phasePre || null,
+                      readableZhText: propB || undefined,
+                      preferredBindingBlock: bindB,
+                    }).prompt,
+                  );
+                } catch {
+                  /* keep vendorPrompt */
+                }
+              }
+            }
             const { runStillVendorWithActuatorCore } = await import(
               "@/ruleEngine/actuators/runStillVendorWithActuator"
             );
@@ -1463,6 +1661,15 @@ export default router.post(
                 (composedForPipe as { litRepairDeltaHints?: string[] }).litRepairDeltaHints ??
                 null,
               visualDescription: literaryDesc,
+              castNames: charNames,
+              primaryName: charNames?.[0],
+              propName:
+                mountedPropName ||
+                (/休书|婚书|信笺/.exec(String(literaryDesc ?? ""))?.[0] ?? null),
+              sceneName: mountedSceneName || (composedForPipe as { sceneName?: string }).sceneName,
+              readableZhText:
+                mountedPropName ||
+                (/休书|婚书|信笺/.exec(String(literaryDesc ?? ""))?.[0] ?? null),
               poseOccupancy: (composedForPipe.generationContract as { primaryIntentSeal?: { poseOccupancy?: string }; designIntentProfile?: { poseOccupancy?: string } } | undefined)
                 ?.primaryIntentSeal?.poseOccupancy ??
                 (composedForPipe.generationContract as { designIntentProfile?: { poseOccupancy?: string } } | undefined)
@@ -1487,6 +1694,9 @@ export default router.post(
                     prompt: seedPrompt,
                     size: repeloadObj.size,
                     aspectRatio: repeloadObj.aspectRatio,
+                    ...((repeloadObj as { seed?: number }).seed != null
+                      ? { seed: (repeloadObj as { seed?: number }).seed }
+                      : {}),
                   },
                   {
                     taskClass: "生成分镜图片",
@@ -1495,6 +1705,8 @@ export default router.post(
                       ...repeloadObj,
                       prompt: seedPrompt,
                       editStrategy,
+                      qualityLadder: batchLadder.ladder,
+                      refsRoles: (composedForPipe as { refsRoles?: string[] }).refsRoles,
                     }),
                     projectId: projectId,
                   },
@@ -1518,6 +1730,66 @@ export default router.post(
             (composedForPipe as { workflowHash?: string }).workflowHash = vendorOut.workflowHash;
             if (vendorOut.vendorPromptUsed) {
               (composedForPipe as { vendorPromptUsed?: string }).vendorPromptUsed = vendorOut.vendorPromptUsed;
+              vendorPrompt = vendorOut.vendorPromptUsed;
+            }
+            if (vendorOut.missingSlots?.length) {
+              (composedForPipe as { missingSlots?: string[] }).missingSlots = [
+                ...new Set([
+                  ...((composedForPipe as { missingSlots?: string[] }).missingSlots ?? []),
+                  ...vendorOut.missingSlots,
+                ]),
+              ];
+            }
+            {
+              const thumbs: string[] = [];
+              for (const r of referenceList) {
+                const raw = String(r.base64 ?? "").replace(/^data:image\/\w+;base64,/, "");
+                thumbs.push(raw && raw.length <= 180_000 ? `data:image/jpeg;base64,${raw}` : "");
+              }
+              (composedForPipe as { refThumbUrls?: string[] }).refThumbUrls = thumbs;
+              if (thumbs.some((t) => !t) && referenceList.length) {
+                (composedForPipe as { missingSlots?: string[] }).missingSlots = [
+                  ...new Set([
+                    ...((composedForPipe as { missingSlots?: string[] }).missingSlots ?? []),
+                    "ref.thumb_missing",
+                  ]),
+                ];
+              }
+              try {
+                const { assertAtTuHomology } =
+                  require("@/ruleEngine/compilers/tunOrdinalBinding") as typeof import("@/ruleEngine/compilers/tunOrdinalBinding");
+                const homo = assertAtTuHomology(
+                  String(vendorOut.vendorPromptUsed ?? vendorPrompt),
+                  referenceList.length,
+                );
+                if (!homo.ok) {
+                  (composedForPipe as { missingSlots?: string[] }).missingSlots = [
+                    ...new Set([
+                      ...((composedForPipe as { missingSlots?: string[] }).missingSlots ?? []),
+                      ...homo.missingSlots,
+                    ]),
+                  ];
+                }
+              } catch {
+                /* optional */
+              }
+            }
+            try {
+              const { resolveTunOneClickHeal } =
+                require("@/ruleEngine/design/tunOneClickHeal") as typeof import("@/ruleEngine/design/tunOneClickHeal");
+              const tunCta = resolveTunOneClickHeal({
+                missingSlots: (composedForPipe as { missingSlots?: string[] }).missingSlots,
+                existingKind: (composedForPipe as { oneClickRepairKind?: string }).oneClickRepairKind,
+              });
+              if (tunCta.oneClickRepairKind !== "none") {
+                (composedForPipe as { oneClickRepairKind?: string }).oneClickRepairKind =
+                  tunCta.oneClickRepairKind;
+                if (tunCta.ctaLabel) {
+                  (composedForPipe as { ctaLabel?: string }).ctaLabel = tunCta.ctaLabel;
+                }
+              }
+            } catch {
+              /* optional */
             }
             actuatorEcho = {
               actuatorId: vendorOut.actuatorId,
@@ -1528,7 +1800,7 @@ export default router.post(
             return {
               url: vendorOut.url,
               savePath: vendorOut.savePath,
-              promptUsed: vendorPrompt,
+              promptUsed: vendorOut.vendorPromptUsed || vendorPrompt,
               imageBase64: vendorOut.imageBase64,
               allowHqOkL0: pipeline.allowHqOk && !pipeline.collapsed,
               fidelityMissing: pipeline.fidelityMissing,
@@ -1699,7 +1971,7 @@ export default router.post(
           return pu.slice(0, 2000);
         };
         const vendorPu = String((composedForPipe as { vendorPromptUsed?: string }).vendorPromptUsed ?? "").trim();
-        const persistPromptUsed = homologizePu(batchLitOut.promptUsed || loopOut.promptUsed);
+        const persistPromptUsed = homologizePu(vendorPu || batchLitOut.promptUsed || loopOut.promptUsed);
         const hqMeta = allowHq
           ? markHqOk({
               qualityMode: "hq_update",
@@ -1721,9 +1993,11 @@ export default router.post(
               fidelityItems: loopOut.fidelityItems,
               sheetLeak: false,
               egressCompressed: Boolean((composedForPipe as { egressCompressed?: boolean }).egressCompressed),
-              ...(vendorPu && vendorPu !== loopOut.promptUsed
-                ? { vendorPromptUsed: vendorPu.slice(0, 2000) }
-                : {}),
+              ...(vendorPu ? { vendorPromptUsed: vendorPu.slice(0, 2000) } : {}),
+              refsRoles: (composedForPipe as { refsRoles?: string[] }).refsRoles,
+              refThumbUrls: (composedForPipe as { refThumbUrls?: string[] }).refThumbUrls,
+              oneClickRepairKind: (composedForPipe as { oneClickRepairKind?: string }).oneClickRepairKind ?? null,
+              missingSlots: (composedForPipe as { missingSlots?: string[] }).missingSlots,
             })
           : {
               stillQuality: "weak" as const,
@@ -1754,6 +2028,10 @@ export default router.post(
               ...(vendorPu && vendorPu !== loopOut.promptUsed
                 ? { vendorPromptUsed: vendorPu.slice(0, 2000) }
                 : {}),
+              refsRoles: (composedForPipe as { refsRoles?: string[] }).refsRoles,
+              refThumbUrls: (composedForPipe as { refThumbUrls?: string[] }).refThumbUrls,
+              oneClickRepairKind: (composedForPipe as { oneClickRepairKind?: string }).oneClickRepairKind ?? null,
+              missingSlots: (composedForPipe as { missingSlots?: string[] }).missingSlots,
             };
         const { applyLifecycleInvalidation } = await import("@/ruleEngine/heal/lifecycleInvalidate");
         const life = applyLifecycleInvalidation("still_regenerated", hqMeta);
@@ -1918,15 +2196,72 @@ export default router.post(
             settingsDeepLink: keyMissing
               ? "/settings/vendor?focus=volcengine&field=apiKey"
               : repairRoute?.settingsDeepLink,
-            ctaLabel:
-              litAfter?.ctaLabel ||
-              (keyMissing
-                ? loopOut.pendingHumanRejudge
-                  ? "人审通过（未测·非失败）"
-                  : "继续生成修复"
-                : loopOut.repairCtaLabel ??
-                  repairRoute?.ctaLabel ??
-                  (!allowHq ? weakPrimary.ctaLabel : undefined)),
+            ctaKind: (() => {
+              try {
+                const { resolveStillPrimaryCta, isStillSsotSealed } =
+                  require("@/ruleEngine/design/shootableArchitecture") as typeof import("@/ruleEngine/design/shootableArchitecture");
+                const src = (composedForPipe as { sources?: string[] }).sources ?? [];
+                const phase =
+                  (composedForPipe as { stillPhase?: string }).stillPhase ??
+                  (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                  null;
+                const sealed = isStillSsotSealed({ stillPhase: phase, composeSources: src });
+                const r = resolveStillPrimaryCta({
+                  primaryNextStep: primaryNext,
+                  stillQuality: allowHq ? "hq_ok" : "weak",
+                  visualPass: allowHq,
+                  keyOptional: true,
+                  pixelDimStatus: keyMissing ? "unmeasured" : allowHq ? "measured_pass" : "measured_fail",
+                  debtKind: litAfter?.debtKind,
+                  stillPhase: phase,
+                  composeSources: src,
+                  ssotSealed: sealed,
+                  realizationDegraded: litAfter?.realization?.realizationDegraded === true,
+                  oneClickRepairKind: (composedForPipe as { oneClickRepairKind?: string }).oneClickRepairKind,
+                  missingSlots: (composedForPipe as { missingSlots?: string[] }).missingSlots,
+                });
+                return r.kind;
+              } catch {
+                return undefined;
+              }
+            })(),
+            ctaLabel: (() => {
+              try {
+                const { isStillSsotSealed, sealedRealizationCtaLabel, resolveStillPrimaryCta } =
+                  require("@/ruleEngine/design/shootableArchitecture") as typeof import("@/ruleEngine/design/shootableArchitecture");
+                const src = (composedForPipe as { sources?: string[] }).sources ?? [];
+                const phase =
+                  (composedForPipe as { stillPhase?: string }).stillPhase ??
+                  (item as { narrative?: { stillPhase?: string } }).narrative?.stillPhase ??
+                  null;
+                if (!allowHq && isStillSsotSealed({ stillPhase: phase, composeSources: src })) {
+                  const r = resolveStillPrimaryCta({
+                    primaryNextStep: primaryNext,
+                    stillQuality: "weak",
+                    keyOptional: true,
+                    pixelDimStatus: keyMissing ? "unmeasured" : "measured_fail",
+                    debtKind: litAfter?.debtKind,
+                    stillPhase: phase,
+                    composeSources: src,
+                    ssotSealed: true,
+                    realizationDegraded: litAfter?.realization?.realizationDegraded === true,
+                  });
+                  return r.label || sealedRealizationCtaLabel({ keyUnmeasured: keyMissing, refInterference: true });
+                }
+              } catch { /* fallthrough */ }
+              return (
+                (composedForPipe as { ctaLabel?: string }).ctaLabel ||
+                litAfter?.ctaLabel ||
+                (keyMissing
+                  ? loopOut.pendingHumanRejudge
+                    ? "人审通过（未测·非失败）"
+                    : "继续生成修复"
+                  : loopOut.repairCtaLabel ??
+                    repairRoute?.ctaLabel ??
+                    (!allowHq ? weakPrimary.ctaLabel : undefined))
+              );
+            })(),
+            oneClickRepairKind: (composedForPipe as { oneClickRepairKind?: string }).oneClickRepairKind ?? null,
             keyOptional: true,
             pixelDimStatus: keyMissing ? "unmeasured" : allowHq ? "measured_pass" : "measured_fail",
             actuatorId: actuatorEcho.actuatorId,
@@ -1934,7 +2269,12 @@ export default router.post(
             propPlateGrade: actuatorEcho.propPlateGrade,
             workflowHash: actuatorEcho.workflowHash,
             userMessage: weakMsg,
-            missingSlots: loopOut.repairMissingSlots ?? repairRoute?.missingSlots,
+            missingSlots: [
+              ...new Set([
+                ...((composedForPipe as { missingSlots?: string[] }).missingSlots ?? []),
+                ...((loopOut.repairMissingSlots ?? repairRoute?.missingSlots ?? []) as string[]),
+              ]),
+            ],
             irdPrimaryAction: loopOut.repairIrdPrimaryAction ?? repairRoute?.irdPrimaryAction,
             videoStale: true,
             ...(() => {

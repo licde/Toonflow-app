@@ -131,9 +131,9 @@ ok("debt.order", STILL_DEBT_PRECEDENCE[0] === "beat_isolate" && STILL_DEBT_PRECE
     visualDescription: String(SHOT3.visualDescription),
     shotDesignSample: sample,
   });
-  ok("refs.keep_soft", c.dropFullSoftEnv === false, c.reason);
+  ok("refs.drop_soft", c.dropFullSoftEnv === true, c.reason);
   ok("refs.force_prop", c.forcePropOccupancySynth === false);
-  ok("refs.asset_first", /asset_first/.test(c.reason) || c.forcePropOccupancySynth === false, c.reason);
+  ok("refs.t2i_first", /t2i_first/.test(c.reason) || c.dropFullSoftEnv === true, c.reason);
   ok("refs.face_lock", c.identityReplaceStandingSheet === true && c.identityPreferActionBody === false);
 }
 

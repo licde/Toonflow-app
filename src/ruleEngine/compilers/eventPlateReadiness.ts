@@ -257,13 +257,20 @@ export async function synthesizePropSoftPlate(input: {
   plateMode?: string | null;
   /** Sealed occupancy — bend_pickup uses ground-pickup geometry, not centered display card */
   poseOccupancy?: string | null;
+  /** LGIA stillPhase — approaching mutes strong readable glyphs (T2I enhance, not display card) */
+  stillPhase?: string | null;
 }): Promise<{ base64: string; kind: string; label: string; plateMode: string }> {
   const cls = String(input.propClassId ?? "generic");
   const hint = String(input.softPlateHint || getPropFormDoctrine(cls)?.softPlateHint || "generic");
   const mode =
     String(input.plateMode ?? "").trim() ||
     (cls === "paper_doc" || hint === "thin_sheets" ? "readable_doc" : "object_inset");
-  const label = String(input.glyphText || input.canonical || "物").slice(0, 4);
+  const phase = String(input.stillPhase ?? "");
+  const approachingPhase = phase === "approaching" || phase === "mid_contact";
+  // Approaching: geometry-only enhance — no strong 休书 glyphs that hijack Seedream composition
+  const label = approachingPhase
+    ? ""
+    : String(input.glyphText || input.canonical || "物").slice(0, 4);
   const chars = [...label];
   const w = 512;
   const h = 512;
@@ -273,11 +280,15 @@ export async function synthesizePropSoftPlate(input: {
   // Also treat object_inset paper as bend ground sheet (callers force mode when sealed)
   const forceGroundSheet =
     bendPickup ||
+    approachingPhase ||
     (mode === "object_inset" && (cls === "paper_doc" || hint === "thin_sheets"));
   if (forceGroundSheet && (cls === "paper_doc" || hint === "thin_sheets" || mode === "readable_doc" || mode === "object_inset" || !mode || mode === "none")) {
-    // Ground pickup: lean + floor sheet; ink title on paper is legal visualization (not chest sticker)
-    const c0 = escapeXml(chars[0] || "纸");
-    const c1 = escapeXml(chars[1] || chars[0] || "片");
+    // Ground pickup: lean + floor sheet; approaching = weak geometry (no ink title)
+    const ink =
+      approachingPhase || !chars.length
+        ? ""
+        : `<text x="290" y="430" text-anchor="middle" font-size="18" font-family="serif" fill="#1a1208" opacity="0.35">${escapeXml(chars[0] || "")}</text>
+    <text x="290" y="452" text-anchor="middle" font-size="18" font-family="serif" fill="#1a1208" opacity="0.35">${escapeXml(chars[1] || chars[0] || "")}</text>`;
     svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
   <defs>
     <radialGradient id="hall" cx="50%" cy="30%" r="80%">
@@ -297,8 +308,7 @@ export async function synthesizePropSoftPlate(input: {
     <polygon points="210,390 380,372 365,470 200,480" fill="#e8dcc6" stroke="#5a4a32" stroke-width="3"/>
     <path d="M235 420 L350 410" stroke="#c4b498" stroke-width="1.5" fill="none" opacity="0.4"/>
     <path d="M250 435 L330 425" stroke="#a89878" stroke-width="1" fill="none" opacity="0.35"/>
-    <text x="290" y="430" text-anchor="middle" font-size="22" font-family="serif" fill="#1a1208" opacity="0.85">${c0}</text>
-    <text x="290" y="452" text-anchor="middle" font-size="22" font-family="serif" fill="#1a1208" opacity="0.85">${c1}</text>
+    ${ink}
   </g>
 </svg>`;
   } else if (mode === "cheek_sweep" && (cls === "paper_doc" || hint === "thin_sheets")) {
@@ -400,17 +410,25 @@ export async function synthesizeAtmospherePlate(input: {
   const glow = warm ? "#f0c060" : cool ? "#a8c8f0" : "#d0c0a0";
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
   <defs>
-    <radialGradient id="g" cx="30%" cy="70%" r="70%">
-      <stop offset="0%" stop-color="${glow}" stop-opacity="0.55"/>
-      <stop offset="55%" stop-color="${c1}" stop-opacity="0.85"/>
+    <radialGradient id="g" cx="28%" cy="62%" r="72%">
+      <stop offset="0%" stop-color="${glow}" stop-opacity="0.62"/>
+      <stop offset="45%" stop-color="${c1}" stop-opacity="0.9"/>
       <stop offset="100%" stop-color="${c0}"/>
     </radialGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1a120c"/>
+      <stop offset="50%" stop-color="#2c2016"/>
+      <stop offset="100%" stop-color="#18100c"/>
+    </linearGradient>
   </defs>
   <rect width="100%" height="100%" fill="url(#g)"/>
-  <rect x="40" y="60" width="28" height="320" fill="#2a2018" opacity="0.45"/>
-  <rect x="420" y="100" width="22" height="280" fill="#2a2018" opacity="0.35"/>
-  <ellipse cx="140" cy="380" rx="36" ry="48" fill="${glow}" opacity="0.7"/>
-  <ellipse cx="140" cy="360" rx="10" ry="18" fill="#fff6d0" opacity="0.85"/>
+  <rect x="0" y="0" width="100%" height="100%" fill="url(#wood)" opacity="0.35"/>
+  <rect x="36" y="40" width="32" height="360" fill="#241810" opacity="0.55"/>
+  <rect x="88" y="70" width="18" height="300" fill="#2a1c12" opacity="0.4"/>
+  <rect x="420" y="80" width="26" height="320" fill="#241810" opacity="0.45"/>
+  <ellipse cx="150" cy="390" rx="40" ry="52" fill="${glow}" opacity="0.75"/>
+  <ellipse cx="150" cy="368" rx="12" ry="20" fill="#fff6d0" opacity="0.9"/>
+  <ellipse cx="210" cy="400" rx="28" ry="36" fill="${glow}" opacity="0.45"/>
 </svg>`;
   try {
     const { default: sharp } = await import("sharp");
@@ -606,6 +624,7 @@ export function stripOrphanSceneSref(
 
 /**
  * Further crop an identity plate toward upper face / upper-body.
+ * Face-lock (identityReplaceStandingSheet / bend anti-sheet): ~0.38 — never keep namecard chest.
  * Event + softEnv / costume need → topRatio ~0.72; face-only ECU → ~0.55.
  */
 export function resolveIdentityCropTopRatio(input: {
@@ -613,10 +632,15 @@ export function resolveIdentityCropTopRatio(input: {
   keepSoftEnvRef?: boolean | null;
   softEnvContinuity?: string | null;
   preferCostume?: boolean | null;
-  /** bend_pickup / action_primary must keep upper-body (≥0.72), never face-only soup */
+  /** bend standing-sheet replace → face-only (≤0.4), not upper-body 0.72 */
   poseOccupancy?: string | null;
   primaryObjective?: string | null;
+  identityReplaceStandingSheet?: boolean | null;
+  faceOnlyLock?: boolean | null;
 }): number {
+  if (input.identityReplaceStandingSheet === true || input.faceOnlyLock === true) {
+    return 0.38;
+  }
   const obj = String(input.objectiveClass ?? "");
   const eventObj =
     obj === "contact_geom" ||
@@ -629,10 +653,58 @@ export function resolveIdentityCropTopRatio(input: {
     input.keepSoftEnvRef === true ||
     input.softEnvContinuity === "must" ||
     input.softEnvContinuity === "optional";
-  if (bend || input.preferCostume === true || eventObj || soft) {
+  // bend without explicit face-lock still defaults face-lock (anti denim/namecard collage)
+  if (bend) {
+    return 0.38;
+  }
+  if (input.preferCostume === true || eventObj || soft) {
     return 0.72;
   }
   return 0.55;
+}
+
+/**
+ * Single plan for bend/action identity crop — face lock MUST win over preferActionBody.
+ * Old OR (bend → preferActionBody) left torso+namecard+studio in image0 → Seedream 左右拼版.
+ */
+export function resolveBendIdentityCropPlan(input: {
+  identityReplaceStandingSheet?: boolean | null;
+  identityPreferActionBody?: boolean | null;
+  poseOccupancy?: string | null;
+  primaryObjective?: string | null;
+  objectiveClass?: string | null;
+  keepSoftEnvRef?: boolean | null;
+  softEnvContinuity?: string | null;
+  visualDescription?: string | null;
+}): {
+  replaceStandingSheet: boolean;
+  preferActionBody: boolean;
+  faceOnlyLock: boolean;
+  topRatio: number;
+} {
+  const vd = String(input.visualDescription ?? "");
+  const bend =
+    String(input.poseOccupancy ?? "") === "bend_pickup" ||
+    String(input.primaryObjective ?? "") === "action_primary" ||
+    String(input.objectiveClass ?? "") === "action_primary" ||
+    /弯腰|捡起|捡拾|俯身/.test(vd);
+  const replaceStandingSheet =
+    input.identityReplaceStandingSheet === true ||
+    (bend && input.identityPreferActionBody !== true);
+  // NEVER force preferActionBody from bend occupancy — that undoes face lock
+  const preferActionBody =
+    !replaceStandingSheet && input.identityPreferActionBody === true;
+  const faceOnlyLock = replaceStandingSheet;
+  const topRatio = resolveIdentityCropTopRatio({
+    objectiveClass: input.objectiveClass,
+    keepSoftEnvRef: input.keepSoftEnvRef,
+    softEnvContinuity: input.softEnvContinuity,
+    poseOccupancy: input.poseOccupancy,
+    primaryObjective: input.primaryObjective,
+    identityReplaceStandingSheet: replaceStandingSheet,
+    faceOnlyLock,
+  });
+  return { replaceStandingSheet, preferActionBody, faceOnlyLock, topRatio };
 }
 
 /**
@@ -674,12 +746,13 @@ export async function softenSoftEnvPlateForAtmosphere(
 
 /**
  * Further crop an identity plate toward upper face (demote handheld soup on event shots).
- * Keeps top ~55% (face) or ~72% (upper-body/costume) of plate.
+ * Keeps top ~38% (face-lock) / ~55% (face) / ~72% (upper-body/costume).
  * preferActionBody: skip top face-band of sheet cell — take mid upper-body band.
+ * faceOnly: allow topRatio < 0.5 (namecard/chest must not survive).
  */
 export async function cropIdentityPlateToFaceBias(
   imageBase64: string,
-  opts?: { topRatio?: number; preferActionBody?: boolean },
+  opts?: { topRatio?: number; preferActionBody?: boolean; faceOnly?: boolean },
 ): Promise<{ base64: string; cropped: boolean; reason?: string }> {
   const raw = String(imageBase64 ?? "").replace(/^data:image\/\w+;base64,/, "").trim();
   if (!raw) return { base64: "", cropped: false, reason: "empty" };
@@ -690,7 +763,7 @@ export async function cropIdentityPlateToFaceBias(
     const w = meta.width ?? 0;
     const h = meta.height ?? 0;
     if (w < 64 || h < 96) return { base64: raw, cropped: false, reason: "too_small" };
-    if (opts?.preferActionBody) {
+    if (opts?.preferActionBody && !opts?.faceOnly) {
       // Skip top ~28% (sheet face-band / head CU), keep next ~68% (torso / reach zone)
       const topSkip = Math.floor(h * 0.28);
       const cropH = Math.max(64, Math.floor(h * 0.68));
@@ -701,14 +774,32 @@ export async function cropIdentityPlateToFaceBias(
         .toBuffer();
       return { base64: out.toString("base64"), cropped: true, reason: "action_body_skip_face_band" };
     }
-    // Allow upper-body bias (~0.72) for IP-Adapter costume; face-only soup uses ~0.55
-    const ratio = Math.min(0.85, Math.max(0.5, Number(opts?.topRatio ?? 0.55)));
+    const faceOnly =
+      opts?.faceOnly === true ||
+      (opts?.topRatio != null && Number(opts.topRatio) < 0.5);
+    const ratio = faceOnly
+      ? Math.min(0.48, Math.max(0.32, Number(opts?.topRatio ?? 0.38)))
+      : Math.min(0.85, Math.max(0.5, Number(opts?.topRatio ?? 0.55)));
     const cropH = Math.max(64, Math.floor(h * ratio));
+    // Face-lock: also trim side studio / card margins (center 78%)
+    const sidePad = faceOnly ? Math.floor(w * 0.11) : 0;
+    const cropW = Math.max(48, w - sidePad * 2);
     const out = await sharp(buf)
-      .extract({ left: 0, top: 0, width: w, height: cropH })
+      .extract({
+        left: sidePad,
+        top: 0,
+        width: cropW,
+        height: Math.min(cropH, h),
+      })
       .jpeg({ quality: 92 })
       .toBuffer();
-    return { base64: out.toString("base64"), cropped: true, reason: `face_bias_top${Math.round(ratio * 100)}` };
+    return {
+      base64: out.toString("base64"),
+      cropped: true,
+      reason: faceOnly
+        ? `face_only_top${Math.round(ratio * 100)}_sideTrim`
+        : `face_bias_top${Math.round(ratio * 100)}`,
+    };
   } catch (e) {
     return {
       base64: raw,
@@ -787,8 +878,8 @@ export async function composeBendPropSoftFromScene(input?: {
 }
 
 /**
- * Bend identity: REAL face/upper crop on dark pad — NO global matte (punches face highlights → 花脸).
- * Optional corner-flood RGB neutralize of studio gray only; softEnv stays independent slot.
+ * Bend identity: REAL face-only crop on dark pad — NO torso/namecard/standing sheet.
+ * Corner-flood RGB neutralize of studio gray; softEnv stays independent slot.
  * Hall Must: never ship empty dark pad as sole identity without face bytes.
  */
 export async function composeBendIdentityPlate(input?: {
@@ -801,7 +892,12 @@ export async function composeBendIdentityPlate(input?: {
     return { base64: "", kind: "bend_identity_face", reason: "no_face_source", usedFace: false };
   }
   try {
-    const face = await cropIdentityPlateToFaceBias(src, { topRatio: 0.58 });
+    // Face-lock: top ~36% + side trim — namecard/chest/denim must not remain for Seedream collage
+    const face = await cropIdentityPlateToFaceBias(src, {
+      topRatio: 0.36,
+      faceOnly: true,
+      preferActionBody: false,
+    });
     const plate = face.base64 || src;
     // Corner-connected studio gray → warm dark RGB (not alpha punch through face)
     const cleaned = await neutralizeCornerStudioGrayRgb(plate);
@@ -846,7 +942,7 @@ export async function composeBendIdentityPlate(input?: {
       base64: out.toString("base64"),
       kind: "bend_identity_face",
       reason: face.cropped
-        ? `real_face_anti_stand_sheet:${cleanTag}`
+        ? `real_face_anti_stand_sheet:${cleanTag}:${face.reason ?? "face_only"}`
         : `real_face_anti_studio:${cleanTag}`,
       usedFace: true,
     };
@@ -1046,7 +1142,10 @@ export async function probeIdentityPlateContamination(input: {
   reason: string;
 }> {
   const meta = String(input.urlOrRemark ?? "");
-  const modernMeta = /西装|校服|现代|西服|衬衫|blazer|suit|shirt|office|白领|职场/i.test(meta);
+  const modernMeta =
+    /西装|校服|现代|西服|衬衫|牛仔|夹克|牛仔夹克|牛仔裤|denim|jacket|hoodie|t-?shirt|blazer|suit|shirt|office|白领|职场|休闲装/i.test(
+      meta,
+    );
   const periodMeta = /古装|汉服|襦裙|CHAR-|袍|发冠|发簪/i.test(meta);
   let grayStudioSuspected = false;
   // Modern cues win even if filename also says 定妆
@@ -1112,6 +1211,95 @@ export async function probeIdentityPlateContamination(input: {
         : "gray_studio_cref"
       : "ok",
   };
+}
+
+/**
+ * Pre-vendor: identity still looks like turnaround sheet (white studio / namecard band).
+ * After face-lock — if still true, force another composeBendIdentityPlate.
+ */
+export async function probeIdentitySheetLeakPixels(input: {
+  imageBase64?: string | null;
+}): Promise<{
+  sheetLeakSuspected: boolean;
+  grayStudioSuspected: boolean;
+  namecardSuspected: boolean;
+  reason: string;
+}> {
+  const raw = String(input.imageBase64 ?? "")
+    .replace(/^data:image\/\w+;base64,/, "")
+    .trim();
+  if (!raw) {
+    return {
+      sheetLeakSuspected: false,
+      grayStudioSuspected: false,
+      namecardSuspected: false,
+      reason: "empty",
+    };
+  }
+  try {
+    const { data, info } = await sharp(Buffer.from(raw, "base64"))
+      .resize(48, 64, { fit: "fill" })
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const w = info.width;
+    const h = info.height;
+    const ch = info.channels || 3;
+    const lum = (x: number, y: number) => {
+      const i = (y * w + x) * ch;
+      return ((data[i] ?? 0) + (data[i + 1] ?? 0) + (data[i + 2] ?? 0)) / 3;
+    };
+    const meanRegion = (x0: number, y0: number, x1: number, y1: number) => {
+      let s = 0;
+      let n = 0;
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          s += lum(x, y);
+          n++;
+        }
+      }
+      return n ? s / n : 0;
+    };
+    const tl = meanRegion(0, 0, Math.floor(w * 0.2), Math.floor(h * 0.25));
+    const tr = meanRegion(Math.floor(w * 0.8), 0, w, Math.floor(h * 0.25));
+    const bl = meanRegion(0, Math.floor(h * 0.75), Math.floor(w * 0.2), h);
+    const br = meanRegion(Math.floor(w * 0.8), Math.floor(h * 0.75), w, h);
+    const bg = (tl + tr + bl + br) / 4;
+    const grayStudioSuspected = bg > 175;
+    const midBand = meanRegion(
+      Math.floor(w * 0.25),
+      Math.floor(h * 0.45),
+      Math.floor(w * 0.75),
+      Math.floor(h * 0.62),
+    );
+    const face = meanRegion(
+      Math.floor(w * 0.3),
+      Math.floor(h * 0.15),
+      Math.floor(w * 0.7),
+      Math.floor(h * 0.4),
+    );
+    const namecardSuspected = midBand > 200 && midBand > face + 35;
+    const sheetLeakSuspected = grayStudioSuspected || namecardSuspected;
+    return {
+      sheetLeakSuspected,
+      grayStudioSuspected,
+      namecardSuspected,
+      reason: namecardSuspected
+        ? grayStudioSuspected
+          ? "namecard+white_studio"
+          : "namecard_band"
+        : grayStudioSuspected
+          ? "white_studio_periphery"
+          : "clean",
+    };
+  } catch (e) {
+    return {
+      sheetLeakSuspected: false,
+      grayStudioSuspected: false,
+      namecardSuspected: false,
+      reason: e instanceof Error ? e.message.slice(0, 40) : "probe_fail",
+    };
+  }
 }
 
 /**
@@ -1480,73 +1668,57 @@ export async function applyContinuityAwareRefBudget(input: {
   };
 }
 
-/** Egress 图N binding for event shots (generic slots, no shot names). */
+/** Egress @图N binding — short asset names only (forbids go in 【画面】). */
 export function buildEventRefOrdinalBinding(input: {
   roles: EventRefRole[];
   propRequired?: boolean;
   thinSheets?: boolean;
   softEnvBakedIntoIdentity?: boolean;
-  /** bend_pickup → ground prop soft; cheek contact → thinSheets sweep */
   poseOccupancy?: string | null;
   plateMode?: string | null;
-  /** When true, later propSoft slots bind as skirt/hem fragment (not SCENE) */
   fragmentPlateHung?: boolean;
-  /** LGIA stillPhase — approaching ≠ grip-complete bind copy */
   stillPhase?: string | null;
+  castNames?: string[] | null;
+  propName?: string | null;
+  sceneName?: string | null;
 }): string {
-  const phase = String(input.stillPhase ?? "");
-  const approaching = phase === "approaching" || phase === "mid_contact";
-  const bend =
-    String(input.poseOccupancy ?? "") === "bend_pickup" ||
-    String(input.plateMode ?? "") === "object_inset";
-  const cheek =
-    !bend &&
-    (input.thinSheets === true || String(input.plateMode ?? "") === "cheek_sweep");
+  try {
+    const { buildTunBindingSlots, formatTunBindingBlockZh } =
+      require("./tunOrdinalBinding") as typeof import("./tunOrdinalBinding");
+    const propName =
+      String(input.propName ?? "").trim() ||
+      (String(input.poseOccupancy ?? "") === "bend_pickup" || /object_inset/.test(String(input.plateMode ?? ""))
+        ? "休书"
+        : "");
+    const slots = buildTunBindingSlots(input.roles, {
+      castNames: (input.castNames ?? []).map(String).filter(Boolean),
+      propName,
+      sceneName: input.sceneName,
+    });
+    return formatTunBindingBlockZh(slots);
+  } catch {
+    /* fall through */
+  }
+  const names = (input.castNames ?? []).map((n) => String(n ?? "").trim()).filter(Boolean);
   const parts: string[] = [];
-  let propSoftSeen = 0;
+  let idIdx = 0;
+  const prop = String(input.propName ?? "").trim() || "道具";
+  const scene = String(input.sceneName ?? "")
+    .trim()
+    .replace(/^SCENE-/i, "") || "场景";
   for (let i = 0; i < input.roles.length; i++) {
     const n = i + 1;
     const role = input.roles[i];
     if (role === "identity") {
-      parts.push(
-        input.softEnvBakedIntoIdentity
-          ? `图${n}=身份脸+软环境烘焙（浅景深殿内氛围，禁止手持物抢本镜事件，禁止灰棚）`
-          : bend
-            ? `图${n}=身份真脸定妆（锁古装角色脸型/发饰，忽略其灰棚/白棚底，禁止全身立姿四视图抢弯腰占位，禁止手持卡片）`
-            : `图${n}=身份脸（仅定妆脸型/服装，忽略其灰棚底，禁止手持物抢本镜事件）`,
-      );
+      parts.push(`@图${n} 为${names[idIdx] ? `${names[idIdx]}角色` : "角色"}`);
+      idIdx += 1;
     } else if (role === "propSoft") {
-      propSoftSeen += 1;
-      const asFragment =
-        input.fragmentPlateHung === true &&
-        (propSoftSeen > 1 || String(input.plateMode ?? "") === "fragment_sil");
-      parts.push(
-        asFragment
-          ? `图${n}=裙摆/衣角碎片浅景深（非整殿 SCENE，禁止建立镜头抢戏）`
-          : bend && approaching
-            ? `图${n}=本镜触地单纸软板（地面唯一一张休书/薄纸，主手伸向纸缘尚未捏紧；纸面墨迹题名可辨；禁止第二张散落纸、禁止胸前标牌/手提袋/浮空贴纸、禁止举卡展示）`
-          : bend
-            ? `图${n}=本镜触地单纸软板（地面唯一一张休书/薄纸于主手近地捡拾；纸面墨迹题名可辨；禁止第二张散落纸、禁止胸前标牌/手提袋/浮空贴纸、禁止举卡展示）`
-            : cheek
-              ? `图${n}=事件道具几何软板（匿名颊廓+展开薄纸角划过触肤，禁止手持卡片/书本卷棒/挡脸举物）`
-              : `图${n}=本镜事件道具软板（薄件入画于触点，禁止手持卡片挡脸，勿仅写清晰入画）`,
-      );
+      parts.push(`@图${n} 为${prop}道具`);
     } else if (role === "softEnv") {
-      parts.push(
-        bend
-          ? `图${n}=主场景殿内（木作/烛火须入画可辨）；道具纸仅取触地单纸槽；禁止场景另绘第二张纸/散落纸；禁止复制图1灰棚/白棚为成图背景；禁止建立镜头抢动作中景`
-          : input.fragmentPlateHung
-            ? `图${n}=裙摆/衣角碎片氛围（浅景深虚化，禁止整殿建立镜头抢戏）`
-            : `图${n}=主场景软环境（须入画可辨）；禁止复制图1灰棚/白棚为成图背景；禁止建立镜头抢戏`,
-      );
+      parts.push(`@图${n} 为${scene}场景`);
     }
   }
-  if (!parts.length && input.propRequired) {
-    return bend
-      ? "参考顺序：身份上身→触地道具→裙摆碎片（若有）"
-      : "参考顺序：身份脸→事件道具→软环境（若有）";
-  }
-  return parts.length ? `参考绑定：${parts.join("；")}` : "";
+  return parts.join(" ");
 }
 
 /** Assert event props present before vendor. */
@@ -1568,3 +1740,84 @@ export function assertEventRefContract(input: {
   }
   return { ok: true, missing };
 }
+
+/**
+ * Seedream refs cap — prefer role order; hard max from vendorMaxRefs (default 20).
+ * Never keep a second identity when singleIdentityOnly (skirt_blur).
+ */
+export function capStillRefsHandbookSlots(input: {
+  refs: Array<{ type: "image"; base64: string; role?: EventRefRole | string }>;
+  maxSlots?: number;
+  /** skirt_blur / hands_only: hard-cap one identity plate */
+  singleIdentityOnly?: boolean;
+}): {
+  refs: Array<{ type: "image"; base64: string; role: EventRefRole }>;
+  roles: EventRefRole[];
+  dropped: string[];
+} {
+  try {
+    const { applySeedreamRefsContract } =
+      require("./seedreamRefsContract") as typeof import("./seedreamRefsContract");
+    const capped = applySeedreamRefsContract({
+      refs: input.refs,
+      maxRefs: input.maxSlots ?? 20,
+      singleIdentityOnly: input.singleIdentityOnly,
+    });
+    const core = capped.refs
+      .filter((r) => r.role === "identity" || r.role === "propSoft" || r.role === "softEnv")
+      .map((r) => ({ type: "image" as const, base64: r.base64, role: r.role as EventRefRole }));
+    // Keep aux after core roles up to max
+    const aux = capped.refs
+      .filter((r) => r.role === "aux")
+      .map((r) => ({ type: "image" as const, base64: r.base64, role: "softEnv" as EventRefRole }));
+    const max = Math.min(20, Math.max(1, Number(input.maxSlots ?? 20)));
+    const merged = [...core, ...aux].slice(0, max);
+    return {
+      refs: merged,
+      roles: merged.map((r) => r.role),
+      dropped: capped.dropped,
+    };
+  } catch {
+    /* fall through legacy ≤3 */
+  }
+  const max = Math.min(20, Math.max(1, Number(input.maxSlots ?? 20)));
+  const dropped: string[] = [];
+  const byRole: Partial<Record<EventRefRole, { type: "image"; base64: string; role: EventRefRole }>> = {};
+  let identityCount = 0;
+  for (const r of input.refs) {
+    if (!r?.base64) continue;
+    const raw = String(r.role ?? "identity");
+    const role: EventRefRole =
+      raw === "propSoft" || raw === "softEnv" || raw === "identity" ? raw : "identity";
+    if (role === "identity") {
+      identityCount += 1;
+      if (byRole.identity || (input.singleIdentityOnly && identityCount > 1)) {
+        dropped.push("identity_extra");
+        continue;
+      }
+      byRole.identity = { type: "image", base64: r.base64, role: "identity" };
+      continue;
+    }
+    if (role === "propSoft") {
+      if (byRole.propSoft) dropped.push("propSoft_dup");
+      else byRole.propSoft = { type: "image", base64: r.base64, role: "propSoft" };
+      continue;
+    }
+    if (byRole.softEnv) dropped.push("softEnv_dup");
+    else byRole.softEnv = { type: "image", base64: r.base64, role: "softEnv" };
+  }
+  const order: EventRefRole[] = ["identity", "propSoft", "softEnv"];
+  const ordered: Array<{ type: "image"; base64: string; role: EventRefRole }> = [];
+  for (const role of order) {
+    const plate = byRole[role];
+    if (!plate) continue;
+    if (ordered.length >= max) {
+      dropped.push(`${role}_cap`);
+      continue;
+    }
+    ordered.push(plate);
+  }
+  return { refs: ordered, roles: ordered.map((r) => r.role), dropped };
+}
+
+

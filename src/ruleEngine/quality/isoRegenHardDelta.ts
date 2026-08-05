@@ -9,13 +9,23 @@ export function hashStillGenFingerprint(input: {
   refUrls?: string[] | null;
   visualDescription?: string | null;
   actuatorId?: string | null;
+  vendorSeed?: number | null;
+  seedreamFields?: Record<string, string> | null;
 }): string {
+  const fieldsBlob = input.seedreamFields
+    ? Object.keys(input.seedreamFields)
+        .sort()
+        .map((k) => `${k}=${input.seedreamFields![k]}`)
+        .join(";")
+    : "";
   const blob = [
     String(input.promptUsed ?? "").trim(),
     String(input.visualDescription ?? "").trim(),
     (input.refsRoles ?? []).join(","),
     (input.refUrls ?? []).join("|"),
     String(input.actuatorId ?? ""),
+    String(input.vendorSeed ?? ""),
+    fieldsBlob,
   ].join("\n");
   return createHash("sha256").update(blob).digest("hex").slice(0, 24);
 }

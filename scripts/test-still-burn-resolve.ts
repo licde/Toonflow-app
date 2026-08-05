@@ -164,7 +164,16 @@ async function main() {
   const fakeDb = (_table: string) => {
     const filters: Record<string, unknown> = {};
     let raw = "";
-    const api = {
+    const filtered = () => {
+      let list = rows.filter((r) =>
+        Object.entries(filters).every(([k, v]) => String(r[k]) === String(v)),
+      );
+      if (raw.includes("trim(filePath)")) {
+        list = list.filter((r) => String(r.filePath ?? "").trim() !== "");
+      }
+      return [...list].sort((a, b) => Number(b.id) - Number(a.id));
+    };
+    const api: Record<string, unknown> = {
       where(c: Record<string, unknown>) {
         Object.assign(filters, c);
         return api;
@@ -176,15 +185,11 @@ async function main() {
       orderBy() {
         return api;
       },
+      limit(_n: number) {
+        return Promise.resolve(filtered());
+      },
       async first() {
-        let list = rows.filter((r) =>
-          Object.entries(filters).every(([k, v]) => String(r[k]) === String(v)),
-        );
-        if (raw.includes("trim(filePath)")) {
-          list = list.filter((r) => String(r.filePath ?? "").trim() !== "");
-        }
-        list = [...list].sort((a, b) => Number(b.id) - Number(a.id));
-        return list[0];
+        return filtered()[0];
       },
     };
     return api;

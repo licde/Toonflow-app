@@ -73,13 +73,23 @@ export function preflightVendorGates(input: {
   }
 
   if (/@图\d|negative\s*:/i.test(prompt)) {
-    results.push({
-      id: "AG-GATE-04",
-      passed: false,
-      severity: "WARN",
-      message: "提示词含 @图N / negative 通道，生成前应剥离",
-      rePushTarget: "MD",
-    });
+    // 图N-first: multi-ref @图N is legal; only flag bare negative: channel as WARN
+    if (/negative\s*:/i.test(prompt)) {
+      results.push({
+        id: "AG-GATE-04",
+        passed: false,
+        severity: "WARN",
+        message: "提示词含 negative: 通道，生成前应剥离；@图N 在多参模式合法保留",
+        rePushTarget: "MD",
+      });
+    } else {
+      results.push({
+        id: "AG-GATE-04",
+        passed: true,
+        severity: "WARN",
+        message: "AG-GATE-04 OK（@图N 多参合法）",
+      });
+    }
   } else {
     results.push({ id: "AG-GATE-04", passed: true, severity: "WARN", message: "AG-GATE-04 OK" });
   }

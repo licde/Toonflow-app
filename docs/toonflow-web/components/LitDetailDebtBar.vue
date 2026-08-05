@@ -15,6 +15,7 @@
     </div>
 
     <p v-if="phaseLine" class="lit-debt__phase">{{ phaseLine }}</p>
+    <p v-if="tunLedgerLine" class="lit-debt__phase" data-testid="tun-ledger-tail">{{ tunLedgerLine }}</p>
 
     <p v-if="findingIds.length" class="lit-debt__codes">codes: {{ findingIds.join(" · ") }}</p>
 
@@ -368,6 +369,22 @@ const phaseLine = computed(() => {
   if (p === "mid_contact") return "静帧分相：mid_contact（刚触 · 软债不阻断）";
   if (p === "held") return "静帧分相：held（持态）";
   return `静帧分相：${p}`;
+});
+
+const tunLedgerLine = computed(() => {
+  const m = props.stillMeta as {
+    healLogTail?: string;
+    tunLedger?: Array<{ kind?: string; detail?: string }>;
+  } | null;
+  const tail = String(m?.healLogTail ?? "").trim();
+  if (tail) return `修复账本：${tail.slice(0, 180)}${tail.length > 180 ? "…" : ""}`;
+  const rows = m?.tunLedger ?? [];
+  if (!rows.length) return "";
+  const s = rows
+    .slice(-6)
+    .map((r) => `${r.kind ?? "op"}:${String(r.detail ?? "").slice(0, 40)}`)
+    .join(" | ");
+  return s ? `修复账本：${s}` : "";
 });
 
 const findingIds = computed(() =>

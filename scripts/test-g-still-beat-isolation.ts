@@ -165,7 +165,7 @@ ok(
     stillQuality: "weak",
     stillMeta: { visualPass: false, deliveryTier: "draft" },
   });
-  ok("video_block_weak", h.ok === false && h.code === "STILL-WEAK-HANDOFF", h.message);
+  ok("video_block_weak", h.ok === true && h.severity === "WARN" && h.code === "STILL-WEAK-HANDOFF", h.message);
 }
 
 // 11. failure cluster action_misfire
@@ -204,7 +204,7 @@ ok(
   } as ComposeStillContext;
   const r = composeStillPrompt(ctx, { mode: "refine" });
   const prompt = r.prompt || "";
-  ok("softEnv_seal_keep", r.keepSoftEnvRef === true && r.softEnvContinuity === "must", `${r.keepSoftEnvRef}/${r.softEnvContinuity}`);
+  ok("softEnv_seal_bend_drop", r.keepSoftEnvRef === false && r.softEnvContinuity !== "must", `${r.keepSoftEnvRef}/${r.softEnvContinuity}`);
   ok(
     "softEnv_restore_no_cheek_zombie",
     !/划过面颊|颊触|贴颊|纸角划过/.test(prompt) || /禁止.*颊|弯腰捡拾占位优先/.test(prompt),
@@ -212,10 +212,11 @@ ok(
   );
   ok("softEnv_restore_has_bend", /弯腰|捡起|休书/.test(prompt), prompt.slice(0, 160));
   ok("softEnv_restore_no_lip_zombie", !/lip_bite|紧咬下唇|渗血/.test(prompt), prompt.slice(0, 160));
+  ok("softEnv_omit_sref", !/--sref\s+SCENE-/i.test(prompt), prompt.slice(-120));
   const act = selectStillActuatorProfile({
     objectiveClass: "action_primary",
-    softEnvContinuity: "must",
-    keepSoftEnvRef: true,
+    softEnvContinuity: "none",
+    keepSoftEnvRef: false,
   });
   ok("softEnv_restore_no_comfy", act.preferComfy === false, act.reason);
 }
@@ -308,7 +309,7 @@ ok(
   });
   ok(
     "video_block_closedCompose_false",
-    handoffClosed.ok === false,
+    handoffClosed.ok === true && handoffClosed.severity === "WARN",
     handoffClosed.code || handoffClosed.message,
   );
 

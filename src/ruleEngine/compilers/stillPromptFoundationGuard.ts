@@ -119,8 +119,9 @@ export function guardStillPromptFoundations(input: {
     },
     {
       id: "layout:sheet_ban",
-      patterns: [/单镜头成片|禁四视图|禁复刻多格拼版/],
-      hint: /[^。；]*(?:单镜头成片|禁四视图)[^。；]*[。；]?/,
+      // 识别别名：既包含“禁四视图”，也包含“禁止四视图”
+      patterns: [/单镜头成片|禁四视图|禁止四视图|禁复刻多格拼版|禁止复刻多格拼版/],
+      hint: /[^。；]*(?:单镜头成片|禁四视图|禁止四视图)[^。；]*[。；]?/,
       fallback: "单镜头成片，禁四视图/拼版",
     },
     {
@@ -131,7 +132,11 @@ export function guardStillPromptFoundations(input: {
   ];
 
   for (const rule of identityBodyRules) {
-    if (hasAny(original, rule.patterns) && !hasAny(prompt, rule.patterns)) {
+    // 该规则的目标是“补齐单镜头锁（单镜头成片），而不是只要已有禁止四视图就算过关”
+    if (
+      hasAny(original, rule.patterns) &&
+      (rule.id === "layout:sheet_ban" ? !hasAny(prompt, [/单镜头成片/]) : !hasAny(prompt, rule.patterns))
+    ) {
       missing.push(rule.id);
       const clause = extractClause(original, rule.hint) ?? rule.fallback;
       if (clause) restore(rule.id, clause);

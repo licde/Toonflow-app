@@ -113,24 +113,43 @@ function budgetUserContent(text: string, maxTokens = 6000): string {
   return `${text.slice(0, maxChars)}\n…[truncated token_budget=${maxTokens}]`;
 }
 
-/** Mode structure scaffold — full section anchors per E1–E4; dialect is only a thin suffix fallback. */
-export function applyModeDialect(prompt: string, modeId: string, existingPrompt?: string): string {
+/** Mode structure scaffold — full section anchors per E1–E4; dialect is only a thin suffix fallback.
+ * Optional referencesSection from videoRefSlotContract — bind at compile, never "bound at burn".
+ */
+export function applyModeDialect(
+  prompt: string,
+  modeId: string,
+  existingPrompt?: string,
+  opts?: { referencesSection?: string | null },
+): string {
   const base = (existingPrompt ?? prompt).replace(/\[mode=[^\]]+\]\s*/g, "").trim();
   const id = modeId;
+  const boundRefs = String(opts?.referencesSection ?? "").trim();
 
   if (id === "multiParameter" || id === "multiImage" || id === "multi_ref" || id === "seedance") {
-    if (/\[References\]/i.test(base) && /@图\d/.test(base)) {
+    if (boundRefs && /\[References\]/i.test(boundRefs)) {
+      try {
+        const { injectVideoReferencesSection } =
+          require("./videoRefSlotContract") as typeof import("./videoRefSlotContract");
+        const withRefs = injectVideoReferencesSection(base, boundRefs);
+        return withRefs.includes("multi-reference")
+          ? withRefs
+          : `${withRefs}\nmulti-reference composition`.trim();
+      } catch {
+        /* fall through */
+      }
+    }
+    if (/\[References\]/i.test(base) && /@图\d|@图片\d/.test(base)) {
       return base.includes("multi-reference") ? base : `${base}\nmulti-reference composition`;
     }
-    // Honesty: never invent @图N scaffolds when caller provided no refs —
-    // still emit [References] header so mode contract is visible.
-    if (!/@图\d/.test(base)) {
+    // No physical slots yet: emit empty References header — DO NOT claim "bound at burn"
+    if (!/@图\d|@图片\d/.test(base)) {
       const withHeader = /\[References\]/i.test(base)
         ? base
-        : `[References]\n(refs bound at burn; no invented @图 slots)\n\n${base}`;
+        : `[References]\n(await slot contract — mount assets before burn)\n\n${base}`;
       return withHeader.includes("multi-reference")
         ? withHeader
-        : `${withHeader}\nmulti-reference composition (refs bound at burn; no invented @图 slots)`.trim();
+        : `${withHeader}\nmulti-reference composition (await slot contract)`.trim();
     }
     const instructionBody = base || "subject action from references";
     return [

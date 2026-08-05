@@ -59,7 +59,7 @@ function ok(name: string, cond: boolean, detail?: string) {
     shotSize: "中景",
     characterNames: ["沈清漪"],
   });
-  ok("action mid demote keep scene", p.excludeScene === false && p.policy === "demote", JSON.stringify(p));
+  ok("action mid demote drop sref", p.excludeScene === false && p.policy === "demote" && p.omitSrefToken === true && p.keepSoftEnvRef === false, JSON.stringify(p));
 }
 
 // --- establishing keep SCENE ---

@@ -242,9 +242,9 @@ export function resolveShotIdentityBinding(input: {
   ) {
     const highL = charLabel(high);
     const lowL = charLabel(low);
-    bindingLine = `站位绑定：${highL}=高位/图1（端坐或主位），${lowL}=低位/图2（跪或侧位）；禁止互换脸与站位`;
+    bindingLine = `站位绑定：${highL}=高位/@图1（端坐或主位），${lowL}=低位/@图2（跪或侧位）；禁止互换脸与站位`;
   } else if (orderedNames.length >= 2 && orderedCodes.length >= 2) {
-    bindingLine = `身份顺序：图1=${orderedNames[0]}，图2=${orderedNames[1]}；不同脸，禁止融成同一张脸`;
+    bindingLine = `@图1 为${orderedNames[0]}角色 @图2 为${orderedNames[1]}角色；不同脸，禁止融成同一张脸`;
   } else if (orderedNames.length >= 2 && orderedCodes.length < 2) {
     // Dual names without dual imaged CHAR — names only, no 图2 prop fiction
     bindingLine = undefined;

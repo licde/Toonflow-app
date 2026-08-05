@@ -1105,7 +1105,9 @@ export function runDesignAutoClose(
     // Industry AV Wave-2: only when FACE/CAM/CU debts open — 禁无债语义 inflate
     if (failed.has("DEX-FACE-BUDGET") || failed.has("DEX-CAM-FIT") || failed.has("DEX-STILL-CU-CAST")) {
     try {
-      const { runIndustryAvSilentRepair, collectRepairChangelog } =
+      const { healShotSizeOrSplit } =
+        require("./healShotSizeOrSplit") as typeof import("./healShotSizeOrSplit");
+      const { collectRepairChangelog } =
         require("./industryAvSilentRepair") as typeof import("./industryAvSilentRepair");
       const pdInd = (plan.planData ?? {}) as Record<string, unknown>;
       const packInd =
@@ -1115,7 +1117,7 @@ export function runDesignAutoClose(
       const shotsInd = [...(packInd.shots ?? [])];
       if (shotsInd.length) {
         const beforeN = shotsInd.length;
-        const ind = runIndustryAvSilentRepair(shotsInd, { maxMs: 6000 });
+        const ind = healShotSizeOrSplit(shotsInd, { maxMs: 6000 });
         if (ind.changed > 0 || ind.diffs.length) {
           const afterN = (ind.shots ?? []).length;
           if (afterN > beforeN + 2 && !failed.has("DEX-FACE-BUDGET") && !failed.has("DEX-CAM-FIT")) {
@@ -1133,10 +1135,11 @@ export function runDesignAutoClose(
           touched = true;
           changes.push({
             ruleId: "DEX-FACE-BUDGET",
-            detail: `industry_silent changed=${ind.changed};diffs=${ind.diffs.join(",") || "none"};residual=${ind.residualDebts.join(",") || "none"};shots=${beforeN}->${afterN}`,
+            detail: `heal_shotsize_split kind=${ind.oneClickRepairKind};changed=${ind.changed};diffs=${ind.diffs.join(",") || "none"};residual=${ind.residualDebts.join(",") || "none"};shots=${beforeN}->${afterN}`,
             path: "preDesignPack.shots",
           });
           (plan as { repairChangelog?: unknown }).repairChangelog = collectRepairChangelog(ind.shots);
+          (plan as { oneClickRepairKind?: string }).oneClickRepairKind = ind.oneClickRepairKind;
           if (ind.residualDebts.length) {
             (plan as { industryResidualDebts?: string[] }).industryResidualDebts = ind.residualDebts;
           }

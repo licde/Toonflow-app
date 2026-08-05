@@ -19,6 +19,8 @@ export type AdaptBurnFromDesignInput = {
   trackId?: number | null;
   storyboardId?: number | null;
   modeId?: string | null;
+  /** Physical [References] from videoRefSlotContract — bind at burn compile, not deferred */
+  referencesSection?: string | null;
 };
 
 export type AdaptBurnFromDesignResult = {
@@ -96,6 +98,18 @@ export function adaptBurnFromDesign(input: AdaptBurnFromDesignInput): AdaptBurnF
   } else if (trackPrompt) {
     prompt = trackPrompt;
     source = "track_seed";
+  }
+
+  // 图N-first: inject real References from slot contract (never leave "bound at burn")
+  const refsSec = String(input.referencesSection ?? "").trim();
+  if (refsSec) {
+    try {
+      const { injectVideoReferencesSection } =
+        require("./videoRefSlotContract") as typeof import("./videoRefSlotContract");
+      prompt = injectVideoReferencesSection(prompt, refsSec);
+    } catch {
+      /* optional */
+    }
   }
 
   const fin = finalizeFiveSectionPrompt({

@@ -48,7 +48,7 @@ const SHOT3: Record<string, unknown> = {
 };
 
 async function main() {
-  // 1. Scene-first contract — keep softEnv
+  // 1. T2I-first contract — drop full SCENE softEnv for bend
   const sample = extractShotDesignSample(SHOT3);
   ok("sample.scene_must", sample.must.some((m) => m.id === "bg.scene_soft"), JSON.stringify(sample.must.map((m) => m.id)));
   ok("sample.frag_should", sample.should.some((m) => m.id === "bg.fragment"), JSON.stringify(sample.should.map((m) => m.id)));
@@ -60,18 +60,19 @@ async function main() {
     primaryObjective: "action_primary",
     shotDesignSample: sample,
   });
-  ok("latch.keepSoftEnv", refsC.dropFullSoftEnv === false, refsC.reason);
+  ok("latch.dropSoftEnv", refsC.dropFullSoftEnv === true, refsC.reason);
   ok("latch.face_lock", refsC.identityReplaceStandingSheet === true);
   ok("latch.no_action_body_force", refsC.identityPreferActionBody === false);
-  ok("latch.bend_sil_hint", refsC.repairDeltaHints.includes("identity_bend_sil"), refsC.repairDeltaHints.join(","));
-  ok("latch.no_drop_hint", !refsC.repairDeltaHints.includes("drop_softEnv"), refsC.repairDeltaHints.join(","));
+  ok("latch.drop_hint", refsC.repairDeltaHints.includes("drop_softEnv"), refsC.repairDeltaHints.join(","));
+  ok("latch.face_crop_hint", refsC.repairDeltaHints.includes("identity_face_crop"), refsC.repairDeltaHints.join(","));
 
   const bg = resolveStillBgPolicy({
     description: SHOT3_VD,
     shotSize: "MS",
     hasSceneLink: true,
   });
-  ok("bg.keep_soft", bg.keepSoftEnvRef === true, JSON.stringify({ reason: bg.reason, keep: bg.keepSoftEnvRef }));
+  ok("bg.drop_soft", bg.keepSoftEnvRef === false && bg.omitSrefToken === true, JSON.stringify({ reason: bg.reason, keep: bg.keepSoftEnvRef, omit: bg.omitSrefToken }));
+  ok("bg.t2i_first", /t2i_first/.test(String(bg.reason)), bg.reason);
 
   // 2. Agnes soup strip
   const soup = `特写。, tag-stack-zh。沈清漪弯腰。指尖捏。${SHOT3_VD}`;
@@ -206,8 +207,78 @@ async function main() {
       ok("identity.ensure_doctrine", /independent_softEnv|no_bake/.test(noop.reason), noop.reason);
     }
 
-    // Contract: softEnv independent, not dropped
-    ok("contract.softEnv_independent", refsC.dropFullSoftEnv === false);
+    // Face-lock: torso+namecard must not survive (anti left/right sheet collage)
+    {
+      const { default: sharp } = await import("sharp");
+      const sheetCell = await sharp({
+        create: { width: 400, height: 800, channels: 3, background: { r: 240, g: 240, b: 242 } },
+      })
+        .composite([
+          {
+            input: await sharp({
+              create: { width: 160, height: 180, channels: 3, background: { r: 210, g: 170, b: 140 } },
+            })
+              .png()
+              .toBuffer(),
+            left: 120,
+            top: 40,
+          },
+          {
+            // namecard chest band
+            input: await sharp({
+              create: { width: 120, height: 40, channels: 3, background: { r: 250, g: 250, b: 250 } },
+            })
+              .png()
+              .toBuffer(),
+            left: 140,
+            top: 280,
+          },
+          {
+            // denim torso
+            input: await sharp({
+              create: { width: 220, height: 280, channels: 3, background: { r: 50, g: 80, b: 140 } },
+            })
+              .png()
+              .toBuffer(),
+            left: 90,
+            top: 340,
+          },
+        ])
+        .jpeg()
+        .toBuffer();
+      const locked = await composeBendIdentityPlate({
+        faceSourceBase64: sheetCell.toString("base64"),
+      });
+      ok("identity.face_lock_used", locked.usedFace === true, locked.reason);
+      ok("identity.face_lock_reason", /face_only|anti_stand/.test(locked.reason), locked.reason);
+      const meta = await sharp(Buffer.from(locked.base64, "base64")).metadata();
+      ok(
+        "identity.face_lock_squareish",
+        (meta.width ?? 0) > 0 && Math.abs((meta.width! / (meta.height || 1)) - 1) < 0.2,
+        `${meta.width}x${meta.height}`,
+      );
+      // Sample lower half of locked plate — denim navy should be gone / darkened pad
+      const { data, info } = await sharp(Buffer.from(locked.base64, "base64"))
+        .resize(32, 32, { fit: "fill" })
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const ch = info.channels || 3;
+      let lowerBlue = 0;
+      let n = 0;
+      for (let y = 20; y < 32; y++) {
+        for (let x = 0; x < 32; x++) {
+          const i = (y * 32 + x) * ch;
+          lowerBlue += data[i + 2] ?? 0;
+          n++;
+        }
+      }
+      const meanB = n ? lowerBlue / n : 255;
+      ok("identity.face_lock_no_denim_lower", meanB < 100, `meanB=${meanB}`);
+    }
+
+    // Contract: bend drops full softEnv; softEnv stays independent text-only (atmosphere)
+    ok("contract.softEnv_dropped", refsC.dropFullSoftEnv === true);
   }
 
   // 5. Single ground prop (no large glyph) + SCENE bind

@@ -77,10 +77,14 @@ export const VENDOR_CAPABILITY_MATRIX: VendorCapabilityProfile[] = [
   {
     id: "seedream_multiref",
     maxPromptChars: 720,
-    contactGeomReliable: false,
+    contactGeomReliable: true,
     softEnvReliable: true,
     allowsDualContactSingleFrame: false,
-    notes: ["一境一拍 lean 短中文", "接触镜可试拍不承诺一次 hq"],
+    notes: [
+      "默认全目标 Seedream（含接触）",
+      "EN 7 字段 vendor；对白/可读字中文引号",
+      "多参考≤20 角色有序；缺槽只治愈不阻断",
+    ],
   },
   {
     id: "comfy_contact_softenv",
@@ -88,7 +92,7 @@ export const VENDOR_CAPABILITY_MATRIX: VendorCapabilityProfile[] = [
     contactGeomReliable: true,
     softEnvReliable: true,
     allowsDualContactSingleFrame: false,
-    notes: ["接触+softEnv 优选", "不可用时降级 Seedream 不灰按钮"],
+    notes: ["仅 forceComfy 实验", "默认关闭；不作为接触失败归因"],
   },
   {
     id: "audio_compile",
@@ -183,10 +187,73 @@ export type StillCtaKind =
   | "enhance_and_generate"
   | "split_and_generate"
   | "continue_repair"
+  | "realization_soft"
+  | "one_click_heal"
   | "burn_ready"
   | "configure_vendor"
   | "enqueue_identity"
   | "enqueue_identity_and_generate";
+
+function sealedSsotOk(meta: {
+  stillPhase?: string | null;
+  composeSources?: string[] | null;
+  ssotSealed?: boolean | null;
+}): boolean {
+  if (meta.ssotSealed === true) return true;
+  if (String(meta.stillPhase ?? "").trim()) return true;
+  const src = meta.composeSources ?? [];
+  return src.some((s) => /ff\.ssot_only_egress|ssot\.phase/.test(String(s)));
+}
+
+/** Export for finalize/batch — detect sole-spine seal from composed sources. */
+export function isStillSsotSealed(meta: {
+  stillPhase?: string | null;
+  composeSources?: string[] | null;
+  ssotSealed?: boolean | null;
+  sources?: string[] | null;
+}): boolean {
+  return sealedSsotOk({
+    stillPhase: meta.stillPhase,
+    composeSources: meta.composeSources ?? meta.sources,
+    ssotSealed: meta.ssotSealed,
+  });
+}
+
+/** Sealed weak still: never let lit「补场景软板」masquerade as design rewrite. */
+export function sealedRealizationCtaLabel(opts?: {
+  keyUnmeasured?: boolean;
+  refInterference?: boolean;
+}): string {
+  if (opts?.keyUnmeasured) return "继续生成（密封OK·像素未测）";
+  if (opts?.refInterference) return "减冲突增强后重出（设计已密封）";
+  return "减冲突增强后重出（设计已密封）";
+}
+
+export function sealedRealizationUserMessage(opts?: {
+  keyUnmeasured?: boolean;
+  refInterference?: boolean;
+}): string {
+  const bits = ["设计已密封（SSOT egress）"];
+  if (opts?.refInterference) bits.push("参考可能干扰构图（identity/prop/softEnv）");
+  if (opts?.keyUnmeasured) bits.push("像素未测（Key 可选，非失败）");
+  bits.push("请减冲突增强或同词再出；非须重开设计");
+  return bits.join("；");
+}
+
+function plateOrRealizationDebt(meta: {
+  debtKind?: string | null;
+  contaminationClass?: string | null;
+  realizationDegraded?: boolean | null;
+}): boolean {
+  const d = String(meta.debtKind ?? "");
+  const c = String(meta.contaminationClass ?? "");
+  if (meta.realizationDegraded === true) return true;
+  if (/prop_plate|plate_geometry|glyph_identity|contamination|action_misfire|locus_mangled|contact_zombie/.test(d))
+    return true;
+  if (c && c !== "none" && /plate_geometry|glyph_identity|contact_zombie|locus_mangled|off_beat_cu/.test(c))
+    return true;
+  return false;
+}
 
 /** Shared Chat/Web CTA resolver — never gray generate for contract debt. */
 export function resolveStillPrimaryCta(meta: {
@@ -201,11 +268,61 @@ export function resolveStillPrimaryCta(meta: {
   debtKind?: string | null;
   /** contact_zombie | plate_geometry | off_beat_cu | … — never blocks generate */
   contaminationClass?: string | null;
+  stillPhase?: string | null;
+  composeSources?: string[] | null;
+  ssotSealed?: boolean | null;
+  realizationDegraded?: boolean | null;
+  oneClickRepairKind?: string | null;
 }): { kind: StillCtaKind; label: string; blocksGenerate: boolean } {
   if (meta.missingIdentity || meta.debtKind === "missing_identity") {
     return { kind: "enqueue_identity_and_generate", label: "补定妆并继续生成", blocksGenerate: false };
   }
-  if (meta.debtKind === "prompt_fidelity") {
+  // Homologous one-click heal (shotSize/split/图N) — never blocks
+  const ock = String(meta.oneClickRepairKind ?? "");
+  if (ock === "design_refine") {
+    return { kind: "enhance_and_generate", label: "设计细化·补挂图N资产", blocksGenerate: false };
+  }
+  if (ock && ock !== "none" && ock !== "confirm_required") {
+    return {
+      kind: "one_click_heal",
+      label:
+        ock === "split" || ock === "shotSize_and_split"
+          ? "一键智拆并生成"
+          : ock === "shotSize"
+            ? "一键改景别并生成"
+            : ock === "partial_edit"
+              ? "局部智能修复"
+              : ock === "restore_scene"
+                ? "一键智能修复·恢复场景板"
+                : ock === "rebind_ordinal"
+                  ? "一键智能修复·重绑@图N"
+                  : ock === "recompile_keep_ordinal"
+                    ? "一键智能修复·重编译保留@图N"
+                    : ock === "regen_still_then_burn"
+                    ? "一键智能修复·先重出静照"
+                    : "一键智能修复",
+      blocksGenerate: false,
+    };
+  }
+  if (ock === "confirm_required") {
+    return { kind: "split_and_generate", label: "确认智拆/改景别后生成", blocksGenerate: false };
+  }
+  // Sealed SSOT + plate/realization debt → soft realization (not enhance writing VD)
+  if (sealedSsotOk(meta) && plateOrRealizationDebt(meta)) {
+    return {
+      kind: "realization_soft",
+      label: "减冲突增强后重出（设计已密封）",
+      blocksGenerate: false,
+    };
+  }
+  if (sealedSsotOk(meta) && (meta.keyOptional || meta.pixelDimStatus === "unmeasured")) {
+    return {
+      kind: "realization_soft",
+      label: "继续生成（密封OK·像素未测）",
+      blocksGenerate: false,
+    };
+  }
+  if (meta.debtKind === "prompt_fidelity" && !sealedSsotOk(meta)) {
     return { kind: "enhance_and_generate", label: "增强锚点并生成", blocksGenerate: false };
   }
   const contam = String(meta.contaminationClass ?? "").trim();
@@ -218,7 +335,7 @@ export function resolveStillPrimaryCta(meta: {
       glyph_identity: "挂真道具板后重出",
     };
     return {
-      kind: "continue_repair",
+      kind: sealedSsotOk(meta) ? "realization_soft" : "continue_repair",
       label: labelByClass[contam] ?? "继续生成修复",
       blocksGenerate: false,
     };
@@ -230,7 +347,7 @@ export function resolveStillPrimaryCta(meta: {
     meta.debtKind === "locus_mangled"
   ) {
     return {
-      kind: "continue_repair",
+      kind: sealedSsotOk(meta) ? "realization_soft" : "continue_repair",
       label:
         meta.debtKind === "plate_geometry"
           ? "挂真道具板后重出"
@@ -248,12 +365,15 @@ export function resolveStillPrimaryCta(meta: {
   if (ird === "confirm_split" || step === "split_shot") {
     return { kind: "split_and_generate", label: "智拆并生成", blocksGenerate: false };
   }
+  // Sealed OK: never promote chat_repair → enhance VD rewrite
   if (
-    ird === "confirm_enhance" ||
-    ird === "apply_auto_enhance" ||
-    step === "chat_repair"
+    (ird === "confirm_enhance" || ird === "apply_auto_enhance" || step === "chat_repair") &&
+    !sealedSsotOk(meta)
   ) {
     return { kind: "enhance_and_generate", label: "增强设计并生成", blocksGenerate: false };
+  }
+  if (step === "chat_repair" && sealedSsotOk(meta)) {
+    return { kind: "realization_soft", label: "继续生成修复（设计已密封）", blocksGenerate: false };
   }
   if (
     step === "regen_storyboard_hq" ||

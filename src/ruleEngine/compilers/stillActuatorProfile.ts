@@ -1,8 +1,7 @@
 /**
- * StillActuatorProfile — common-framework executor selection (not shot-specific).
- * High-difficulty contact + softEnv continuity → controllable backend (Comfy).
- * Low difficulty → Seedream multi-ref.
- * Key/VLM is orthogonal and never selects the actuator.
+ * StillActuatorProfile — Seedream-first (handbook rebuild).
+ * Default: always Seedream multi-ref including contact_geom.
+ * Comfy only when forceComfy / allowComfyAccel explicitly true (experiment).
  */
 export type StillActuatorId = "seedream_multiref" | "comfy_contact_softenv";
 
@@ -11,7 +10,7 @@ export type PropPlateGrade = "asset" | "fe" | "synthetic_geometry" | "missing";
 export type StillActuatorDecision = {
   actuatorId: StillActuatorId;
   reason: string;
-  /** True when comfy preferred but unavailable — caller must echo degraded */
+  /** True only when explicit Comfy experiment */
   preferComfy: boolean;
 };
 
@@ -19,23 +18,11 @@ export function selectStillActuatorProfile(input: {
   objectiveClass?: string | null;
   softEnvContinuity?: "must" | "optional" | "none" | string | null;
   keepSoftEnvRef?: boolean | null;
-  /** When false, never prefer Comfy (default HQ = Seedream). */
+  /** Opt-in only — default false (Seedream for contact too). */
   allowComfyAccel?: boolean | null;
+  forceComfy?: boolean | null;
   visualDescription?: string | null;
 }): StillActuatorDecision {
-  try {
-    const { isOralMicroNotActionPrimary } =
-      require("./singleShotClosedCompose") as typeof import("./singleShotClosedCompose");
-    if (isOralMicroNotActionPrimary(input.visualDescription)) {
-      return {
-        actuatorId: "seedream_multiref",
-        preferComfy: false,
-        reason: "oral_ecu_mouth_seedream_no_comfy_contact",
-      };
-    }
-  } catch {
-    /* optional */
-  }
   const obj = String(input.objectiveClass ?? "");
   const continuity =
     input.softEnvContinuity === "must" ||
@@ -45,28 +32,18 @@ export function selectStillActuatorProfile(input: {
       : input.keepSoftEnvRef
         ? "must"
         : "none";
-  // action_primary / identity_first: Seedream is default HQ — never require Comfy
-  if (obj === "action_primary" || obj === "identity_first" || obj === "scene_keep" || obj === "empty_scene") {
-    return {
-      actuatorId: "seedream_multiref",
-      preferComfy: false,
-      reason: `objective_${obj || "default"}_seedream_hq`,
-    };
-  }
-  const contactLike = obj === "contact_geom" || obj === "prop_readable";
-  const softMust = continuity === "must";
-  const allowComfy = input.allowComfyAccel !== false;
-  if (contactLike && softMust && allowComfy) {
+  const forceComfy = input.forceComfy === true || input.allowComfyAccel === true;
+  if (forceComfy && (obj === "contact_geom" || obj === "prop_readable") && continuity === "must") {
     return {
       actuatorId: "comfy_contact_softenv",
       preferComfy: true,
-      reason: "contact_or_prop_readable+softEnv_must_optional_comfy",
+      reason: "forceComfy_experiment_contact_softEnv",
     };
   }
   return {
     actuatorId: "seedream_multiref",
     preferComfy: false,
-    reason: contactLike ? `contact_softEnv_${continuity}_seedream` : `objective_${obj || "default"}`,
+    reason: obj ? `objective_${obj}_seedream_default` : "seedream_default_no_comfy",
   };
 }
 
@@ -146,7 +123,7 @@ export function compressStillEgressForActuator(input: {
       const { bendNegCarveOut } = require("./stillSealGate") as typeof import("./stillSealGate");
       carve = bendNegCarveOut();
     } catch {
-      carve = ["手持卡片挡脸", "跪坐替代弯腰", "蹲跪触地", "盘坐捡纸", "灰棚白棚", "胸前展示卡"];
+      carve = ["手持卡片挡脸", "跪坐替代弯腰", "蹲跪触地", "盘坐捡纸", "灰棚白棚", "胸前展示卡", "牛仔夹克", "现代连衣裙露背", "次角完整正脸立像"];
     }
   }
   // Carve-out negatives always kept for bend; rest fill remaining budget
@@ -222,7 +199,78 @@ export function compressStillEgressForActuator(input: {
   }
   positive = positive.replace(/\b(cheek contact|bend pick|holding card|grey studio)[^.。]*/gi, "").trim();
   negative = negative.replace(/\b(holding|grey|white seamless|denim|collage)[^.。,]*/gi, "").trim();
+  positive = stripStillIrSoupTokens(positive);
+  positive = structureStillPositiveForSeedream(positive, {
+    poseOccupancy: occEarly,
+    objectiveClass: input.objectiveClass,
+    appendEnParallel: false,
+  });
   return { positive, negative, strippedChars: Math.max(0, before - positive.length - negative.length) };
+}
+
+/** Peel PromptIR tag soup that must never ride vendor positive. */
+export function stripStillIrSoupTokens(text: string): string {
+  let s = String(text ?? "");
+  s = s.replace(/\b(?:CHAR-SCENE|PURE-SCENE|CHAR-PROP|PURE-PROP)\b/gi, "");
+  s = s.replace(/(?:^|[。；，,\s])暖光\s*\d{3,4}\s*K\s*,?\s*情绪\d+(?=[。；，,\s]|$)/g, " ");
+  s = s.replace(/(?:^|[，,\s])情绪\d+(?=\s*[，,]\s*(?:中景|近景|全景|特写|远景))/g, " ");
+  s = s.replace(/^\s*,+\s*/g, "").replace(/[，,]{2,}/g, "，").replace(/\s{2,}/g, " ").trim();
+  return s;
+}
+
+/**
+ * Handbook positive order: Subject+Action → Scene+Light → Costume → Framing.
+ * Negatives stay outside (carve budget in compress).
+ */
+export function structureStillPositiveForSeedream(
+  positive: string,
+  opts?: { poseOccupancy?: string | null; objectiveClass?: string | null; appendEnParallel?: boolean },
+): string {
+  const raw = stripStillIrSoupTokens(positive);
+  if (!raw) return raw;
+  const clauses = raw
+    .split(/[。；;\n]+/)
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const buckets = {
+    action: [] as string[],
+    scene: [] as string[],
+    costume: [] as string[],
+    framing: [] as string[],
+    other: [] as string[],
+  };
+  for (const c of clauses) {
+    if (/占位：|弯腰|站姿|俯身|捡|拾|伸向|接近|主手|触地|颊触|唇部|咬唇/.test(c)) {
+      buckets.action.push(c);
+    } else if (/殿|室内|卧室|寝|暖光|烛|色温|环境|浅景深|主场景|软环境|背景/.test(c)) {
+      buckets.scene.push(c);
+    } else if (/古装|襦裙|汉服|定妆|衣装|发饰|发髻/.test(c)) {
+      buckets.costume.push(c);
+    } else if (/中景|近景|全景|特写|远景|构图|画幅|景别|\bMS\b|\bCU\b/i.test(c)) {
+      buckets.framing.push(c);
+    } else {
+      buckets.other.push(c);
+    }
+  }
+  const ordered = [
+    ...buckets.action,
+    ...buckets.scene,
+    ...buckets.costume,
+    ...buckets.framing,
+    ...buckets.other,
+  ];
+  let out = ordered.join("。").replace(/。{2,}/g, "。").trim();
+  const bend =
+    opts?.poseOccupancy === "bend_pickup" ||
+    /弯腰|捡起|捡拾|俯身/.test(out);
+  if (opts?.appendEnParallel !== false && bend) {
+    const en =
+      "Standing figure bends at the waist reaching thin paper on the floor; period costume; warm indoor light; medium shot.";
+    if (!/bends at the waist/i.test(out)) {
+      out = `${out}。${en}`.replace(/。{2,}/g, "。");
+    }
+  }
+  return out;
 }
 
 /**
@@ -244,7 +292,7 @@ export function compressStillEgressForSeedream(input: {
   bgSceneMust?: boolean | null;
   stillPhase?: string | null;
 }): { prompt: string; strippedChars: number } {
-  const raw = String(input.prompt ?? "").trim();
+  const raw = stripStillIrSoupTokens(String(input.prompt ?? "").trim());
   let defaultMax = 720;
   try {
     const { resolveVendorCapability } =
@@ -339,6 +387,19 @@ export function compressStillEgressForSeedream(input: {
     .replace(/\b(cheek contact|bend pick|holding card|force_compose|delta_hash)[^.。]*/gi, "")
     .replace(/\s{2,}/g, " ")
     .trim();
+  prompt = stripStillIrSoupTokens(prompt);
+  // Re-bucket positive head (before 负向) for handbook order; keep carve negatives
+  {
+    const negAt = prompt.indexOf("。负向：");
+    const head = negAt > 0 ? prompt.slice(0, negAt) : prompt;
+    const negTail = negAt > 0 ? prompt.slice(negAt) : "";
+    const structured = structureStillPositiveForSeedream(head, {
+      poseOccupancy: bendOccSeed ? "bend_pickup" : occ,
+      objectiveClass: input.objectiveClass,
+      appendEnParallel: bendOccSeed,
+    });
+    prompt = `${structured}${negTail}`.replace(/。{2,}/g, "。").trim();
+  }
   if (bendOccSeed) {
     prompt = prompt
       .replace(/蹲身(拾起|捡起|捡拾|捡)/g, "弯腰$1")

@@ -33,11 +33,12 @@ function lipLineFromPolicy(policy: string, hasDialogue: boolean): string | undef
   if (!hasDialogue) return undefined;
   const p = policy.toLowerCase().replace(/-/g, "_");
   if (!p || p === "none" || p === "silent") return "无口型同步";
+  // subtle_natural before broad "natural" includes() — otherwise subtle_natural → wrong dialogue_native line
+  if (p === "subtle_natural" || p === "subtle" || /^subtle/.test(p)) {
+    return "口型轻微同步，嘴型自然";
+  }
   if (p === "dialogue_native" || p === "natural" || p === "natural_emphasized" || p.includes("natural")) {
     return "口型同步开启，对白嘴型自然";
-  }
-  if (p === "subtle_natural" || p === "subtle" || p.includes("subtle")) {
-    return "口型轻微同步，嘴型自然";
   }
   return "口型轻微同步，嘴型自然";
 }

@@ -86,7 +86,8 @@ function wrap(
   extra: Partial<QualityDecisionResult> & { reasons: string[]; nextStep?: BurnGateEnvelope["nextStep"] },
   batchMode?: boolean,
 ): QualityDecisionResult {
-  // Wave-2 never-block: quality debts → soft_defer + actionable nextStep; still allow soft burn path
+  // Wave-2 never-block Generate UX: quality debts → soft_defer + actionable nextStep
+  // Structural split debts still forbid burn (requireFixBeforeBurn homology) — soft_defer ≠ burnAllowed
   const forceSoft =
     !burnAllowed &&
     decision !== "auto" &&
@@ -94,6 +95,9 @@ function wrap(
       /face_budget|split_shot|still_onebeat|vis_|raise_duration|soft_patch|rePush/i.test(
         String(decision) + (extra.reasons ?? []).join(","),
       ));
+  const structuralBurnForbid = /still_onebeat|vis_parent_burn|still_cu_cast|vis_multi|img_still_qa/i.test(
+    (extra.reasons ?? []).join(","),
+  );
   const effective: QualityDecisionKind = forceSoft ? "soft_defer" : decision;
   const nextStep =
     extra.nextStep ??
@@ -109,8 +113,8 @@ function wrap(
   });
   return {
     decision: effective,
-    // Soft path may still deliver with debt marks (never hard-block UX)
-    burnAllowed: forceSoft ? true : burnAllowed,
+    // Soft UX may continue generate; unresolved multi-beat / vis-parent still cannot burn
+    burnAllowed: forceSoft && !structuralBurnForbid ? true : burnAllowed,
     softDefer: effective === "soft_defer" || forceSoft,
     softDeferRaiseAllowed: effective === "soft_defer" || forceSoft,
     reasons: extra.reasons,

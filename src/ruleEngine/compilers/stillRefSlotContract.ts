@@ -179,9 +179,9 @@ export function formatLayoutLockLine(
   opts?: { seatingHard?: boolean },
 ): string {
   if (opts?.seatingHard === true) {
-    return `【布局锁】图${anchorOrdinal}为座次构图锚（只锁高低位与人数，禁止取脸、禁止加人）；脸与服装只取后续角色定妆图。`;
+    return `【布局锁】@图${anchorOrdinal} 为座次构图锚（只锁高低位与人数，禁止取脸、禁止加人）；脸与服装只取后续角色定妆图。`;
   }
-  return `【布局锁】图${anchorOrdinal}为构图保真锚（只保人数与景别重心，禁止取脸、禁止加人）；脸与服装只取后续角色定妆图。`;
+  return `【布局锁】@图${anchorOrdinal} 为构图保真锚（只保人数与景别重心，禁止取脸、禁止加人）；脸与服装只取后续角色定妆图。`;
 }
 
 export function formatPhysicalBindingLines(input: {
@@ -199,12 +199,12 @@ export function formatPhysicalBindingLines(input: {
   if (anchor) {
     const label = seatingHard
       ? anchor.role === "layout"
-        ? "座次布局锚（只锁高低位与人数，禁止取脸）"
-        : "构图保真锚（只保座次，脸取后续定妆）"
+        ? "座次布局锚"
+        : "构图保真锚"
       : anchor.role === "layout"
-        ? "构图锚（只锁人数，禁止取脸）"
-        : "构图保真锚（只保人数与景别，脸取后续定妆）";
-    parts.push(`图${anchor.ordinal}=${label}`);
+        ? "构图锚"
+        : "构图保真锚";
+    parts.push(`@图${anchor.ordinal} 为${label}`);
   }
   for (const c of crefs) {
     const name = (c.name || c.code || "").trim();
@@ -216,9 +216,9 @@ export function formatPhysicalBindingLines(input: {
           ? "（低位跪）"
           : ""
       : "";
-    parts.push(`图${c.ordinal}=${name}${stand}`);
+    parts.push(`@图${c.ordinal} 为${name}角色${stand}`);
   }
-  const figureMap = parts.join("，");
+  const figureMap = parts.join(" ");
 
   let bindingLine: string | undefined;
   const high = String(input.highName ?? "").trim();
@@ -234,9 +234,9 @@ export function formatPhysicalBindingLines(input: {
     lowSlot &&
     highSlot.ordinal !== lowSlot.ordinal
   ) {
-    bindingLine = `站位绑定：${high}=高位/图${highSlot.ordinal}（端坐或主位），${low}=低位/图${lowSlot.ordinal}（跪或侧位）；禁止互换脸与站位`;
+    bindingLine = `站位绑定：${high}=高位/@图${highSlot.ordinal}（端坐或主位），${low}=低位/@图${lowSlot.ordinal}（跪或侧位）；禁止互换脸与站位`;
   } else if (crefs.length >= 2) {
-    bindingLine = `身份顺序：图${crefs[0].ordinal}=${crefs[0].name || crefs[0].code}，图${crefs[1].ordinal}=${crefs[1].name || crefs[1].code}；不同脸，禁止融成同一张脸`;
+    bindingLine = `@图${crefs[0].ordinal} 为${crefs[0].name || crefs[0].code}角色 @图${crefs[1].ordinal} 为${crefs[1].name || crefs[1].code}角色；不同脸，禁止融成同一张脸`;
   }
 
   const layoutLockLine = anchor
@@ -297,7 +297,7 @@ export function remapPromptToPhysicalRefs(
     out = out.replace(CAST_CARD_RE, formatted.castLine);
   }
   if (formatted.bindingLine) tail.push(formatted.bindingLine);
-  if (formatted.figureMap) tail.push(`参考图序：${formatted.figureMap}`);
+  if (formatted.figureMap) tail.push(formatted.figureMap);
   if (formatted.layoutLockLine) tail.push(formatted.layoutLockLine);
 
   out = `${out} ${tail.join(" ")}`

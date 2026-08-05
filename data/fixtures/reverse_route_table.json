@@ -1695,6 +1695,169 @@
       "forwardStages": ["SB", "MD"],
       "repairPriority": "P0",
       "defaultAction": "confirmSplitShot"
+    },
+    {
+      "trigger": "ref.ordinal_mismatch",
+      "ruleIds": ["REF-ORDINAL-MISMATCH", "ref.ordinal_mismatch"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["一键重绑图N序", "设计细化补挂"],
+      "defaultAction": "rebind_ordinal_list",
+      "requireFixBeforeBurn": false,
+      "forbidRegenWithoutDescFix": false,
+      "note": "物理 referenceList 与 @图N 词序不一致；试拍不阻断；一键 rebind"
+    },
+    {
+      "trigger": "ref.attu_format",
+      "ruleIds": ["REF-ATTU-FORMAT", "ref.attu_format"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["一键重绑@图N", "重编译【画面】"],
+      "defaultAction": "recompile_attu_zh",
+      "requireFixBeforeBurn": false,
+      "forbidRegenWithoutDescFix": false,
+      "note": "egress 无 @图N 为名 或仍有 图1=/EN-first；试拍不阻断"
+    },
+    {
+      "trigger": "ref.picture_unref",
+      "ruleIds": ["REF-PICTURE-UNREF", "ref.picture_unref"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN"],
+      "repairPriority": "P0",
+      "presentationFork": ["一键重编译画面段"],
+      "defaultAction": "recompile_attu_zh",
+      "requireFixBeforeBurn": false,
+      "note": "【画面】未再点名 @图N"
+    },
+    {
+      "trigger": "ref.asset_name_missing",
+      "ruleIds": ["REF-ASSET-NAME-MISSING", "ref.asset_name_missing"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "AS", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["设计细化·补资产显示名"],
+      "defaultAction": "design_refine_mount",
+      "requireFixBeforeBurn": false,
+      "note": "挂载有图但无名/抽象身份真脸；禁假绑定"
+    },
+    {
+      "trigger": "ref.thumb_missing",
+      "ruleIds": ["REF-THUMB-MISSING", "ref.thumb_missing"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "presentationFork": ["设计细化·补挂/重挂", "一键重绑实送序"],
+      "defaultAction": "design_refine_mount",
+      "requireFixBeforeBurn": false,
+      "note": "芯片无实送缩略图；试拍不阻断"
+    },
+    {
+      "trigger": "ref.scene_mismatch",
+      "ruleIds": ["REF-SCENE-MISMATCH", "ref.scene_mismatch", "drop_softEnv"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["一键恢复场景板", "soften 保留氛围"],
+      "defaultAction": "restore_softEnv_ref",
+      "requireFixBeforeBurn": false,
+      "note": "FE已挂场景被 drop/demote 空挂或像素景不符；禁默 drop"
+    },
+    {
+      "trigger": "ref.identity_mismatch",
+      "ruleIds": ["REF-IDENTITY-MISMATCH", "ref.identity_mismatch", "identity.sheet"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["AS", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["脸裁重挂图1", "补定妆"],
+      "defaultAction": "face_crop_remount",
+      "requireFixBeforeBurn": false,
+      "note": "四视图泄漏或脸错；裁切失败记债仍可试拍"
+    },
+    {
+      "trigger": "ref.prop_replaced",
+      "ruleIds": ["REF-PROP-REPLACED", "ref.prop_replaced"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "defaultAction": "restore_fe_prop_plate",
+      "requireFixBeforeBurn": false,
+      "note": "FE道具板被 synth 静替"
+    },
+    {
+      "trigger": "ref.identity.missing",
+      "ruleIds": ["REF-IDENTITY-MISSING", "ref.identity.missing"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "AS", "MD-IMG"],
+      "repairPriority": "P0",
+      "presentationFork": ["设计细化·补挂角色"],
+      "defaultAction": "design_refine_mount",
+      "requireFixBeforeBurn": false,
+      "forbidRegenWithoutDescFix": false,
+      "note": "挂载门：缺身份资产；CTA=设计细化非假一键"
+    },
+    {
+      "trigger": "ref.scene.missing",
+      "ruleIds": ["REF-SCENE-MISSING", "ref.scene.missing"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "AS", "MD-IMG"],
+      "repairPriority": "P1",
+      "defaultAction": "design_refine_mount",
+      "requireFixBeforeBurn": false,
+      "note": "挂载门：VD需场景但未挂"
+    },
+    {
+      "trigger": "ref.prop.missing",
+      "ruleIds": ["REF-PROP-MISSING", "ref.prop.missing"],
+      "reverseTarget": "SB",
+      "forwardStages": ["SB", "MD-IMG"],
+      "repairPriority": "P1",
+      "defaultAction": "design_refine_mount",
+      "requireFixBeforeBurn": false
+    },
+    {
+      "trigger": "still.stale",
+      "ruleIds": ["STILL-STALE", "still.stale", "videoStale"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["先重出静照再烧"],
+      "defaultAction": "regen_still_then_burn",
+      "requireFixBeforeBurn": true,
+      "forbidRegenWithoutDescFix": true,
+      "note": "静照过期/错源；禁止 Wave-2 静默 absorb 继续烧；试拍不灰"
+    },
+    {
+      "trigger": "still.missing",
+      "ruleIds": ["STILL-MISSING", "still.missing"],
+      "reverseTarget": "MD-IMG",
+      "forwardStages": ["MD-IMG", "MD-VID"],
+      "repairPriority": "P0",
+      "defaultAction": "batch_still_hq",
+      "requireFixBeforeBurn": true,
+      "note": "无本镜静照不可当真 I2V 首帧"
+    },
+    {
+      "trigger": "video.first_frame",
+      "ruleIds": ["VIDEO-FIRST-FRAME", "video.first_frame"],
+      "reverseTarget": "MD-VID",
+      "forwardStages": ["MD-IMG", "MD-VID"],
+      "repairPriority": "P0",
+      "defaultAction": "pin_still_index0",
+      "requireFixBeforeBurn": true,
+      "note": "I2V referenceList[0] 必须=本镜有效静照"
+    },
+    {
+      "trigger": "video.tun_stripped",
+      "ruleIds": ["VIDEO-TUN-STRIPPED", "video.tun_stripped"],
+      "reverseTarget": "EN",
+      "forwardStages": ["EN", "MD-VID"],
+      "repairPriority": "P0",
+      "presentationFork": ["重编译保留@图N", "改 I2V 方言诚实"],
+      "defaultAction": "recompile_keep_ordinal",
+      "requireFixBeforeBurn": false,
+      "note": "多参模式不应剥 @图N；Wan/I2V 应方言 none 而非假多参"
     }
   ],
   "maxRounds": 3

@@ -302,9 +302,15 @@ export async function applyLiteraryRepairDeltas(input: {
     }
   }
 
-  // 3) Re-crop identity when contract / camera.MS / bend prefers action body
+  // 3) Re-crop identity — NEVER action-body when standing-sheet replace / bend face-lock
+  const faceLockDelta =
+    refsContract?.identityReplaceStandingSheet === true ||
+    (bend && refsContract?.identityPreferActionBody !== true) ||
+    hints.includes("identity_face_crop") ||
+    hints.includes("identity_bend_sil");
   if (
-    (refsContract?.identityPreferActionBody || bend || hints.includes("preferActionBody")) &&
+    !faceLockDelta &&
+    (refsContract?.identityPreferActionBody || hints.includes("preferActionBody")) &&
     refs.length &&
     roles[0] !== "propSoft"
   ) {
@@ -336,11 +342,12 @@ export async function applyLiteraryRepairDeltas(input: {
     }
   }
 
-  // 3b) Bend: replace standing identity with face+lean silhouette (anti upright sheet)
+  // 3b) Bend: replace standing identity with face-only plate (anti upright sheet / namecard collage)
   if (
     (refsContract?.identityReplaceStandingSheet ||
       bend ||
-      hints.includes("identity_bend_sil")) &&
+      hints.includes("identity_bend_sil") ||
+      hints.includes("identity_face_crop")) &&
     refs.length &&
     roles[0] !== "propSoft"
   ) {

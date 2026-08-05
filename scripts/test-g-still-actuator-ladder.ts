@@ -45,7 +45,17 @@ async function main() {
     objectiveClass: "contact_geom",
     softEnvContinuity: "must",
   });
-  ok("L0 contact+softEnv→comfy", comfyPick.preferComfy && comfyPick.actuatorId === "comfy_contact_softenv");
+  ok(
+    "L0 contact+softEnv→seedream default",
+    !comfyPick.preferComfy && comfyPick.actuatorId === "seedream_multiref",
+    comfyPick.reason,
+  );
+  const forceComfy = selectStillActuatorProfile({
+    objectiveClass: "contact_geom",
+    softEnvContinuity: "must",
+    forceComfy: true,
+  });
+  ok("L0 forceComfy experiment", forceComfy.preferComfy && forceComfy.actuatorId === "comfy_contact_softenv");
 
   const seedPick = selectStillActuatorProfile({
     objectiveClass: "atmosphere",
@@ -57,7 +67,7 @@ async function main() {
     objectiveClass: "prop_readable",
     softEnvContinuity: "must",
   });
-  ok("L0 prop_readable+must→comfy", propPick.preferComfy);
+  ok("L0 prop_readable→seedream default", !propPick.preferComfy);
 
   ok(
     "L0 synth grade",
@@ -136,6 +146,47 @@ async function main() {
   ok("L0 bend compress no cheek head", !/^接触几何/.test(bendComp.prompt.trim()), bendComp.prompt.slice(0, 40));
   ok("L0 bend compress no skirt-only", !/背景仅裙摆碎片虚化/.test(bendComp.prompt), bendComp.prompt.slice(0, 100));
   ok("L0 bend compress hall lead", /主场景|禁止灰棚/.test(bendComp.prompt), bendComp.prompt.slice(0, 100));
+  ok("L0 bend compress no CHAR-SCENE", !/CHAR-SCENE/i.test(bendComp.prompt));
+  ok(
+    "L0 bend compress has EN parallel",
+    /bends at the waist/i.test(bendComp.prompt) || bendComp.prompt.length >= 280,
+    bendComp.prompt.slice(-120),
+  );
+
+  const irSoupVendor = compressStillEgressForSeedream({
+    prompt: ", CHAR-SCENE, 卧室, 暖光 4500K, 情绪4, 中景。沈清漪弯腰捡起休书，古装襦裙，室内暖光。",
+    objectiveClass: "action_primary",
+    poseOccupancy: "bend_pickup",
+    primaryIntentSeal: { poseOccupancy: "bend_pickup" },
+  });
+  ok("L0 IR soup peeled", !/CHAR-SCENE/i.test(irSoupVendor.prompt));
+  ok("L0 IR emo crumb peeled", !/情绪4/.test(irSoupVendor.prompt) || /情绪6/.test(irSoupVendor.prompt));
+  ok("L0 IR action first", /弯腰/.test(irSoupVendor.prompt.slice(0, 80)), irSoupVendor.prompt.slice(0, 100));
+
+  {
+    const { capStillRefsHandbookSlots } = require("../src/ruleEngine/compilers/eventPlateReadiness") as typeof import("../src/ruleEngine/compilers/eventPlateReadiness");
+    const { resolveStillVendorSizeLadder } = require("../src/ruleEngine/compilers/stillQuality") as typeof import("../src/ruleEngine/compilers/stillQuality");
+    const capped = capStillRefsHandbookSlots({
+      refs: [
+        { type: "image", base64: "a", role: "identity" },
+        { type: "image", base64: "b", role: "identity" },
+        { type: "image", base64: "c", role: "propSoft" },
+        { type: "image", base64: "d", role: "softEnv" },
+        { type: "image", base64: "e", role: "softEnv" },
+      ],
+      maxSlots: 20,
+      singleIdentityOnly: true,
+    });
+    ok("L0 handbook has identity+prop+soft", capped.roles.includes("identity") && capped.roles.includes("propSoft"));
+    ok("L0 handbook drop twin id", capped.dropped.includes("identity_extra"));
+    ok("L0 handbook ≤20", capped.refs.length <= 20);
+    const draft = resolveStillVendorSizeLadder({ qualityMode: "draft", requestedQuality: "2K" });
+    ok("L0 draft ladder 1K", draft.size === "1K" && draft.ladder === "draft_preview");
+    const hq = resolveStillVendorSizeLadder({ qualityMode: "hq_update", requestedQuality: "1K", lockSeed: 42 });
+    ok("L0 hq ladder ≥2K", hq.size === "2K" || hq.size === "4K");
+    ok("L0 hq seed locked", hq.seed === 42 && hq.seedLockPreferred === true);
+  }
+
   const protected = protectEgressHeadAfterCompress("裙摆虚化。" + "x".repeat(400), 120, {
     bend: true,
     occupancyLead: "占位：弯腰捡拾，道具在主手。",
@@ -168,14 +219,18 @@ async function main() {
   const glyphAtom = atoms.atoms.find((a) => a.id === "prop.glyph");
   ok("L0 glyph is should not must", !glyphAtom || glyphAtom.priority === "should");
 
-  // Handoff: degraded+synth blocks
+  // Handoff: intent-first — weak/degraded+synth absorbs as WARN (never BLOCK burn)
   const handoffBlock = assertStillContactVideoHandoff({
     visualDescription: "特写。休书纸角划过面颊。",
     stillPrompt: "休书纸角划过面颊，禁止手持卡片",
     stillMeta: { actuatorDegraded: true, propPlateGrade: "synthetic_geometry", poseHandoffBlocked: true },
     stillQuality: "weak",
   });
-  ok("L0 degraded+synth blocks I2V", handoffBlock.ok === false && handoffBlock.severity === "BLOCK");
+  ok(
+    "L0 degraded+synth warns I2V",
+    handoffBlock.ok === true && handoffBlock.severity === "WARN",
+    `${handoffBlock.severity}:${handoffBlock.message ?? ""}`,
+  );
 
   // Vendor baseUrl bridge (env unset → applyComfyVendorBaseUrl)
   const prevBridge = process.env.COMFY_URL;
@@ -272,10 +327,41 @@ async function main() {
     },
   });
   ok("L1 vendor fallback seedream", vendor.actuatorId === "seedream_multiref");
-  ok("L1 actuatorDegraded honest", vendor.actuatorDegraded === true);
+  ok("L1 actuatorDegraded false default", vendor.actuatorDegraded === false);
   ok("L1 propPlateGrade synth", vendor.propPlateGrade === "synthetic_geometry");
   ok("L1 egressCompressed", vendor.egressCompressed === true);
   ok("L1 seedream ran", wrote && vendor.vendorCalled);
+  ok("L1 EN vendor prompt", /woman|bend|medium|Avoid/i.test(String(vendor.vendorPromptUsed ?? "")));
+  ok("L1 blocksGenerate false", vendor.blocksGenerate === false);
+
+  const vendorForce = await runStillVendorWithActuatorCore({
+    vendorPrompt: longPrompt,
+    referenceList: [
+      { type: "image", base64: tiny },
+      { type: "image", base64: tiny },
+      { type: "image", base64: tiny },
+    ],
+    refsRoles: ["identity", "propSoft", "softEnv"],
+    objectiveClass: "contact_geom",
+    softEnvContinuity: "must",
+    keepSoftEnvRef: true,
+    forceComfy: true,
+    propClassId: "paper_doc",
+    synthesizedProp: true,
+    projectId: 1,
+    uuid: () => "test-uuid-2",
+    ossWriteFile: async () => {},
+    getSmallImageUrl: async () => "https://example/test.jpg",
+    runSeedream: async () => ({
+      url: "https://example/seed.jpg",
+      savePath: "/1/workFlow/y.jpg",
+      imageBase64: tiny,
+    }),
+  });
+  ok(
+    "L1 forceComfy degrades to seedream",
+    vendorForce.actuatorId === "seedream_multiref" && vendorForce.actuatorDegraded === true,
+  );
 
   // Contact fail → no fake hq_ok
   const humanFail = resolveStillHumanRejudgeOutcome({

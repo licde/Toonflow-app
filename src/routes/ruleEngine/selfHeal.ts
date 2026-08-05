@@ -312,25 +312,42 @@ export default router.post(
       } catch {
         /* keep default */
       }
-      // Wave-2: run industry silent repair on package shots when available
+      // Wave-2 / plan: homologous healShotSizeOrSplit (import-first; experience second pass)
       try {
         if (pkg?.shots?.length) {
-          const { runIndustryAvSilentRepair, collectRepairChangelog } =
+          const { healShotSizeOrSplit } =
+            require("@/ruleEngine/design/healShotSizeOrSplit") as typeof import("@/ruleEngine/design/healShotSizeOrSplit");
+          const { collectRepairChangelog } =
             require("@/ruleEngine/design/industryAvSilentRepair") as typeof import("@/ruleEngine/design/industryAvSilentRepair");
-          const ind = runIndustryAvSilentRepair(pkg.shots as Record<string, unknown>[], { maxMs: 4000 });
+          const ind = healShotSizeOrSplit(pkg.shots as Record<string, unknown>[], { maxMs: 4000 });
           if (ind.changed > 0) {
             pkg.shots = ind.shots as typeof pkg.shots;
             await saveEpisodePackage(u.db, pkg);
             appliedToDb = true;
             repairChangelog = collectRepairChangelog(ind.shots);
-            primaryNextStep = ind.diffs.some((d) => d.startsWith("face_split") || d.startsWith("reaction_expand"))
-              ? "split_shot"
-              : primaryNextStep;
+            primaryNextStep =
+              ind.oneClickRepairKind === "split" || ind.oneClickRepairKind === "shotSize_and_split"
+                ? "split_shot"
+                : ind.oneClickRepairKind === "confirm_required"
+                  ? "split_shot"
+                  : primaryNextStep;
           }
+          (result as { oneClickRepairKind?: string }).oneClickRepairKind = ind.oneClickRepairKind;
+          (result as { blocksGenerate?: boolean }).blocksGenerate = false;
         }
       } catch {
         /* optional */
       }
+
+      const oneClick = String((result as { oneClickRepairKind?: string }).oneClickRepairKind ?? "none");
+      const ctaLabel =
+        oneClick === "split" || oneClick === "shotSize_and_split"
+          ? "一键智拆并生成"
+          : oneClick === "shotSize"
+            ? "一键改景别并生成"
+            : oneClick === "confirm_required"
+              ? "确认智拆/改景别后生成"
+              : "智能修复";
 
       return res.status(200).send(
         success({
@@ -341,9 +358,11 @@ export default router.post(
           cdHydrated,
           trackAbsorbed,
           stillContamAbsorbed,
-          ctaLabel: "智能修复",
+          ctaLabel,
           primaryNextStep,
           repairChangelog,
+          oneClickRepairKind: oneClick,
+          blocksGenerate: false,
           implementationDegraded: trackAbsorbed > 0 || stillContamAbsorbed || undefined,
         }),
       );

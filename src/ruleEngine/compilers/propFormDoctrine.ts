@@ -190,13 +190,22 @@ export function buildPropFormInject(input: {
   }
   // Positive-only form fact (no 禁止 in lead)
   const formFact = `${prop}：${doctrine.formMust}`;
+  const approachingPhase =
+    String(input.stillPhase ?? "") === "approaching" ||
+    String(input.stillPhase ?? "") === "mid_contact";
   let glyphFact: string | undefined;
-  if (doctrine.glyphRequired || /字迹|可辨|笺面|纸面可见|二字/.test(String(input.visualDescription ?? ""))) {
+  if (
+    !approachingPhase &&
+    (doctrine.glyphRequired || /字迹|可辨|笺面|纸面可见|二字/.test(String(input.visualDescription ?? "")))
+  ) {
     if (glyphText) {
       glyphFact = `纸面可见「${glyphText}」墨迹更佳（几何触点优先）`;
     } else {
       glyphFact = `${prop}纸面可有字迹更佳`;
     }
+  } else if (approachingPhase) {
+    // Geometry enhance only — ban strong ink display-card hijack (拧词假可读)
+    glyphFact = `${prop}近地薄片几何可辨（禁强墨迹展示卡）`
   }
   return {
     formFact,
@@ -204,7 +213,7 @@ export function buildPropFormInject(input: {
     poseFact,
     forbidden,
     softPlateHint: doctrine.softPlateHint,
-    glyphText,
+    glyphText: approachingPhase ? "" : glyphText,
     formPositive: doctrine.formPositive,
   };
 }

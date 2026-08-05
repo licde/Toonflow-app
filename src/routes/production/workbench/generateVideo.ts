@@ -888,40 +888,27 @@ export default router.post(
         stillQuality = "weak";
       }
       if (stillMeta?.videoStale && !vlmInfra) {
-        // Practice: VIDEO-PROMPT-STALE — clear only after track prompt writeback with live hash
-        let wroteTrack = false;
+        // 图N handoff: still.stale must NOT Wave-2 silent absorb — requireFixBeforeBurn
         try {
-          const { buildShotChainContract } = await import("@/ruleEngine/quality/shotChainContract");
-          designContentHashNowForEgress = buildShotChainContract(shotMeta as Record<string, unknown>).designContentHash;
-          autoRecompiledVideoPrompt = true;
-          const promptNow = String(burnPrompt || prompt || "").trim();
-          if (trackId && promptNow) {
-            const trReasonRaw = await u.db("o_videoTrack").where("id", trackId).first();
-            let trReason: Record<string, unknown> = {};
-            try {
-              trReason = JSON.parse(String((trReasonRaw as { reason?: string } | undefined)?.reason || "{}"));
-            } catch {
-              trReason = {};
-            }
-            await u.db("o_videoTrack").where("id", trackId).update({
-              prompt: promptNow,
-              reason: JSON.stringify({
-                ...trReason,
-                designContentHash: designContentHashNowForEgress,
-                videoStale: false,
-                staleClearedAt: new Date().toISOString(),
-                staleClearSource: "burn_writeback",
-              }),
-            });
-            wroteTrack = true;
-          }
+          const { stampTunLedgerOntoMeta } =
+            require("@/ruleEngine/compilers/tunOrdinalLedger") as typeof import("@/ruleEngine/compilers/tunOrdinalLedger");
+          stillMeta = stampTunLedgerOntoMeta(stillMeta as Record<string, unknown>, {
+            kind: "still_stale",
+            detail: "videoStale — regen still before burn",
+            missingSlot: "still.stale",
+          }) as typeof stillMeta;
+          (stillMeta as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn = true;
+          (stillMeta as { missingSlots?: string[] }).missingSlots = [
+            ...new Set([
+              ...((stillMeta as { missingSlots?: string[] }).missingSlots ?? []),
+              "still.stale",
+            ]),
+          ];
         } catch {
-          wroteTrack = false;
+          (stillMeta as { requireFixBeforeBurn?: boolean }).requireFixBeforeBurn = true;
         }
-        if (wroteTrack) {
-          stillMeta = { ...(stillMeta as object), videoStale: false };
-        }
-        // If writeback failed, keep videoStale — chain egress may still BLOCK
+        healThenBurnNotes.push("静照过期(still.stale)·需先重出静照再烧·禁止静默absorb");
+        // Do NOT clear videoStale via track prompt writeback alone
       }
       const { assertStillFirstFrameContract } = await import("@/ruleEngine/qc/stillFirstFrameGate");
       const { assertStillDetectForBurn } = await import("@/ruleEngine/qc/stillDetectRepair");
@@ -983,18 +970,20 @@ export default router.post(
       if (!detect.ok) {
         const noFile = !resolvedStillPath;
         if (noFile) {
+          const detectNextStep = detect.primaryNextStep === "split_shot" ? "split_shot" : "batch_still";
+          const detectCtaLabel = detectNextStep === "split_shot" ? "去拆镜" : "去生成静照";
           const { buildBurnGateEnvelope } = await import("@/ruleEngine/compilers/burnGateEnvelope");
           const env = buildBurnGateEnvelope(
             [{ id: detect.code ?? "STILL-FIRSTFRAME-MISSING", message: detect.message || "缺少静照", reverseTrigger: detect.reverseTrigger }],
-            { nextStep: "batch_still", primary: { userMessage: detect.message, ctaLabel: "去生成静照" } },
+            { nextStep: detectNextStep, primary: { userMessage: detect.message, ctaLabel: detectCtaLabel } },
           );
           return res.status(400).send(
             error(detect.message || "缺少静照首帧", {
               code: "STILL-FIRSTFRAME-MISSING",
-              primaryNextStep: "batch_still",
+              primaryNextStep: detectNextStep,
               reverseTrigger: detect.reverseTrigger ?? "still_firstframe_weak",
               userMessage: env.userMessage,
-              ctaLabel: "去生成静照",
+              ctaLabel: detectCtaLabel,
               resolvedStoryboardId: resolved.storyboardId,
               hasStillFile: false,
             }),
@@ -1440,7 +1429,36 @@ export default router.post(
     }
     if (!qd.burnAllowed) {
       const env = qd.envelope ?? buildBurnGateEnvelope([{ id: "LIP-01", message: qd.reasons.join(","), reverseTrigger: "pr_lip_duration" }]);
-      // Wave-2 never-block: soft absorb + mark debt + continue (同源 batch)
+      const staleBlocks =
+        Boolean((stillMeta as { videoStale?: boolean } | null)?.videoStale) ||
+        Boolean((stillMeta as { requireFixBeforeBurn?: boolean } | null)?.requireFixBeforeBurn) ||
+        ((stillMeta as { missingSlots?: string[] } | null)?.missingSlots ?? []).includes("still.stale");
+      if (staleBlocks) {
+        // 图N handoff: do not Wave-2 absorb still.stale — requireFixBeforeBurn
+        healThenBurnNotes.push(
+          env.userMessage || `静照债须先修: ${qd.decision} — ${qd.reasons.join("; ")}`,
+        );
+        qd = {
+          ...qd,
+          burnAllowed: false,
+          softDefer: true,
+          reasons: [...qd.reasons, "still.stale_requireFixBeforeBurn"],
+        };
+        return res.status(400).send(
+          error("静照过期或错源，请先重出静照再烧视频", {
+            code: "STILL-STALE",
+            requireFixBeforeBurn: true,
+            missingSlots: (stillMeta as { missingSlots?: string[] } | null)?.missingSlots ?? ["still.stale"],
+            ctaLabel: "一键智能修复·先重出静照",
+            oneClickRepairKind: "regen_still_then_burn",
+            primaryNextStep: "batch_still",
+            reverseTrigger: "still.stale",
+            healThenBurnNotes,
+            blocksGenerate: false,
+          }),
+        );
+      }
+      // Wave-2 never-block: soft absorb + mark debt + continue (同源 batch) — except still.stale above
       healThenBurnNotes.push(
         env.userMessage || `质量债软吸收: ${qd.decision} — ${qd.reasons.join("; ")}`,
       );
@@ -1460,6 +1478,22 @@ export default router.post(
       lipMin: lip?.lipMin || undefined,
       nativeAudio: resolveVendorCapability(vendorIdFromModel(model)).nativeAudio,
     });
+    if (packed.warnings?.includes("video.tun_stripped") || packed.warnings?.includes("wan_strip_at_refs")) {
+      healThenBurnNotes.push("video.tun_stripped·方言剥图N已记账");
+      try {
+        const { stampTunLedgerOntoMeta } =
+          require("@/ruleEngine/compilers/tunOrdinalLedger") as typeof import("@/ruleEngine/compilers/tunOrdinalLedger");
+        if (stillMeta) {
+          stillMeta = stampTunLedgerOntoMeta(stillMeta as Record<string, unknown>, {
+            kind: "tun_stripped",
+            detail: packed.warnings.join(","),
+            missingSlot: "video.tun_stripped",
+          }) as typeof stillMeta;
+        }
+      } catch {
+        /* optional */
+      }
+    }
     // Sync Camera text to API duration + scrub XML/sidecar/EN QF shells
     {
       const { sanitizeVideoPrompt } = await import("@/ruleEngine/compilers/sanitizeVideoPrompt");
@@ -1495,7 +1529,7 @@ export default router.post(
     }
     const generateAudio = packed.audio;
     const runDuration = packed.duration;
-    const vendorPromptFinal = burnPrompt;
+    let vendorPromptFinal = burnPrompt;
 
     const inferMediaType = (filePath?: string | null, dbType?: string | null): "image" | "video" | "audio" => {
       if (dbType === "audio" || dbType === "video" || dbType === "image") return dbType;
@@ -1530,12 +1564,64 @@ export default router.post(
     if (resolvedStillPath && !images.some((i) => i?.path === resolvedStillPath)) {
       images.unshift({ path: resolvedStillPath, mediaType: "image" });
     }
+    // I2V / first-frame pin: still must be referenceList[0]
+    if (resolvedStillPath) {
+      const stillIdx = images.findIndex((i) => i?.path === resolvedStillPath);
+      if (stillIdx > 0) {
+        const [stillRow] = images.splice(stillIdx, 1);
+        images.unshift(stillRow!);
+      }
+    }
     const base64 = await Promise.all(
       images.map(async (item) => {
         if (!item?.path) return null;
         return { base64: await u.oss.getImageBase64(item.path), type: item.mediaType };
       }),
     );
+    // Bind real [References] at burn from physical order (废止 bound-at-burn 空话)
+    try {
+      const { buildVideoRefSlotContract, injectVideoReferencesSection, videoTunStripped } =
+        await import("@/ruleEngine/compilers/videoRefSlotContract");
+      const modeStr = typeof mode === "string" ? mode : Array.isArray(modeData) ? String(modeData[0] ?? "") : "";
+      const stillB64 = base64[0]?.type === "image" ? String(base64[0].base64 ?? "") : "";
+      const otherImgs = base64
+        .slice(1)
+        .filter((b) => b?.type === "image" && b.base64)
+        .map((b) => String(b!.base64));
+      const slot = buildVideoRefSlotContract({
+        stillBase64: stillB64 || null,
+        identityBase64s: otherImgs.slice(0, 2),
+        sceneBase64: otherImgs[2] ?? null,
+        propBase64: otherImgs[3] ?? null,
+        vendorId: vendorIdFromModel(model),
+        modeId: modeStr,
+        i2vFirst: true,
+      });
+      if (slot.referencesSection) {
+        burnPrompt = injectVideoReferencesSection(burnPrompt, slot.referencesSection);
+      }
+      if (slot.dialect !== "none" && videoTunStripped(burnPrompt, slot.dialect)) {
+        healThenBurnNotes.push("video.tun_stripped·烧词缺图N");
+      }
+      if (slot.missingSlots.length) {
+        healThenBurnNotes.push(`video_mount:${slot.missingSlots.join("/")}`);
+      }
+    } catch {
+      /* optional */
+    }
+    // Re-pack after References inject so Seedance @图→@图片 keeps ordinals
+    {
+      const packed2 = applyVendorPromptPack({
+        prompt: burnPrompt,
+        vendorId: vendorIdFromModel(model),
+        duration: runDuration,
+        audio: generateAudio,
+        lipMin: lip?.lipMin || undefined,
+        nativeAudio: resolveVendorCapability(vendorIdFromModel(model)).nativeAudio,
+      });
+      burnPrompt = packed2.prompt;
+    }
+    vendorPromptFinal = burnPrompt;
     const videoPath = `/${projectId}/video/${uuidv4()}.mp4`;
     const burnDebug = {
       model,

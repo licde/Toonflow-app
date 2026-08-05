@@ -216,6 +216,8 @@
   "mustEditBlockIds": [
     "DEX-LITERARY-STALE",
     "DEX-VIS-SPLIT",
+    "DEX-STILL-CU-CAST",
+    "DEX-STILL-ONEBEAT",
     "DEX-EMPTY-SHOT-CONSISTENCY",
     "DEX-QP-02",
     "DESIGN-LOSS",

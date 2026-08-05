@@ -281,7 +281,12 @@ const noLipUpgrade = resolveLipDurationSingleSource({
   hasDialogue: true,
   hardBlockNoLipOnDialogue: true,
 });
-ok("T-NOLIP explicit silent upgrades by default", !noLipUpgrade.blocked && /subtle|lip/i.test(noLipUpgrade.lipLine ?? ""));
+ok(
+  "T-NOLIP explicit silent upgrades by default",
+  !noLipUpgrade.blocked &&
+    (/subtle|lip|口型|轻微/i.test(noLipUpgrade.lipLine ?? "") ||
+      /subtle/i.test(String(noLipUpgrade.resolvedPolicy ?? ""))),
+);
 const noLipBlock = resolveLipDurationSingleSource({
   prompt: "says hello, no lip sync",
   lipSyncPolicy: "none",

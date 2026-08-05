@@ -158,6 +158,8 @@ export interface ComposeStillResult {
   /** Continuity: must survive via own slot or bake into identity */
   softEnvContinuity?: "must" | "optional" | "none";
   bgMode?: "keep_plate" | "soft_env" | "atmosphere_only";
+  /** Refs contract latch (T2I-first drop softEnv / identity face crop) */
+  stillRefsContract?: import("./stillRefsContract").StillRefsContract;
   softEnvBakedIntoIdentity?: boolean;
   propSource?: "asset" | "fe" | "synth" | string;
   refsRoles?: string[];
@@ -251,10 +253,15 @@ function cleanTokenTail(
   orderedCrefs?: string[],
   opts?: { omitSref?: boolean },
 ): string {
+  // Fix glued vendor tokens: `--cref CHAR-X--sref SCENE` → spaced
+  const normalized = String(tokenTail ?? "").replace(
+    /([A-Za-z]+-[A-Za-z0-9]+)--(sref|cref|ar)\b/gi,
+    "$1 --$2",
+  );
   const crefs = new Set<string>();
   const srefs = new Set<string>();
   let ar = "";
-  tokenTail
+  normalized
     .replace(/--sref\s+([^\s,，。；;]+)[,，。；;]*/gi, (_, c: string) => {
       srefs.add(String(c).replace(/[,，。；;]+$/g, ""));
       return " ";
@@ -1390,6 +1397,9 @@ export function composeStillPrompt(
         qualityMode,
         importSoftTrack: Boolean((ctx as { importSoftTrack?: boolean }).importSoftTrack),
         allowXorSoftInject: false,
+        // Compose is the design contract boundary: unshootable literary XOR
+        // must block here, while import/workbench smart-heal may stay soft.
+        hardBlock: true,
       });
       sources.push(...litGate.sources);
       if (
@@ -1742,9 +1752,14 @@ export function composeStillPrompt(
   }
   const bgPolicyResult = modality.bgPolicy;
   // Seal softEnv from Match sample: bg.scene_soft Must → keepSoftEnvRef + continuity=must (同源 DIP/contract)
+  // Exception: bend/action T2I-first — sample Must must not re-hang altar SCENE over dropFullSoftEnv
   let keepSoftEnvSealed = Boolean(bgPolicyResult.keepSoftEnvRef);
   let softEnvContinuitySealed: "must" | "optional" | "none" =
     bgPolicyResult.softEnvContinuity ?? (keepSoftEnvSealed ? "optional" : "none");
+  const bendDropSoftEnv =
+    Boolean(bgPolicyResult.omitSrefToken) ||
+    /bend_action:t2i_first|t2i_first_drop_scene/.test(String(bgPolicyResult.reason ?? "")) ||
+    /弯腰|捡起|捡拾|俯身|触地捡/.test(String(ctx.visualDescription ?? ""));
   try {
     const sample = (ctx as {
       shotDesignSample?: { must?: Array<{ id?: string }> };
@@ -1752,7 +1767,7 @@ export function composeStillPrompt(
     const sceneMust = Boolean(
       sample?.must?.some((m) => m.id === "bg.scene_soft" || m.id === "bg.composition"),
     );
-    if (sceneMust) {
+    if (sceneMust && !bendDropSoftEnv) {
       keepSoftEnvSealed = true;
       softEnvContinuitySealed = "must";
       bgPolicyResult.keepSoftEnvRef = true;
@@ -1779,6 +1794,14 @@ export function composeStillPrompt(
           : "背景：主场景浅景深虚化（殿内轮廓/烛光可辨），禁止灰棚白棚；裙摆/衣角可为加强虚化，禁止次角完整正脸抢戏";
         bgPolicyResult.reason = `${bgPolicyResult.reason}|seal_scene_soft_must`;
       }
+    } else if (sceneMust && bendDropSoftEnv) {
+      keepSoftEnvSealed = false;
+      softEnvContinuitySealed = "none";
+      bgPolicyResult.keepSoftEnvRef = false;
+      bgPolicyResult.softEnvContinuity = "none";
+      bgPolicyResult.omitSrefToken = true;
+      (modality as { keepSoftEnvRef?: boolean }).keepSoftEnvRef = false;
+      sources.push("seal.sample.bg.scene_soft.skipped_bend_t2i");
     }
   } catch {
     /* optional */
@@ -2013,14 +2036,19 @@ export function composeStillPrompt(
             "skirt_blur" ||
           /裙摆|衣角虚化/.test(String(ctx.visualDescription ?? "") + String(ctx.background ?? ""));
         if (skirt && castForCard.length >= 2) {
-          // Secondary is fragment-only — do not legislate full 2-person cast
+          // Soft fragment secondary — keep literary cast card (仅N人) + soft blur note
+          const names = castForCard.map((c) =>
+            typeof c === "string" ? c : String((c as { name?: string })?.name ?? ""),
+          ).filter(Boolean);
           const heroName =
             String((ctx as { narrative?: { literaryPrimary?: string } }).narrative?.literaryPrimary ?? "") ||
-            (typeof castForCard[0] === "string"
-              ? castForCard[0]
-              : String((castForCard[0] as { name?: string })?.name ?? "主角"));
+            names[0] ||
+            "主角";
+          const softName = names.find((n) => n !== heroName) || "";
           supportParts.push(
-            `出镜人数：仅1人主体（${heroName}）；次角仅裙摆/衣角虚化，禁止完整正脸立像`,
+            softName
+              ? `出镜人数：完整入画仅1人（${heroName}）；${softName}仅裙摆/衣角碎片虚化，禁止完整正脸/半身立像与持物抢戏，禁止第三人`
+              : `出镜人数：完整入画仅1人（${heroName}）；次角仅裙摆/衣角虚化，禁止完整正脸立像`,
           );
           sources.push("identity.castCardinality.skirt_blur");
         } else {
@@ -2214,6 +2242,19 @@ export function composeStillPrompt(
   if (!measureVisualBody(visualBody).ok && layerSkeletonScene(ctx, descParts, sources, recipeAdapt)) {
     didSynthesize = true;
     visualBody = [...descParts, ...supportParts].filter(Boolean).join("。").replace(/。。+/g, "。").trim();
+  }
+
+  // VD + ff.spine may restack the same action clause — dedupe so onebeat doesn't false-green warn
+  try {
+    const { dedupeNarrativeClauses } =
+      require("./stillIdentitySsot") as typeof import("./stillIdentitySsot");
+    const deduped = dedupeNarrativeClauses(visualBody);
+    if (deduped !== visualBody) {
+      visualBody = deduped;
+      sources.push("visualBody.narrative_clause_dedupe");
+    }
+  } catch {
+    /* optional */
   }
 
   // QP-02 judges literary shootability — strip bgPolicy/recipe garnish so 木作/烛光 wash cannot fake-green abstract-only VD
@@ -3030,7 +3071,10 @@ export function composeStillPrompt(
       prompt = stripped.text;
       for (const s of stripped.stripped) sources.push(`ff.strip:${s}`);
       // Sole spine egress: rebuild from SSOT + identity token tail
-      try {
+      // Seating/kneel StageA: keep 权力位：/站位绑定 — do not wipe with action-primary SSOT rebuild
+      if (predPack.hasSeatingOrKneel) {
+        sources.push("ff.ssot_only_egress:skip_seating");
+      } else try {
         const { buildSsotOnlyEgress } =
           require("./stillSsotRead") as typeof import("./stillSsotRead");
         const { resolveGatedSoftHints } =
@@ -3126,6 +3170,19 @@ export function composeStillPrompt(
     sources.push("closed.strip.skipped:ssot_only");
   }
 
+  // Last-mile invariant: when we ban turnaround/grid/collage, we must still output the literal single-shot lock token.
+  // (Some later gates/sanitizers may preserve alias bans like “禁止四视图” but drop “单镜头成片” itself.)
+  try {
+    const { STILL_SINGLE_FRAME_LOCK_EDIT_ZH } =
+      require("./stillFirstFrameLiterarySsot") as typeof import("./stillFirstFrameLiterarySsot");
+    if (!/单镜头成片/.test(prompt) && /四视图|拼版|多宫格/.test(prompt)) {
+      prompt = `${prompt}。${STILL_SINGLE_FRAME_LOCK_EDIT_ZH}`.replace(/。。+/g, "。").trim();
+      sources.push("identity.singleFrameLock.finalAssert");
+    }
+  } catch {
+    /* optional */
+  }
+
   return {
     ok: true,
     prompt,
@@ -3148,6 +3205,34 @@ export function composeStillPrompt(
     keepSoftEnvRef: keepSoftEnvSealed,
     softEnvContinuity: softEnvContinuitySealed,
     bgMode: modality.bgMode,
+    stillRefsContract: (() => {
+      try {
+        const { resolveStillRefsContract } =
+          require("./stillRefsContract") as typeof import("./stillRefsContract");
+        const seal = (generationContract as {
+          primaryIntentSeal?: { poseOccupancy?: string; primaryObjective?: string };
+        } | undefined)?.primaryIntentSeal;
+        return resolveStillRefsContract({
+          primaryObjective: seal?.primaryObjective ?? generationContract?.objectiveClass,
+          objectiveClass: generationContract?.objectiveClass,
+          poseOccupancy: seal?.poseOccupancy,
+          visualDescription: String(ctx.visualDescription ?? visualBody ?? ""),
+          stillPhase: (ctx as { stillPhase?: string | null }).stillPhase,
+          feSceneHung:
+            keepSoftEnvSealed === true ||
+            softEnvContinuitySealed === "must" ||
+            Boolean((ctx as { hasSceneLink?: boolean }).hasSceneLink) ||
+            Boolean((ctx as { feSceneHung?: boolean }).feSceneHung),
+          shotDesignSample: (ctx as { shotDesignSample?: unknown }).shotDesignSample as {
+            primaryObjective?: string | null;
+            poseOccupancy?: string | null;
+            must?: Array<{ id: string }>;
+          } | null,
+        });
+      } catch {
+        return undefined;
+      }
+    })(),
     promptLintConflicts: warnings
       .filter((w) => w.startsWith("promptLint:"))
       .map((w) => w.replace(/^promptLint:/, "")),
